@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Sidebar } from './Sidebar';
-import { POSFoodAlert, INITIAL_OVERDUE_COUNT } from './POSFoodAlert';
+import { POSFoodAlertPreview } from '../../__fixtures__/previews/POSFoodAlertPreview';
+import { INITIAL_OVERDUE_COUNT } from '../../__fixtures__/POSFoodAlert.fixture';
 import { Button } from './ui/button';
 import { Menu } from 'lucide-react';
 import { Toaster } from 'sonner';
@@ -41,7 +42,7 @@ export function Layout() {
 
         {/* POS Food Alert — pinned below top bar on all /pos pages */}
         {isPOSPage && (
-          <POSFoodAlert
+          <POSFoodAlertPreview
             onViewBooking={(bookingNo) => navigate(`/pos/booking/${bookingNo}`)}
           />
         )}

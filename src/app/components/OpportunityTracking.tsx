@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -11,33 +10,41 @@ import {
 } from './ui/dialog';
 import {
   Phone, Mail, Users, Plus, Eye, Edit, Calendar, TrendingUp,
-  CheckCircle, XCircle, Clock, AlertCircle, Target, MessageSquare,
-  Building2, Plane, ChevronRight,
+  CheckCircle, XCircle, Clock as ClockIcon, AlertCircle, Target, MessageSquare,
+  Building2, Plane,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
 
-type DealStage = 'Prospecting' | 'Proposal Sent' | 'Negotiation' | 'Renewal Due' | 'Closed Won' | 'Closed Lost';
-type InteractionType = 'Meeting' | 'Call' | 'Email' | 'Site Visit';
-type AccountType = 'Corporate' | 'Travel Agency';
+void ClockIcon;
 
-interface Interaction {
+export type OpportunityTrackingDealStage =
+  | 'Prospecting'
+  | 'Proposal Sent'
+  | 'Negotiation'
+  | 'Renewal Due'
+  | 'Closed Won'
+  | 'Closed Lost';
+
+export type OpportunityTrackingInteractionType = 'Meeting' | 'Call' | 'Email' | 'Site Visit';
+export type OpportunityTrackingAccountType = 'Corporate' | 'Travel Agency';
+
+export interface OpportunityTrackingInteraction {
   id: number;
   date: string;
-  type: InteractionType;
+  type: OpportunityTrackingInteractionType;
   summary: string;
   followUpDate?: string;
   conductedBy: string;
 }
 
-interface Opportunity {
+export interface OpportunityTrackingOpportunity {
   id: number;
   opportunityRef: string;
   companyName: string;
   accountNumber: string;
-  accountType: AccountType;
+  accountType: OpportunityTrackingAccountType;
   contactName: string;
   contactEmail: string;
-  stage: DealStage;
+  stage: OpportunityTrackingDealStage;
   estimatedValue: number;
   currency: string;
   expectedCloseDate: string;
@@ -45,11 +52,48 @@ interface Opportunity {
   description: string;
   createdDate: string;
   lastActivityDate: string;
-  interactions: Interaction[];
+  interactions: OpportunityTrackingInteraction[];
   notes: string;
 }
 
-const STAGE_CONFIG: Record<DealStage, { color: string; bg: string; border: string; icon: React.ReactNode; order: number }> = {
+export interface OpportunityTrackingLogDraft {
+  oppId: number | null;
+  type: OpportunityTrackingInteractionType;
+  summary: string;
+  date: string;
+  followUpDate: string;
+  conductedBy: string;
+}
+
+export interface OpportunityTrackingProps {
+  opportunities: OpportunityTrackingOpportunity[];
+  filteredOpportunities: OpportunityTrackingOpportunity[];
+  filterStage: 'all' | OpportunityTrackingDealStage;
+  filterType: 'all' | OpportunityTrackingAccountType;
+  searchTerm: string;
+  viewMode: 'pipeline' | 'table';
+
+  selectedOpp: OpportunityTrackingOpportunity | null;
+  isDetailOpen: boolean;
+
+  isLogOpen: boolean;
+  logDraft: OpportunityTrackingLogDraft;
+
+  onSearchTermChange: (value: string) => void;
+  onFilterStageChange: (value: 'all' | OpportunityTrackingDealStage) => void;
+  onFilterTypeChange: (value: 'all' | OpportunityTrackingAccountType) => void;
+  onViewModeChange: (mode: 'pipeline' | 'table') => void;
+  onSelectOpportunity: (opp: OpportunityTrackingOpportunity | null) => void;
+  onCloseDetail: () => void;
+  onOpenLog: (opp: OpportunityTrackingOpportunity) => void;
+  onCloseLog: () => void;
+  onLogDraftChange: (draft: OpportunityTrackingLogDraft) => void;
+  onLogInteraction: () => void;
+  onCreateOpportunity: () => void;
+  onEditOpportunity: (opp: OpportunityTrackingOpportunity) => void;
+}
+
+const STAGE_CONFIG: Record<OpportunityTrackingDealStage, { color: string; bg: string; border: string; icon: React.ReactNode; order: number }> = {
   'Prospecting':   { color: 'text-gray-700',   bg: 'bg-gray-100',   border: 'border-gray-300',  icon: <Target className="w-3.5 h-3.5" />,       order: 1 },
   'Proposal Sent': { color: 'text-blue-700',   bg: 'bg-blue-100',   border: 'border-blue-300',  icon: <Mail className="w-3.5 h-3.5" />,          order: 2 },
   'Negotiation':   { color: 'text-purple-700', bg: 'bg-purple-100', border: 'border-purple-300',icon: <MessageSquare className="w-3.5 h-3.5" />, order: 3 },
@@ -58,90 +102,14 @@ const STAGE_CONFIG: Record<DealStage, { color: string; bg: string; border: strin
   'Closed Lost':   { color: 'text-red-700',    bg: 'bg-red-100',    border: 'border-red-300',   icon: <XCircle className="w-3.5 h-3.5" />,       order: 6 },
 };
 
-const INTERACTION_ICONS: Record<InteractionType, React.ReactNode> = {
+const INTERACTION_ICONS: Record<OpportunityTrackingInteractionType, React.ReactNode> = {
   Meeting:    <Users className="w-3.5 h-3.5" />,
   Call:       <Phone className="w-3.5 h-3.5" />,
   Email:      <Mail className="w-3.5 h-3.5" />,
   'Site Visit': <Building2 className="w-3.5 h-3.5" />,
 };
 
-const MOCK_OPPORTUNITIES: Opportunity[] = [
-  {
-    id: 1, opportunityRef: 'OPP-2025-0001', companyName: 'Cathay Pacific Airways', accountNumber: 'CORP-2024-0001',
-    accountType: 'Corporate', contactName: 'Alice Lam', contactEmail: 'alice.lam@cathaypacific.com',
-    stage: 'Renewal Due', estimatedValue: 168000, currency: 'HKD',
-    expectedCloseDate: '2025-03-31', assignedTo: 'Kelly Chan', createdDate: '2024-12-01', lastActivityDate: '2025-02-18',
-    description: 'Annual contract renewal. Client is happy but may seek Enterprise upgrade.',
-    notes: 'Alice mentioned possible headcount growth. Explore Enterprise Bundle.',
-    interactions: [
-      { id: 1, date: '2025-02-18', type: 'Meeting', summary: 'Renewal discussion. Client satisfied. Interested in upgrade options.', followUpDate: '2025-03-01', conductedBy: 'Kelly Chan' },
-      { id: 2, date: '2025-01-20', type: 'Call', summary: 'Check-in call. No issues. Confirmed renewal intent.', conductedBy: 'Kelly Chan' },
-      { id: 3, date: '2024-12-15', type: 'Email', summary: 'Sent renewal proposal and pricing sheet.', conductedBy: 'Kelly Chan' },
-    ],
-  },
-  {
-    id: 2, opportunityRef: 'OPP-2025-0002', companyName: 'Goldman Sachs HK', accountNumber: 'PROSPECT-001',
-    accountType: 'Corporate', contactName: 'Michael Yung', contactEmail: 'm.yung@gs.com',
-    stage: 'Proposal Sent', estimatedValue: 280000, currency: 'HKD',
-    expectedCloseDate: '2025-04-15', assignedTo: 'David Lau', createdDate: '2025-01-10', lastActivityDate: '2025-02-10',
-    description: 'New enterprise prospect. CFO office has 30+ frequent flyers per month.',
-    notes: 'Decision maker is CFO. Proposal sent for Enterprise Bundle.',
-    interactions: [
-      { id: 1, date: '2025-02-10', type: 'Meeting', summary: 'Presented Enterprise Bundle proposal. Price negotiation expected.', followUpDate: '2025-02-24', conductedBy: 'David Lau' },
-      { id: 2, date: '2025-01-22', type: 'Site Visit', summary: 'Hosted Michael for lounge tour. Very positive feedback.', conductedBy: 'David Lau' },
-      { id: 3, date: '2025-01-10', type: 'Call', summary: 'Initial discovery call. Identified 30+ travellers/month.', conductedBy: 'David Lau' },
-    ],
-  },
-  {
-    id: 3, opportunityRef: 'OPP-2025-0003', companyName: 'Fortune Travel Group', accountNumber: 'TA-2024-0003',
-    accountType: 'Travel Agency', contactName: 'Gary Tsang', contactEmail: 'gary.tsang@fortunetravel.com',
-    stage: 'Negotiation', estimatedValue: 160000, currency: 'HKD',
-    expectedCloseDate: '2025-03-15', assignedTo: 'Kelly Chan', createdDate: '2025-01-05', lastActivityDate: '2025-02-21',
-    description: 'Upsell from Business to Enterprise Bundle. Balance nearly depleted.',
-    notes: 'Gary is pushing for 5% discount on Enterprise. Approved by manager.',
-    interactions: [
-      { id: 1, date: '2025-02-21', type: 'Call', summary: 'Negotiating discount terms. Gary accepted 3%.', followUpDate: '2025-02-28', conductedBy: 'Kelly Chan' },
-      { id: 2, date: '2025-02-05', type: 'Meeting', summary: 'Presented upsell options. Client interested in Enterprise.', conductedBy: 'Kelly Chan' },
-    ],
-  },
-  {
-    id: 4, opportunityRef: 'OPP-2025-0004', companyName: 'Pacific World Travel', accountNumber: 'TA-2024-0002',
-    accountType: 'Travel Agency', contactName: 'Fiona Cheung', contactEmail: 'fiona@pacificworld.hk',
-    stage: 'Prospecting', estimatedValue: 32000, currency: 'HKD',
-    expectedCloseDate: '2025-05-01', assignedTo: 'David Lau', createdDate: '2025-02-22', lastActivityDate: '2025-02-22',
-    description: 'Newly onboarded. Standard Bundle trial. Assess utilisation for upsell in Q3.',
-    notes: 'Monitor usage in first 3 months.',
-    interactions: [
-      { id: 1, date: '2025-02-22', type: 'Email', summary: 'Welcome email sent with onboarding guide.', conductedBy: 'David Lau' },
-    ],
-  },
-  {
-    id: 5, opportunityRef: 'OPP-2024-0005', companyName: 'HSBC Hong Kong', accountNumber: 'CORP-2024-0002',
-    accountType: 'Corporate', contactName: 'Brian Wong', contactEmail: 'brian.wong@hsbc.com',
-    stage: 'Closed Won', estimatedValue: 3800, currency: 'HKD',
-    expectedCloseDate: '2024-03-20', assignedTo: 'Kelly Chan', createdDate: '2024-02-15', lastActivityDate: '2024-03-20',
-    description: 'Basic Bundle sold. Entry-level package.',
-    notes: 'Watch for utilisation — potential to upgrade to Standard.',
-    interactions: [
-      { id: 1, date: '2024-03-20', type: 'Call', summary: 'Contract signed. Basic Bundle activated.', conductedBy: 'Kelly Chan' },
-      { id: 2, date: '2024-03-01', type: 'Meeting', summary: 'Signed off on Basic Bundle terms.', conductedBy: 'Kelly Chan' },
-    ],
-  },
-  {
-    id: 6, opportunityRef: 'OPP-2024-0006', companyName: 'DHL Express HK', accountNumber: 'PROSPECT-002',
-    accountType: 'Corporate', contactName: 'Tom Leung', contactEmail: 't.leung@dhl.com',
-    stage: 'Closed Lost', estimatedValue: 56000, currency: 'HKD',
-    expectedCloseDate: '2024-11-30', assignedTo: 'David Lau', createdDate: '2024-09-01', lastActivityDate: '2024-11-30',
-    description: 'Lost to competitor — preferred in-terminal lounge contract.',
-    notes: 'Re-approach Q3 2025 when their contract expires.',
-    interactions: [
-      { id: 1, date: '2024-11-30', type: 'Email', summary: 'Client confirmed they signed with competitor.', conductedBy: 'David Lau' },
-      { id: 2, date: '2024-10-15', type: 'Meeting', summary: 'Final pitch. Strong competition from CX Lounge.', conductedBy: 'David Lau' },
-    ],
-  },
-];
-
-function StageBadge({ stage }: { stage: DealStage }) {
+function StageBadge({ stage }: { stage: OpportunityTrackingDealStage }) {
   const cfg = STAGE_CONFIG[stage];
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${cfg.bg} ${cfg.color}`}>
@@ -150,8 +118,8 @@ function StageBadge({ stage }: { stage: DealStage }) {
   );
 }
 
-function InteractionIcon({ type }: { type: InteractionType }) {
-  const COLORS: Record<InteractionType, string> = {
+function InteractionIcon({ type }: { type: OpportunityTrackingInteractionType }) {
+  const COLORS: Record<OpportunityTrackingInteractionType, string> = {
     Meeting: 'bg-blue-100 text-blue-600', Call: 'bg-green-100 text-green-600',
     Email: 'bg-gray-100 text-gray-600', 'Site Visit': 'bg-purple-100 text-purple-600',
   };
@@ -162,69 +130,42 @@ function InteractionIcon({ type }: { type: InteractionType }) {
   );
 }
 
-export function OpportunityTracking() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
-  const [filterStage, setFilterStage]     = useState<'all' | DealStage>('all');
-  const [filterType,  setFilterType]      = useState<'all' | AccountType>('all');
-  const [searchTerm,  setSearchTerm]      = useState('');
-  const [viewMode,    setViewMode]        = useState<'pipeline' | 'table'>('pipeline');
+const PIPELINE_STAGES: OpportunityTrackingDealStage[] = ['Prospecting', 'Proposal Sent', 'Negotiation', 'Renewal Due'];
+const CLOSED_STAGES:   OpportunityTrackingDealStage[] = ['Closed Won', 'Closed Lost'];
 
-  const [selectedOpp, setSelectedOpp]   = useState<Opportunity | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  // Log interaction dialog
-  const [isLogOpen, setIsLogOpen] = useState(false);
-  const [logOppId,  setLogOppId]  = useState<number | null>(null);
-  const [logType,   setLogType]   = useState<InteractionType>('Meeting');
-  const [logSummary, setLogSummary] = useState('');
-  const [logDate,    setLogDate]   = useState(new Date().toISOString().split('T')[0]);
-  const [logFollowUp, setLogFollowUp] = useState('');
-  const [logBy,      setLogBy]     = useState('HKIAL Staff');
-
-  const filtered = opportunities.filter(o => {
-    const matchSearch = !searchTerm || o.companyName.toLowerCase().includes(searchTerm.toLowerCase()) || o.opportunityRef.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchStage  = filterStage === 'all' || o.stage === filterStage;
-    const matchType   = filterType  === 'all' || o.accountType === filterType;
-    return matchSearch && matchStage && matchType;
-  });
-
-  const PIPELINE_STAGES: DealStage[] = ['Prospecting', 'Proposal Sent', 'Negotiation', 'Renewal Due'];
-  const CLOSED_STAGES:   DealStage[] = ['Closed Won', 'Closed Lost'];
-
+export function OpportunityTracking({
+  opportunities,
+  filteredOpportunities,
+  filterStage,
+  filterType,
+  searchTerm,
+  viewMode,
+  selectedOpp,
+  isDetailOpen,
+  isLogOpen,
+  logDraft,
+  onSearchTermChange,
+  onFilterStageChange,
+  onFilterTypeChange,
+  onViewModeChange,
+  onSelectOpportunity,
+  onCloseDetail,
+  onOpenLog,
+  onCloseLog,
+  onLogDraftChange,
+  onLogInteraction,
+  onCreateOpportunity,
+  onEditOpportunity,
+}: OpportunityTrackingProps) {
   const totalPipelineValue = opportunities
     .filter(o => !CLOSED_STAGES.includes(o.stage))
     .reduce((s, o) => s + o.estimatedValue, 0);
   const closedWonValue = opportunities.filter(o => o.stage === 'Closed Won').reduce((s, o) => s + o.estimatedValue, 0);
   const renewalDueCount = opportunities.filter(o => o.stage === 'Renewal Due').length;
 
-  const handleLogInteraction = () => {
-    if (!logOppId || !logSummary.trim()) return;
-    setOpportunities(prev => prev.map(o => {
-      if (o.id !== logOppId) return o;
-      const newInteraction: Interaction = {
-        id: Math.max(...o.interactions.map(i => i.id), 0) + 1,
-        date: logDate, type: logType, summary: logSummary,
-        followUpDate: logFollowUp || undefined, conductedBy: logBy,
-      };
-      return { ...o, interactions: [newInteraction, ...o.interactions], lastActivityDate: logDate };
-    }));
-    toast.success('Interaction Logged', { description: `${logType} logged for ${opportunities.find(o => o.id === logOppId)?.companyName}` });
-    // Also update selectedOpp if open
-    if (selectedOpp?.id === logOppId) {
-      setSelectedOpp(prev => prev ? {
-        ...prev, lastActivityDate: logDate,
-        interactions: [{ id: Math.max(...prev.interactions.map(i => i.id), 0) + 1, date: logDate, type: logType, summary: logSummary, followUpDate: logFollowUp || undefined, conductedBy: logBy }, ...prev.interactions],
-      } : prev);
-    }
-    setIsLogOpen(false); setLogSummary(''); setLogFollowUp('');
-  };
-
-  const openLogDialog = (opp: Opportunity) => {
-    setLogOppId(opp.id); setLogDate(new Date().toISOString().split('T')[0]);
-    setLogType('Meeting'); setIsLogOpen(true);
-  };
-
   const daysUntil = (d: string) => Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+
+  const setDraft = (patch: Partial<OpportunityTrackingLogDraft>) => onLogDraftChange({ ...logDraft, ...patch });
 
   return (
     <div className="p-4 md:p-6">
@@ -233,13 +174,11 @@ export function OpportunityTracking() {
           <h1 className="text-gray-900 mb-1">CRM & Opportunity Tracking</h1>
           <p className="text-sm text-gray-500">Track deal pipeline, log client interactions, and manage renewal cycles.</p>
         </div>
-        <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-          onClick={() => toast.info('New opportunity form coming soon.')}>
+        <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white" onClick={onCreateOpportunity}>
           <Plus className="w-4 h-4 mr-2" />New Opportunity
         </Button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
           <p className="text-xs text-blue-200 mb-1">Pipeline Value</p>
@@ -261,23 +200,26 @@ export function OpportunityTracking() {
         </Card>
       </div>
 
-      {/* Filters + View Toggle */}
       <Card className="p-4 mb-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Input placeholder="Search by company or opportunity ref..." value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)} className="pl-4" />
+            <Input
+              placeholder="Search by company or opportunity ref..."
+              value={searchTerm}
+              onChange={(e) => onSearchTermChange(e.target.value)}
+              className="pl-4"
+            />
           </div>
-          <Select value={filterStage} onValueChange={(v: any) => setFilterStage(v)}>
+          <Select value={filterStage} onValueChange={(v) => onFilterStageChange(v as 'all' | OpportunityTrackingDealStage)}>
             <SelectTrigger className="w-full md:w-52"><SelectValue placeholder="All Stages" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Stages</SelectItem>
-              {(['Prospecting','Proposal Sent','Negotiation','Renewal Due','Closed Won','Closed Lost'] as DealStage[]).map(s => (
+              {(['Prospecting','Proposal Sent','Negotiation','Renewal Due','Closed Won','Closed Lost'] as OpportunityTrackingDealStage[]).map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
+          <Select value={filterType} onValueChange={(v) => onFilterTypeChange(v as 'all' | OpportunityTrackingAccountType)}>
             <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
@@ -286,11 +228,11 @@ export function OpportunityTracking() {
             </SelectContent>
           </Select>
           <div className="flex border rounded-md overflow-hidden">
-            <button onClick={() => setViewMode('pipeline')}
+            <button onClick={() => onViewModeChange('pipeline')}
               className={`px-3 py-2 text-sm transition-colors ${viewMode === 'pipeline' ? 'bg-[#0f2942] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               Pipeline
             </button>
-            <button onClick={() => setViewMode('table')}
+            <button onClick={() => onViewModeChange('table')}
               className={`px-3 py-2 text-sm transition-colors ${viewMode === 'table' ? 'bg-[#0f2942] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
               Table
             </button>
@@ -298,14 +240,12 @@ export function OpportunityTracking() {
         </div>
       </Card>
 
-      {/* Pipeline View */}
       {viewMode === 'pipeline' && (
         <div className="space-y-6">
-          {/* Active Stages */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {PIPELINE_STAGES.map(stage => {
               const cfg  = STAGE_CONFIG[stage];
-              const opps = filtered.filter(o => o.stage === stage);
+              const opps = filteredOpportunities.filter(o => o.stage === stage);
               return (
                 <div key={stage} className={`rounded-lg border-2 ${cfg.border} ${cfg.bg} p-3`}>
                   <div className={`flex items-center justify-between mb-3`}>
@@ -316,7 +256,7 @@ export function OpportunityTracking() {
                     {opps.length === 0
                       ? <p className="text-xs text-gray-400 text-center py-4">No deals</p>
                       : opps.map(o => (
-                          <div key={o.id} onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}
+                          <div key={o.id} onClick={() => onSelectOpportunity(o)}
                             className="bg-white rounded p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100">
                             <p className="text-xs text-gray-900 mb-1">{o.companyName}</p>
                             <p className="text-xs text-gray-500 mb-2">{o.accountType === 'Corporate' ? '🏢' : '✈️'} {o.opportunityRef}</p>
@@ -338,11 +278,10 @@ export function OpportunityTracking() {
               );
             })}
           </div>
-          {/* Closed row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {CLOSED_STAGES.map(stage => {
               const cfg  = STAGE_CONFIG[stage];
-              const opps = filtered.filter(o => o.stage === stage);
+              const opps = filteredOpportunities.filter(o => o.stage === stage);
               return (
                 <div key={stage} className={`rounded-lg border-2 ${cfg.border} ${cfg.bg} p-3`}>
                   <div className={`flex items-center justify-between mb-3`}>
@@ -353,7 +292,7 @@ export function OpportunityTracking() {
                     {opps.length === 0
                       ? <p className="text-xs text-gray-400 col-span-2 text-center py-3">No deals</p>
                       : opps.map(o => (
-                          <div key={o.id} onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}
+                          <div key={o.id} onClick={() => onSelectOpportunity(o)}
                             className="bg-white rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100">
                             <p className="text-xs text-gray-900">{o.companyName}</p>
                             <p className="text-xs text-gray-500">HKD {(o.estimatedValue / 1000).toFixed(0)}K</p>
@@ -367,7 +306,6 @@ export function OpportunityTracking() {
         </div>
       )}
 
-      {/* Table View */}
       {viewMode === 'table' && (
         <Card>
           <div className="overflow-x-auto">
@@ -386,7 +324,7 @@ export function OpportunityTracking() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(o => (
+                {filteredOpportunities.map(o => (
                   <TableRow key={o.id} className="hover:bg-gray-50">
                     <TableCell className="text-sm text-blue-700">{o.opportunityRef}</TableCell>
                     <TableCell>
@@ -406,10 +344,10 @@ export function OpportunityTracking() {
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="outline" size="sm" className="text-xs px-2"
-                          onClick={() => openLogDialog(o)}>
+                          onClick={() => onOpenLog(o)}>
                           <MessageSquare className="w-3 h-3 mr-1" />Log
                         </Button>
-                        <Button variant="ghost" size="sm" onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}>
+                        <Button variant="ghost" size="sm" onClick={() => onSelectOpportunity(o)}>
                           <Eye className="w-4 h-4" />
                         </Button>
                       </div>
@@ -422,8 +360,7 @@ export function OpportunityTracking() {
         </Card>
       )}
 
-      {/* ── Opportunity Detail Dialog ── */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+      <Dialog open={isDetailOpen} onOpenChange={(open) => { if (!open) onCloseDetail(); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedOpp && (
             <>
@@ -463,12 +400,11 @@ export function OpportunityTracking() {
                   )}
                 </div>
 
-                {/* Interaction Timeline */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm text-gray-700">Interaction History</p>
                     <Button variant="outline" size="sm" className="text-xs"
-                      onClick={() => { openLogDialog(selectedOpp); }}>
+                      onClick={() => onOpenLog(selectedOpp)}>
                       <Plus className="w-3 h-3 mr-1" />Log Interaction
                     </Button>
                   </div>
@@ -494,9 +430,8 @@ export function OpportunityTracking() {
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
-                <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-                  onClick={() => toast.info('Edit opportunity form coming soon.')}>
+                <Button variant="outline" onClick={onCloseDetail}>Close</Button>
+                <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white" onClick={() => onEditOpportunity(selectedOpp)}>
                   <Edit className="w-4 h-4 mr-2" />Edit Stage
                 </Button>
               </DialogFooter>
@@ -505,17 +440,16 @@ export function OpportunityTracking() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Log Interaction Dialog ── */}
-      <Dialog open={isLogOpen} onOpenChange={setIsLogOpen}>
+      <Dialog open={isLogOpen} onOpenChange={(open) => { if (!open) onCloseLog(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Log Interaction</DialogTitle>
-            <DialogDescription>{opportunities.find(o => o.id === logOppId)?.companyName}</DialogDescription>
+            <DialogDescription>{opportunities.find(o => o.id === logDraft.oppId)?.companyName}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="mb-[10px] block">Interaction Type *</Label>
-              <Select value={logType} onValueChange={(v: any) => setLogType(v)}>
+              <Select value={logDraft.type} onValueChange={(v) => setDraft({ type: v as OpportunityTrackingInteractionType })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Meeting">Meeting</SelectItem>
@@ -527,25 +461,33 @@ export function OpportunityTracking() {
             </div>
             <div>
               <Label className="mb-[10px] block">Date *</Label>
-              <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+              <Input type="date" value={logDraft.date} onChange={(e) => setDraft({ date: e.target.value })} />
             </div>
             <div>
               <Label className="mb-[10px] block">Summary *</Label>
-              <Textarea rows={3} placeholder="What was discussed / agreed..." value={logSummary} onChange={(e) => setLogSummary(e.target.value)} />
+              <Textarea
+                rows={3}
+                placeholder="What was discussed / agreed..."
+                value={logDraft.summary}
+                onChange={(e) => setDraft({ summary: e.target.value })}
+              />
             </div>
             <div>
               <Label className="mb-[10px] block">Follow-up Date</Label>
-              <Input type="date" value={logFollowUp} onChange={(e) => setLogFollowUp(e.target.value)} />
+              <Input type="date" value={logDraft.followUpDate} onChange={(e) => setDraft({ followUpDate: e.target.value })} />
             </div>
             <div>
               <Label className="mb-[10px] block">Conducted By</Label>
-              <Input value={logBy} onChange={(e) => setLogBy(e.target.value)} />
+              <Input value={logDraft.conductedBy} onChange={(e) => setDraft({ conductedBy: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsLogOpen(false)}>Cancel</Button>
-            <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-              disabled={!logSummary.trim()} onClick={handleLogInteraction}>
+            <Button variant="outline" onClick={onCloseLog}>Cancel</Button>
+            <Button
+              className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
+              disabled={!logDraft.summary.trim()}
+              onClick={onLogInteraction}
+            >
               <CheckCircle className="w-4 h-4 mr-2" />Save Interaction
             </Button>
           </DialogFooter>

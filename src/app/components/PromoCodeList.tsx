@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,13 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import {
   Search, Plus, Edit, Trash2, Percent, BookOpen, Building2,
   ChevronDown, ChevronRight, Hash, Calendar, Tag, ToggleLeft, ToggleRight,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
-import React from 'react';
 
-type CodeType = 'Discount' | 'Free bookings';
+export type PromoCodeListCodeType = 'Discount' | 'Free bookings';
 
-interface PromoBatch {
+export interface PromoCodeListBatch {
   id: number;
   companyId: number;
   companyName: string;
@@ -22,7 +20,7 @@ interface PromoBatch {
   prefix: string;
   titleEn: string;
   titleTradChi: string;
-  codeType: CodeType;
+  codeType: PromoCodeListCodeType;
   startDate: string;
   endDate: string;
   reusable: boolean;
@@ -34,176 +32,33 @@ interface PromoBatch {
   sampleCodes: string[];
 }
 
-interface CompanyGroup {
+export interface PromoCodeListCompanyGroup {
   companyId: number;
   companyName: string;
   companyShortCode: string;
-  batches: PromoBatch[];
+  batches: PromoCodeListBatch[];
 }
 
-interface PromoCodeListProps {
+export interface PromoCodeListProps {
+  batches: PromoCodeListBatch[];
+  companyGroups: PromoCodeListCompanyGroup[];
+  filteredGroups: PromoCodeListCompanyGroup[];
+  searchTerm: string;
+  filterType: 'all' | PromoCodeListCodeType;
+  filterStatus: 'all' | 'active' | 'inactive';
+  filterCompany: 'all' | string;
+  expandedCompanies: Set<number>;
+  onSearchTermChange: (value: string) => void;
+  onFilterTypeChange: (value: 'all' | PromoCodeListCodeType) => void;
+  onFilterStatusChange: (value: 'all' | 'active' | 'inactive') => void;
+  onFilterCompanyChange: (value: 'all' | string) => void;
+  onToggleCompanyExpanded: (companyId: number) => void;
   onEditPromoCode?: (promoCodeId: number) => void;
   onCreatePromoCode?: () => void;
+  onDeletePromoCode?: (promoCodeId: number) => void;
 }
 
-// ─── Mock batch data ──────────────────────────────────────────────────────────
-const MOCK_BATCHES: PromoBatch[] = [
-  {
-    id: 1,
-    companyId: 1,
-    companyName: 'Cathay Pacific Airways',
-    companyShortCode: 'CPA',
-    prefix: 'CPA',
-    titleEn: 'Cathay Pacific Welcome Offer',
-    titleTradChi: '國泰航空歡迎優惠',
-    codeType: 'Discount',
-    startDate: '2026-01-01',
-    endDate: '2026-12-31',
-    reusable: false,
-    amount: 15,
-    useLimit: 1,
-    totalCodes: 200,
-    usedCount: 45,
-    availability: true,
-    sampleCodes: ['CPA-A3B7C2', 'CPA-X9Y4Z1', 'CPA-M5N8P3'],
-  },
-  {
-    id: 7,
-    companyId: 1,
-    companyName: 'Cathay Pacific Airways',
-    companyShortCode: 'CPA',
-    prefix: 'CPAVIP',
-    titleEn: 'Cathay Pacific VIP Elite',
-    titleTradChi: '國泰航空至尊貴賓',
-    codeType: 'Free bookings',
-    startDate: '2026-03-01',
-    endDate: '2026-09-30',
-    reusable: true,
-    amount: 3,
-    useLimit: 2,
-    totalCodes: 80,
-    usedCount: 12,
-    availability: true,
-    sampleCodes: ['CPAVIP-Q1R2S3', 'CPAVIP-T4U5V6'],
-  },
-  {
-    id: 2,
-    companyId: 2,
-    companyName: 'HSBC Hong Kong',
-    companyShortCode: 'HSBC',
-    prefix: 'HSBC',
-    titleEn: 'HSBC Staff Complimentary Lounge',
-    titleTradChi: '滙豐員工免費貴賓室',
-    codeType: 'Free bookings',
-    startDate: '2026-02-01',
-    endDate: '2026-06-30',
-    reusable: false,
-    amount: 2,
-    useLimit: 1,
-    totalCodes: 500,
-    usedCount: 128,
-    availability: true,
-    sampleCodes: ['HSBC-T2R4W8', 'HSBC-K6L9M2', 'HSBC-P3Q7N5'],
-  },
-  {
-    id: 3,
-    companyId: 5,
-    companyName: 'PwC Hong Kong',
-    companyShortCode: 'PWC',
-    prefix: 'PWC',
-    titleEn: 'PwC Summer Special Discount',
-    titleTradChi: 'PwC 夏季特別折扣',
-    codeType: 'Discount',
-    startDate: '2025-06-01',
-    endDate: '2025-08-31',
-    reusable: true,
-    amount: 20,
-    useLimit: 3,
-    totalCodes: 100,
-    usedCount: 92,
-    availability: false,
-    sampleCodes: ['PWC-D4F6H8', 'PWC-J2K5L7', 'PWC-N9P3Q6'],
-  },
-  {
-    id: 4,
-    companyId: 9,
-    companyName: 'KPMG',
-    companyShortCode: 'KPMG',
-    prefix: 'KPMG',
-    titleEn: 'KPMG New Year Offer',
-    titleTradChi: 'KPMG 新年優惠',
-    codeType: 'Discount',
-    startDate: '2026-01-01',
-    endDate: '2026-01-31',
-    reusable: false,
-    amount: 25,
-    useLimit: 1,
-    totalCodes: 300,
-    usedCount: 198,
-    availability: true,
-    sampleCodes: ['KPMG-B5C8D2', 'KPMG-E4F7G1', 'KPMG-H3J6K9'],
-  },
-  {
-    id: 8,
-    companyId: 9,
-    companyName: 'KPMG',
-    companyShortCode: 'KPMG',
-    prefix: 'KPMGQ2',
-    titleEn: 'KPMG Q2 Loyalty Reward',
-    titleTradChi: 'KPMG 第二季忠誠獎勵',
-    codeType: 'Free bookings',
-    startDate: '2026-04-01',
-    endDate: '2026-06-30',
-    reusable: false,
-    amount: 1,
-    useLimit: 1,
-    totalCodes: 150,
-    usedCount: 0,
-    availability: true,
-    sampleCodes: ['KPMGQ2-A1B2C3', 'KPMGQ2-D4E5F6'],
-  },
-  {
-    id: 5,
-    companyId: 14,
-    companyName: 'Morgan Stanley',
-    companyShortCode: 'MS',
-    prefix: 'MS',
-    titleEn: 'Morgan Stanley VIP Access',
-    titleTradChi: '摩根士丹利貴賓通行',
-    codeType: 'Free bookings',
-    startDate: '2026-01-15',
-    endDate: '2026-12-15',
-    reusable: true,
-    amount: 1,
-    useLimit: 5,
-    totalCodes: 150,
-    usedCount: 56,
-    availability: true,
-    sampleCodes: ['MS-A7B2C4', 'MS-D9E3F6', 'MS-G5H8J1'],
-  },
-  {
-    id: 6,
-    companyId: 8,
-    companyName: 'Deloitte',
-    companyShortCode: 'DLT',
-    prefix: 'DLT',
-    titleEn: 'Deloitte Holiday Perk',
-    titleTradChi: 'Deloitte 節日福利',
-    codeType: 'Discount',
-    startDate: '2023-12-01',
-    endDate: '2023-12-31',
-    reusable: false,
-    amount: 15,
-    useLimit: 1,
-    totalCodes: 250,
-    usedCount: 250,
-    availability: false,
-    sampleCodes: ['DLT-R2S5T8', 'DLT-U4V7W1', 'DLT-X3Y6Z9'],
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const isBatchActive = (batch: PromoBatch): boolean => {
+export const isBatchActive = (batch: PromoCodeListBatch): boolean => {
   const now = new Date();
   return (
     now >= new Date(batch.startDate) &&
@@ -218,11 +73,10 @@ const daysUntilDate = (dateStr: string): number => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-const usagePct = (b: PromoBatch) =>
+const usagePct = (b: PromoCodeListBatch) =>
   Math.min(100, Math.round((b.usedCount / b.totalCodes) * 100));
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
-const TypeBadge = ({ type }: { type: CodeType }) => {
+const TypeBadge = ({ type }: { type: PromoCodeListCodeType }) => {
   if (type === 'Discount') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
@@ -244,7 +98,7 @@ const StatusBadge = ({ active }: { active: boolean }) =>
     <Badge variant="outline" className="text-gray-500 text-xs">Inactive</Badge>
   );
 
-const UsageBar = ({ batch }: { batch: PromoBatch }) => {
+const UsageBar = ({ batch }: { batch: PromoCodeListBatch }) => {
   const pct = usagePct(batch);
   const barColor = pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-blue-500';
   return (
@@ -262,78 +116,24 @@ const UsageBar = ({ batch }: { batch: PromoBatch }) => {
   );
 };
 
-// ─── Main component ───────────────────────────────────────────────────────────
-export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeListProps) {
-  const [batches] = useState<PromoBatch[]>(MOCK_BATCHES);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | CodeType>('all');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
-  const [filterCompany, setFilterCompany] = useState<'all' | string>('all');
-  const [expandedCompanies, setExpandedCompanies] = useState<Set<number>>(
-    new Set(Array.from(new Set(MOCK_BATCHES.map((b) => b.companyId))))
-  );
-
-  const toggleCompany = (companyId: number) => {
-    const next = new Set(expandedCompanies);
-    if (next.has(companyId)) {
-      next.delete(companyId);
-    } else {
-      next.add(companyId);
-    }
-    setExpandedCompanies(next);
-  };
-
-  // Group batches by company
-  const companyGroups: CompanyGroup[] = Array.from(
-    new Map(batches.map((b) => [b.companyId, b])).values()
-  ).map((rep) => ({
-    companyId: rep.companyId,
-    companyName: rep.companyName,
-    companyShortCode: rep.companyShortCode,
-    batches: batches.filter((b) => b.companyId === rep.companyId),
-  }));
-
-  // Filter company groups
-  const filteredGroups = companyGroups
-    .filter((group) => {
-      // Company filter
-      if (filterCompany !== 'all' && String(group.companyId) !== filterCompany) return false;
-      // Search
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        const hit = group.batches.some(
-          (b) =>
-            b.prefix.toLowerCase().includes(q) ||
-            b.titleEn.toLowerCase().includes(q) ||
-            b.companyName.toLowerCase().includes(q)
-        );
-        if (!hit) return false;
-      }
-      return true;
-    })
-    .map((group) => ({
-      ...group,
-      // Apply type / status filters to child batches
-      batches: group.batches.filter((b) => {
-        const matchType = filterType === 'all' || b.codeType === filterType;
-        const matchStatus =
-          filterStatus === 'all' ||
-          (filterStatus === 'active' && isBatchActive(b)) ||
-          (filterStatus === 'inactive' && !isBatchActive(b));
-        if (searchTerm) {
-          const q = searchTerm.toLowerCase();
-          const matchSearch =
-            b.prefix.toLowerCase().includes(q) ||
-            b.titleEn.toLowerCase().includes(q) ||
-            b.companyName.toLowerCase().includes(q);
-          return matchType && matchStatus && matchSearch;
-        }
-        return matchType && matchStatus;
-      }),
-    }))
-    .filter((group) => group.batches.length > 0);
-
-  // Summary stats
+export function PromoCodeList({
+  batches,
+  companyGroups,
+  filteredGroups,
+  searchTerm,
+  filterType,
+  filterStatus,
+  filterCompany,
+  expandedCompanies,
+  onSearchTermChange,
+  onFilterTypeChange,
+  onFilterStatusChange,
+  onFilterCompanyChange,
+  onToggleCompanyExpanded,
+  onEditPromoCode,
+  onCreatePromoCode,
+  onDeletePromoCode,
+}: PromoCodeListProps) {
   const totalBatches = batches.length;
   const activeBatches = batches.filter(isBatchActive).length;
   const totalCodesAll = batches.reduce((s, b) => s + b.totalCodes, 0);
@@ -345,7 +145,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
 
   return (
     <div className="p-4 md:p-6">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-gray-900 mb-1">Promo Code Batches</h1>
@@ -359,7 +158,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
         </Button>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
           <p className="text-xs text-blue-200 mb-1">Total Batches</p>
@@ -387,7 +185,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
         </Card>
       </div>
 
-      {/* Filters */}
       <Card className="p-4 mb-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
@@ -395,11 +192,11 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
             <Input
               placeholder="Search by prefix, title, or company…"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => onSearchTermChange(e.target.value)}
               className="pl-9"
             />
           </div>
-          <Select value={filterCompany} onValueChange={(v: any) => setFilterCompany(v)}>
+          <Select value={filterCompany} onValueChange={(v) => onFilterCompanyChange(v as 'all' | string)}>
             <SelectTrigger className="w-full md:w-52">
               <SelectValue placeholder="All Companies" />
             </SelectTrigger>
@@ -412,7 +209,7 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
+          <Select value={filterType} onValueChange={(v) => onFilterTypeChange(v as 'all' | PromoCodeListCodeType)}>
             <SelectTrigger className="w-full md:w-44">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
@@ -422,7 +219,7 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
               <SelectItem value="Free bookings">Free Bookings</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
+          <Select value={filterStatus} onValueChange={(v) => onFilterStatusChange(v as 'all' | 'active' | 'inactive')}>
             <SelectTrigger className="w-full md:w-40">
               <SelectValue placeholder="All Statuses" />
             </SelectTrigger>
@@ -435,7 +232,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
         </div>
       </Card>
 
-      {/* Table */}
       <Card>
         <div className="overflow-x-auto">
           <Table>
@@ -474,7 +270,7 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                     <TableRow
                       key={`company-${group.companyId}`}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => toggleCompany(group.companyId)}
+                      onClick={() => onToggleCompanyExpanded(group.companyId)}
                     >
                       <TableCell className="text-gray-400">
                         {isExpanded ? (
@@ -546,7 +342,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                         <TableCell colSpan={6}>
                           <div className="pl-8 pr-4 py-3">
                             <div className="grid grid-cols-12 gap-4 items-start">
-                              {/* Prefix & Title */}
                               <div className="col-span-3">
                                 <div className="flex items-center gap-2 mb-1">
                                   <Tag className="w-4 h-4 text-gray-400" />
@@ -558,7 +353,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                                 <p className="text-xs text-gray-500 ml-6">{batch.titleTradChi}</p>
                               </div>
 
-                              {/* Type & Value */}
                               <div className="col-span-2">
                                 <div className="flex flex-col gap-1.5">
                                   <TypeBadge type={batch.codeType} />
@@ -581,7 +375,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                                 </div>
                               </div>
 
-                              {/* Valid Period */}
                               <div className="col-span-3">
                                 <div className="flex items-start gap-2">
                                   <Calendar className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
@@ -598,7 +391,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                                 </div>
                               </div>
 
-                              {/* Usage */}
                               <div className="col-span-2">
                                 <p className="text-xs text-gray-500 mb-1">Code Usage</p>
                                 <UsageBar batch={batch} />
@@ -609,7 +401,6 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                                 )}
                               </div>
 
-                              {/* Status & Actions */}
                               <div className="col-span-2">
                                 <div className="flex items-center gap-2 mb-2">
                                   <StatusBadge active={active} />
@@ -631,7 +422,10 @@ export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeL
                                     variant="outline"
                                     size="sm"
                                     className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onDeletePromoCode?.(batch.id);
+                                    }}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
