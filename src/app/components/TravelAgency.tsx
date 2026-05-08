@@ -1,10 +1,8 @@
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import {
-  Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User,
-  DollarSign, Users, UserPlus as UserPlusIcon, CreditCard as CreditCardIcon,
-} from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Building2, Calendar, UserPlus, Mail, Phone, User, DollarSign, CreditCard, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,99 +30,136 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
-void UserPlusIcon;
-void CreditCardIcon;
-
-export type TravelAgencyPaymentMethod = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Monthly Invoice';
-export type TravelAgencyStatus = 'active' | 'inactive' | 'suspended';
-
-export interface TravelAgencyAgency {
+interface TravelAgency {
   id: number;
   agencyName: string;
   agencyCode: string;
   contactPerson: string;
   email: string;
   phone: string;
-  paymentMethod: TravelAgencyPaymentMethod;
+  paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Monthly Invoice';
   creditLimit: number;
   creditBalance: number;
   discountRate: number;
   memberCount: number;
   totalBookings: number;
-  status: TravelAgencyStatus;
+  status: 'active' | 'inactive' | 'suspended';
   createdDate: string;
 }
 
-export interface TravelAgencyProps {
-  agencies: TravelAgencyAgency[];
-  totalAgencies: number;
-  paginatedAgencies: TravelAgencyAgency[];
-  startIndex: number;
-  itemsPerPage: number;
-  totalPages: number;
-  currentPage: number;
-  searchTerm: string;
-  statusFilter: string;
-  paymentFilter: string;
-  startDate: string;
-  endDate: string;
-  isDialogOpen: boolean;
-  editingAgency: TravelAgencyAgency | null;
-  onSearchTermChange: (value: string) => void;
-  onStatusFilterChange: (value: string) => void;
-  onPaymentFilterChange: (value: string) => void;
-  onStartDateChange: (value: string) => void;
-  onEndDateChange: (value: string) => void;
-  onResetFilters: () => void;
-  onPageChange: (page: number) => void;
-  onCreate: () => void;
-  onEdit: (agency: TravelAgencyAgency) => void;
-  onDelete: (id: number) => void;
-  onDialogOpenChange: (open: boolean) => void;
-  onSubmit: () => void;
+const generateMockAgencies = (): TravelAgency[] => {
+  const agencyNames = [
+    'EGL Tours', 'Wing On Travel', 'Hong Thai Travel', 'TravelExpert', 'Goldjoy Travel', 'Zuji Travel',
+    'Expedia Hong Kong', 'Trip.com', 'Klook Travel', 'KKday', 'CTrip Hong Kong', 'Agoda Travel',
+    'Asia World-Expo Travel', 'China Travel Service', 'Pak Kong Travel', 'Sincerity Travel',
+    'Morning Star Travel', 'Brilliant Tour', 'Jetour Holidays', 'Sunflower Travel',
+    'Concorde Tours', 'Miramar Travel', 'JTB Hong Kong', 'HIS Travel', 'Phoenix Travel',
+    'Dragonair Holidays', 'Cathay Holidays', 'Premier Holidays', 'Royal Holiday', 'Elite Tours',
+    'Executive Travel', 'Premium Voyages', 'Luxury Escapes', 'First Class Travel', 'Diamond Tours',
+    'Platinum Journeys', 'Golden Gate Travel', 'Silk Road Tours', 'Orient Express', 'Asia Pacific Travel',
+    'Global Gateway', 'Worldwide Ventures', 'International Tours', 'Universal Travel', 'Cosmos Holidays'
+  ];
+  
+  const contactNames = ['Sarah Wong', 'John Chen', 'Michael Lee', 'Emily Tam', 'David Cheng', 'Lisa Wang', 'Peter Chan', 'Jennifer Lam', 'Raymond Ho', 'Angela Ng'];
+  const paymentMethods: ('Upfront' | 'Net Upfront' | 'On-Credit' | 'Monthly Invoice')[] = ['Upfront', 'Net Upfront', 'On-Credit', 'Monthly Invoice'];
+  const statuses: ('active' | 'inactive' | 'suspended')[] = ['active', 'active', 'active', 'active', 'active', 'inactive', 'suspended'];
+  
+  const agencies: TravelAgency[] = [];
+  for (let i = 1; i <= 45; i++) {
+    const date = new Date(2024, Math.floor(i / 10), (i % 28) + 1);
+    const creditLimit = 50000 + (i * 10000) % 300000;
+    const creditUsed = Math.floor(creditLimit * (0.2 + (i % 5) * 0.15));
+    
+    agencies.push({
+      id: i,
+      agencyName: agencyNames[i % agencyNames.length],
+      agencyCode: `TA-${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i * 2) % 26))}-${String(i).padStart(3, '0')}`,
+      contactPerson: contactNames[i % contactNames.length],
+      email: `${contactNames[i % contactNames.length].toLowerCase().replace(' ', '.')}@${agencyNames[i % agencyNames.length].toLowerCase().replace(/ /g, '')}${i > 20 ? i : ''}.com.hk`,
+      phone: `+852 ${2000 + (i * 123) % 9000} ${1000 + (i * 456) % 9000}`,
+      paymentMethod: paymentMethods[i % paymentMethods.length],
+      creditLimit: creditLimit,
+      creditBalance: creditLimit - creditUsed,
+      discountRate: 10 + (i % 3) * 5,
+      memberCount: 20 + (i * 5) % 100,
+      totalBookings: 50 + (i * 15) % 500,
+      status: statuses[i % statuses.length],
+      createdDate: date.toISOString().split('T')[0]
+    });
+  }
+  return agencies;
+};
+
+interface TravelAgencyProps {
+  onEditAgency?: (agencyId: number) => void;
 }
 
-export function TravelAgency({
-  agencies,
-  totalAgencies,
-  paginatedAgencies,
-  startIndex,
-  itemsPerPage,
-  totalPages,
-  currentPage,
-  searchTerm,
-  statusFilter,
-  paymentFilter,
-  startDate,
-  endDate,
-  isDialogOpen,
-  editingAgency,
-  onSearchTermChange,
-  onStatusFilterChange,
-  onPaymentFilterChange,
-  onStartDateChange,
-  onEndDateChange,
-  onResetFilters,
-  onPageChange,
-  onCreate,
-  onEdit,
-  onDelete,
-  onDialogOpenChange,
-  onSubmit,
-}: TravelAgencyProps) {
+export function TravelAgency({ onEditAgency }: TravelAgencyProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAgency, setEditingAgency] = useState<TravelAgency | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const agencies: TravelAgency[] = generateMockAgencies();
+
+  const filteredAgencies = agencies.filter(agency => {
+    const matchesSearch = agency.agencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         agency.agencyCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         agency.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || agency.status === statusFilter;
+    const matchesPayment = paymentFilter === 'all' || agency.paymentMethod === paymentFilter;
+    
+    let matchesDate = true;
+    if (startDate && endDate) {
+      const agencyDate = new Date(agency.createdDate);
+      matchesDate = agencyDate >= new Date(startDate) && agencyDate <= new Date(endDate);
+    }
+    
+    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+  });
+
+  const totalPages = Math.ceil(filteredAgencies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedAgencies = filteredAgencies.slice(startIndex, startIndex + itemsPerPage);
+
+  const handleAddOrEdit = () => {
+    setIsDialogOpen(false);
+    setEditingAgency(null);
+  };
+
+  const handleEdit = (agency: TravelAgency) => {
+    if (onEditAgency) {
+      onEditAgency(agency.id);
+    }
+  };
+
+  const handleDelete = (id: number) => {
+    if (confirm('Are you sure you want to delete this travel agency?')) {
+      // Delete logic here
+      console.log('Deleting agency:', id);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1>Travel Agency Management</h1>
           <p className="text-gray-600">Manage travel agency partnerships and credit accounts</p>
         </div>
-        <Button onClick={onCreate}>
+        <Button onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
           Add Travel Agency
         </Button>
       </div>
 
+      {/* Statistics Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center justify-between">
@@ -169,6 +204,7 @@ export function TravelAgency({
         </Card>
       </div>
 
+      {/* Filters */}
       <Card className="p-4">
         <div className="grid grid-cols-5 gap-4">
           <div className="col-span-2">
@@ -177,13 +213,13 @@ export function TravelAgency({
               <Input
                 placeholder="Search by agency name, code, or contact..."
                 value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
           </div>
 
-          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -195,7 +231,7 @@ export function TravelAgency({
             </SelectContent>
           </Select>
 
-          <Select value={paymentFilter} onValueChange={onPaymentFilterChange}>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
             <SelectTrigger>
               <SelectValue placeholder="Payment Method" />
             </SelectTrigger>
@@ -208,7 +244,13 @@ export function TravelAgency({
             </SelectContent>
           </Select>
 
-          <Button variant="outline" onClick={onResetFilters}>
+          <Button variant="outline" onClick={() => {
+            setSearchTerm('');
+            setStatusFilter('all');
+            setPaymentFilter('all');
+            setStartDate('');
+            setEndDate('');
+          }}>
             Reset Filters
           </Button>
         </div>
@@ -219,7 +261,7 @@ export function TravelAgency({
             <Input
               type="date"
               value={startDate}
-              onChange={(e) => onStartDateChange(e.target.value)}
+              onChange={(e) => setStartDate(e.target.value)}
             />
           </div>
           <div>
@@ -227,12 +269,13 @@ export function TravelAgency({
             <Input
               type="date"
               value={endDate}
-              onChange={(e) => onEndDateChange(e.target.value)}
+              onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
         </div>
       </Card>
 
+      {/* Agency List */}
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -282,8 +325,8 @@ export function TravelAgency({
                     </td>
                     <td className="px-4 py-4">
                       <Badge variant={
-                        agency.paymentMethod === 'On-Credit' ? 'default' :
-                        agency.paymentMethod === 'Monthly Invoice' ? 'secondary' :
+                        agency.paymentMethod === 'On-Credit' ? 'default' : 
+                        agency.paymentMethod === 'Monthly Invoice' ? 'secondary' : 
                         'outline'
                       }>
                         {agency.paymentMethod}
@@ -303,10 +346,10 @@ export function TravelAgency({
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div
+                          <div 
                             className={`h-2 rounded-full ${
-                              Number(creditUtilization) > 80 ? 'bg-red-500' :
-                              Number(creditUtilization) > 60 ? 'bg-orange-500' :
+                              Number(creditUtilization) > 80 ? 'bg-red-500' : 
+                              Number(creditUtilization) > 60 ? 'bg-orange-500' : 
                               'bg-green-500'
                             }`}
                             style={{ width: `${creditUtilization}%` }}
@@ -329,8 +372,8 @@ export function TravelAgency({
                     </td>
                     <td className="px-4 py-4">
                       <Badge variant={
-                        agency.status === 'active' ? 'default' :
-                        agency.status === 'suspended' ? 'destructive' :
+                        agency.status === 'active' ? 'default' : 
+                        agency.status === 'suspended' ? 'destructive' : 
                         'secondary'
                       }>
                         {agency.status}
@@ -338,10 +381,10 @@ export function TravelAgency({
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => onEdit(agency)}>
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(agency)}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => onDelete(agency.id)}>
+                        <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => handleDelete(agency.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -353,15 +396,16 @@ export function TravelAgency({
           </table>
         </div>
 
+        {/* Pagination */}
         <div className="border-t p-4 flex items-center justify-between">
           <p className="text-sm text-gray-600">
-            Showing {totalAgencies === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + itemsPerPage, totalAgencies)} of {totalAgencies} agencies
+            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAgencies.length)} of {filteredAgencies.length} agencies
           </p>
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+                <PaginationPrevious 
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
@@ -370,7 +414,7 @@ export function TravelAgency({
                 return (
                   <PaginationItem key={pageNum}>
                     <PaginationLink
-                      onClick={() => onPageChange(pageNum)}
+                      onClick={() => setCurrentPage(pageNum)}
                       isActive={currentPage === pageNum}
                       className="cursor-pointer"
                     >
@@ -381,8 +425,8 @@ export function TravelAgency({
               })}
               {totalPages > 5 && <PaginationEllipsis />}
               <PaginationItem>
-                <PaginationNext
-                  onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+                <PaginationNext 
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
@@ -391,7 +435,8 @@ export function TravelAgency({
         </div>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={onDialogOpenChange}>
+      {/* Add/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingAgency ? 'Edit Travel Agency' : 'Add New Travel Agency'}</DialogTitle>
@@ -399,33 +444,49 @@ export function TravelAgency({
               {editingAgency ? 'Update travel agency information' : 'Create a new travel agency partnership'}
             </DialogDescription>
           </DialogHeader>
-
+          
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Agency Name</Label>
-                <Input placeholder="Enter agency name" defaultValue={editingAgency?.agencyName} />
+                <Input
+                  placeholder="Enter agency name"
+                  defaultValue={editingAgency?.agencyName}
+                />
               </div>
               <div>
                 <Label className="mb-2">Agency Code</Label>
-                <Input placeholder="TA-XXX-001" defaultValue={editingAgency?.agencyCode} />
+                <Input
+                  placeholder="TA-XXX-001"
+                  defaultValue={editingAgency?.agencyCode}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Contact Person</Label>
-                <Input placeholder="Enter contact name" defaultValue={editingAgency?.contactPerson} />
+                <Input
+                  placeholder="Enter contact name"
+                  defaultValue={editingAgency?.contactPerson}
+                />
               </div>
               <div>
                 <Label className="mb-2">Phone Number</Label>
-                <Input placeholder="+852 XXXX XXXX" defaultValue={editingAgency?.phone} />
+                <Input
+                  placeholder="+852 XXXX XXXX"
+                  defaultValue={editingAgency?.phone}
+                />
               </div>
             </div>
 
             <div>
               <Label className="mb-2">Email Address</Label>
-              <Input type="email" placeholder="contact@agency.com" defaultValue={editingAgency?.email} />
+              <Input
+                type="email"
+                placeholder="contact@agency.com"
+                defaultValue={editingAgency?.email}
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -445,14 +506,24 @@ export function TravelAgency({
               </div>
               <div>
                 <Label className="mb-2">Discount Rate (%)</Label>
-                <Input type="number" placeholder="0-30" min="0" max="30" defaultValue={editingAgency?.discountRate || 10} />
+                <Input
+                  type="number"
+                  placeholder="0-30"
+                  min="0"
+                  max="30"
+                  defaultValue={editingAgency?.discountRate || 10}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Credit Limit (HKD)</Label>
-                <Input type="number" placeholder="100000" defaultValue={editingAgency?.creditLimit} />
+                <Input
+                  type="number"
+                  placeholder="100000"
+                  defaultValue={editingAgency?.creditLimit}
+                />
               </div>
               <div>
                 <Label className="mb-2">Status</Label>
@@ -471,15 +542,18 @@ export function TravelAgency({
 
             <div>
               <Label className="mb-2">Remarks / Notes</Label>
-              <Textarea placeholder="Additional information about this agency..." rows={3} />
+              <Textarea
+                placeholder="Additional information about this agency..."
+                rows={3}
+              />
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onDialogOpenChange(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={onSubmit}>
+            <Button onClick={handleAddOrEdit}>
               {editingAgency ? 'Update Agency' : 'Add Agency'}
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -9,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import {
   Pagination,
   PaginationContent,
@@ -19,7 +22,7 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
-export interface MemberCompanyCompany {
+interface Company {
   id: number;
   companyName: string;
   companyCode: string;
@@ -33,111 +36,161 @@ export interface MemberCompanyCompany {
   createdDate: string;
 }
 
-export interface MemberCompanyProps {
-  loading?: boolean;
-  error?: string | null;
-  companies: MemberCompanyCompany[];
-  totalCount: number;
-  currentPage: number;
-  totalPages: number;
-  startIndex: number;
-  endIndex: number;
-  searchTerm: string;
-  statusFilter: string;
-  startDate: string;
-  endDate: string;
-  paginationModel: number[];
-  deletingCompanyId?: number | null;
-  onSearchTermChange: (value: string) => void;
-  onStatusFilterChange: (value: string) => void;
-  onStartDateChange: (value: string) => void;
-  onEndDateChange: (value: string) => void;
-  onClearFilters: () => void;
-  onPageChange: (page: number) => void;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-  onEditCompany: (companyId: number) => void;
-  onCreateCompany: () => void;
-  onDeleteCompany: (companyId: number) => void;
+const generateMockCompanies = (): Company[] => {
+  const companyNames = [
+    'Cathay Pacific Airways', 'HSBC Hong Kong', 'Ernst & Young', 'Swire Properties', 'PwC Hong Kong',
+    'Bank of China', 'Standard Chartered', 'Deloitte', 'KPMG', 'AIA Group',
+    'Hong Kong Land', 'MTR Corporation', 'CLP Holdings', 'Jardine Matheson', 'Wheelock and Company',
+    'Sun Hung Kai Properties', 'Henderson Land', 'New World Development', 'Sino Group', 'Kerry Properties',
+    'DBS Bank', 'Manulife Financial', 'Prudential Hong Kong', 'AXA Insurance', 'Zurich Insurance',
+    'Morgan Stanley', 'Goldman Sachs', 'JP Morgan', 'Citibank', 'UBS',
+    'Credit Suisse', 'Deutsche Bank', 'Barclays', 'BNP Paribas', 'Societe Generale',
+    'ING Bank', 'Nomura Securities', 'Mizuho Bank', 'Sumitomo Mitsui', 'Bank of Tokyo',
+    'China Construction Bank', 'ICBC', 'Agricultural Bank', 'China Merchants Bank', 'Ping An Insurance'
+  ];
+  
+  const contactNames = ['Sarah Wong', 'John Chen', 'Michael Lee', 'Emily Tam', 'David Cheng', 'Lisa Wang', 'Peter Chan', 'Jennifer Lam', 'Raymond Ho', 'Angela Ng'];
+  const paymentMethods: ('Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase')[] = ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase'];
+  const statuses: ('active' | 'inactive')[] = ['active', 'active', 'active', 'active', 'inactive'];
+  
+  const companies: Company[] = [];
+  for (let i = 1; i <= 45; i++) {
+    const date = new Date(2024, Math.floor(i / 10), (i % 28) + 1);
+    companies.push({
+      id: i,
+      companyName: companyNames[i % companyNames.length],
+      companyCode: `CORP-${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i * 2) % 26))}-${String(i).padStart(3, '0')}`,
+      contactPerson: contactNames[i % contactNames.length],
+      email: `${contactNames[i % contactNames.length].toLowerCase().replace(' ', '.')}@${companyNames[i % companyNames.length].toLowerCase().replace(/ /g, '').replace(/&/g, '')}${i > 20 ? i : ''}.com`,
+      phone: `+852 ${2000 + (i * 123) % 9000} ${1000 + (i * 456) % 9000}`,
+      paymentMethod: paymentMethods[i % paymentMethods.length],
+      discountRate: 5 + (i % 4) * 5,
+      customerCount: 15 + (i * 7) % 80,
+      status: statuses[i % statuses.length],
+      createdDate: date.toISOString().split('T')[0]
+    });
+  }
+  return companies;
+};
+
+interface MemberCompanyProps {
+  onEditCompany?: (companyId: number) => void;
+  onCreateCompany?: () => void;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-700',
-};
+export function MemberCompany({ onEditCompany, onCreateCompany }: MemberCompanyProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-const PAYMENT_COLORS: Record<MemberCompanyCompany['paymentMethod'], string> = {
-  Upfront: 'bg-blue-100 text-blue-700',
-  'Net Upfront': 'bg-cyan-100 text-cyan-700',
-  'On-Credit': 'bg-purple-100 text-purple-700',
-  'Bulk Purchase': 'bg-orange-100 text-orange-700',
-};
+  const companies: Company[] = generateMockCompanies();
 
-export function MemberCompany({
-  loading,
-  error,
-  companies,
-  totalCount,
-  currentPage,
-  totalPages,
-  startIndex,
-  endIndex,
-  searchTerm,
-  statusFilter,
-  startDate,
-  endDate,
-  paginationModel,
-  deletingCompanyId,
-  onSearchTermChange,
-  onStatusFilterChange,
-  onStartDateChange,
-  onEndDateChange,
-  onClearFilters,
-  onPageChange,
-  onPrevPage,
-  onNextPage,
-  onEditCompany,
-  onCreateCompany,
-  onDeleteCompany,
-}: MemberCompanyProps) {
-  const renderPagination = () => (
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            onClick={onPrevPage}
-            className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-          />
-        </PaginationItem>
-        {paginationModel.map((page, index) => {
-          if (page === -1 || page === -2) {
+  const filteredCompanies = companies.filter(company => {
+    const matchesSearch = company.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         company.companyCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         company.contactPerson.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || company.status === statusFilter;
+    const matchesStartDate = !startDate || new Date(company.createdDate) >= new Date(startDate);
+    const matchesEndDate = !endDate || new Date(company.createdDate) <= new Date(endDate);
+    return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
+  }).sort((a, b) => b.id - a.id);
+
+  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
+
+  const renderPagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, -1, totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, -1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, -1, currentPage - 1, currentPage, currentPage + 1, -2, totalPages);
+      }
+    }
+
+    return (
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious 
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+            />
+          </PaginationItem>
+          {pages.map((page, index) => {
+            if (page === -1 || page === -2) {
+              return (
+                <PaginationItem key={`ellipsis-${index}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              );
+            }
             return (
-              <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
+              <PaginationItem key={page}>
+                <PaginationLink
+                  onClick={() => setCurrentPage(page)}
+                  isActive={currentPage === page}
+                  className="cursor-pointer"
+                >
+                  {page}
+                </PaginationLink>
               </PaginationItem>
             );
-          }
-          return (
-            <PaginationItem key={page}>
-              <PaginationLink
-                onClick={() => onPageChange(page)}
-                isActive={currentPage === page}
-                className="cursor-pointer"
-              >
-                {page}
-              </PaginationLink>
-            </PaginationItem>
-          );
-        })}
-        <PaginationItem>
-          <PaginationNext
-            onClick={onNextPage}
-            className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  );
+          })}
+          <PaginationItem>
+            <PaginationNext 
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  };
+
+  const getStatusColor = (status: string) => {
+    return status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700';
+  };
+
+  const getPaymentColor = (method: string) => {
+    switch (method) {
+      case 'Upfront':
+        return 'bg-blue-100 text-blue-700';
+      case 'Net Upfront':
+        return 'bg-cyan-100 text-cyan-700';
+      case 'On-Credit':
+        return 'bg-purple-100 text-purple-700';
+      case 'Bulk Purchase':
+        return 'bg-orange-100 text-orange-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleEdit = (company: Company) => {
+    if (onEditCompany) {
+      onEditCompany(company.id);
+    }
+  };
+
+  const handleCreate = () => {
+    if (onCreateCompany) {
+      onCreateCompany();
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -146,12 +199,13 @@ export function MemberCompany({
           <h1>Customer Company Management</h1>
           <p className="text-gray-600">Manage corporate and agency accounts</p>
         </div>
-        <Button onClick={onCreateCompany}>
+        <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Add New Company
         </Button>
       </div>
 
+      {/* Filters */}
       <Card className="p-4">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -162,10 +216,10 @@ export function MemberCompany({
                 placeholder="Search by company name, code, or contact person..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
@@ -177,6 +231,7 @@ export function MemberCompany({
             </Select>
           </div>
 
+          {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label>Start Date</label>
@@ -184,7 +239,7 @@ export function MemberCompany({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => onStartDateChange(e.target.value)}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -196,14 +251,22 @@ export function MemberCompany({
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => onEndDateChange(e.target.value)}
+                  onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={onClearFilters}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setStatusFilter('all');
+                  setSearchTerm('');
+                }}
+              >
                 Clear Filters
               </Button>
             </div>
@@ -211,22 +274,16 @@ export function MemberCompany({
         </div>
       </Card>
 
+      {/* Companies Table */}
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
           <div className="text-sm text-gray-500">
-            {loading
-              ? 'Loading companies...'
-              : `Showing ${totalCount === 0 ? 0 : startIndex + 1}-${endIndex} of ${totalCount} companies`}
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredCompanies.length)} of {filteredCompanies.length} companies
           </div>
-          <div>{renderPagination()}</div>
+          <div>
+            {renderPagination()}
+          </div>
         </div>
-
-        {error && (
-          <div className="p-4 text-sm text-red-600 bg-red-50 border-b border-red-200">
-            {error}
-          </div>
-        )}
-
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
@@ -244,15 +301,15 @@ export function MemberCompany({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {companies.map((company) => (
+              {paginatedCompanies.map((company) => (
                 <tr key={company.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{company.id}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Building2 className="w-4 h-4 text-gray-400" />
-                      <button
+                      <button 
                         className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                        onClick={() => onEditCompany(company.id)}
+                        onClick={() => handleEdit(company)}
                       >
                         {company.companyName}
                       </button>
@@ -265,7 +322,7 @@ export function MemberCompany({
                     <div className="text-gray-600">{company.phone}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={PAYMENT_COLORS[company.paymentMethod] ?? 'bg-gray-100 text-gray-700'}>
+                    <Badge className={getPaymentColor(company.paymentMethod)}>
                       {company.paymentMethod}
                     </Badge>
                   </td>
@@ -274,7 +331,7 @@ export function MemberCompany({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{company.customerCount}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={STATUS_COLORS[company.status] ?? 'bg-gray-100 text-gray-700'}>
+                    <Badge className={getStatusColor(company.status)}>
                       {company.status}
                     </Badge>
                   </td>
@@ -283,7 +340,7 @@ export function MemberCompany({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEditCompany(company.id)}
+                        onClick={() => handleEdit(company)}
                         className="h-8 w-8 p-0"
                         title="Edit Company"
                       >
@@ -292,8 +349,7 @@ export function MemberCompany({
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled={deletingCompanyId === company.id}
-                        onClick={() => onDeleteCompany(company.id)}
+                        onClick={() => console.log('Delete company:', company.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         title="Delete Company"
                       >
@@ -307,12 +363,10 @@ export function MemberCompany({
           </table>
         </div>
 
-        {!loading && companies.length === 0 && (
-          <div className="text-center py-12 text-gray-500">No companies match your filters.</div>
-        )}
-
-        {companies.length > 0 && (
-          <div className="p-4 border-t flex justify-end">{renderPagination()}</div>
+        {filteredCompanies.length > 0 && (
+          <div className="p-4 border-t flex justify-end">
+            {renderPagination()}
+          </div>
         )}
       </Card>
     </div>

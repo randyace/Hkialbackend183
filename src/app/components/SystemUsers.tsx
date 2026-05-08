@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -26,128 +27,122 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
-export type SystemUsersRole = 'System Admin' | 'Lounge Manager' | 'Supervisor' | 'Staff';
-export type SystemUsersStatus = 'active' | 'inactive';
-
-export interface SystemUsersUser {
+interface SystemUser {
   id: number;
   name: string;
   email: string;
-  role: SystemUsersRole;
+  role: 'System Admin' | 'Lounge Manager' | 'Supervisor' | 'Staff';
   department: string;
-  status: SystemUsersStatus;
+  status: 'active' | 'inactive';
   lastLogin: string;
   createdDate: string;
   permissions: string[];
 }
 
-export interface SystemUsersFormState {
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-}
-
-export interface SystemUsersProps {
-  users: SystemUsersUser[];
-  totalUsers: number;
-  paginatedUsers: SystemUsersUser[];
-  startIndex: number;
-  endIndex: number;
-  totalPages: number;
-  currentPage: number;
-  searchTerm: string;
-  roleFilter: string;
-  startDate: string;
-  endDate: string;
-  isDialogOpen: boolean;
-  editingUser: SystemUsersUser | null;
-  form: SystemUsersFormState;
-  onSearchTermChange: (value: string) => void;
-  onRoleFilterChange: (value: string) => void;
-  onStartDateChange: (value: string) => void;
-  onEndDateChange: (value: string) => void;
-  onClearFilters: () => void;
-  onPageChange: (page: number) => void;
-  onCreate: () => void;
-  onEdit: (user: SystemUsersUser) => void;
-  onDelete: (user: SystemUsersUser) => void;
-  onManagePermissions: (user: SystemUsersUser) => void;
-  onDialogOpenChange: (open: boolean) => void;
-  onFormChange: (form: SystemUsersFormState) => void;
-  onQuickFill: () => void;
-  onSubmit: () => void;
-}
-
-const getRoleColor = (role: string) => {
-  switch (role) {
-    case 'System Admin':
-      return 'bg-purple-100 text-purple-700';
-    case 'Lounge Manager':
-      return 'bg-blue-100 text-blue-700';
-    case 'Supervisor':
-      return 'bg-green-100 text-green-700';
-    case 'Staff':
-      return 'bg-gray-100 text-gray-700';
-    default:
-      return 'bg-gray-100 text-gray-700';
+const generateMockUsers = (): SystemUser[] => {
+  const firstNames = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
+  const lastNames = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
+  const roles: ('System Admin' | 'Lounge Manager' | 'Supervisor' | 'Staff')[] = ['System Admin', 'Lounge Manager', 'Supervisor', 'Staff', 'Staff', 'Staff'];
+  const departments = ['IT Department', 'Lounge Operations', 'Guest Services', 'Finance', 'Management', 'Security', 'Housekeeping', 'F&B Services'];
+  const statuses: ('active' | 'inactive')[] = ['active', 'active', 'active', 'active', 'inactive'];
+  
+  const users: SystemUser[] = [];
+  for (let i = 1; i <= 45; i++) {
+    const firstName = firstNames[i % firstNames.length];
+    const lastName = lastNames[i % lastNames.length];
+    const name = `${firstName} ${lastName}`;
+    const role = roles[i % roles.length];
+    const department = departments[i % departments.length];
+    const status = statuses[i % statuses.length];
+    
+    const createdDate = new Date(2023, Math.floor(i / 10), (i % 28) + 1);
+    const lastLoginDate = new Date(2026, 0, 15 + (i % 8));
+    const lastLoginHour = 8 + (i % 12);
+    const lastLoginMinute = (i * 15) % 60;
+    
+    let permissions: string[] = [];
+    if (role === 'System Admin') {
+      permissions = ['all'];
+    } else if (role === 'Lounge Manager') {
+      permissions = ['approve_invoices', 'manage_staff', 'view_reports', 'approve_bookings'];
+    } else if (role === 'Supervisor') {
+      permissions = ['approve_bookings', 'manage_bookings', 'view_reports', 'create_bookings'];
+    } else {
+      permissions = ['create_bookings', 'edit_bookings', 'view_guests'];
+    }
+    
+    users.push({
+      id: i,
+      name: i === 1 ? 'HKIAL Staff' : name,
+      email: i === 1 ? 'admin@hkial.com' : `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(' ', '')}@hkial.com`,
+      role,
+      department,
+      status,
+      lastLogin: `${lastLoginDate.toISOString().split('T')[0]} ${String(lastLoginHour).padStart(2, '0')}:${String(lastLoginMinute).padStart(2, '0')}`,
+      createdDate: createdDate.toISOString().split('T')[0],
+      permissions
+    });
   }
+  return users;
 };
 
-const getStatusColor = (status: string) =>
-  status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+export function SystemUsers() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-export function SystemUsers({
-  totalUsers,
-  paginatedUsers,
-  startIndex,
-  endIndex,
-  totalPages,
-  currentPage,
-  searchTerm,
-  roleFilter,
-  startDate,
-  endDate,
-  isDialogOpen,
-  editingUser,
-  form,
-  onSearchTermChange,
-  onRoleFilterChange,
-  onStartDateChange,
-  onEndDateChange,
-  onClearFilters,
-  onPageChange,
-  onCreate,
-  onEdit,
-  onDelete,
-  onManagePermissions,
-  onDialogOpenChange,
-  onFormChange,
-  onQuickFill,
-  onSubmit,
-}: SystemUsersProps) {
-  const setForm = (patch: Partial<SystemUsersFormState>) => onFormChange({ ...form, ...patch });
+  // Form state for create/edit dialog
+  const [formName, setFormName] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formRole, setFormRole] = useState('Staff');
+  const [formDepartment, setFormDepartment] = useState('IT Department');
+
+  const users: SystemUser[] = generateMockUsers();
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.role.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesStartDate = !startDate || new Date(user.createdDate) >= new Date(startDate);
+    const matchesEndDate = !endDate || new Date(user.createdDate) <= new Date(endDate);
+    return matchesSearch && matchesRole && matchesStartDate && matchesEndDate;
+  }).sort((a, b) => b.id - a.id);
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   const renderPagination = () => {
-    const pages: number[] = [];
+    const pages = [];
     const maxVisiblePages = 5;
-
+    
     if (totalPages <= maxVisiblePages) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else if (currentPage <= 3) {
-      pages.push(1, 2, 3, 4, -1, totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      pages.push(1, -1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
     } else {
-      pages.push(1, -1, currentPage - 1, currentPage, currentPage + 1, -2, totalPages);
+      if (currentPage <= 3) {
+        pages.push(1, 2, 3, 4, -1, totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1, -1, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, -1, currentPage - 1, currentPage, currentPage + 1, -2, totalPages);
+      }
     }
 
     return (
       <Pagination>
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious
-              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            <PaginationPrevious 
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
             />
           </PaginationItem>
@@ -162,7 +157,7 @@ export function SystemUsers({
             return (
               <PaginationItem key={page}>
                 <PaginationLink
-                  onClick={() => onPageChange(page)}
+                  onClick={() => setCurrentPage(page)}
                   isActive={currentPage === page}
                   className="cursor-pointer"
                 >
@@ -172,14 +167,59 @@ export function SystemUsers({
             );
           })}
           <PaginationItem>
-            <PaginationNext
-              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            <PaginationNext 
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
             />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
     );
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'System Admin':
+        return 'bg-purple-100 text-purple-700';
+      case 'Lounge Manager':
+        return 'bg-blue-100 text-blue-700';
+      case 'Supervisor':
+        return 'bg-green-100 text-green-700';
+      case 'Staff':
+        return 'bg-gray-100 text-gray-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    return status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+  };
+
+  const handleEdit = (user: SystemUser) => {
+    setEditingUser(user);
+    setFormName(user.name);
+    setFormEmail(user.email);
+    setFormRole(user.role);
+    setFormDepartment(user.department);
+    setIsDialogOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingUser(null);
+    setFormName('');
+    setFormEmail('');
+    setFormRole('Staff');
+    setFormDepartment('IT Department');
+    setIsDialogOpen(true);
+  };
+
+  // ── Quick Fill for Dialog ───────────────────────────────────────────────────
+  const handleQuickFill = () => {
+    setFormName('Karen Leung');
+    setFormEmail('karen.leung@hkial.com');
+    setFormRole('Supervisor');
+    setFormDepartment('Lounge Operations');
   };
 
   return (
@@ -189,12 +229,13 @@ export function SystemUsers({
           <h1>System Users Management</h1>
           <p className="text-gray-600">Manage staff accounts, roles, and permissions</p>
         </div>
-        <Button onClick={onCreate}>
+        <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Add New User
         </Button>
       </div>
 
+      {/* Filters */}
       <Card className="p-4">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -205,10 +246,10 @@ export function SystemUsers({
                 placeholder="Search by name, email, or role..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
-                onChange={(e) => onSearchTermChange(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={roleFilter} onValueChange={onRoleFilterChange}>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -222,6 +263,7 @@ export function SystemUsers({
             </Select>
           </div>
 
+          {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label>Start Date</label>
@@ -229,7 +271,7 @@ export function SystemUsers({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => onStartDateChange(e.target.value)}
+                  onChange={(e) => setStartDate(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -241,14 +283,22 @@ export function SystemUsers({
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => onEndDateChange(e.target.value)}
+                  onChange={(e) => setEndDate(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={onClearFilters}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                  setRoleFilter('all');
+                  setSearchTerm('');
+                }}
+              >
                 Clear Filters
               </Button>
             </div>
@@ -256,12 +306,15 @@ export function SystemUsers({
         </div>
       </Card>
 
+      {/* Users Table */}
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
           <div className="text-sm text-gray-500">
-            Showing {totalUsers === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, totalUsers)} of {totalUsers} users
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredUsers.length)} of {filteredUsers.length} users
           </div>
-          <div>{renderPagination()}</div>
+          <div>
+            {renderPagination()}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -284,9 +337,9 @@ export function SystemUsers({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <Shield className="w-4 h-4 text-gray-400" />
-                      <button
+                      <button 
                         className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                        onClick={() => onEdit(user)}
+                        onClick={() => handleEdit(user)}
                       >
                         {user.name}
                       </button>
@@ -298,7 +351,9 @@ export function SystemUsers({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{user.department}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                    <Badge className={getStatusColor(user.status)}>
+                      {user.status}
+                    </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.lastLogin}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -306,7 +361,7 @@ export function SystemUsers({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onEdit(user)}
+                        onClick={() => handleEdit(user)}
                         className="h-8 w-8 p-0"
                         title="Edit User"
                       >
@@ -315,7 +370,7 @@ export function SystemUsers({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onManagePermissions(user)}
+                        onClick={() => console.log('Manage permissions:', user.id)}
                         className="h-8 w-8 p-0 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
                         title="Manage Permissions"
                       >
@@ -324,7 +379,7 @@ export function SystemUsers({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onDelete(user)}
+                        onClick={() => console.log('Delete user:', user.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         title="Delete User"
                       >
@@ -338,12 +393,15 @@ export function SystemUsers({
           </table>
         </div>
 
-        {totalUsers > 0 && (
-          <div className="p-4 border-t flex justify-end">{renderPagination()}</div>
+        {filteredUsers.length > 0 && (
+          <div className="p-4 border-t flex justify-end">
+            {renderPagination()}
+          </div>
         )}
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={onDialogOpenChange}>
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="min-w-[1200px] max-w-[1200px]">
           <DialogHeader>
             <DialogTitle>
@@ -356,7 +414,7 @@ export function SystemUsers({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onQuickFill}
+                onClick={handleQuickFill}
                 className="gap-1 mt-2 w-fit bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
               >
                 <Shuffle className="w-3 h-3" />
@@ -364,20 +422,14 @@ export function SystemUsers({
               </Button>
             )}
           </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSubmit();
-            }}
-          >
+          <form className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label>Full Name</label>
                 <input
                   type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ name: e.target.value })}
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., Wong Chi Ming"
                 />
@@ -386,8 +438,8 @@ export function SystemUsers({
                 <label>Email Address</label>
                 <input
                   type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ email: e.target.value })}
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="email@hkial.com"
                 />
@@ -398,8 +450,8 @@ export function SystemUsers({
               <div>
                 <label>Role</label>
                 <select
-                  value={form.role}
-                  onChange={(e) => setForm({ role: e.target.value })}
+                  value={formRole}
+                  onChange={(e) => setFormRole(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
                   <option value="System Admin">System Admin</option>
@@ -411,8 +463,8 @@ export function SystemUsers({
               <div>
                 <label>Department</label>
                 <select
-                  value={form.department}
-                  onChange={(e) => setForm({ department: e.target.value })}
+                  value={formDepartment}
+                  onChange={(e) => setFormDepartment(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
                   <option value="IT Department">IT Department</option>
@@ -442,7 +494,7 @@ export function SystemUsers({
                   'Manage System Settings',
                   'View Audit Logs',
                   'Manage Bookable Items',
-                  'Daily Movement Log',
+                  'Daily Movement Log'
                 ].map((permission) => (
                   <label key={permission} className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" className="rounded" />
@@ -464,7 +516,7 @@ export function SystemUsers({
             </div>
 
             <div className="flex gap-3 justify-end pt-4">
-              <Button type="button" variant="outline" onClick={() => onDialogOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                 Cancel
               </Button>
               <Button type="submit">

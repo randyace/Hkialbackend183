@@ -1,11 +1,34 @@
-import { useState, useEffect, useCallback } from 'react';
+/**
+ * KitchenDisplay.tsx — Integration-Ready Dumb UI Component
+ *
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  ZERO hardcoded seed orders live in this file.                          │
+ * │  All order data comes through KitchenDisplayProps.                      │
+ * │  For dev/design preview, initialOrders defaults from:                  │
+ * │    __fixtures__/KitchenDisplay.mocks.ts → mockKDSOrders                 │
+ * │                                                                         │
+ * │  ❌ REMOVED: useEffect order simulation (was business/demo logic)       │
+ * │  ✅ RETAINED: ElapsedBadge useEffect (pure UI — computes display text)  │
+ * │                                                                         │
+ * │  CI4 Smart Container wires:                                             │
+ * │    initialOrders       → GET /api/kds/orders                            │
+ * │    onItemToggled       → PATCH /api/kds/orders/{id}/items/{itemId}      │
+ * │    onOrderStatusChanged→ PATCH /api/kds/orders/{id}/status              │
+ * │    onRefresh           → re-call GET /api/kds/orders                    │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChefHat, Clock, CheckCircle2, Utensils, Bell, BellOff,
-  RefreshCw, AlertCircle, Users, MapPin, CheckCheck, Eye, LayoutGrid, Languages,
+  RefreshCw, AlertCircle, Users, MapPin, CheckCheck, Eye,
+  LayoutGrid, Languages,
 } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { mockKitchenDisplayData } from './__fixtures__/KitchenDisplay.mocks';
 
-// ── Language ──────────────────────────────────────────────────────────────────
+// ─── Language strings (pure UI — not data, not from backend) ─────────────────
+
 type Lang = 'en' | 'zh';
 
 const T = {
@@ -95,203 +118,148 @@ const T = {
   },
 } as const;
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-type OrderStatus = 'new' | 'received' | 'served';
-type ActiveTab   = 'all' | 'new' | 'received' | 'served';
+// ─── Exported Data Types (CI4 Smart Container must map to these shapes) ───────
 
-interface KDSOrderItem {
+export type OrderStatus = 'new' | 'received' | 'served';
+export type ItemCategory = 'Food' | 'Beverage' | 'Dessert' | 'Snack';
+
+export interface KDSOrderItem {
   id: number;
+  /** English name */
   name: string;
+  /** Traditional Chinese name */
   nameZh: string;
-  category: 'Food' | 'Beverage' | 'Dessert' | 'Snack';
+  category: ItemCategory;
   quantity: number;
+  /** English preparation notes */
   notes?: string;
+  /** Chinese preparation notes */
   notesZh?: string;
+  /** True when this specific item has an allergy concern */
   allergyFlag?: boolean;
+  /** True when kitchen staff have acknowledged / prepared this item */
   done: boolean;
 }
 
-interface KDSOrder {
+export interface KDSOrder {
+  /** Internal KDS identifier, e.g. "KDS-001" */
   id: string;
+  /** Linked POS order reference, e.g. "POS-20260316-000012" */
   posOrderNo: string;
+  /** English suite / room name */
   suiteName: string;
+  /** Chinese suite / room name */
   suiteNameZh: string;
   guestName: string;
   guestCount: number;
+  /** ISO 8601 datetime or JS Date — when the order was placed in POS */
   placedAt: Date;
   status: OrderStatus;
+  /** Set when status transitions new → received */
   receivedAt?: Date;
+  /** Set when status transitions received → served */
   servedAt?: Date;
   items: KDSOrderItem[];
   priority: 'normal' | 'rush';
+  /** English allergy / dietary alert text */
   allergyAlert?: string;
+  /** Chinese allergy / dietary alert text */
   allergyAlertZh?: string;
 }
 
-// ── Category labels ───────────────────────────────────────────────────────────
-const CATEGORY_LABEL: Record<string, { en: string; zh: string }> = {
+// ─── Callback Interfaces ──────────────────────────────────────────────────────
+
+export interface KitchenDisplayCallbacks {
+  /**
+   * Fired after a kitchen staff member toggles one item's done state.
+   * CI4: PATCH /api/kds/orders/{orderId}/items/{itemId}  { done: newDoneState }
+   */
+  onItemToggled?: (
+    orderId: string,
+    itemId: number,
+    newDoneState: boolean,
+    updatedOrder: KDSOrder,
+  ) => void;
+
+  /**
+   * Fired when an order's status advances (new→received or received→served),
+   * whether triggered by toggling the last item or by "Mark All".
+   * CI4: PATCH /api/kds/orders/{orderId}/status  { status: newStatus }
+   */
+  onOrderStatusChanged?: (
+    orderId: string,
+    newStatus: OrderStatus,
+    updatedOrder: KDSOrder,
+  ) => void;
+
+  /**
+   * Fired when the staff presses the manual Refresh button.
+   * CI4: re-fetch GET /api/kds/orders and call setOrders / re-mount with key.
+   */
+  onRefresh?: () => void;
+}
+
+// ─── Composed Props Interface ─────────────────────────────────────────────────
+
+export interface KitchenDisplayProps extends KitchenDisplayCallbacks {
+  /**
+   * Seed orders for the display.
+   * In production the Smart Container fetches these from CI4 and passes them.
+   * Defaults to fixture data so the component renders standalone.
+   *
+   * To re-sync after a server poll, change the `key` prop on this component
+   * so React remounts it with the fresh initialOrders.
+   */
+  initialOrders?: KDSOrder[];
+
+  /**
+   * Server-supplied "last refreshed" timestamp.
+   * When absent the component uses the mount time.
+   */
+  lastRefreshedAt?: Date;
+}
+
+// ─── Static UI Config (never from backend) ────────────────────────────────────
+
+const CATEGORY_LABEL: Record<ItemCategory, { en: string; zh: string }> = {
   Food:     { en: 'Food',     zh: '食物' },
   Beverage: { en: 'Beverage', zh: '飲品' },
   Dessert:  { en: 'Dessert',  zh: '甜品' },
   Snack:    { en: 'Snack',    zh: '小食' },
 };
 
-const CATEGORY_COLOR: Record<string, string> = {
+const CATEGORY_COLOR: Record<ItemCategory, string> = {
   Food:     'bg-orange-100 text-orange-700 border border-orange-200',
   Beverage: 'bg-blue-100   text-blue-700   border border-blue-200',
   Dessert:  'bg-pink-100   text-pink-700   border border-pink-200',
-  Snack:    'bg-yellow-100 text-yellow-700  border border-yellow-200',
+  Snack:    'bg-yellow-100 text-yellow-700 border border-yellow-200',
 };
 
-// ── Mock seed data ─────────────────────────────────────────────────────────────
-const SEED_ORDERS: KDSOrder[] = [
-  {
-    id: 'KDS-001',
-    posOrderNo: 'POS-20260316-000012',
-    suiteName: 'VIP Suite A1', suiteNameZh: 'VIP貴賓廳 A1',
-    guestName: 'Mr John Smith',
-    guestCount: 3,
-    placedAt: new Date(Date.now() - 2 * 60 * 1000),
-    status: 'new',
-    priority: 'rush',
-    allergyAlert: 'Shellfish, Peanuts', allergyAlertZh: '介貝類、花生',
-    items: [
-      { id: 1, name: 'Grilled Salmon Fillet', nameZh: '香煎三文魚柳', category: 'Food',     quantity: 2, notes: 'Medium-well, extra lemon', notesZh: '七成熟，多檸檬', allergyFlag: false, done: false },
-      { id: 2, name: 'Caesar Salad',          nameZh: '凱撒沙律',     category: 'Food',     quantity: 1, allergyFlag: false, done: false },
-      { id: 3, name: 'Espresso',              nameZh: '意式濃縮咖啡', category: 'Beverage', quantity: 3, allergyFlag: false, done: false },
-      { id: 4, name: 'Tiramisu',              nameZh: '提拉米蘇',     category: 'Dessert',  quantity: 1, notes: 'No nuts', notesZh: '不加果仁', allergyFlag: true, done: false },
-    ],
-  },
-  {
-    id: 'KDS-002',
-    posOrderNo: 'POS-20260316-000015',
-    suiteName: 'Executive Suite B2', suiteNameZh: '行政廳 B2',
-    guestName: 'Mrs Mary Johnson',
-    guestCount: 2,
-    placedAt: new Date(Date.now() - 5 * 60 * 1000),
-    status: 'new',
-    priority: 'normal',
-    items: [
-      { id: 5, name: 'Club Sandwich',            nameZh: '總匯三文治',      category: 'Food',     quantity: 2, allergyFlag: false, done: false },
-      { id: 6, name: 'French Fries',             nameZh: '薯條',            category: 'Snack',    quantity: 2, allergyFlag: false, done: false },
-      { id: 7, name: 'Sparkling Water (500 ml)', nameZh: '氣泡水 (500毫升)',category: 'Beverage', quantity: 2, allergyFlag: false, done: false },
-    ],
-  },
-  {
-    id: 'KDS-003',
-    posOrderNo: 'POS-20260316-000009',
-    suiteName: 'Premiere Suite C1', suiteNameZh: '首席廳 C1',
-    guestName: 'Mr David Lee',
-    guestCount: 4,
-    placedAt: new Date(Date.now() - 9 * 60 * 1000),
-    status: 'received',
-    receivedAt: new Date(Date.now() - 7 * 60 * 1000),
-    priority: 'normal',
-    items: [
-      { id: 8,  name: 'Wagyu Beef Burger', nameZh: '和牛漢堡',      category: 'Food',     quantity: 2, notes: 'Well done', notesZh: '全熟', allergyFlag: false, done: false },
-      { id: 9,  name: 'Tom Yum Soup',      nameZh: '冬蔭功湯',      category: 'Food',     quantity: 2, allergyFlag: false, done: false },
-      { id: 10, name: 'Red Wine (Glass)',   nameZh: '紅葡萄酒 (杯)', category: 'Beverage', quantity: 4, allergyFlag: false, done: false },
-      { id: 11, name: 'Cheese Platter',    nameZh: '芝士拼盤',      category: 'Snack',    quantity: 1, allergyFlag: false, done: false },
-    ],
-  },
-  {
-    id: 'KDS-004',
-    posOrderNo: 'POS-20260316-000007',
-    suiteName: 'VIP Suite A2', suiteNameZh: 'VIP貴賓廳 A2',
-    guestName: 'Miss Sarah Chen',
-    guestCount: 1,
-    placedAt: new Date(Date.now() - 14 * 60 * 1000),
-    status: 'received',
-    receivedAt: new Date(Date.now() - 12 * 60 * 1000),
-    priority: 'normal',
-    allergyAlert: 'Dairy, Eggs', allergyAlertZh: '乳製品、雞蛋',
-    items: [
-      { id: 12, name: 'Seasonal Fruit Bowl', nameZh: '時令鮮果盤', category: 'Food',     quantity: 1, allergyFlag: false, done: true },
-      { id: 13, name: 'Green Tea',           nameZh: '綠茶',       category: 'Beverage', quantity: 1, allergyFlag: false, done: false },
-    ],
-  },
-  {
-    id: 'KDS-005',
-    posOrderNo: 'POS-20260316-000003',
-    suiteName: 'Business Suite D1', suiteNameZh: '商務廳 D1',
-    guestName: 'Mr Robert Wang',
-    guestCount: 2,
-    placedAt: new Date(Date.now() - 22 * 60 * 1000),
-    status: 'served',
-    receivedAt: new Date(Date.now() - 20 * 60 * 1000),
-    servedAt: new Date(Date.now() - 5 * 60 * 1000),
-    priority: 'normal',
-    items: [
-      { id: 14, name: 'Dim Sum Set (3 pcs)', nameZh: '點心套餐 (3件)', category: 'Food',     quantity: 2, allergyFlag: false, done: true },
-      { id: 15, name: 'Jasmine Tea',         nameZh: '茉莉花茶',       category: 'Beverage', quantity: 2, allergyFlag: false, done: true },
-    ],
-  },
-  {
-    id: 'KDS-006',
-    posOrderNo: 'POS-20260316-000001',
-    suiteName: 'Open Lounge', suiteNameZh: '開放式貴賓室',
-    guestName: 'Mrs Emma Wilson',
-    guestCount: 3,
-    placedAt: new Date(Date.now() - 30 * 60 * 1000),
-    status: 'served',
-    receivedAt: new Date(Date.now() - 28 * 60 * 1000),
-    servedAt: new Date(Date.now() - 12 * 60 * 1000),
-    priority: 'normal',
-    items: [
-      { id: 16, name: 'Afternoon Tea Set', nameZh: '下午茶套餐', category: 'Food',     quantity: 3, allergyFlag: false, done: true },
-      { id: 17, name: 'Cappuccino',        nameZh: '卡布奇諾',   category: 'Beverage', quantity: 2, allergyFlag: false, done: true },
-      { id: 18, name: 'Orange Juice',      nameZh: '橙汁',       category: 'Beverage', quantity: 1, allergyFlag: false, done: true },
-    ],
-  },
-];
+// ─── Pure-UI helper hook (elapsed display string — not business logic) ────────
 
-// ── New-order pool ────────────────────────────────────────────────────────────
-let _nextId = 7;
-const NEW_ITEMS_POOL: Omit<KDSOrderItem, 'done'>[][] = [
-  [
-    { id: 100, name: 'Wagyu Beef Slider', nameZh: '和牛滑漢堡', category: 'Food',     quantity: 3, allergyFlag: false },
-    { id: 101, name: 'Iced Lemon Tea',    nameZh: '凍檸茶',     category: 'Beverage', quantity: 3, allergyFlag: false },
-  ],
-  [
-    { id: 102, name: 'Lobster Bisque',    nameZh: '龍蝦濃湯',   category: 'Food',     quantity: 1, allergyFlag: false },
-    { id: 103, name: 'Sourdough Bread',   nameZh: '酸種麵包',   category: 'Snack',    quantity: 2, allergyFlag: false },
-    { id: 104, name: 'Champagne (Glass)', nameZh: '香檳 (杯)',   category: 'Beverage', quantity: 1, allergyFlag: false },
-  ],
-  [
-    { id: 105, name: 'Panna Cotta', nameZh: '奶凍',   category: 'Dessert',  quantity: 2, notes: 'Extra berry sauce', notesZh: '加多莓果醬', allergyFlag: false },
-    { id: 106, name: 'Flat White',  nameZh: '馥芮白', category: 'Beverage', quantity: 2, allergyFlag: false },
-  ],
-];
-const SUITES    = ['VIP Suite A3', 'Business Suite D2', 'Premiere Suite C2', 'Open Lounge'];
-const SUITES_ZH = ['VIP貴賓廳 A3', '商務廳 D2', '首席廳 C2', '開放式貴賓室'];
-const GUESTS    = ['Mr Kevin Zhang', 'Mrs Helen Yuen', 'Mr Daniel Ho', 'Miss Grace Liu'];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function useElapsedTime(date: Date, lang: Lang): string {
   const [elapsed, setElapsed] = useState('');
   useEffect(() => {
     const calc = () => {
       const diff = Math.floor((Date.now() - date.getTime()) / 1000);
       if (lang === 'zh') {
-        if (diff < 60) return `${diff}秒`;
-        return `${Math.floor(diff / 60)}分 ${diff % 60}秒`;
-      } else {
-        if (diff < 60) return `${diff}s`;
-        return `${Math.floor(diff / 60)}m ${diff % 60}s`;
+        return diff < 60 ? `${diff}秒` : `${Math.floor(diff / 60)}分 ${diff % 60}秒`;
       }
+      return diff < 60 ? `${diff}s` : `${Math.floor(diff / 60)}m ${diff % 60}s`;
     };
     setElapsed(calc());
-    const interval = setInterval(() => setElapsed(calc()), 1000);
-    return () => clearInterval(interval);
+    const id = setInterval(() => setElapsed(calc()), 1000);
+    return () => clearInterval(id);
   }, [date, lang]);
   return elapsed;
 }
 
 function elapsedMinutes(date: Date): number {
-  return Math.floor((Date.now() - date.getTime()) / 60000);
+  return Math.floor((Date.now() - date.getTime()) / 60_000);
 }
 
-// ── ElapsedBadge ──────────────────────────────────────────────────────────────
+// ─── ElapsedBadge — pure display component ────────────────────────────────────
+
 function ElapsedBadge({ since, warn, lang }: { since: Date; warn: number; lang: Lang }) {
   const elapsed = useElapsedTime(since, lang);
   const isWarn  = elapsedMinutes(since) >= warn;
@@ -308,16 +276,17 @@ function ElapsedBadge({ since, warn, lang }: { since: Date; warn: number; lang: 
   );
 }
 
-// ── Order Card ────────────────────────────────────────────────────────────────
+// ─── OrderCard ────────────────────────────────────────────────────────────────
+
 interface OrderCardProps {
   order: KDSOrder;
   lang: Lang;
   onToggleItem: (orderId: string, itemId: number) => void;
-  onMarkAll: (orderId: string) => void;
+  onMarkAll:    (orderId: string) => void;
 }
 
 function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
-  const t = T[lang];
+  const t          = T[lang];
   const isNew      = order.status === 'new';
   const isReceived = order.status === 'received';
   const isServed   = order.status === 'served';
@@ -338,7 +307,7 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
   return (
     <div className={`bg-white rounded-xl border-2 ${borderClass} shadow-md overflow-hidden flex flex-col`}>
 
-      {/* Card Header */}
+      {/* ── Header ── */}
       <div className={`px-4 py-3 flex items-start justify-between gap-2 ${
         isNew ? 'bg-red-50' : isReceived ? 'bg-amber-50' : 'bg-green-50'
       }`}>
@@ -356,7 +325,9 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
               </span>
             )}
           </div>
-          <p style={{ fontSize: '1.15em' }} className="font-semibold text-gray-900 mt-0.5 truncate">{order.guestName}</p>
+          <p style={{ fontSize: '1.15em' }} className="font-semibold text-gray-900 mt-0.5 truncate">
+            {order.guestName}
+          </p>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span style={{ fontSize: '0.85em' }} className="flex items-center gap-1 text-gray-500">
               <MapPin className="w-3.5 h-3.5" />
@@ -367,6 +338,7 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
             </span>
           </div>
         </div>
+
         <div className="shrink-0 flex flex-col items-end gap-1">
           <ElapsedBadge since={order.placedAt} warn={isNew ? 5 : isReceived ? 15 : 999} lang={lang} />
           {isReceived && order.receivedAt && (
@@ -377,14 +349,16 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         </div>
       </div>
 
-      {/* Progress bar */}
+      {/* ── Progress bar ── */}
       {!isServed && (
         <div className="px-4 pt-3 pb-1">
           <div className="flex items-center justify-between mb-1">
             <span style={{ fontSize: '0.85em' }} className="text-gray-500">
               {isNew ? t.itemsAcknowledged : t.itemsReady}
             </span>
-            <span style={{ fontSize: '0.85em' }} className="font-semibold text-gray-700">{doneCount}/{totalCount}</span>
+            <span style={{ fontSize: '0.85em' }} className="font-semibold text-gray-700">
+              {doneCount}/{totalCount}
+            </span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
             <div
@@ -399,12 +373,14 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         </div>
       )}
 
-      {/* Allergy Alert */}
+      {/* ── Allergy Alert ── */}
       {order.allergyAlert && (
         <div className="mx-4 mt-3 px-3 py-2 bg-orange-50 border border-orange-300 rounded-lg flex items-start gap-2">
           <AlertCircle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
           <div>
-            <p style={{ fontSize: '0.9em' }} className="font-semibold text-orange-800">{t.allergyAlertTitle}</p>
+            <p style={{ fontSize: '0.9em' }} className="font-semibold text-orange-800">
+              {t.allergyAlertTitle}
+            </p>
             <p style={{ fontSize: '0.85em' }} className="text-orange-700">
               {lang === 'zh' ? (order.allergyAlertZh ?? order.allergyAlert) : order.allergyAlert}
             </p>
@@ -412,7 +388,7 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         </div>
       )}
 
-      {/* Items list */}
+      {/* ── Items List ── */}
       <div className="px-4 py-3 flex-1 space-y-2">
         {order.items.map(item => (
           <div
@@ -439,8 +415,8 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
               >
                 {item.quantity}×
               </div>
+
               <div className="flex-1 min-w-0">
-                {/* Primary name */}
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span
                     style={{ fontSize: '1.05em' }}
@@ -451,14 +427,14 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
                     {lang === 'zh' ? item.nameZh : item.name}
                   </span>
                   {item.allergyFlag && !item.done && (
-                    <span style={{ fontSize: '0.85em' }} className="text-orange-600">{t.checkAllergy}</span>
+                    <span style={{ fontSize: '0.85em' }} className="text-orange-600">
+                      {t.checkAllergy}
+                    </span>
                   )}
                 </div>
-                {/* Secondary name */}
                 <p style={{ fontSize: '0.82em' }} className="text-gray-400">
                   {lang === 'zh' ? item.name : item.nameZh}
                 </p>
-                {/* Notes */}
                 {item.notes && (
                   <p style={{ fontSize: '0.85em' }} className="text-gray-500 mt-0.5 italic">
                     {lang === 'zh'
@@ -466,17 +442,18 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
                       : `"${item.notes}"`}
                   </p>
                 )}
-                {/* Category badge */}
                 <span
                   style={{ fontSize: '0.8em' }}
                   className={`inline-block mt-1 px-1.5 py-0.5 rounded font-medium ${CATEGORY_COLOR[item.category]}`}
                 >
-                  {lang === 'zh' ? CATEGORY_LABEL[item.category].zh : CATEGORY_LABEL[item.category].en}
+                  {lang === 'zh'
+                    ? CATEGORY_LABEL[item.category].zh
+                    : CATEGORY_LABEL[item.category].en}
                 </span>
               </div>
             </div>
 
-            {/* Action button */}
+            {/* Item action button */}
             {!isServed && (
               <button
                 onClick={() => onToggleItem(order.id, item.id)}
@@ -513,7 +490,7 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         ))}
       </div>
 
-      {/* Mark All button */}
+      {/* ── Mark All button ── */}
       {!isServed && (
         <div className="px-4 pb-3">
           <button
@@ -534,7 +511,7 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         </div>
       )}
 
-      {/* Auto-advance hint */}
+      {/* ── Auto-advance hint ── */}
       {!isServed && allDone && (
         <div
           className={`mx-4 mb-4 px-3 py-2.5 rounded-lg flex items-center gap-2 font-semibold ${
@@ -549,20 +526,27 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
         </div>
       )}
 
-      {/* POS ref */}
+      {/* ── POS ref ── */}
       <div className="px-4 pb-3">
-        <p style={{ fontSize: '0.78em' }} className="text-gray-400 font-mono">{order.posOrderNo}</p>
+        <p style={{ fontSize: '0.78em' }} className="text-gray-400 font-mono">
+          {order.posOrderNo}
+        </p>
       </div>
 
-      {/* Served stamp */}
+      {/* ── Served stamp ── */}
       {isServed && (
         <div className="px-4 pb-4">
-          <div style={{ fontSize: '0.95em' }} className="w-full py-2.5 rounded-lg bg-green-100 border border-green-300 flex items-center justify-center gap-2 text-green-700">
+          <div
+            style={{ fontSize: '0.95em' }}
+            className="w-full py-2.5 rounded-lg bg-green-100 border border-green-300 flex items-center justify-center gap-2 text-green-700"
+          >
             <CheckCircle2 className="w-5 h-5" />
             {t.servedStamp}
             {order.servedAt && (
               <span style={{ fontSize: '0.85em' }} className="text-green-600 ml-1">
-                · {order.servedAt.toLocaleTimeString('en-HK', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                · {order.servedAt.toLocaleTimeString('en-HK', {
+                  hour: '2-digit', minute: '2-digit', hour12: false,
+                })}
               </span>
             )}
           </div>
@@ -572,152 +556,204 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-export function KitchenDisplay() {
-  const [orders, setOrders]               = useState<KDSOrder[]>(SEED_ORDERS);
-  const [soundOn, setSoundOn]             = useState(true);
-  const [flashNew, setFlashNew]           = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date());
-  const [activeTab, setActiveTab]         = useState<ActiveTab>('all');
-  const [lang, setLang]                   = useState<Lang>('en');
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+type ActiveTab = 'all' | 'new' | 'received' | 'served';
+
+export function KitchenDisplay({
+  initialOrders   = mockKitchenDisplayData.initialOrders as KDSOrder[],
+  lastRefreshedAt,
+  onItemToggled,
+  onOrderStatusChanged,
+  onRefresh,
+}: KitchenDisplayProps = {}) {
+
+  // ── Pure UI state ──────────────────────────────────────────────────────────
+  const [orders,        setOrders]        = useState<KDSOrder[]>(initialOrders);
+  const [soundOn,       setSoundOn]       = useState(true);
+  const [flashNew,      setFlashNew]      = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState<Date>(lastRefreshedAt ?? new Date());
+  const [activeTab,     setActiveTab]     = useState<ActiveTab>('all');
+  const [lang,          setLang]          = useState<Lang>('en');
+
+  const prevOrderCountRef = useRef(initialOrders.length);
+
+  /**
+   * UI-only effect: detect when the Smart Container re-feeds new orders
+   * (e.g. after a server poll), sync local state, and flash the banner.
+   * This is DISPLAY logic — not a data-fetch.
+   */
+  useEffect(() => {
+    const incoming = initialOrders.length;
+    if (incoming > prevOrderCountRef.current && soundOn) {
+      setFlashNew(true);
+      const id = setTimeout(() => setFlashNew(false), 3_000);
+      prevOrderCountRef.current = incoming;
+      return () => clearTimeout(id);
+    }
+    prevOrderCountRef.current = incoming;
+    setOrders(initialOrders);
+  }, [initialOrders]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = T[lang];
 
+  // ── Derived data ──────────────────────────────────────────────────────────
   const newOrders      = orders.filter(o => o.status === 'new');
   const receivedOrders = orders.filter(o => o.status === 'received');
   const servedOrders   = orders.filter(o => o.status === 'served');
 
   const tabOrders: Record<ActiveTab, KDSOrder[]> = {
-    all:      orders,
-    new:      newOrders,
-    received: receivedOrders,
-    served:   servedOrders,
+    all: orders, new: newOrders, received: receivedOrders, served: servedOrders,
   };
-
   const tabCounts: Record<ActiveTab, number> = {
-    all:      orders.length,
-    new:      newOrders.length,
-    received: receivedOrders.length,
-    served:   servedOrders.length,
+    all: orders.length, new: newOrders.length,
+    received: receivedOrders.length, served: servedOrders.length,
+  };
+  const tabEmpty: Record<ActiveTab, string> = {
+    all: t.emptyAll, new: t.emptyNew,
+    received: t.emptyReceived, served: t.emptyServed,
   };
 
-  const tabEmptyMessages: Record<ActiveTab, string> = {
-    all:      t.emptyAll,
-    new:      t.emptyNew,
-    received: t.emptyReceived,
-    served:   t.emptyServed,
-  };
-
-  const TABS: { key: ActiveTab; label: string; icon: React.ReactNode; activeClass: string; badgeClass: string }[] = [
-    { key: 'all',      label: t.tabAll,      icon: <LayoutGrid className="w-5 h-5" />,   activeClass: 'border-b-2 border-[#05C9CC] text-[#05C9CC] bg-cyan-50', badgeClass: 'bg-[#05C9CC] text-white' },
-    { key: 'new',      label: t.tabNew,      icon: <Bell className="w-5 h-5" />,          activeClass: 'border-b-2 border-red-500 text-red-600 bg-red-50',      badgeClass: 'bg-red-500 text-white' },
-    { key: 'received', label: t.tabReceived, icon: <Utensils className="w-5 h-5" />,      activeClass: 'border-b-2 border-amber-500 text-amber-600 bg-amber-50', badgeClass: 'bg-amber-500 text-white' },
-    { key: 'served',   label: t.tabServed,   icon: <CheckCircle2 className="w-5 h-5" />,  activeClass: 'border-b-2 border-green-600 text-green-700 bg-green-50', badgeClass: 'bg-green-600 text-white' },
+  const TABS: Array<{
+    key: ActiveTab; label: string; icon: React.ReactNode;
+    activeClass: string; badgeClass: string;
+  }> = [
+    { key: 'all',      label: t.tabAll,      icon: <LayoutGrid className="w-5 h-5" />,  activeClass: 'border-b-2 border-[#05C9CC] text-[#05C9CC] bg-cyan-50',  badgeClass: 'bg-[#05C9CC] text-white' },
+    { key: 'new',      label: t.tabNew,      icon: <Bell className="w-5 h-5" />,         activeClass: 'border-b-2 border-red-500 text-red-600 bg-red-50',        badgeClass: 'bg-red-500 text-white'    },
+    { key: 'received', label: t.tabReceived, icon: <Utensils className="w-5 h-5" />,     activeClass: 'border-b-2 border-amber-500 text-amber-600 bg-amber-50',   badgeClass: 'bg-amber-500 text-white'  },
+    { key: 'served',   label: t.tabServed,   icon: <CheckCircle2 className="w-5 h-5" />, activeClass: 'border-b-2 border-green-600 text-green-700 bg-green-50',   badgeClass: 'bg-green-600 text-white'  },
   ];
 
+  // ── Action handlers — mutate local state, then fire callback to parent ────
+
   const handleToggleItem = useCallback((orderId: string, itemId: number) => {
-    setOrders(prev => prev.map(order => {
-      if (order.id !== orderId) return order;
-      const updatedItems = order.items.map(item =>
-        item.id === itemId ? { ...item, done: !item.done } : item
-      );
-      const allDone = updatedItems.every(i => i.done);
-      if (allDone && order.status === 'new') {
-        const tCur = T[lang];
-        toast.success(tCur.toastOrderReceived, { description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}` });
-        setTimeout(() => setActiveTab('received'), 600);
-        return { ...order, items: updatedItems.map(i => ({ ...i, done: false })), status: 'received' as OrderStatus, receivedAt: new Date() };
-      }
-      if (allDone && order.status === 'received') {
-        const tCur = T[lang];
-        toast.success(tCur.toastFoodServed, { description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}` });
-        setTimeout(() => setActiveTab('served'), 600);
-        return { ...order, items: updatedItems, status: 'served' as OrderStatus, servedAt: new Date() };
-      }
-      return { ...order, items: updatedItems };
-    }));
-  }, [lang]);
+    setOrders(prev => {
+      const next = prev.map(order => {
+        if (order.id !== orderId) return order;
+
+        const updatedItems = order.items.map(item =>
+          item.id === itemId ? { ...item, done: !item.done } : item,
+        );
+        const allDone = updatedItems.every(i => i.done);
+
+        // new → received transition
+        if (allDone && order.status === 'new') {
+          toast.success(T[lang].toastOrderReceived, {
+            description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}`,
+          });
+          setTimeout(() => setActiveTab('received'), 600);
+          const updated: KDSOrder = {
+            ...order,
+            items: updatedItems.map(i => ({ ...i, done: false })),
+            status: 'received',
+            receivedAt: new Date(),
+          };
+          onOrderStatusChanged?.(order.id, 'received', updated);
+          return updated;
+        }
+
+        // received → served transition
+        if (allDone && order.status === 'received') {
+          toast.success(T[lang].toastFoodServed, {
+            description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}`,
+          });
+          setTimeout(() => setActiveTab('served'), 600);
+          const updated: KDSOrder = {
+            ...order,
+            items: updatedItems,
+            status: 'served',
+            servedAt: new Date(),
+          };
+          onOrderStatusChanged?.(order.id, 'served', updated);
+          return updated;
+        }
+
+        const updated = { ...order, items: updatedItems };
+        const toggledItem = updatedItems.find(i => i.id === itemId)!;
+        onItemToggled?.(order.id, itemId, toggledItem.done, updated);
+        return updated;
+      });
+      return next;
+    });
+  }, [lang, onItemToggled, onOrderStatusChanged]);
 
   const handleMarkAll = useCallback((orderId: string) => {
     setOrders(prev => prev.map(order => {
       if (order.id !== orderId) return order;
+
       const updatedItems = order.items.map(item => ({ ...item, done: true }));
+
       if (order.status === 'new') {
-        const tCur = T[lang];
-        toast.success(tCur.toastOrderReceived, { description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}` });
+        toast.success(T[lang].toastOrderReceived, {
+          description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}`,
+        });
         setTimeout(() => setActiveTab('received'), 600);
-        return { ...order, items: updatedItems.map(i => ({ ...i, done: false })), status: 'received' as OrderStatus, receivedAt: new Date() };
+        const updated: KDSOrder = {
+          ...order,
+          items: updatedItems.map(i => ({ ...i, done: false })),
+          status: 'received',
+          receivedAt: new Date(),
+        };
+        onOrderStatusChanged?.(order.id, 'received', updated);
+        return updated;
       }
+
       if (order.status === 'received') {
-        const tCur = T[lang];
-        toast.success(tCur.toastFoodServed, { description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}` });
+        toast.success(T[lang].toastFoodServed, {
+          description: `${lang === 'zh' ? order.suiteNameZh : order.suiteName} — ${order.guestName}`,
+        });
         setTimeout(() => setActiveTab('served'), 600);
-        return { ...order, items: updatedItems, status: 'served' as OrderStatus, servedAt: new Date() };
+        const updated: KDSOrder = {
+          ...order,
+          items: updatedItems,
+          status: 'served',
+          servedAt: new Date(),
+        };
+        onOrderStatusChanged?.(order.id, 'served', updated);
+        return updated;
       }
+
       return { ...order, items: updatedItems };
     }));
-  }, [lang]);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const idx     = (_nextId - 7) % NEW_ITEMS_POOL.length;
-      const suite   = SUITES[(_nextId) % SUITES.length];
-      const suiteZh = SUITES_ZH[(_nextId) % SUITES_ZH.length];
-      const guest   = GUESTS[(_nextId) % GUESTS.length];
-      const newOrder: KDSOrder = {
-        id: `KDS-${String(_nextId).padStart(3, '0')}`,
-        posOrderNo: `POS-20260316-${String(_nextId * 7 + 20).padStart(6, '0')}`,
-        suiteName: suite, suiteNameZh: suiteZh,
-        guestName: guest,
-        guestCount: 1 + (_nextId % 3),
-        placedAt: new Date(),
-        status: 'new',
-        priority: _nextId % 5 === 0 ? 'rush' : 'normal',
-        items: NEW_ITEMS_POOL[idx].map(i => ({ ...i, done: false })),
-      };
-      _nextId++;
-      setOrders(prev => [newOrder, ...prev]);
-      setFlashNew(true);
-      setLastRefreshed(new Date());
-      setTimeout(() => setFlashNew(false), 3000);
-      if (soundOn) {
-        const tCur = T[lang];
-        toast.info(tCur.toastNewOrder, {
-          description: `${lang === 'zh' ? suiteZh : suite} · ${guest}`,
-          duration: 4000,
-        });
-      }
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [soundOn, lang]);
+  }, [lang, onOrderStatusChanged]);
 
   const handleManualRefresh = () => {
     setLastRefreshed(new Date());
     toast.info(t.toastRefreshed);
+    onRefresh?.();
   };
 
-  const currentOrders = tabOrders[activeTab];
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col h-full bg-gray-100" style={{ fontSize: '1.125rem' }}>
 
-      {/* Top bar */}
-      <div className={`bg-[#0f2942] px-6 py-4 flex items-center justify-between gap-4 transition-all ${flashNew ? 'ring-4 ring-red-500 ring-inset' : ''}`}>
+      {/* ── Top bar ── */}
+      <div className={`bg-[#0f2942] px-6 py-4 flex items-center justify-between gap-4 transition-all ${
+        flashNew ? 'ring-4 ring-red-500 ring-inset' : ''
+      }`}>
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
             <ChefHat className="w-7 h-7 text-white" />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.1em' }} className="text-white font-semibold">{t.systemTitle}</h2>
-            <p style={{ fontSize: '0.8em' }} className="text-blue-200">{t.systemSubtitle}</p>
+            <h2 style={{ fontSize: '1.1em' }} className="text-white font-semibold">
+              {t.systemTitle}
+            </h2>
+            <p style={{ fontSize: '0.8em' }} className="text-blue-200">
+              {t.systemSubtitle}
+            </p>
           </div>
         </div>
+
         <div className="flex items-center gap-3 flex-wrap">
           <span style={{ fontSize: '0.8em' }} className="text-blue-200 hidden sm:block">
-            {t.refreshedAt} {lastRefreshed.toLocaleTimeString('en-HK', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+            {t.refreshedAt}{' '}
+            {lastRefreshed.toLocaleTimeString('en-HK', {
+              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+            })}
           </span>
 
-          {/* Language toggle */}
+          {/* Language toggle — pure UI, not business state */}
           <button
             onClick={() => setLang(l => l === 'en' ? 'zh' : 'en')}
             style={{ fontSize: '0.85em' }}
@@ -735,6 +771,7 @@ export function KitchenDisplay() {
           >
             <RefreshCw className="w-5 h-5" />
           </button>
+
           <button
             onClick={() => setSoundOn(p => !p)}
             className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -745,17 +782,19 @@ export function KitchenDisplay() {
         </div>
       </div>
 
-      {/* Flash banner */}
+      {/* ── New-order flash banner ── */}
       {flashNew && (
-        <div style={{ fontSize: '1em' }} className="bg-red-500 text-white text-center py-2 font-semibold animate-pulse">
+        <div
+          style={{ fontSize: '1em' }}
+          className="bg-red-500 text-white text-center py-2 font-semibold animate-pulse"
+        >
           {t.newOrderBanner}
         </div>
       )}
 
-      {/* Tab bar */}
+      {/* ── Tab bar ── */}
       <div className="bg-white border-b border-gray-200 flex items-stretch">
         {TABS.map(tab => {
-          const count    = tabCounts[tab.key];
           const isActive = activeTab === tab.key;
           return (
             <button
@@ -772,31 +811,27 @@ export function KitchenDisplay() {
               <span>{tab.label}</span>
               <span
                 style={{ fontSize: '0.85em' }}
-                className={`ml-1 min-w-[1.6em] h-[1.6em] rounded-full flex items-center justify-center font-bold px-1.5 ${
-                  isActive
-                    ? tab.badgeClass
-                    : count > 0
-                    ? 'bg-gray-200 text-gray-600'
-                    : 'bg-gray-100 text-gray-400'
-                } ${tab.key === 'new' && count > 0 && !isActive ? 'animate-pulse bg-red-100 text-red-600' : ''}`}
+                className={`px-2 py-0.5 rounded-full font-semibold ${
+                  isActive ? tab.badgeClass : 'bg-gray-100 text-gray-600'
+                }`}
               >
-                {count}
+                {tabCounts[tab.key]}
               </span>
             </button>
           );
         })}
       </div>
 
-      {/* Order cards grid */}
+      {/* ── Order grid ── */}
       <div className="flex-1 overflow-y-auto p-4">
-        {currentOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <CheckCircle2 className="w-16 h-16 mb-3 opacity-20" />
-            <p style={{ fontSize: '1em' }}>{tabEmptyMessages[activeTab]}</p>
+        {tabOrders[activeTab].length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 gap-3 text-gray-400">
+            <Utensils className="w-12 h-12 opacity-30" />
+            <p style={{ fontSize: '1em' }}>{tabEmpty[activeTab]}</p>
           </div>
         ) : (
-          <div className={`grid gap-4 ${activeTab === 'all' ? 'grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
-            {currentOrders.map(order => (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+            {tabOrders[activeTab].map(order => (
               <OrderCard
                 key={order.id}
                 order={order}
@@ -809,19 +844,26 @@ export function KitchenDisplay() {
         )}
       </div>
 
-      {/* Footer legend */}
-      <div className="bg-white border-t border-gray-200 px-6 py-2 flex items-center gap-6 flex-wrap text-gray-500" style={{ fontSize: '0.85em' }}>
+      {/* ── Legend footer ── */}
+      <div
+        style={{ fontSize: '0.82em' }}
+        className="bg-white border-t border-gray-200 px-6 py-2.5 flex flex-wrap gap-x-6 gap-y-1 text-gray-500"
+      >
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-red-500 inline-block" /> {t.legendNew}
+          <span className="w-3 h-3 rounded-full bg-red-400 shrink-0" />
+          {t.legendNew}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-amber-500 inline-block" /> {t.legendReceived}
+          <span className="w-3 h-3 rounded-full bg-amber-400 shrink-0" />
+          {t.legendReceived}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-full bg-green-600 inline-block" /> {t.legendServed}
+          <span className="w-3 h-3 rounded-full bg-green-500 shrink-0" />
+          {t.legendServed}
         </span>
-        <span className="flex items-center gap-1.5 ml-auto text-orange-600">
-          <AlertCircle className="w-4 h-4" /> {t.legendAllergy}
+        <span className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-orange-400 shrink-0" />
+          {t.legendAllergy}
         </span>
       </div>
     </div>

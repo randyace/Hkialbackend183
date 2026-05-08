@@ -1,17 +1,17 @@
 import { createBrowserRouter, useNavigate, useParams, useLocation, Navigate } from 'react-router';
 
 import { Layout } from './components/Layout';
-import { DashboardPreview } from '../__fixtures__/previews/DashboardPreview';
-import { AccountListPreview } from '../__fixtures__/previews/AccountListPreview';
+import { Dashboard } from './components/Dashboard';
+import { AccountList } from './components/AccountList';
 import { ApplicationReview } from './components/ApplicationReview';
 import { AccountCreation } from './components/AccountCreation';
-import { MemberCompanyPreview } from '../__fixtures__/previews/MemberCompanyPreview';
+import { MemberCompany } from './components/MemberCompany';
 import { CompanyEdit } from './components/CompanyEdit';
 import { Reports } from './components/Reports';
-import { TravelAgencyPreview } from '../__fixtures__/previews/TravelAgencyPreview';
+import { TravelAgency } from './components/TravelAgency';
 import { TravelAgencyDetail } from './components/TravelAgencyDetail';
 import { MemberDetail } from './components/MemberDetail';
-import { BookingManagementPreview } from '../__fixtures__/previews/BookingManagementPreview';
+import { BookingManagement } from './components/BookingManagement';
 import { CreateBooking } from './components/CreateBooking';
 import { BookingDetail } from './components/BookingDetail';
 import { BookingSettings } from './components/BookingSettings';
@@ -20,24 +20,24 @@ import { SupervisingApproval } from './components/SupervisingApproval';
 import { BookingSchedules } from './components/BookingSchedules';
 import { SuiteBookingSchedules } from './components/SuiteBookingSchedules';
 import { TableBookingSchedules } from './components/TableBookingSchedules';
-import { BookableItemsPreview } from '../__fixtures__/previews/BookableItemsPreview';
+import { BookableItems } from './components/BookableItems';
 import { BookableItemEdit } from './components/BookableItemEdit';
 import { POSFloorPlan } from './components/POSFloorPlan';
 import { POSCheckout } from './components/POSCheckout';
-import { POSBookingDetailPreview } from '../__fixtures__/previews/POSBookingDetailPreview';
+import { POSBookingDetail } from './components/POSBookingDetail';
 import { KitchenDisplay } from './components/KitchenDisplay';
-import { LoungeLayoutPreview } from '../__fixtures__/previews/LoungeLayoutPreview';
-import { SystemUsersPreview } from '../__fixtures__/previews/SystemUsersPreview';
-import { AuditLogsPreview } from '../__fixtures__/previews/AuditLogsPreview';
-import { PromoCodeListPreview } from '../__fixtures__/previews/PromoCodeListPreview';
+import { LoungeLayout } from './components/LoungeLayout';
+import { SystemUsers } from './components/SystemUsers';
+import { AuditLogs } from './components/AuditLogs';
+import { PromoCodeList } from './components/PromoCodeList';
 import { PromoCodeEdit } from './components/PromoCodeEdit';
 import { PromoCodeUsage } from './components/PromoCodeUsage';
 import { PromoCodeGeneratedPage, GeneratedCodesData } from './components/PromoCodeGeneratedPage';
-import { GradingPackagesPreview } from '../__fixtures__/previews/GradingPackagesPreview';
+import { GradingPackages } from './components/GradingPackages';
 import { PurchaseManagement } from './components/PurchaseManagement';
 import { BalanceTracker } from './components/BalanceTracker';
 import { CorporateReports } from './components/CorporateReports';
-import { OpportunityTrackingPreview } from '../__fixtures__/previews/OpportunityTrackingPreview';
+import { OpportunityTracking } from './components/OpportunityTracking';
 import { RefundReport } from './components/RefundReport';
 import { PreOrderPage } from './components/PreOrderPage';
 
@@ -63,7 +63,7 @@ function NotFound() {
 function CustomerListPage() {
   const navigate = useNavigate();
   return (
-    <AccountListPreview
+    <AccountList
       onViewDetail={(accountNo) => navigate(`/customer/detail/${encodeURIComponent(accountNo)}`)}
     />
   );
@@ -84,7 +84,7 @@ function CustomerDetailPage() {
 function CustomerCompanyPage() {
   const navigate = useNavigate();
   return (
-    <MemberCompanyPreview
+    <MemberCompany
       onEditCompany={(id) => navigate(`/customer/company/edit/${id}`)}
       onCreateCompany={() => navigate('/customer/company/create')}
     />
@@ -110,7 +110,7 @@ function CompanyCreatePage() {
 function TravelAgencyPage() {
   const navigate = useNavigate();
   return (
-    <TravelAgencyPreview
+    <TravelAgency
       onEditAgency={(id) => navigate(`/travel-agency/edit/${id}`)}
     />
   );
@@ -135,7 +135,7 @@ function TravelAgencyCreatePage() {
 function BookingListPage() {
   const navigate = useNavigate();
   return (
-    <BookingManagementPreview
+    <BookingManagement
       onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
     />
   );
@@ -236,7 +236,7 @@ function PreOrderRoute() {
 function BookableItemsPage() {
   const navigate = useNavigate();
   return (
-    <BookableItemsPreview
+    <BookableItems
       onEditItem={(id) => navigate(`/bookable-items/edit/${id}`)}
       onCreateItem={() => navigate('/bookable-items/create')}
     />
@@ -274,7 +274,7 @@ function POSBookingDetailPage() {
   const navigate = useNavigate();
   if (!bookingNo) return <Navigate to="/pos" replace />;
   return (
-    <POSBookingDetailPreview
+    <POSBookingDetail
       bookingNo={decodeURIComponent(bookingNo)}
       onBack={() => navigate('/pos')}
     />
@@ -296,7 +296,7 @@ function POSCheckoutPage() {
 function PromoCodeListPage() {
   const navigate = useNavigate();
   return (
-    <PromoCodeListPreview
+    <PromoCodeList
       onEditPromoCode={(id) => navigate(`/promo-codes/edit/${id}`)}
       onCreatePromoCode={() => navigate('/promo-codes/create')}
     />
@@ -357,7 +357,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
 
       // Dashboard
-      { path: 'dashboard', Component: DashboardPreview },
+      { path: 'dashboard', Component: Dashboard },
 
       // Customers
       { path: 'customer',                  Component: CustomerListPage },
@@ -375,7 +375,7 @@ export const router = createBrowserRouter([
       { path: 'travel-agency/edit/:id', Component: TravelAgencyEditPage },
 
       // Membership / Contracts
-      { path: 'membership/packages', Component: GradingPackagesPreview },
+      { path: 'membership/packages', Component: GradingPackages },
       { path: 'membership/purchase', Component: PurchaseManagement },
       { path: 'membership/balance',  Component: BalanceTracker },
 
@@ -408,7 +408,7 @@ export const router = createBrowserRouter([
       { path: 'pos/kitchen',               Component: KitchenDisplay },
 
       // Lounge
-      { path: 'lounge', Component: LoungeLayoutPreview },
+      { path: 'lounge', Component: LoungeLayout },
 
       // Promo Codes
       { path: 'promo-codes',            Component: PromoCodeListPage },
@@ -424,11 +424,11 @@ export const router = createBrowserRouter([
       { path: 'reports/refund',     Component: RefundReport },
 
       // System
-      { path: 'system/users', Component: SystemUsersPreview },
-      { path: 'system/audit', Component: AuditLogsPreview },
+      { path: 'system/users', Component: SystemUsers },
+      { path: 'system/audit', Component: AuditLogs },
 
       // CRM
-      { path: 'crm/opportunities', Component: OpportunityTrackingPreview },
+      { path: 'crm/opportunities', Component: OpportunityTracking },
 
       // 404
       { path: '*', Component: NotFound },

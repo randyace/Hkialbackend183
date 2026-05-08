@@ -1,13 +1,14 @@
+import { useState } from 'react';
 import { ChevronDown, ChevronUp, UtensilsCrossed, Clock, CheckCheck, X, AlertTriangle } from 'lucide-react';
 
-export interface PendingItem {
+interface PendingItem {
   name: string;
   qty: number;
   status: 'pending' | 'preparing';
   waitMinutes: number;
 }
 
-export interface PendingOrder {
+interface PendingOrder {
   suiteId: string;
   suiteName: string;
   bookingNo: string;
@@ -15,46 +16,88 @@ export interface PendingOrder {
   items: PendingItem[];
 }
 
-export interface POSFoodAlertProps {
-  pendingOrders: PendingOrder[];
-  isExpanded: boolean;
-  totalItems: number;
-  hasOverdue: boolean;
-  overdueThreshold: number;
-  onToggleExpanded: () => void;
-  onDismiss: () => void;
-  onNavigateToBooking: (bookingNo: string) => void;
-  onMarkServed: (suiteId: string) => void;
-  statusLabel: (item: PendingItem) => string;
-  statusClassName: (item: PendingItem) => string;
-  waitClassName: (mins: number) => string;
+interface POSFoodAlertProps {
+  /** Called when the user clicks the booking number — navigate to that booking */
+  onViewBooking?: (bookingNo: string) => void;
 }
 
-export function POSFoodAlert({
-  pendingOrders,
-  isExpanded,
-  totalItems,
-  hasOverdue,
-  overdueThreshold,
-  onToggleExpanded,
-  onDismiss,
-  onNavigateToBooking,
-  onMarkServed,
-  statusLabel,
-  statusClassName,
-  waitClassName,
-}: POSFoodAlertProps) {
-  if (pendingOrders.length === 0) return null;
+// ── Mock live pending-food data ────────────────────────────────────────────
+const INITIAL_PENDING: PendingOrder[] = [
+  {
+    suiteId: 'exec-1',
+    suiteName: 'Executive Suite 1',
+    bookingNo: 'A-202602-000002',
+    guestName: 'Mary Johnson',
+    items: [
+      { name: 'Premium Breakfast Set', qty: 2, status: 'preparing', waitMinutes: 35 },
+    ],
+  },
+  {
+    suiteId: 'vip-a1',
+    suiteName: 'VIP Suite A1',
+    bookingNo: 'A-202602-000001',
+    guestName: 'John Smith',
+    items: [
+      { name: 'Wagyu Beef Burger',  qty: 1, status: 'preparing', waitMinutes: 28 },
+      { name: 'Dim Sum Platter',    qty: 1, status: 'pending',   waitMinutes: 12 },
+    ],
+  },
+  {
+    suiteId: 'business-4',
+    suiteName: 'Business Suite 4',
+    bookingNo: 'A-202602-000009',
+    guestName: 'Sarah Chen',
+    items: [
+      { name: 'Lobster Salad',               qty: 1, status: 'pending', waitMinutes: 8 },
+      { name: 'Champagne (Dom Pérignon)',     qty: 1, status: 'pending', waitMinutes: 8 },
+    ],
+  },
+];
+
+const OVERDUE_THRESHOLD = 20; // minutes
+
+/** Number of pending orders that have at least one overdue item — used by Sidebar badge */
+export const INITIAL_OVERDUE_COUNT = INITIAL_PENDING.filter(o =>
+  o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD)
+).length;
+
+export function POSFoodAlert({ onViewBooking }: POSFoodAlertProps) {
+  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(INITIAL_PENDING);
+  const [isExpanded, setIsExpanded]       = useState(true);
+  const [dismissed, setDismissed]         = useState(false);
+
+  if (dismissed || pendingOrders.length === 0) return null;
+
+  const totalItems  = pendingOrders.reduce((s, o) => s + o.items.length, 0);
+  const hasOverdue  = pendingOrders.some(o => o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD));
+
+  const markServed = (suiteId: string) => {
+    setPendingOrders(prev => prev.filter(o => o.suiteId !== suiteId));
+  };
+
+  const statusLabel = (item: PendingItem) =>
+    item.status === 'preparing' ? 'Preparing' : 'Pending';
+
+  const statusCls = (item: PendingItem) =>
+    item.status === 'preparing'
+      ? 'bg-blue-100 text-blue-700'
+      : 'bg-yellow-100 text-yellow-700';
+
+  const waitCls = (mins: number) =>
+    mins >= OVERDUE_THRESHOLD ? 'text-red-600 font-semibold' : 'text-gray-500';
 
   return (
     <div className={`border-b transition-colors ${hasOverdue ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+      {/* ── Collapsed / Header strip ─────────────────────────────────── */}
       <div className="flex items-center gap-3 px-5 py-2.5">
+        {/* Icon */}
         <div className={`shrink-0 ${hasOverdue ? 'text-red-500' : 'text-amber-500'}`}>
           {hasOverdue
             ? <AlertTriangle className="w-4 h-4" />
             : <UtensilsCrossed className="w-4 h-4" />}
         </div>
 
+        {/* Label + count */}
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className={`text-sm font-semibold ${hasOverdue ? 'text-red-700' : 'text-amber-700'}`}>
             {hasOverdue ? 'Overdue Food Orders' : 'Pending Food Orders'}
@@ -69,9 +112,10 @@ export function POSFoodAlert({
           </span>
         </div>
 
+        {/* Expand / Dismiss */}
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={onToggleExpanded}
+            onClick={() => setIsExpanded(v => !v)}
             className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
               hasOverdue
                 ? 'text-red-600 hover:bg-red-100'
@@ -85,7 +129,7 @@ export function POSFoodAlert({
             )}
           </button>
           <button
-            onClick={onDismiss}
+            onClick={() => setDismissed(true)}
             title="Dismiss alert"
             className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
@@ -94,16 +138,18 @@ export function POSFoodAlert({
         </div>
       </div>
 
+      {/* ── Expanded order rows ──────────────────────────────────────── */}
       {isExpanded && (
         <div className="px-5 pb-3 space-y-2">
+          {/* Sort: longest wait first */}
           {[...pendingOrders]
             .sort((a, b) =>
               Math.max(...b.items.map(i => i.waitMinutes)) -
               Math.max(...a.items.map(i => i.waitMinutes))
             )
             .map(order => {
-              const maxWait = Math.max(...order.items.map(i => i.waitMinutes));
-              const isOverdue = maxWait >= overdueThreshold;
+              const maxWait    = Math.max(...order.items.map(i => i.waitMinutes));
+              const isOverdue  = maxWait >= OVERDUE_THRESHOLD;
 
               return (
                 <div
@@ -114,6 +160,7 @@ export function POSFoodAlert({
                       : 'bg-white border-amber-200'
                   }`}
                 >
+                  {/* Suite + booking info */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-sm font-semibold ${isOverdue ? 'text-red-800' : 'text-gray-900'}`}>
@@ -121,7 +168,7 @@ export function POSFoodAlert({
                       </span>
                       <span className="text-xs text-gray-400">{order.guestName}</span>
                       <button
-                        onClick={() => onNavigateToBooking(order.bookingNo)}
+                        onClick={() => onViewBooking?.(order.bookingNo)}
                         className="font-mono text-xs text-blue-600 hover:underline"
                       >
                         {order.bookingNo}
@@ -133,21 +180,23 @@ export function POSFoodAlert({
                       )}
                     </div>
 
+                    {/* Items list */}
                     <div className="mt-2 flex flex-wrap gap-2">
                       {order.items.map((item, idx) => (
                         <span
                           key={idx}
                           className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs border ${
-                            item.waitMinutes >= overdueThreshold
+                            item.waitMinutes >= OVERDUE_THRESHOLD
                               ? 'bg-red-50 border-red-200 text-red-700'
                               : 'bg-gray-50 border-gray-200 text-gray-700'
                           }`}
                         >
-                          <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${statusClassName(item)}`}>
+                          {/* Status dot */}
+                          <span className={`inline-block px-1.5 py-0.5 rounded text-xs ${statusCls(item)}`}>
                             {statusLabel(item)}
                           </span>
                           <span>{item.qty > 1 ? `${item.qty}× ` : ''}{item.name}</span>
-                          <span className={`flex items-center gap-0.5 ${waitClassName(item.waitMinutes)}`}>
+                          <span className={`flex items-center gap-0.5 ${waitCls(item.waitMinutes)}`}>
                             <Clock className="w-3 h-3" />
                             {item.waitMinutes} min
                           </span>
@@ -156,8 +205,9 @@ export function POSFoodAlert({
                     </div>
                   </div>
 
+                  {/* Mark as Served */}
                   <button
-                    onClick={() => onMarkServed(order.suiteId)}
+                    onClick={() => markServed(order.suiteId)}
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition-colors"
                   >
                     <CheckCheck className="w-3.5 h-3.5" />
