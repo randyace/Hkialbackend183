@@ -22,9 +22,27 @@ import {
   DialogTitle,
 } from './ui/dialog';
 
-interface TravelAgencyDetailProps {
-  agencyId: number | null;
+// ── MOCK agency (isolated — container replaces via props) ─────────────────────
+const MOCK_AGENCY: TravelAgency = {
+  id: 1,
+  agencyName: 'Wings Travel Agency',
+  agencyCode: 'TA-WG-001',
+  contactPerson: 'Alice Chan',
+  email: 'alice.chan@wingstravel.hk',
+  phone: '+852 9111 2222',
+  paymentMethod: 'On-Credit',
+  discountRate: 15,
+  status: 'active',
+};
+
+export interface TravelAgencyDetailProps {
+  agencyId?: number | null;
+  /** Pass full agency from CI4; when null falls back to MOCK_AGENCY for demo */
+  agency?: TravelAgency | null;
   onBack: () => void;
+  onEdit?: () => void;
+  onAddContact?: (contact: ContactPerson) => void;
+  isLoading?: boolean;
 }
 
 interface TravelAgency {
@@ -151,9 +169,16 @@ function BalanceBadge({ used, total }: { used: number; total: number }) {
   );
 }
 
-export function TravelAgencyDetail({ agencyId, onBack }: TravelAgencyDetailProps) {
-  // Mock data - in real app, would fetch based on agencyId
+export function TravelAgencyDetail({
+  agencyId,
+  agency: agencyProp,
+  onBack,
+  onEdit,
+  onAddContact,
+  isLoading = false,
+}: TravelAgencyDetailProps) {
   const [agency, setAgency] = useState<TravelAgency | null>(
+    agencyProp !== undefined ? agencyProp :
     agencyId ? {
       id: agencyId,
       agencyName: 'Wings Travel Agency',

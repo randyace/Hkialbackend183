@@ -317,12 +317,33 @@ const paymentModeBadgeClass = (mode: SupervisingBooking['paymentMode']) => {
   return 'bg-gray-100 text-gray-700';
 };
 
+// ── MOCK constant (isolated — container replaces via props) ───────────────────
+const MOCK_SUPERVISING_BOOKINGS: SupervisingBooking[] = generateBookings();
+
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface SupervisingApprovalProps {
+  /** Pass populated array from CI4; falls back to MOCK_SUPERVISING_BOOKINGS when empty */
+  bookings?: SupervisingBooking[];
+  onApprove?: (id: number, note?: string) => void;
+  onReject?: (id: number, reason: string) => void;
+  onEscalate?: (id: number) => void;
+  onViewDetail?: (bookingId: number) => void;
+  isLoading?: boolean;
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export function SupervisingApproval({ onViewDetail }: {
-  onViewDetail?: (bookingId: number) => void;
-}) {
-  const [bookings] = useState<SupervisingBooking[]>(generateBookings);
+export function SupervisingApproval({
+  bookings: bookingsProp = [],
+  onApprove,
+  onReject,
+  onEscalate,
+  onViewDetail,
+  isLoading = false,
+}: SupervisingApprovalProps) {
+  const [bookings] = useState<SupervisingBooking[]>(
+    bookingsProp.length > 0 ? bookingsProp : MOCK_SUPERVISING_BOOKINGS,
+  );
   const [statuses, setStatuses] = useState<Record<number, SupervisingStatus>>({});
 
   // Sub-navigation

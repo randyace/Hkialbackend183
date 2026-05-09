@@ -45,11 +45,39 @@ const REVENUE_TREND = [
   { month: 'Feb 25', corporate: 88000,  agency: 78000  },
 ];
 
-export function CorporateReports() {
+// ── MOCK constants (isolated — container replaces via props) ──────────────────
+const MOCK_MONTHLY_UTILISATION = MONTHLY_UTILISATION;
+const MOCK_COMPANY_SUMMARY     = COMPANY_SUMMARY;
+const MOCK_PIE_DATA            = PIE_DATA;
+const MOCK_REVENUE_TREND       = REVENUE_TREND;
+
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface CorporateReportsProps {
+  monthlyUtilisation?: typeof MONTHLY_UTILISATION;
+  companySummary?: typeof COMPANY_SUMMARY;
+  pieData?: typeof PIE_DATA;
+  revenueTrend?: typeof REVENUE_TREND;
+  onGenerateReport?: (type: string) => void;
+  isLoading?: boolean;
+}
+
+export function CorporateReports({
+  monthlyUtilisation: monthlyUtilisationProp,
+  companySummary: companySummaryProp,
+  pieData: pieDataProp,
+  revenueTrend: revenueTrendProp,
+  onGenerateReport,
+  isLoading = false,
+}: CorporateReportsProps = {}) {
+  const displayMontly  = monthlyUtilisationProp ?? MOCK_MONTHLY_UTILISATION;
+  const displaySummary = companySummaryProp     ?? MOCK_COMPANY_SUMMARY;
+  const displayPie     = pieDataProp            ?? MOCK_PIE_DATA;
+  const displayTrend   = revenueTrendProp       ?? MOCK_REVENUE_TREND;
+
   const [filterPeriod, setFilterPeriod] = useState<string>('last-6-months');
   const [filterType,   setFilterType]   = useState<string>('all');
 
-  const filteredSummary = COMPANY_SUMMARY.filter(c =>
+  const filteredSummary = displaySummary.filter(c =>
     filterType === 'all' || c.type === filterType
   );
 
@@ -121,7 +149,7 @@ export function CorporateReports() {
         <Card className="p-4 md:col-span-2">
           <p className="text-sm text-gray-700 mb-4">Monthly Sessions by Company</p>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={MONTHLY_UTILISATION} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+            <BarChart data={displayMontly} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
@@ -140,14 +168,14 @@ export function CorporateReports() {
           <p className="text-sm text-gray-700 mb-4">Sessions by Account Type</p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
-              <Pie data={PIE_DATA} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
-                {PIE_DATA.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+              <Pie data={displayPie} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
+                {displayPie.map((entry, index) => <Cell key={index} fill={entry.color} />)}
               </Pie>
               <Tooltip />
             </PieChart>
           </ResponsiveContainer>
           <div className="space-y-2 mt-2">
-            {PIE_DATA.map(d => (
+            {displayPie.map(d => (
               <div key={d.name} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full" style={{ background: d.color }} />{d.name}</div>
                 <span className="text-gray-700">{d.value} sessions</span>
@@ -161,7 +189,7 @@ export function CorporateReports() {
       <Card className="p-4 mb-6">
         <p className="text-sm text-gray-700 mb-4">Revenue Trend — Corporate vs Travel Agency (HKD)</p>
         <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={REVENUE_TREND} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
+          <LineChart data={displayTrend} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v / 1000).toFixed(0)}K`} />

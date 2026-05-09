@@ -70,8 +70,29 @@ const mockApplications: Application[] = [
   }
 ];
 
-export function ApplicationReview() {
-  const [applications, setApplications] = useState<Application[]>(mockApplications);
+// ── MOCK constant (isolated — container replaces via props) ───────────────────
+const MOCK_APPLICATIONS = mockApplications;
+
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface ApplicationReviewProps {
+  /** Pass populated array from CI4; falls back to MOCK_APPLICATIONS when empty */
+  applications?: Application[];
+  onApprove?: (id: string) => void;
+  onReject?: (id: string, reason: string) => void;
+  onViewDetail?: (id: string) => void;
+  isLoading?: boolean;
+}
+
+export function ApplicationReview({
+  applications: applicationsProp = [],
+  onApprove,
+  onReject,
+  onViewDetail,
+  isLoading = false,
+}: ApplicationReviewProps) {
+  const [applications, setApplications] = useState<Application[]>(
+    applicationsProp.length > 0 ? applicationsProp : MOCK_APPLICATIONS,
+  );
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
@@ -108,6 +129,7 @@ export function ApplicationReview() {
     setIsApprovalDialogOpen(false);
     setSelectedApp(null);
     resetForm();
+    onApprove?.(selectedApp.id);
   };
 
   const handleReject = () => {
@@ -127,6 +149,7 @@ export function ApplicationReview() {
     setIsRejectionDialogOpen(false);
     setSelectedApp(null);
     setRejectionReason('');
+    onReject?.(selectedApp.id, rejectionReason);
   };
 
   const resetForm = () => {

@@ -162,8 +162,24 @@ function InteractionIcon({ type }: { type: InteractionType }) {
   );
 }
 
-export function OpportunityTracking() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(MOCK_OPPORTUNITIES);
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface OpportunityTrackingProps {
+  /** Pass populated array from CI4; falls back to MOCK_OPPORTUNITIES when empty */
+  opportunities?: Opportunity[];
+  onUpdateStatus?: (id: string, status: DealStage) => void;
+  onAddInteraction?: (id: string) => void;
+  isLoading?: boolean;
+}
+
+export function OpportunityTracking({
+  opportunities: opportunitiesProp = [],
+  onUpdateStatus,
+  onAddInteraction,
+  isLoading = false,
+}: OpportunityTrackingProps = {}) {
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(
+    opportunitiesProp.length > 0 ? opportunitiesProp : MOCK_OPPORTUNITIES,
+  );
   const [filterStage, setFilterStage]     = useState<'all' | DealStage>('all');
   const [filterType,  setFilterType]      = useState<'all' | AccountType>('all');
   const [searchTerm,  setSearchTerm]      = useState('');

@@ -585,10 +585,29 @@ function RefundDetailModal({
   );
 }
 
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface RefundReportProps {
+  /** Pass populated array from CI4; falls back to MOCK_REFUND_RECORDS when empty */
+  refunds?: RefundRecord[];
+  onViewDetail?: (id: number) => void;
+  onUpdateStatus?: (id: number, status: RefundStatus, notes: string) => void;
+  isLoading?: boolean;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function RefundReport() {
-  const [records, setRecords] = useState<RefundRecord[]>(MOCK_REFUND_RECORDS);
+export function RefundReport({
+  refunds: refundsProp = [],
+  onViewDetail,
+  onUpdateStatus,
+  isLoading = false,
+}: RefundReportProps = {}) {
+  const [records, setRecords] = useState<RefundRecord[]>(
+    refundsProp.length > 0 ? refundsProp : MOCK_REFUND_RECORDS,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RefundStatus | 'All'>('All');
   const [accountTypeFilter, setAccountTypeFilter] = useState<AccountType | 'All'>('All');

@@ -330,7 +330,23 @@ function ContractStatusBadge({ status }: { status: Contract['status'] }) {
   return <Badge className={colors[status]}>{status}</Badge>;
 }
 
-export function BalanceTracker() {
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface BalanceTrackerProps {
+  /** Pass populated array from CI4; falls back to MOCK_ACCOUNTS when empty */
+  contracts?: Account[];
+  onViewContract?: (id: string) => void;
+  isLoading?: boolean;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+}
+
+export function BalanceTracker({
+  contracts: contractsProp = [],
+  onViewContract,
+  isLoading = false,
+}: BalanceTrackerProps = {}) {
+  const displayAccounts = contractsProp.length > 0 ? contractsProp : MOCK_ACCOUNTS;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | BalanceStatus>('all');

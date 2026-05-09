@@ -306,8 +306,25 @@ const generateMockBooking = (bookingNo: string): POSBooking => {
   };
 };
 
-export function POSBookingDetail({ bookingNo, onBack }: POSBookingDetailProps) {
-  const booking = generateMockBooking(bookingNo);
+// ── MOCK constant + updated Props ────────────────────────────────────────────
+const MOCK_BOOKING_DETAIL: POSBooking = generateMockBooking('A-202603-000001');
+
+export interface POSBookingDetailFullProps extends POSBookingDetailProps {
+  /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_DETAIL */
+  booking?: POSBooking | null;
+  onCheckout?: (paymentData: { method: string }) => void;
+  onAddItem?: (item: CartItem) => void;
+  onRemoveItem?: (itemId: string) => void;
+  isLoading?: boolean;
+}
+
+export function POSBookingDetail({
+  bookingNo,
+  onBack,
+  booking: bookingProp,
+  isLoading = false,
+}: POSBookingDetailFullProps) {
+  const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');

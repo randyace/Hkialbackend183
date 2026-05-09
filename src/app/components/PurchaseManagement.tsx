@@ -28,9 +28,28 @@ type TabView = 'all' | 'individual' | 'corporate';
 const TIERS: Tier[] = ['Gold', 'Platinum', 'Diamond', 'Sapphire'];
 const fmt = (d: string) => new Date(d).toLocaleDateString('en-HK', { day: '2-digit', month: 'long', year: 'numeric' });
 
-export function PurchaseManagement() {
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface PurchaseManagementProps {
+  /** Pass populated array from CI4; falls back to INITIAL_RECORDS when empty */
+  purchases?: PurchaseRecord[];
+  onViewDetail?: (id: string) => void;
+  onCreateNew?: () => void;
+  isLoading?: boolean;
+  page?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+}
+
+export function PurchaseManagement({
+  purchases: purchasesProp = [],
+  onViewDetail,
+  onCreateNew,
+  isLoading = false,
+}: PurchaseManagementProps = {}) {
   const [view, setView] = useState<'list' | 'create'>('list');
-  const [records, setRecords]   = useState<PurchaseRecord[]>(INITIAL_RECORDS);
+  const [records, setRecords]   = useState<PurchaseRecord[]>(
+    purchasesProp.length > 0 ? purchasesProp : INITIAL_RECORDS,
+  );
   const [accounts, setAccounts] = useState<AccountOption[]>(MOCK_ACCOUNTS);
 
   // Tab & filters

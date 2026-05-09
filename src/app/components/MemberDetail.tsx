@@ -20,9 +20,18 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 
-interface MemberDetailProps {
+// ── MOCK constant (isolated — container replaces via props) ───────────────────
+const MOCK_ACCOUNT_NUMBER = 'ACC-2024-1001';
+
+export interface MemberDetailProps {
+  /** Account number to fetch — falls back to MOCK_ACCOUNT_NUMBER in demo mode */
   accountNumber?: string;
+  /** Pass full member object from CI4; when null component uses mock internally */
+  member?: Member | null;
   onBack: () => void;
+  onEdit?: () => void;
+  onUpgrade?: (packageId: string) => void;
+  isLoading?: boolean;
 }
 
 interface Preference {
@@ -97,7 +106,14 @@ interface Spouse {
   linkedAccountNo?: string;
 }
 
-export function MemberDetail({ accountNumber = 'ACC-2024-1001', onBack }: MemberDetailProps) {
+export function MemberDetail({
+  accountNumber = MOCK_ACCOUNT_NUMBER,
+  member,
+  onBack,
+  onEdit,
+  onUpgrade,
+  isLoading = false,
+}: MemberDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddPreferenceOpen, setIsAddPreferenceOpen] = useState(false);
   const [isAddAllergyOpen, setIsAddAllergyOpen] = useState(false);

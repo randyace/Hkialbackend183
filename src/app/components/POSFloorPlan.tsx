@@ -192,7 +192,22 @@ const SERVICE_CATALOGUE: CatalogueItem[] = [
 ];
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export function POSFloorPlan({ onViewBookingDetail, onCheckout }: POSFloorPlanProps) {
+// ── MOCK constant (isolated — TODAY_BOOKINGS already module-scoped above) ────
+const MOCK_TODAY_BOOKINGS = TODAY_BOOKINGS;
+
+export interface POSFloorPlanExtendedProps extends POSFloorPlanProps {
+  /** Pass today's booking list from CI4; falls back to MOCK_TODAY_BOOKINGS when empty */
+  todayBookings?: MatchingBooking[];
+  onTableStatusChange?: (tableId: string, status: string) => void;
+  isLoading?: boolean;
+}
+
+export function POSFloorPlan({
+  onViewBookingDetail,
+  onCheckout,
+  todayBookings: _todayBookingsProp,
+  isLoading = false,
+}: POSFloorPlanExtendedProps) {
   // ── Suites are stateful so we can promote reserved/available → occupied ──
   const [suites, setSuites] = useState<Suite[]>([
     {

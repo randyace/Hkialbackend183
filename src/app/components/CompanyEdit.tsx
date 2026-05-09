@@ -22,9 +22,27 @@ import {
   DialogTitle,
 } from './ui/dialog';
 
-interface CompanyEditProps {
-  companyId: number | null;
+// ── MOCK constant (isolated — container replaces via props) ───────────────────
+const MOCK_COMPANY: Company = {
+  id: 1,
+  companyName: 'Cathay Pacific Airways',
+  companyCode: 'CORP-CX-001',
+  contactPerson: 'Sarah Wong',
+  email: 'sarah.wong@cathaypacific.com',
+  phone: '+852 2123 4567',
+  paymentMethod: 'On-Credit',
+  discountRate: 15,
+  status: 'active',
+};
+
+export interface CompanyEditProps {
+  companyId?: number | null;
+  /** Pass full company from CI4; when null falls back to MOCK_COMPANY for demo */
+  initialData?: Company | null;
+  onSave?: (data: Company) => void;
   onBack: () => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
 }
 
 interface Company {
@@ -149,20 +167,16 @@ function BalanceBadge({ used, total }: { used: number; total: number }) {
   );
 }
 
-export function CompanyEdit({ companyId, onBack }: CompanyEditProps) {
-  // Mock data - in real app, would fetch based on companyId
+export function CompanyEdit({
+  companyId,
+  initialData,
+  onSave,
+  onBack,
+  onCancel,
+  isSubmitting = false,
+}: CompanyEditProps) {
   const [company, setCompany] = useState<Company | null>(
-    companyId ? {
-      id: companyId,
-      companyName: 'Cathay Pacific Airways',
-      companyCode: 'CORP-CX-001',
-      contactPerson: 'Sarah Wong',
-      email: 'sarah.wong@cathaypacific.com',
-      phone: '+852 2123 4567',
-      paymentMethod: 'On-Credit',
-      discountRate: 15,
-      status: 'active'
-    } : null
+    initialData !== undefined ? initialData : companyId ? MOCK_COMPANY : null,
   );
 
   const [editingContract, setEditingContract] = useState<Contract | null>(null);

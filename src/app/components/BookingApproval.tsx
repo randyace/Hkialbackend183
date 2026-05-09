@@ -251,13 +251,31 @@ const REJECTION_REASONS = [
   'Other (specify below)',
 ];
 
+// ── MOCK constant (isolated — container replaces via props) ───────────────────
+const MOCK_BOOKINGS: PendingBooking[] = generatePendingBookings();
+
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface BookingApprovalProps {
+  /** Pass populated array from CI4; falls back to MOCK_BOOKINGS when empty */
+  bookings?: PendingBooking[];
+  onApprove?: (id: number) => void;
+  onReject?: (id: number, reason?: string) => void;
+  onViewDetail?: (bookingId: number) => void;
+  isLoading?: boolean;
+}
+
 // ── Main Component ───────────────────────────────────────────────────────────
 
-export function BookingApproval({ onViewDetail }: {
-  onViewDetail?: (bookingId: number) => void;
-  onReviewBooking?: (booking: PendingBooking) => void; // kept for backward compat, handled internally
-}) {
-  const [bookings] = useState<PendingBooking[]>(generatePendingBookings);
+export function BookingApproval({
+  bookings: bookingsProp = [],
+  onApprove,
+  onReject,
+  onViewDetail,
+  isLoading = false,
+}: BookingApprovalProps) {
+  const [bookings] = useState<PendingBooking[]>(
+    bookingsProp.length > 0 ? bookingsProp : MOCK_BOOKINGS,
+  );
 
   // ── Two-step approval status ─────────────────────────────────────────────
   const [bookingStatuses, setBookingStatuses] = useState<Record<number, BookingStatusRecord>>({});

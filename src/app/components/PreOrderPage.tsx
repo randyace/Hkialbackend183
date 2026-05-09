@@ -109,13 +109,47 @@ export interface PreOrderBooking {
   amount: string;
 }
 
-interface PreOrderPageProps {
-  booking: PreOrderBooking;
+// ── MOCK constants (isolated — SERVICE_CATALOGUE already module-scoped above) ─
+const MOCK_MENU_ITEMS = SERVICE_CATALOGUE;
+const MOCK_BOOKING: PreOrderBooking = {
+  id: 1,
+  bookingNo: 'A-202603-000001',
+  guestName: 'John Smith',
+  accountNo: 'ACC-2024-0001',
+  venue: 'VIP Suite A',
+  date: '2026-03-16',
+  startTime: '14:00',
+  endTime: '17:00',
+  flightNo: 'CX888',
+  flightTime: '18:30',
+  numberOfGuests: 2,
+  status: 'Confirmed',
+  accountType: 'Individual',
+  paymentMode: 'Upfront',
+  amount: 'HK$7,600',
+};
+
+export interface PreOrderPageProps {
+  /** Pass fully-loaded booking from CI4; falls back to MOCK_BOOKING when null */
+  booking?: PreOrderBooking | null;
+  /** Pass menu items from CI4; falls back to MOCK_MENU_ITEMS when empty */
+  items?: CatalogueItem[];
+  onAddToCart?: (item: PreOrderItem) => void;
+  onCheckout?: () => void;
+  cartItems?: PreOrderItem[];
   onBack: () => void;
   onSaved: () => void;
+  isLoading?: boolean;
 }
 
-export function PreOrderPage({ booking, onBack, onSaved }: PreOrderPageProps) {
+export function PreOrderPage({
+  booking: bookingProp,
+  items: _itemsProp,
+  onBack,
+  onSaved,
+  isLoading = false,
+}: PreOrderPageProps) {
+  const booking = bookingProp ?? MOCK_BOOKING;
   const [items, setItems]               = useState<PreOrderItem[]>([]);
   const [search, setSearch]             = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);

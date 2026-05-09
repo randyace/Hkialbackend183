@@ -10,8 +10,19 @@ import { toast } from 'sonner';
 import { MOCK_ACCOUNTS } from './PurchaseCreate';
 import { Building2, Plane, Search, Shuffle, Copy, X, UserPlus } from 'lucide-react';
 
-interface AccountCreationProps {
-  type: 'individual' | 'corporate';
+// ── MOCK companies (isolated — container replaces via props) ──────────────────
+const MOCK_COMPANIES = [
+  { id: '1', name: 'Cathay Pacific Airways', code: 'CORP-CX-001' },
+  { id: '2', name: 'HSBC Holdings',          code: 'CORP-HS-001' },
+  { id: '3', name: 'AIA Group',              code: 'CORP-AI-001' },
+];
+
+export interface AccountCreationProps {
+  type?: 'individual' | 'corporate' | 'travel-agency';
+  companies?: typeof MOCK_COMPANIES;
+  onSubmit?: (data: FormData) => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
 }
 
 interface CorporateSubForm {
@@ -38,7 +49,14 @@ const emptySubForm = (id: number): CorporateSubForm => ({
   remarks: '',
 });
 
-export function AccountCreation({ type }: AccountCreationProps) {
+export function AccountCreation({
+  type,
+  companies: companiesProp,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+}: AccountCreationProps = {}) {
+  const displayCompanies = companiesProp && companiesProp.length > 0 ? companiesProp : MOCK_COMPANIES;
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>('individual');
   const [selectedCompanyAccount, setSelectedCompanyAccount] = useState<string>('');
   const [companySearch, setCompanySearch] = useState('');
