@@ -76,12 +76,12 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Customers Management',
     icon: <Users className="w-5 h-5" />,
     submenu: [
-      { id: 'all-customers',    label: 'All Customers',      path: '/customer' },
-      { id: 'create-customers', label: 'Create Customers',   path: '/customer/create' },
-      { id: 'customer-company', label: 'Customer Companies', path: '/customer/company' },
+      { id: 'all-customers',    label: 'All Customers',      path: '/customers' },
+      { id: 'approve-customers',label: 'Approve Customers',  path: '/customers/approve' },
+      { id: 'create-customers', label: 'Create Customer',    path: '/customers/create' },
+      { id: 'customer-company', label: 'Customer Companies', path: '/customers/company' },
       { id: 'travel-agency',    label: 'Travel Agency',      path: '/travel-agency' },
-      { id: 'grading-packages', label: 'Grading Packages',   path: '/membership/packages' },
-      { id: 'customers-report', label: 'Customers Report',   path: '/customer/report' },
+      { id: 'grading-packages', label: 'Grading Packages',   path: '/grading-packages' },
     ],
   },
   {
@@ -98,21 +98,12 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Bookings Management',
     icon: <Calendar className="w-5 h-5" />,
     submenu: [
-      { id: 'all-bookings',         label: 'All Bookings',              path: '/booking' },
-      { id: 'approve-bookings',     label: 'Approve Booking Request',   path: '/booking/approve' },
-      { id: 'supervising-approval', label: 'Supervising Approval',      path: '/booking/supervising' },
-      { id: 'create-bookings',      label: 'Create Bookings',           path: '/booking/create' },
-      { id: 'bookings-report',      label: 'Bookings Report',           path: '/booking/report' },
-    ],
-  },
-  {
-    id: 'booking-schedules-group',
-    label: 'Booking Schedules',
-    icon: <Calendar className="w-5 h-5" />,
-    submenu: [
-      { id: 'booking-schedules',       label: 'All Booking Schedules',   path: '/booking/schedules' },
-      { id: 'suite-booking-schedules', label: 'Suite Booking Schedules', path: '/booking/schedules/suite' },
-      { id: 'table-booking-schedules', label: 'Table Booking Schedules', path: '/booking/schedules/table' },
+      { id: 'all-bookings',         label: 'All Bookings',            path: '/bookings' },
+      { id: 'approve-bookings',     label: 'Approve Booking Request', path: '/bookings/approve' },
+      { id: 'supervising-approval', label: 'Supervising Approval',    path: '/bookings/supervising-approval' },
+      { id: 'create-bookings',      label: 'Create Booking',          path: '/bookings/create' },
+      { id: 'bookings-schedules',   label: 'Booking Schedules',       path: '/bookings/schedules' },
+      { id: 'bookings-settings',    label: 'Booking Settings',        path: '/bookings/settings' },
     ],
   },
   {
@@ -120,9 +111,7 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Bookable Items Management',
     icon: <Package className="w-5 h-5" />,
     submenu: [
-      { id: 'all-bookable-items',    label: 'All Bookable Items',    path: '/bookable-items' },
-      { id: 'create-bookable-items', label: 'Create Bookable Items', path: '/bookable-items/create' },
-      { id: 'sales-report',          label: 'Sales Report',          path: '/bookable-items/report' },
+      { id: 'all-items',    label: 'All Bookable Items',    path: '/items' },
     ],
   },
   {
@@ -130,9 +119,8 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Point of Sales',
     icon: <CreditCard className="w-5 h-5" />,
     submenu: [
-      { id: 'pos-floor-plan',   label: 'POS Floor Plan',  path: '/pos' },
-      { id: 'pos-transactions', label: 'Transactions',    path: '/pos/transactions' },
-      { id: 'kitchen-display',  label: 'Kitchen Display', path: '/pos/kitchen' },
+      { id: 'pos-floor-plan',  label: 'POS Floor Plan',  path: '/pos' },
+      { id: 'kitchen-display', label: 'Kitchen Display', path: '/pos/kitchen' },
     ],
   },
   {
@@ -140,7 +128,8 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Lounge Management',
     icon: <Building2 className="w-5 h-5" />,
     submenu: [
-      { id: 'lounge-layout', label: 'Manage Lounge Layout Plan', path: '/lounge' },
+      { id: 'lounge-layout', label: 'Lounge Layout Plan', path: '/lounge-layout' },
+      { id: 'suites',        label: 'Suite Schedules',    path: '/suites' },
     ],
   },
   {
@@ -158,10 +147,8 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Reports & Analytics',
     icon: <FileText className="w-5 h-5" />,
     submenu: [
-      { id: 'reports',           label: 'Generate Reports',    path: '/reports' },
-      { id: 'analytics',         label: 'Analytics Dashboard', path: '/reports/analytics' },
-      { id: 'corporate-reports', label: 'BD Usage Reports',    path: '/reports/corporate' },
-      { id: 'refund-report',     label: 'Refund Report',       path: '/reports/refund' },
+      { id: 'corporate-reports', label: 'BD Usage Reports', path: '/reports/corporate' },
+      { id: 'refund-report',     label: 'Refund Report',    path: '/reports/refund' },
     ],
   },
   {
@@ -169,8 +156,8 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'System Users Management',
     icon: <Settings className="w-5 h-5" />,
     submenu: [
-      { id: 'manage-system-users', label: 'Manage System Users', path: '/system/users' },
-      { id: 'audit-logs',          label: 'Audit Logs',          path: '/system/audit' },
+      { id: 'manage-system-users', label: 'Manage System Users', path: '/system-users' },
+      { id: 'audit-logs',          label: 'Audit Logs',          path: '/audit-logs' },
     ],
   },
 ];
@@ -178,29 +165,26 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
 const MOCK_USER: SidebarUser = { name: 'HKIAL Staff', role: 'Administrator' };
 
 // ─── Helper — derive which groups should start expanded based on currentPath ──
-// (No routing hook needed — derives purely from the string passed as prop)
 
 function getInitialOpenGroups(pathname: string): string[] {
   const groups: string[] = [];
   if (pathname === '/' || pathname === '/dashboard') return groups;
-  if (pathname.startsWith('/customer') || pathname.startsWith('/travel-agency') || pathname.startsWith('/membership/packages')) {
-    groups.push('customers');
-  }
-  if (pathname.startsWith('/membership/purchase') || pathname.startsWith('/membership/balance')) {
-    groups.push('contract');
-  }
-  if (pathname.startsWith('/booking') && !pathname.startsWith('/booking/schedules')) {
-    groups.push('bookings');
-  }
-  if (pathname.startsWith('/booking/schedules')) {
-    groups.push('booking-schedules-group');
-  }
-  if (pathname.startsWith('/bookable-items')) groups.push('bookable-items');
-  if (pathname.startsWith('/pos'))            groups.push('pos');
-  if (pathname.startsWith('/lounge'))         groups.push('lounge');
-  if (pathname.startsWith('/promo-codes'))    groups.push('promo');
-  if (pathname.startsWith('/reports'))        groups.push('reports');
-  if (pathname.startsWith('/system'))         groups.push('system-users');
+  if (
+    pathname.startsWith('/customers') ||
+    pathname.startsWith('/travel-agency') ||
+    pathname.startsWith('/grading-packages')
+  ) groups.push('customers');
+  if (
+    pathname.startsWith('/membership/purchase') ||
+    pathname.startsWith('/membership/balance')
+  ) groups.push('contract');
+  if (pathname.startsWith('/bookings')) groups.push('bookings');
+  if (pathname.startsWith('/items'))        groups.push('bookable-items');
+  if (pathname.startsWith('/pos'))          groups.push('pos');
+  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/suites')) groups.push('lounge');
+  if (pathname.startsWith('/promo-codes'))  groups.push('promo');
+  if (pathname.startsWith('/reports'))      groups.push('reports');
+  if (pathname.startsWith('/system-users') || pathname.startsWith('/audit-logs')) groups.push('system-users');
   return groups;
 }
 

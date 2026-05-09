@@ -64,7 +64,7 @@ function CustomerListPage() {
   const navigate = useNavigate();
   return (
     <AccountList
-      onViewDetail={(accountNo) => navigate(`/customer/detail/${encodeURIComponent(accountNo)}`)}
+      onViewDetail={(accountNo) => navigate(`/customers/detail/${encodeURIComponent(accountNo)}`)}
     />
   );
 }
@@ -72,7 +72,7 @@ function CustomerListPage() {
 function CustomerDetailPage() {
   const { accountNo } = useParams<{ accountNo: string }>();
   const navigate = useNavigate();
-  if (!accountNo) return <Navigate to="/customer" replace />;
+  if (!accountNo) return <Navigate to="/customers" replace />;
   return (
     <MemberDetail
       accountNumber={decodeURIComponent(accountNo)}
@@ -85,8 +85,8 @@ function CustomerCompanyPage() {
   const navigate = useNavigate();
   return (
     <MemberCompany
-      onEditCompany={(id) => navigate(`/customer/company/edit/${id}`)}
-      onCreateCompany={() => navigate('/customer/company/create')}
+      onEditCompany={(id) => navigate(`/customers/company/edit/${id}`)}
+      onCreateCompany={() => navigate('/customers/company/create')}
     />
   );
 }
@@ -97,14 +97,14 @@ function CompanyEditPage() {
   return (
     <CompanyEdit
       companyId={id ? parseInt(id) : null}
-      onBack={() => navigate('/customer/company')}
+      onBack={() => navigate('/customers/company')}
     />
   );
 }
 
 function CompanyCreatePage() {
   const navigate = useNavigate();
-  return <CompanyEdit companyId={null} onBack={() => navigate('/customer/company')} />;
+  return <CompanyEdit companyId={null} onBack={() => navigate('/customers/company')} />;
 }
 
 function TravelAgencyPage() {
@@ -136,7 +136,7 @@ function BookingListPage() {
   const navigate = useNavigate();
   return (
     <BookingManagement
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
     />
   );
 }
@@ -144,7 +144,7 @@ function BookingListPage() {
 function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  if (!id) return <Navigate to="/booking" replace />;
+  if (!id) return <Navigate to="/bookings" replace />;
   return (
     <BookingDetail
       bookingId={parseInt(id)}
@@ -155,14 +155,14 @@ function BookingDetailPage() {
 
 function BookingSettingsPage() {
   const navigate = useNavigate();
-  return <BookingSettings onBack={() => navigate('/booking')} />;
+  return <BookingSettings onBack={() => navigate('/bookings')} />;
 }
 
 function BookingApprovalPage() {
   const navigate = useNavigate();
   return (
     <BookingApproval
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
     />
   );
 }
@@ -171,7 +171,7 @@ function SupervisingApprovalPage() {
   const navigate = useNavigate();
   return (
     <SupervisingApproval
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
     />
   );
 }
@@ -180,10 +180,10 @@ function BookingSchedulesPage() {
   const navigate = useNavigate();
   return (
     <BookingSchedules
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
       onPreOrder={(booking) =>
-        navigate('/booking/pre-order', {
-          state: { booking, originUrl: '/booking/schedules' },
+        navigate('/bookings/pre-order', {
+          state: { booking, originUrl: '/bookings/schedules' },
         })
       }
     />
@@ -194,10 +194,10 @@ function SuiteBookingSchedulesPage() {
   const navigate = useNavigate();
   return (
     <SuiteBookingSchedules
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
       onPreOrder={(booking) =>
-        navigate('/booking/pre-order', {
-          state: { booking, originUrl: '/booking/schedules/suite' },
+        navigate('/bookings/pre-order', {
+          state: { booking, originUrl: '/suites' },
         })
       }
     />
@@ -208,10 +208,10 @@ function TableBookingSchedulesPage() {
   const navigate = useNavigate();
   return (
     <TableBookingSchedules
-      onViewDetail={(id) => navigate(`/booking/detail/${id}`)}
+      onViewDetail={(id) => navigate(`/bookings/detail/${id}`)}
       onPreOrder={(booking) =>
-        navigate('/booking/pre-order', {
-          state: { booking, originUrl: '/booking/schedules/table' },
+        navigate('/bookings/pre-order', {
+          state: { booking, originUrl: '/bookings/schedules' },
         })
       }
     />
@@ -222,7 +222,7 @@ function PreOrderRoute() {
   const location = useLocation();
   const navigate = useNavigate();
   const booking = location.state?.booking;
-  const originUrl: string = location.state?.originUrl || '/booking/schedules';
+  const originUrl: string = location.state?.originUrl || '/bookings/schedules';
   if (!booking) return <Navigate to={originUrl} replace />;
   return (
     <PreOrderPage
@@ -237,8 +237,8 @@ function BookableItemsPage() {
   const navigate = useNavigate();
   return (
     <BookableItems
-      onEditItem={(id) => navigate(`/bookable-items/edit/${id}`)}
-      onCreateItem={() => navigate('/bookable-items/create')}
+      onEditItem={(id) => navigate(`/items/edit/${id}`)}
+      onCreateItem={() => navigate('/items/create')}
     />
   );
 }
@@ -249,14 +249,14 @@ function BookableItemEditPage() {
   return (
     <BookableItemEdit
       itemId={id ? parseInt(id) : null}
-      onBack={() => navigate('/bookable-items')}
+      onBack={() => navigate('/items')}
     />
   );
 }
 
 function BookableItemCreatePage() {
   const navigate = useNavigate();
-  return <BookableItemEdit itemId={null} onBack={() => navigate('/bookable-items')} />;
+  return <BookableItemEdit itemId={null} onBack={() => navigate('/items')} />;
 }
 
 function POSFloorPlanPage() {
@@ -360,75 +360,74 @@ export const router = createBrowserRouter([
       { path: 'dashboard', Component: Dashboard },
 
       // Customers
-      { path: 'customer',                  Component: CustomerListPage },
-      { path: 'customer/create',           Component: CustomerCreatePage },
-      { path: 'customer/approve',          Component: ApplicationReview },
-      { path: 'customer/detail/:accountNo', Component: CustomerDetailPage },
-      { path: 'customer/company',          Component: CustomerCompanyPage },
-      { path: 'customer/company/create',   Component: CompanyCreatePage },
-      { path: 'customer/company/edit/:id', Component: CompanyEditPage },
-      { path: 'customer/report',           Component: Reports },
+      { path: 'customers',                    Component: CustomerListPage },
+      { path: 'customers/approve',            Component: ApplicationReview },
+      { path: 'customers/create',             Component: CustomerCreatePage },
+      { path: 'customers/detail/:accountNo',  Component: CustomerDetailPage },
+      { path: 'customers/company',            Component: CustomerCompanyPage },
+      { path: 'customers/company/create',     Component: CompanyCreatePage },
+      { path: 'customers/company/edit/:id',   Component: CompanyEditPage },
 
       // Travel Agency
       { path: 'travel-agency',          Component: TravelAgencyPage },
       { path: 'travel-agency/create',   Component: TravelAgencyCreatePage },
       { path: 'travel-agency/edit/:id', Component: TravelAgencyEditPage },
 
+      // Grading Packages
+      { path: 'grading-packages', Component: GradingPackages },
+
       // Membership / Contracts
-      { path: 'membership/packages', Component: GradingPackages },
       { path: 'membership/purchase', Component: PurchaseManagement },
       { path: 'membership/balance',  Component: BalanceTracker },
 
       // Bookings
-      { path: 'booking',                Component: BookingListPage },
-      { path: 'booking/create',         Component: CreateBooking },
-      { path: 'booking/detail/:id',     Component: BookingDetailPage },
-      { path: 'booking/approve',        Component: BookingApprovalPage },
-      { path: 'booking/supervising',    Component: SupervisingApprovalPage },
-      { path: 'booking/settings',       Component: BookingSettingsPage },
-      { path: 'booking/pre-order',      Component: PreOrderRoute },
-      { path: 'booking/report',         Component: Reports },
+      { path: 'bookings',                      Component: BookingListPage },
+      { path: 'bookings/approve',              Component: BookingApprovalPage },
+      { path: 'bookings/supervising-approval', Component: SupervisingApprovalPage },
+      { path: 'bookings/create',               Component: CreateBooking },
+      { path: 'bookings/detail/:id',           Component: BookingDetailPage },
+      { path: 'bookings/settings',             Component: BookingSettingsPage },
+      { path: 'bookings/pre-order',            Component: PreOrderRoute },
+      { path: 'bookings/schedules',            Component: BookingSchedulesPage },
 
-      // Booking Schedules
-      { path: 'booking/schedules',       Component: BookingSchedulesPage },
-      { path: 'booking/schedules/suite', Component: SuiteBookingSchedulesPage },
-      { path: 'booking/schedules/table', Component: TableBookingSchedulesPage },
+      // Suites (suite booking schedules — top-level canonical route)
+      { path: 'suites', Component: SuiteBookingSchedulesPage },
 
       // Bookable Items
-      { path: 'bookable-items',          Component: BookableItemsPage },
-      { path: 'bookable-items/create',   Component: BookableItemCreatePage },
-      { path: 'bookable-items/edit/:id', Component: BookableItemEditPage },
-      { path: 'bookable-items/report',   Component: Reports },
+      { path: 'items',          Component: BookableItemsPage },
+      { path: 'items/create',   Component: BookableItemCreatePage },
+      { path: 'items/edit/:id', Component: BookableItemEditPage },
 
       // POS
-      { path: 'pos',                       Component: POSFloorPlanPage },
-      { path: 'pos/booking/:bookingNo',    Component: POSBookingDetailPage },
-      { path: 'pos/checkout/:bookingNo',   Component: POSCheckoutPage },
-      { path: 'pos/transactions',          Component: BookingListPage },
-      { path: 'pos/kitchen',               Component: KitchenDisplay },
+      { path: 'pos',                     Component: POSFloorPlanPage },
+      { path: 'pos/booking/:bookingNo',  Component: POSBookingDetailPage },
+      { path: 'pos/checkout/:bookingNo', Component: POSCheckoutPage },
+      { path: 'pos/kitchen',             Component: KitchenDisplay },
 
       // Lounge
-      { path: 'lounge', Component: LoungeLayout },
+      { path: 'lounge-layout', Component: LoungeLayout },
 
       // Promo Codes
-      { path: 'promo-codes',            Component: PromoCodeListPage },
-      { path: 'promo-codes/create',     Component: PromoCodeCreatePage },
-      { path: 'promo-codes/edit/:id',   Component: PromoCodeEditPage },
-      { path: 'promo-codes/usage',      Component: PromoCodeUsage },
-      { path: 'promo-codes/generated',  Component: PromoCodeGeneratedRoute },
+      { path: 'promo-codes',           Component: PromoCodeListPage },
+      { path: 'promo-codes/create',    Component: PromoCodeCreatePage },
+      { path: 'promo-codes/edit/:id',  Component: PromoCodeEditPage },
+      { path: 'promo-codes/usage',     Component: PromoCodeUsage },
+      { path: 'promo-codes/generated', Component: PromoCodeGeneratedRoute },
 
       // Reports & Analytics
-      { path: 'reports',            Component: Reports },
-      { path: 'reports/analytics',  Component: Reports },
-      { path: 'reports/corporate',  Component: CorporateReports },
-      { path: 'reports/refund',     Component: RefundReport },
+      { path: 'reports/corporate', Component: CorporateReports },
+      { path: 'reports/refund',    Component: RefundReport },
+      { path: 'reports',           Component: Reports },
 
-      // System
-      { path: 'system/users', Component: SystemUsers },
-      { path: 'system/audit', Component: AuditLogs },
+      // System Users & Audit Logs
+      { path: 'system-users', Component: SystemUsers },
+      { path: 'audit-logs',   Component: AuditLogs },
 
       // CRM
       { path: 'crm/opportunities', Component: OpportunityTracking },
+
+      // Table schedules (internal, not in sidebar)
+      { path: 'bookings/schedules/table', Component: TableBookingSchedulesPage },
 
       // 404
       { path: '*', Component: NotFound },

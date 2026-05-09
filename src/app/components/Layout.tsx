@@ -21,7 +21,11 @@ export function Layout() {
           isSidebarOpen ? 'w-80' : 'w-0'
         } overflow-hidden`}
       >
-        <Sidebar overdueOrdersCount={INITIAL_OVERDUE_COUNT} />
+        <Sidebar
+          currentPath={location.pathname}
+          onNavigate={(path) => navigate(path)}
+          overdueOrdersCount={INITIAL_OVERDUE_COUNT}
+        />
       </div>
 
       {/* Main Content Area */}
