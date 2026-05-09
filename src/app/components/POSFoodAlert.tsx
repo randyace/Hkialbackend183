@@ -8,7 +8,7 @@ interface PendingItem {
   waitMinutes: number;
 }
 
-interface PendingOrder {
+export interface FoodAlert {
   suiteId: string;
   suiteName: string;
   bookingNo: string;
@@ -16,15 +16,17 @@ interface PendingOrder {
   items: PendingItem[];
 }
 
-interface POSFoodAlertProps {
+export interface POSFoodAlertProps {
+  alerts?: FoodAlert[];
+  isLoading?: boolean;
+  onDismiss?: (id: string) => void;
+  onRefresh?: () => void;
   /** Called when the user clicks the booking number — navigate to that booking */
   onViewBooking?: (bookingNo: string) => void;
-  /** Initial list of pending food orders; falls back to INITIAL_PENDING */
-  initialOrders?: PendingOrder[];
 }
 
 // ── Mock live pending-food data ────────────────────────────────────────────
-const INITIAL_PENDING: PendingOrder[] = [
+const MOCK_ALERTS: FoodAlert[] = [
   {
     suiteId: 'exec-1',
     suiteName: 'Executive Suite 1',
@@ -59,12 +61,13 @@ const INITIAL_PENDING: PendingOrder[] = [
 const OVERDUE_THRESHOLD = 20; // minutes
 
 /** Number of pending orders that have at least one overdue item — used by Sidebar badge */
-export const INITIAL_OVERDUE_COUNT = INITIAL_PENDING.filter(o =>
+export const INITIAL_OVERDUE_COUNT = MOCK_ALERTS.filter(o =>
   o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD)
 ).length;
 
-export function POSFoodAlert({ onViewBooking, initialOrders }: POSFoodAlertProps = {}) {
-  const [orders, setOrders] = useState<PendingOrder[]>(initialOrders ?? INITIAL_PENDING);
+export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, onRefresh, onViewBooking }: POSFoodAlertProps = {}) {
+  const baseAlerts = alertsProp.length > 0 ? alertsProp : MOCK_ALERTS;
+  const [orders, setOrders] = useState<FoodAlert[]>(baseAlerts);
   const [isExpanded, setIsExpanded]       = useState(true);
   const [dismissed, setDismissed]         = useState(false);
 
@@ -75,6 +78,7 @@ export function POSFoodAlert({ onViewBooking, initialOrders }: POSFoodAlertProps
 
   const markServed = (suiteId: string) => {
     setOrders(prev => prev.filter(o => o.suiteId !== suiteId));
+    onDismiss?.(suiteId);
   };
 
   const statusLabel = (item: PendingItem) =>

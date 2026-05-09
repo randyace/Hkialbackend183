@@ -14,7 +14,7 @@ import React from 'react';
 
 type CodeType = 'Discount' | 'Free bookings';
 
-interface PromoBatch {
+export interface PromoCode {
   id: number;
   companyId: number;
   companyName: string;
@@ -38,18 +38,19 @@ interface CompanyGroup {
   companyId: number;
   companyName: string;
   companyShortCode: string;
-  batches: PromoBatch[];
+  batches: PromoCode[];
 }
 
-interface PromoCodeListProps {
-  batches?: PromoBatch[];
+export interface PromoCodeListProps {
+  codes?: PromoCode[];
   isLoading?: boolean;
-  onEditPromoCode?: (promoCodeId: number) => void;
-  onCreatePromoCode?: () => void;
+  onCreate?: () => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
 }
 
 // ─── Mock batch data ──────────────────────────────────────────────────────────
-const MOCK_BATCHES: PromoBatch[] = [
+const MOCK_CODES: PromoCode[] = [
   {
     id: 1,
     companyId: 1,
@@ -205,7 +206,7 @@ const MOCK_BATCHES: PromoBatch[] = [
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const isBatchActive = (batch: PromoBatch): boolean => {
+const isBatchActive = (batch: PromoCode): boolean => {
   const now = new Date();
   return (
     now >= new Date(batch.startDate) &&
@@ -220,7 +221,7 @@ const daysUntilDate = (dateStr: string): number => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
-const usagePct = (b: PromoBatch) =>
+const usagePct = (b: PromoCode) =>
   Math.min(100, Math.round((b.usedCount / b.totalCodes) * 100));
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -246,7 +247,7 @@ const StatusBadge = ({ active }: { active: boolean }) =>
     <Badge variant="outline" className="text-gray-500 text-xs">Inactive</Badge>
   );
 
-const UsageBar = ({ batch }: { batch: PromoBatch }) => {
+const UsageBar = ({ batch }: { batch: PromoCode }) => {
   const pct = usagePct(batch);
   const barColor = pct >= 90 ? 'bg-red-500' : pct >= 60 ? 'bg-amber-500' : 'bg-blue-500';
   return (
@@ -265,14 +266,14 @@ const UsageBar = ({ batch }: { batch: PromoBatch }) => {
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function PromoCodeList({ batches: propBatches, isLoading, onEditPromoCode, onCreatePromoCode }: PromoCodeListProps) {
-  const [batches] = useState<PromoBatch[]>(propBatches || MOCK_BATCHES);
+export function PromoCodeList({ codes: codesProp = [], isLoading, onCreate, onEdit, onDelete }: PromoCodeListProps) {
+  const batches = codesProp.length > 0 ? codesProp : MOCK_CODES;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | CodeType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterCompany, setFilterCompany] = useState<'all' | string>('all');
   const [expandedCompanies, setExpandedCompanies] = useState<Set<number>>(
-    new Set(Array.from(new Set(MOCK_BATCHES.map((b) => b.companyId))))
+    new Set(Array.from(new Set(MOCK_CODES.map((b) => b.companyId))))
   );
 
   const toggleCompany = (companyId: number) => {
@@ -355,7 +356,7 @@ export function PromoCodeList({ batches: propBatches, isLoading, onEditPromoCode
             Corporate promo codes are created in batches per company. Expand a company to view its batches.
           </p>
         </div>
-        <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0" onClick={onCreatePromoCode}>
+        <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0" onClick={onCreate}>
           <Plus className="w-4 h-4 mr-2" />
           Create Batch
         </Button>
@@ -623,7 +624,7 @@ export function PromoCodeList({ batches: propBatches, isLoading, onEditPromoCode
                                     className="h-7 px-2"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      onEditPromoCode?.(batch.id);
+                                      onEdit?.(batch.id);
                                     }}
                                   >
                                     <Edit className="w-3 h-3 mr-1" />
@@ -633,7 +634,7 @@ export function PromoCodeList({ batches: propBatches, isLoading, onEditPromoCode
                                     variant="outline"
                                     size="sm"
                                     className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => { e.stopPropagation(); onDelete?.(batch.id); }}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
