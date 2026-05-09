@@ -127,9 +127,34 @@ const emptyNonFlying = (): NonFlyingGuest => ({
 const isPassengerFilled = (p: PassengerDetail) =>
   !!(p.title || p.firstName || p.lastName || p.travelDocNo || p.ageGroup || p.birthdayDay);
 
+// ── MOCK constants (already module-scoped above: TRAVEL_AGENCY_LIST, SUITE_OPTIONS etc.) ──
+
+export interface BookingFormData {
+  accountType: string;
+  accountNumber: string;
+  guestName: string;
+  flightNo: string;
+  flightTime: string;
+  suite: string;
+  visitDate: string;
+  numberOfGuests: number;
+  paymentMode: string;
+}
+
+// ── Props interface ───────────────────────────────────────────────────────────
+export interface CreateBookingProps {
+  onSubmit?: (data: BookingFormData) => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function CreateBooking() {
+export function CreateBooking({
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+}: CreateBookingProps = {}) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Travel Agency' | ''>('');

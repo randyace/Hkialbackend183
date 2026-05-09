@@ -29,22 +29,12 @@ import {
   generateMockBooking,
 } from './booking/BookingDetailMocks';
 
-// All data arrays imported from ./booking/BookingDetailMocks
-
-// MERGE_FIXED_FIELDS imported from ./booking/BookingDetailMocks
-
 interface BookingDetailProps {
   bookingId: number;
   onBack: () => void;
 }
 
 // ── Passenger detail types ────────────────────────��─────────────────────────
-// Passenger types + seeds imported from ./booking/BookingDetailMocks
-
-// NonFlyingGuest types + seeds imported from ./booking/BookingDetailMocks
-
-// generateMockBooking imported from ./booking/BookingDetailMocks
-
 // ── MOCK constant (isolated) — container passes real booking via prop ─────────
 const MOCK_BOOKING_ID = 1;
 
