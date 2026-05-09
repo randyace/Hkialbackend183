@@ -90,11 +90,16 @@ const generateMockAgencies = (): TravelAgency[] => {
   return agencies;
 };
 
-interface TravelAgencyProps {
+const MOCK_AGENCIES: TravelAgency[] = generateMockAgencies();
+
+export interface TravelAgencyProps {
+  agencies?: TravelAgency[];
+  isLoading?: boolean;
   onEditAgency?: (agencyId: number) => void;
+  onCreateAgency?: () => void;
 }
 
-export function TravelAgency({ onEditAgency }: TravelAgencyProps) {
+export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency }: TravelAgencyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -105,7 +110,7 @@ export function TravelAgency({ onEditAgency }: TravelAgencyProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const agencies: TravelAgency[] = generateMockAgencies();
+  const agencies: TravelAgency[] = agenciesProp?.length ? agenciesProp : MOCK_AGENCIES;
 
   const filteredAgencies = agencies.filter(agency => {
     const matchesSearch = agency.agencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||

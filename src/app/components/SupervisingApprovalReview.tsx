@@ -114,17 +114,59 @@ const REJECTION_REASONS = [
 
 type ReviewMode = 'view' | 'approve' | 'revision' | 'reject';
 
-interface SupervisingApprovalReviewProps {
-  booking: SupervisingBooking;
-  onBack: () => void;
-  onApprove: (bookingId: number, note?: string) => void;
-  onRequestRevision: (bookingId: number, reason: string) => void;
-  onReject: (bookingId: number, reason: string) => void;
+export interface SupervisingApprovalReviewProps {
+  booking?: SupervisingBooking;
+  isLoading?: boolean;
+  onBack?: () => void;
+  onApprove?: (bookingId: number, note?: string) => void;
+  onRequestRevision?: (bookingId: number, reason: string) => void;
+  onReject?: (bookingId: number, reason: string) => void;
 }
 
 export function SupervisingApprovalReview({
-  booking, onBack, onApprove, onRequestRevision, onReject,
-}: SupervisingApprovalReviewProps) {
+  booking: bookingProp,
+  onBack = () => {},
+  onApprove = () => {},
+  onRequestRevision = () => {},
+  onReject = () => {},
+}: SupervisingApprovalReviewProps = {}) {
+  // Fallback mock booking so the component renders standalone
+  const booking: SupervisingBooking = bookingProp ?? {
+    id: 1,
+    bookingNo: 'A-202603-000001',
+    invoiceNo: 'INV-2026-000001',
+    invoiceDate: '2026-03-01',
+    requestType: 'New Booking',
+    guestName: 'John Smith',
+    accountNo: 'ACC-2024-0001',
+    accountType: 'Individual',
+    membershipTier: 'Platinum',
+    suite: 'VIP Suite A',
+    dateTime: '2026-03-07 09:00',
+    flightNo: 'CX888',
+    flightTime: '12:30',
+    flightType: 'Departure',
+    flightOrigin: 'HKG',
+    flightDestination: 'NRT',
+    numberOfGuests: 2,
+    nonFlyingGuests: 0,
+    hasLimousine: false,
+    hasShopping: false,
+    isAdHoc: false,
+    paymentMode: 'Upfront',
+    bookingType: 'Online',
+    submittedAt: '2026-02-28 10:00',
+    submittedBy: 'Staff User',
+    lineItems: [
+      { description: 'Lounge Access (2 pax)', quantity: 2, unitPrice: 2400, amount: 4800 },
+    ],
+    subtotal: 4800,
+    agencyDiscount: 0,
+    membershipDiscount: 0,
+    serviceCharge: 480,
+    totalAmount: 5280,
+    staffDecision: { decision: 'Approved', by: 'Staff User', at: '2026-02-28 11:00' },
+  };
   const [reviewMode, setReviewMode] = useState<ReviewMode>('view');
   const [supervisorNote, setSupervisorNote] = useState('');
   const [selectedRevisionReason, setSelectedRevisionReason] = useState('');

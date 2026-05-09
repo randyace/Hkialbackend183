@@ -113,13 +113,17 @@ const paymentModeBadgeClass = (mode: string) => {
   return 'bg-gray-100 text-gray-700';
 };
 
-interface BookingReviewProps {
-  bookingId: number;
-  onBack: () => void;
+export interface BookingReviewProps {
+  bookingId?: number;
+  bookings?: typeof MOCK_BOOKINGS;
+  onBack?: () => void;
+  onApprove?: (bookingId: number) => void;
+  onReject?: (bookingId: number, reason: string) => void;
 }
 
-export function BookingReview({ bookingId, onBack }: BookingReviewProps) {
-  const booking = MOCK_BOOKINGS.find(b => b.id === bookingId);
+export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () => {}, onApprove, onReject }: BookingReviewProps = {}) {
+  const allBookings = bookingsProp?.length ? bookingsProp : MOCK_BOOKINGS;
+  const booking = allBookings.find(b => b.id === (bookingId ?? 1)) ?? allBookings[0];
   const [reviewMode, setReviewMode] = useState<'view' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -148,6 +152,7 @@ export function BookingReview({ bookingId, onBack }: BookingReviewProps) {
     });
     setTimeout(() => {
       onBack();
+      onApprove?.(booking.id);
     }, 1500);
   };
 
@@ -159,6 +164,7 @@ export function BookingReview({ bookingId, onBack }: BookingReviewProps) {
     });
     setTimeout(() => {
       onBack();
+      onReject?.(booking.id, reason);
     }, 1500);
   };
 

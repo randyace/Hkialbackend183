@@ -152,12 +152,16 @@ const generateMockItems = (): BookableItem[] => {
   return items;
 };
 
-interface BookableItemsProps {
+const MOCK_ITEMS: BookableItem[] = generateMockItems();
+
+export interface BookableItemsProps {
+  items?: BookableItem[];
+  isLoading?: boolean;
   onEditItem?: (itemId: number) => void;
   onCreateItem?: () => void;
 }
 
-export function BookableItems({ onEditItem, onCreateItem }: BookableItemsProps = {}) {
+export function BookableItems({ items: itemsProp, onEditItem, onCreateItem }: BookableItemsProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -165,7 +169,7 @@ export function BookableItems({ onEditItem, onCreateItem }: BookableItemsProps =
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const items: BookableItem[] = generateMockItems();
+  const items: BookableItem[] = itemsProp?.length ? itemsProp : MOCK_ITEMS;
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||

@@ -4,15 +4,13 @@ import { Badge } from './ui/badge';
 import { Input } from './ui/input';
 import {
   ArrowLeft, Copy, CheckCheck, FileDown, Search,
-  FileImage, FileSpreadsheet, QrCode, Package,
+  FileSpreadsheet, QrCode, Package,
   Clock, CheckCircle2, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
 // ── QR Code renderer (canvas-based, no external lib needed via DOM API) ────────
-// We use the `qrcode` package for actual QR generation
 async function renderQRToCanvas(text: string, size = 200): Promise<HTMLCanvasElement> {
-  // Dynamically import qrcode
   const QRCode = (await import('qrcode')).default;
   const canvas = document.createElement('canvas');
   await QRCode.toCanvas(canvas, text, {
@@ -32,9 +30,10 @@ export interface GeneratedCodesData {
   mode: 'generate' | 'view';
 }
 
-interface PromoCodeGeneratedPageProps {
-  data: GeneratedCodesData;
-  onBack: () => void;
+export interface PromoCodeGeneratedPageProps {
+  data?: GeneratedCodesData;
+  isLoading?: boolean;
+  onBack?: () => void;
 }
 
 // ── Mock: deterministically mark some codes as used with timestamps ────────────
@@ -48,7 +47,6 @@ const MOCK_USE_TIMESTAMPS = [
 function buildUsedMap(codes: string[]): Map<number, string> {
   const map = new Map<number, string>();
   codes.forEach((_, idx) => {
-    // Mark ~40% of codes as used — every code whose index mod 5 is 0, 2, or 4
     if (idx % 5 === 0 || idx % 5 === 2) {
       map.set(idx, MOCK_USE_TIMESTAMPS[idx % MOCK_USE_TIMESTAMPS.length]);
     }
@@ -81,7 +79,15 @@ function QRCard({ code, size = 80, used = false }: { code: string; size?: number
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageProps) {
+export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: PromoCodeGeneratedPageProps = {}) {
+  const data: GeneratedCodesData = dataProp ?? {
+    prefix: 'DEMO',
+    codes: Array.from({ length: 20 }, (_, i) => `DEMO-${String(i + 1).padStart(6, '0')}`),
+    companyName: 'Demo Company',
+    purchaseCategory: 'Corporate',
+    mode: 'generate',
+  };
+
   const { prefix, codes, companyName, purchaseCategory, mode } = data;
 
   const [search, setSearch]               = useState('');
@@ -92,13 +98,10 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
   const [showQR, setShowQR]               = useState(false);
   const [showAvailableOnly, setShowAvailableOnly] = useState(false);
 
-  // Build used-code map once (deterministic based on code list)
   const usedMap = useMemo(() => buildUsedMap(codes), [codes]);
-
   const usedCount      = usedMap.size;
   const availableCount = codes.length - usedCount;
 
-  // Filter codes by search and available-only toggle
   const filtered = codes
     .map((code, idx) => ({ code, idx, usedAt: usedMap.get(idx) }))
     .filter(({ code, usedAt }) => {
@@ -107,20 +110,17 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
       return matchSearch && matchAvail;
     });
 
-  // ── Copy single code ─────────────────────────────────────────────────────
   const handleCopy = (code: string, idx: number) => {
     navigator.clipboard.writeText(code).catch(() => {});
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 1500);
   };
 
-  // ── Copy all ────────────────────────────────────────────────────────────
   const handleCopyAll = () => {
     navigator.clipboard.writeText(codes.join('\n')).catch(() => {});
     toast.success('All codes copied to clipboard!');
   };
 
-  // ── Download CSV / Excel ─────────────────────────────────────────────
   const handleDownloadExcel = () => {
     setCsvLoading(true);
     const rows = [
@@ -144,13 +144,11 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
     toast.success('Excel / CSV file downloaded!');
   };
 
-  // ── Download PDF with QR codes ──────────────────────────────────────────
   const handleDownloadPDF = async () => {
     setPdfLoading(true);
     try {
       const jsPDF = (await import('jspdf')).default;
       const QRCode = (await import('qrcode')).default;
-
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = 210;
       const pageH = 297;
@@ -159,8 +157,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
       const qrSize = 40;
       const cellW = (pageW - margin * 2) / cols;
       const cellH = qrSize + 18;
-      let x = margin;
-      let y = margin + 14;
 
       doc.setFillColor(15, 41, 66);
       doc.rect(0, 0, pageW, 16, 'F');
@@ -170,7 +166,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
       doc.setFontSize(8);
       doc.text(`Prefix: ${prefix}  |  Total: ${codes.length}  |  Generated: ${new Date().toLocaleDateString('en-HK')}`, margin, 14.5);
       if (companyName) doc.text(`Company: ${companyName}`, pageW - margin - 60, 10, { align: 'left' });
-
       doc.setTextColor(30, 30, 30);
 
       for (let i = 0; i < codes.length; i++) {
@@ -186,37 +181,29 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
           doc.setFontSize(8);
           doc.text(`Prefix: ${prefix}  |  Total: ${codes.length}`, margin, 14.5);
           doc.setTextColor(30, 30, 30);
-          y = margin + 14;
         }
-
-        x = margin + col * cellW;
-        const rowInPage = Math.floor(i / cols) % Math.floor((pageH - margin * 2 - 20) / cellH);
-        y = margin + 14 + rowInPage * cellH + 4;
-
         const isUsed = usedMap.has(i);
+        const rowInPage = Math.floor(i / cols) % Math.floor((pageH - margin * 2 - 20) / cellH);
+        const x = margin + col * cellW;
+        const y = margin + 14 + rowInPage * cellH + 4;
         const dataUrl = await QRCode.toDataURL(code, {
           width: 200, margin: 1,
           color: isUsed ? { dark: '#9ca3af', light: '#f9fafb' } : { dark: '#0f2942', light: '#ffffff' },
         });
-
         doc.setFillColor(isUsed ? 243 : 248, isUsed ? 244 : 250, isUsed ? 246 : 252);
         doc.setDrawColor(220, 220, 220);
         doc.roundedRect(x + 1, y - 2, cellW - 2, cellH, 2, 2, 'FD');
-
         const qrX = x + (cellW - qrSize) / 2;
         doc.addImage(dataUrl, 'PNG', qrX, y, qrSize, qrSize);
-
         doc.setFontSize(7);
         doc.setTextColor(isUsed ? 156 : 15, isUsed ? 163 : 41, isUsed ? 175 : 66);
         doc.text(code, x + cellW / 2, y + qrSize + 4, { align: 'center' });
-
         doc.setFontSize(6);
         doc.setTextColor(150, 150, 150);
         const usedAt = usedMap.get(i);
         doc.text(usedAt ? `USED: ${usedAt}` : `#${i + 1} — Available`, x + cellW / 2, y + qrSize + 8, { align: 'center' });
         doc.setTextColor(30, 30, 30);
       }
-
       doc.save(`promo-codes-${prefix}-${new Date().toISOString().split('T')[0]}.pdf`);
       toast.success(`PDF downloaded with ${codes.length} QR codes!`);
     } catch (err) {
@@ -227,16 +214,13 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
     }
   };
 
-  // ── Download PNG ZIP ────────────────────────────────────────────────────
   const handleDownloadPNGZip = async () => {
     setZipLoading(true);
     try {
       const JSZip  = (await import('jszip')).default;
       const QRCode = (await import('qrcode')).default;
-
       const zip = new JSZip();
       const folder = zip.folder(`promo-qrcodes-${prefix}`)!;
-
       for (let i = 0; i < codes.length; i++) {
         const code = codes[i];
         const isUsed = usedMap.has(i);
@@ -245,7 +229,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
           width: 400, margin: 2,
           color: isUsed ? { dark: '#9ca3af', light: '#f9fafb' } : { dark: '#0f2942', light: '#ffffff' },
         });
-
         const labelCanvas = document.createElement('canvas');
         labelCanvas.width  = 400;
         labelCanvas.height = 460;
@@ -261,12 +244,10 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
         ctx.font = '13px sans-serif';
         const usedAt = usedMap.get(i);
         ctx.fillText(usedAt ? `USED: ${usedAt}` : `#${i + 1} — Available`, 200, 448);
-
         const blob: Blob = await new Promise(resolve => labelCanvas.toBlob(b => resolve(b!), 'image/png'));
         const arrayBuf = await blob.arrayBuffer();
         folder.file(`${code}.png`, arrayBuf);
       }
-
       const zipBlob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
@@ -285,7 +266,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-
       {/* Top bar */}
       <div className="bg-[#0f2942] px-6 py-4 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-4">
@@ -354,10 +334,7 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
         <div className="text-sm text-gray-600">
           Prefix: <span className="font-mono font-medium text-[#0f2942]">{prefix}</span>
         </div>
-
-        {/* Controls */}
         <div className="ml-auto flex items-center gap-3 flex-wrap">
-          {/* Show available only toggle */}
           <button
             onClick={() => setShowAvailableOnly(v => !v)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors ${
@@ -366,12 +343,9 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
                 : 'bg-white text-gray-600 border-gray-300 hover:border-emerald-400 hover:text-emerald-700'
             }`}
           >
-            {showAvailableOnly
-              ? <ToggleRight className="w-4 h-4" />
-              : <ToggleLeft className="w-4 h-4" />}
+            {showAvailableOnly ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
             Available codes only
           </button>
-
           <button
             onClick={() => setShowQR(q => !q)}
             className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors"
@@ -407,7 +381,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
       {/* Codes grid */}
       <div className="flex-1 overflow-y-auto p-6">
         {showQR ? (
-          // QR grid view
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {filtered.map(({ code, idx, usedAt }) => (
               <div
@@ -443,7 +416,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
             ))}
           </div>
         ) : (
-          // Text list view
           <div className="grid grid-cols-4 gap-2">
             {filtered.map(({ code, idx, usedAt }) => (
               <div
@@ -480,7 +452,6 @@ export function PromoCodeGeneratedPage({ data, onBack }: PromoCodeGeneratedPageP
             ))}
           </div>
         )}
-
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Search className="w-10 h-10 mb-2 opacity-30" />

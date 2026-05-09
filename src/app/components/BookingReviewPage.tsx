@@ -130,15 +130,50 @@ const Field = ({ label, children }: { label: string | React.ReactNode; children:
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-interface BookingReviewPageProps {
-  booking: PendingBooking;
-  reviewStage: 'staff' | 'supervisor';
-  onBack: () => void;
-  onApprove: (bookingId: number) => void;
-  onReject: (bookingId: number, reason: string) => void;
+export interface BookingReviewPageProps {
+  booking?: PendingBooking;
+  reviewStage?: 'staff' | 'supervisor';
+  onBack?: () => void;
+  onApprove?: (bookingId: number) => void;
+  onReject?: (bookingId: number, reason: string) => void;
 }
 
-export function BookingReviewPage({ booking, reviewStage, onBack, onApprove, onReject }: BookingReviewPageProps) {
+// ── Default mock booking for standalone preview ───────────────────────────────
+const MOCK_PENDING_BOOKING: PendingBooking = {
+  id: 1,
+  bookingNo: 'A-202603-000001',
+  requestType: 'New Booking Request',
+  guestName: 'James Hoffmann',
+  accountNo: 'ACC-2026-1001',
+  accountType: 'Individual',
+  membershipTier: 'Gold',
+  suite: 'Premier Suite A',
+  dateTime: '2026-03-06 08:30',
+  flightNo: 'CX113',
+  flightTime: '11:45',
+  flightOrigin: 'LHR',
+  flightDestination: 'HKG',
+  flightType: 'Arrival',
+  numberOfGuests: 2,
+  nonFlyingGuests: 1,
+  hasLimousine: false,
+  hasShopping: false,
+  isAdHoc: false,
+  paymentMode: 'Upfront',
+  amount: 'HK$3,357',
+  bookingType: 'Online',
+  submittedAt: '2026-02-24 09:12',
+  specialRequests: 'Guest requires wheelchair assistance',
+};
+
+export function BookingReviewPage({
+  booking: bookingProp,
+  reviewStage = 'staff',
+  onBack = () => {},
+  onApprove,
+  onReject,
+}: BookingReviewPageProps = {}) {
+  const booking: PendingBooking = bookingProp ?? MOCK_PENDING_BOOKING;
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -183,7 +218,7 @@ export function BookingReviewPage({ booking, reviewStage, onBack, onApprove, onR
 
   // ── Action Handlers ────────────────────────────────────────────────────────
   const handleApprove = () => {
-    onApprove(booking.id);
+    onApprove?.(booking.id);
     if (reviewStage === 'staff') {
       toast.success(`Booking ${booking.bookingNo} forwarded for supervisor approval`, {
         description: 'A supervisor or manager must give final approval before the booking is confirmed.',
@@ -198,7 +233,7 @@ export function BookingReviewPage({ booking, reviewStage, onBack, onApprove, onR
 
   const handleReject = () => {
     if (!selectedReason) return;
-    onReject(booking.id, customReason ? `${selectedReason} - ${customReason}` : selectedReason);
+    onReject?.(booking.id, customReason ? `${selectedReason} - ${customReason}` : selectedReason);
     setShowRejectDialog(false);
     toast.info(`Booking ${booking.bookingNo} rejection submitted`, {
       description: 'The rejection has been sent to AM / Manager to review',
@@ -273,7 +308,7 @@ export function BookingReviewPage({ booking, reviewStage, onBack, onApprove, onR
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ════════════════════════════════════════════════════
             LEFT COLUMN — Full Booking Details (read-only)
-            ═════════════════════════════════════════��══════════ */}
+            ═══════════════════════════════════════════════════ */}
         <div className="lg:col-span-2 space-y-6">
 
           {/* ── Ad-hoc Alert ── */}

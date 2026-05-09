@@ -42,6 +42,8 @@ interface CompanyGroup {
 }
 
 interface PromoCodeListProps {
+  batches?: PromoBatch[];
+  isLoading?: boolean;
   onEditPromoCode?: (promoCodeId: number) => void;
   onCreatePromoCode?: () => void;
 }
@@ -263,8 +265,8 @@ const UsageBar = ({ batch }: { batch: PromoBatch }) => {
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function PromoCodeList({ onEditPromoCode, onCreatePromoCode }: PromoCodeListProps) {
-  const [batches] = useState<PromoBatch[]>(MOCK_BATCHES);
+export function PromoCodeList({ batches: propBatches, isLoading, onEditPromoCode, onCreatePromoCode }: PromoCodeListProps) {
+  const [batches] = useState<PromoBatch[]>(propBatches || MOCK_BATCHES);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | CodeType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');

@@ -19,6 +19,8 @@ interface PendingOrder {
 interface POSFoodAlertProps {
   /** Called when the user clicks the booking number — navigate to that booking */
   onViewBooking?: (bookingNo: string) => void;
+  /** Initial list of pending food orders; falls back to INITIAL_PENDING */
+  initialOrders?: PendingOrder[];
 }
 
 // ── Mock live pending-food data ────────────────────────────────────────────
@@ -61,18 +63,18 @@ export const INITIAL_OVERDUE_COUNT = INITIAL_PENDING.filter(o =>
   o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD)
 ).length;
 
-export function POSFoodAlert({ onViewBooking }: POSFoodAlertProps) {
-  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>(INITIAL_PENDING);
+export function POSFoodAlert({ onViewBooking, initialOrders }: POSFoodAlertProps = {}) {
+  const [orders, setOrders] = useState<PendingOrder[]>(initialOrders ?? INITIAL_PENDING);
   const [isExpanded, setIsExpanded]       = useState(true);
   const [dismissed, setDismissed]         = useState(false);
 
-  if (dismissed || pendingOrders.length === 0) return null;
+  if (dismissed || orders.length === 0) return null;
 
-  const totalItems  = pendingOrders.reduce((s, o) => s + o.items.length, 0);
-  const hasOverdue  = pendingOrders.some(o => o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD));
+  const totalItems  = orders.reduce((s, o) => s + o.items.length, 0);
+  const hasOverdue  = orders.some(o => o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD));
 
   const markServed = (suiteId: string) => {
-    setPendingOrders(prev => prev.filter(o => o.suiteId !== suiteId));
+    setOrders(prev => prev.filter(o => o.suiteId !== suiteId));
   };
 
   const statusLabel = (item: PendingItem) =>
@@ -105,10 +107,10 @@ export function POSFoodAlert({ onViewBooking }: POSFoodAlertProps) {
           <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs text-white font-bold ${
             hasOverdue ? 'bg-red-500' : 'bg-amber-500'
           } ${hasOverdue ? 'animate-pulse' : ''}`}>
-            {pendingOrders.length}
+            {orders.length}
           </span>
           <span className="text-xs text-gray-500 hidden sm:block">
-            {pendingOrders.length} table{pendingOrders.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''} waiting
+            {orders.length} table{orders.length !== 1 ? 's' : ''} · {totalItems} item{totalItems !== 1 ? 's' : ''} waiting
           </span>
         </div>
 
@@ -142,7 +144,7 @@ export function POSFoodAlert({ onViewBooking }: POSFoodAlertProps) {
       {isExpanded && (
         <div className="px-5 pb-3 space-y-2">
           {/* Sort: longest wait first */}
-          {[...pendingOrders]
+          {[...orders]
             .sort((a, b) =>
               Math.max(...b.items.map(i => i.waitMinutes)) -
               Math.max(...a.items.map(i => i.waitMinutes))

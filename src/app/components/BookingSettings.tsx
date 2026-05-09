@@ -4,29 +4,36 @@ import { Button } from './ui/button';
 import { ArrowLeft, Save, Shuffle } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
-interface BookingSettingsProps {
-  onBack: () => void;
+const MOCK_SETTINGS = {
+  defaultCutoffHours: 3,
+  maxGuestsPerBooking: 6,
+  allowAdHocBookings: true,
+  requireFlightInfo: true,
+  enableSMSNotifications: true,
+  enableEmailNotifications: true,
+  autoApproveVIP: false,
+  autoApproveCorporate: false,
+  limousineLeadTime: 24,
+  minBookingAdvance: 2,
+  maxBookingAdvance: 90,
+  allowNonFlyingGuests: true,
+  requirePaymentForUpfront: true,
+  paymentLinkExpiry: 48,
+};
+
+export type BookingSettingsData = typeof MOCK_SETTINGS;
+
+export interface BookingSettingsProps {
+  settings?: BookingSettingsData;
+  onBack?: () => void;
+  onSave?: (settings: BookingSettingsData) => void;
 }
 
-export function BookingSettings({ onBack }: BookingSettingsProps) {
-  const [settings, setSettings] = useState({
-    defaultCutoffHours: 3,
-    maxGuestsPerBooking: 6,
-    allowAdHocBookings: true,
-    requireFlightInfo: true,
-    enableSMSNotifications: true,
-    enableEmailNotifications: true,
-    autoApproveVIP: false,
-    autoApproveCorporate: false,
-    limousineLeadTime: 24,
-    minBookingAdvance: 2,
-    maxBookingAdvance: 90,
-    allowNonFlyingGuests: true,
-    requirePaymentForUpfront: true,
-    paymentLinkExpiry: 48,
-  });
+export function BookingSettings({ settings: settingsProp, onBack = () => {}, onSave }: BookingSettingsProps = {}) {
+  const [settings, setSettings] = useState<BookingSettingsData>(settingsProp ?? MOCK_SETTINGS);
 
   const handleSave = () => {
+    onSave?.(settings);
     toast.success('Booking settings updated successfully');
   };
 

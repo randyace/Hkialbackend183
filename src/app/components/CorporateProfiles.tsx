@@ -132,7 +132,21 @@ const MOCK_PROFILES: CompanyProfile[] = [
   },
 ];
 
-export function CorporateProfiles() {
+export interface CorporateProfilesProps {
+  profiles?: CompanyProfile[];
+  isLoading?: boolean;
+  onViewProfile?: (profileId: number) => void;
+  onEditProfile?: (profileId: number) => void;
+  onCreateProfile?: () => void;
+}
+
+export function CorporateProfiles({
+  profiles: profilesProp,
+  onViewProfile,
+  onEditProfile,
+  onCreateProfile,
+}: CorporateProfilesProps = {}) {
+  const profiles: CompanyProfile[] = profilesProp?.length ? profilesProp : MOCK_PROFILES;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'Active' | 'Inactive' | 'Pending'>('all');
@@ -140,7 +154,7 @@ export function CorporateProfiles() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'contacts' | 'contracts' | 'history'>('overview');
 
-  const filtered = MOCK_PROFILES.filter(p => {
+  const filtered = profiles.filter(p => {
     const matchSearch = !searchTerm || p.companyName.toLowerCase().includes(searchTerm.toLowerCase()) || p.accountNumber.toLowerCase().includes(searchTerm.toLowerCase());
     const matchType   = filterType   === 'all' || p.accountType === filterType;
     const matchStatus = filterStatus === 'all' || p.status      === filterStatus;
@@ -170,17 +184,17 @@ export function CorporateProfiles() {
           <p className="text-sm text-gray-500">Centralized profiles with contracts, contacts, and booking history.</p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0"
-          onClick={() => toast.info('Create new profile form coming soon.')}>
+          onClick={() => onCreateProfile && onCreateProfile()}>
           <Plus className="w-4 h-4 mr-2" />Add Profile
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-[#0f2942] text-white"><p className="text-xs text-blue-200 mb-1">Total Profiles</p><p className="text-2xl text-white">{MOCK_PROFILES.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Active</p><p className="text-2xl text-green-600">{MOCK_PROFILES.filter(p => p.status === 'Active').length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Corporate</p><p className="text-2xl text-blue-600">{MOCK_PROFILES.filter(p => p.accountType === 'Corporate').length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Travel Agency</p><p className="text-2xl text-purple-600">{MOCK_PROFILES.filter(p => p.accountType === 'Travel Agency').length}</p></Card>
+        <Card className="p-4 bg-[#0f2942] text-white"><p className="text-xs text-blue-200 mb-1">Total Profiles</p><p className="text-2xl text-white">{profiles.length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Active</p><p className="text-2xl text-green-600">{profiles.filter(p => p.status === 'Active').length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Corporate</p><p className="text-2xl text-blue-600">{profiles.filter(p => p.accountType === 'Corporate').length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Travel Agency</p><p className="text-2xl text-purple-600">{profiles.filter(p => p.accountType === 'Travel Agency').length}</p></Card>
       </div>
 
       {/* Filters */}
@@ -395,7 +409,7 @@ export function CorporateProfiles() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
             <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-              onClick={() => { toast.info('Edit profile form coming soon.'); }}>
+              onClick={() => { onEditProfile && onEditProfile(selectedProfile?.id || 0); }}>
               <Edit className="w-4 h-4 mr-2" />Edit Profile
             </Button>
           </DialogFooter>

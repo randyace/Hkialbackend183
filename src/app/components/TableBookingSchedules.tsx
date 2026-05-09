@@ -1,12 +1,11 @@
-import { BookingSchedules } from './BookingSchedules';
+import { BookingSchedules, BookingSchedulesProps } from './BookingSchedules';
 
-export function TableBookingSchedules({
-  onViewDetail,
-  onPreOrder,
-}: {
+export interface TableBookingSchedulesProps {
   onViewDetail?: (bookingId: number) => void;
-  onPreOrder?: (booking: any) => void;
-}) {
+  onPreOrder?: BookingSchedulesProps['onPreOrder'];
+}
+
+export function TableBookingSchedules({ onViewDetail, onPreOrder }: TableBookingSchedulesProps = {}) {
   return (
     <BookingSchedules
       venueTypeFilter="tables"

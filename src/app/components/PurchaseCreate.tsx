@@ -191,14 +191,25 @@ function SectionHeader({ num, title, done }: { num: number; title: string; done:
 
 // ─── PurchaseCreate Component ──────────────────────────────────────────────────
 
-interface PurchaseCreateProps {
-  accounts: AccountOption[];
-  existingIds: number[];
-  onBack: () => void;
-  onComplete: (record: PurchaseRecord) => void;
+export interface PurchaseCreateProps {
+  packages?: GradingPackage[];
+  sessionBundles?: SessionBundle[];
+  accounts?: AccountOption[];
+  onSubmit?: (record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>) => void;
+  onBack?: () => void;
 }
 
-export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: PurchaseCreateProps) {
+export function PurchaseCreate({
+  packages: packagesProp,
+  sessionBundles: sessionBundlesProp,
+  accounts: accountsProp,
+  onSubmit,
+  onBack,
+}: PurchaseCreateProps = {}) {
+  const availablePackages  = packagesProp?.length  ? packagesProp  : GRADING_PACKAGES;
+  const availableBundles   = sessionBundlesProp?.length ? sessionBundlesProp : SESSION_BUNDLES;
+  const availableAccounts  = accountsProp?.length  ? accountsProp  : MOCK_ACCOUNTS;
+
   const [catFilter, setCatFilter]           = useState<'all' | PurchaseCategory>('all');
   const [acctSearch, setAcctSearch]         = useState('');
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
@@ -217,7 +228,7 @@ export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: Pu
   // ── Quick Fill for Demo ───────────────────────────────────────────────────
   const handleQuickFill = () => {
     // Select a Corporate account
-    const corpAccount = accounts.find(a => a.purchaseCategory === 'Corporate');
+    const corpAccount = availableAccounts.find(a => a.purchaseCategory === 'Corporate');
     if (corpAccount) {
       setSelectedAccount(corpAccount);
       setCatFilter('Corporate');
@@ -249,7 +260,7 @@ export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: Pu
 
   // ── Filtered account list ───────────────────────────────────────────────────
 
-  const filteredAccounts = accounts.filter(a => {
+  const filteredAccounts = availableAccounts.filter(a => {
     const matchCat    = catFilter === 'all' || a.purchaseCategory === catFilter;
     const matchSearch = !acctSearch ||
       a.primaryName.toLowerCase().includes(acctSearch.toLowerCase()) ||
@@ -277,7 +288,7 @@ export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: Pu
     // For Travel Agency: need credit balance and price
     if (isTravelAgency && (!creditBalance || !totalPrice)) return;
     
-    const newId      = Math.max(...existingIds, 0) + 1;
+    const newId      = Math.max(...INITIAL_RECORDS.map(r => r.id), 0) + 1;
     const today      = new Date().toISOString().split('T')[0];
     const expiry     = new Date();
     
@@ -384,7 +395,29 @@ export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: Pu
       };
     }
 
-    onComplete(record);
+    onSubmit?.({
+      purchaseRef: record.purchaseRef,
+      purchaseDate: record.purchaseDate,
+      purchaseCategory: record.purchaseCategory,
+      accountNumber: record.accountNumber,
+      primaryName: record.primaryName,
+      primaryEmail: record.primaryEmail,
+      previousTier: record.previousTier,
+      newTier: record.newTier,
+      creditsAdded: record.creditsAdded,
+      totalCreditsAfter: record.totalCreditsAfter,
+      bundleLabel: record.bundleLabel,
+      sessionsAdded: record.sessionsAdded,
+      totalSessionsAfter: record.totalSessionsAfter,
+      packagePrice: record.packagePrice,
+      paymentMethod: record.paymentMethod,
+      transactionRef: record.transactionRef,
+      processedBy: record.processedBy,
+      notes: record.notes,
+      expiryDate: record.expiryDate,
+      status: record.status,
+      invoiceSentDate: record.invoiceSentDate,
+    });
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -525,7 +558,7 @@ export function PurchaseCreate({ accounts, existingIds, onBack, onComplete }: Pu
                   Credits and tier upgrade activate after the invoice is sent.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {GRADING_PACKAGES.map(pkg => {
+                  {availablePackages.map(pkg => {
                     const meta = TIER_META[pkg.tier];
                     const isSel = selectedPackage?.kind === 'grading' && (selectedPackage as GradingPackage).tier === pkg.tier;
                     return (

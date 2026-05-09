@@ -781,7 +781,12 @@ const ANALYTICS_TABS = [
 
 // ── Main Reports Component ───────────────────────────────────────────────────
 
-export function Reports() {
+export interface ReportsProps {
+  isLoading?: boolean;
+  onExport?: (reportType: string) => void;
+}
+
+export function Reports({}: ReportsProps = {}) {
   const [activeTab, setActiveTab] = useState<string>('operational');
 
   const activeReport = ANALYTICS_TABS.find(t => t.id === activeTab)!;

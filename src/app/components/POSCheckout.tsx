@@ -14,11 +14,6 @@ import {
   SelectValue,
 } from './ui/select';
 
-interface POSCheckoutProps {
-  bookingNo: string;
-  onBack: () => void;
-}
-
 interface OrderItem {
   id: number;
   name: string;
@@ -27,32 +22,64 @@ interface OrderItem {
   unitPrice: number;
 }
 
-export function POSCheckout({ bookingNo, onBack }: POSCheckoutProps) {
+interface BookingData {
+  bookingNo: string;
+  guestName: string;
+  accountNo: string;
+  membershipTier: string;
+  suiteName: string;
+  checkInTime: string;
+  checkOutTime: string;
+  duration: string;
+  loungeAccess: number;
+  creditBalance: number;
+}
+
+const MOCK_BOOKING_DATA: BookingData = {
+  bookingNo: 'A-202602-000001',
+  guestName: 'John Smith',
+  accountNo: 'ACC-2024-001',
+  membershipTier: 'Platinum',
+  suiteName: 'VIP Suite A1',
+  checkInTime: '14:30',
+  checkOutTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+  duration: '3 hours 15 minutes',
+  loungeAccess: 450,
+  creditBalance: 25000,
+};
+
+const MOCK_ORDER_ITEMS: OrderItem[] = [
+  { id: 1, name: 'Espresso',             category: 'Beverage', quantity: 2, unitPrice: 45 },
+  { id: 2, name: 'Club Sandwich',        category: 'Food',     quantity: 1, unitPrice: 180 },
+  { id: 3, name: 'Glass of Champagne',   category: 'Beverage', quantity: 2, unitPrice: 250 },
+  { id: 4, name: 'Chocolate Soufflé',    category: 'Dessert',  quantity: 1, unitPrice: 120 },
+  { id: 5, name: 'Airport Limousine',    category: 'Transfer', quantity: 1, unitPrice: 800 },
+];
+
+export interface POSCheckoutProps {
+  bookingNo?: string;
+  bookingData?: BookingData;
+  orderItems?: OrderItem[];
+  onBack?: () => void;
+  onComplete?: (paymentData: { method: string; total: number }) => void;
+}
+
+export function POSCheckout({
+  bookingNo: bookingNoProp,
+  bookingData: bookingDataProp,
+  orderItems: orderItemsProp,
+  onBack = () => {},
+  onComplete,
+}: POSCheckoutProps = {}) {
   const [paymentMethod, setPaymentMethod] = useState<'credit-card' | 'account-credit'>('credit-card');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
-  // Mock booking data
-  const bookingData = {
-    bookingNo: bookingNo,
-    guestName: 'John Smith',
-    accountNo: 'ACC-2024-001',
-    membershipTier: 'Platinum',
-    suiteName: 'VIP Suite A1',
-    checkInTime: '14:30',
-    checkOutTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-    duration: '3 hours 15 minutes',
-    loungeAccess: 450,
-    creditBalance: 25000
+  const bookingData: BookingData = bookingDataProp ?? {
+    ...MOCK_BOOKING_DATA,
+    bookingNo: bookingNoProp ?? MOCK_BOOKING_DATA.bookingNo,
   };
-
-  const orderItems: OrderItem[] = [
-    { id: 1, name: 'Espresso', category: 'Beverage', quantity: 2, unitPrice: 45 },
-    { id: 2, name: 'Caesar Salad', category: 'Food', quantity: 1, unitPrice: 120 },
-    { id: 3, name: 'Grilled Salmon', category: 'Food', quantity: 1, unitPrice: 280 },
-    { id: 4, name: 'Red Wine (Glass)', category: 'Beverage', quantity: 2, unitPrice: 95 },
-    { id: 5, name: 'Tiramisu', category: 'Dessert', quantity: 1, unitPrice: 85 },
-  ];
+  const orderItems: OrderItem[] = orderItemsProp?.length ? orderItemsProp : MOCK_ORDER_ITEMS;
 
   const subtotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const serviceCharge = subtotal * 0.1;
@@ -64,6 +91,9 @@ export function POSCheckout({ bookingNo, onBack }: POSCheckoutProps) {
     setTimeout(() => {
       setIsProcessing(false);
       setIsComplete(true);
+      if (onComplete) {
+        onComplete({ method: paymentMethod, total: totalAmount });
+      }
     }, 1500);
   };
 
@@ -137,7 +167,7 @@ export function POSCheckout({ bookingNo, onBack }: POSCheckoutProps) {
             Back to Floor Plan
           </Button>
           <div>
-            <h1>Checkout - {bookingNo}</h1>
+            <h1>Checkout - {bookingNoProp}</h1>
             <p className="text-gray-600">Complete payment and checkout</p>
           </div>
         </div>

@@ -290,7 +290,15 @@ function generateTransactions(): PromoTransaction[] {
 const MOCK_TRANSACTIONS: PromoTransaction[] = generateTransactions();
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export function PromoCodeUsage() {
+export interface PromoCodeUsageProps {
+  batchUsage?: PromoBatchUsage[];
+  isLoading?: boolean;
+  onViewBatch?: (batchId: number) => void;
+  onExport?: () => void;
+}
+
+export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBatch, onExport }: PromoCodeUsageProps = {}) {
+  const batchData: PromoBatchUsage[] = batchUsageProp?.length ? batchUsageProp : MOCK_BATCH_USAGE;
   const [activeTab, setActiveTab] = useState<'batches' | 'transactions'>('batches');
 
   // ── Batch tab state ────────────────────────────────────────────────────────
@@ -312,7 +320,7 @@ export function PromoCodeUsage() {
   const ITEMS_PER_PAGE = 10;
 
   // ── Batch filtering ────────────────────────────────────────────────────────
-  const filtered = MOCK_BATCH_USAGE.filter(batch => {
+  const filtered = batchData.filter(batch => {
     const matchSearch = !searchTerm
       || batch.companyName.toLowerCase().includes(searchTerm.toLowerCase())
       || batch.batchRef.toLowerCase().includes(searchTerm.toLowerCase())
@@ -347,11 +355,11 @@ export function PromoCodeUsage() {
   const paginatedTxns = filteredTxns.slice((txnPage - 1) * ITEMS_PER_PAGE, txnPage * ITEMS_PER_PAGE);
 
   // ── Summary stats ──────────────────────────────────────────────────────────
-  const totalBatches   = MOCK_BATCH_USAGE.length;
-  const activeBatches  = MOCK_BATCH_USAGE.filter(b => b.status === 'Active').length;
-  const totalCodesGen  = MOCK_BATCH_USAGE.reduce((s, b) => s + b.totalCodes, 0);
-  const totalCodesUsed = MOCK_BATCH_USAGE.reduce((s, b) => s + b.codesUsed, 0);
-  const totalRevImpact = MOCK_BATCH_USAGE.reduce((s, b) => s + b.totalRevenueImpact, 0);
+  const totalBatches   = batchData.length;
+  const activeBatches  = batchData.filter(b => b.status === 'Active').length;
+  const totalCodesGen  = batchData.reduce((s, b) => s + b.totalCodes, 0);
+  const totalCodesUsed = batchData.reduce((s, b) => s + b.codesUsed, 0);
+  const totalRevImpact = batchData.reduce((s, b) => s + b.totalRevenueImpact, 0);
   const avgUsageRate   = totalCodesGen > 0 ? ((totalCodesUsed / totalCodesGen) * 100).toFixed(1) : '0.0';
 
   // ── Download Batch CSV ─────────────────────────────────────────────────────

@@ -73,12 +73,16 @@ const generateMockCompanies = (): Company[] => {
   return companies;
 };
 
-interface MemberCompanyProps {
+const MOCK_COMPANIES: Company[] = generateMockCompanies();
+
+export interface MemberCompanyProps {
+  companies?: Company[];
+  isLoading?: boolean;
   onEditCompany?: (companyId: number) => void;
   onCreateCompany?: () => void;
 }
 
-export function MemberCompany({ onEditCompany, onCreateCompany }: MemberCompanyProps) {
+export function MemberCompany({ companies: companiesProp, onEditCompany, onCreateCompany }: MemberCompanyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -86,7 +90,7 @@ export function MemberCompany({ onEditCompany, onCreateCompany }: MemberCompanyP
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const companies: Company[] = generateMockCompanies();
+  const companies: Company[] = companiesProp?.length ? companiesProp : MOCK_COMPANIES;
 
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = company.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||

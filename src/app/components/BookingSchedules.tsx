@@ -176,19 +176,24 @@ const ALL_STATUSES: BookingStatus[] = [
 ];
 
 // ── Component ────────────────────────────────────────────────────────────────
+export interface BookingSchedulesProps {
+  bookings?: ScheduleBooking[];
+  venueTypeFilter?: 'all' | 'suites' | 'tables';
+  pageTitle?: string;
+  pageSubtitle?: string;
+  onViewDetail?: (bookingId: number) => void;
+  onPreOrder?: (booking: ScheduleBooking) => void;
+}
+
 export function BookingSchedules({
+  bookings: bookingsProp,
   onViewDetail,
   onPreOrder,
   venueTypeFilter = 'all',
   pageTitle = 'Booking Schedules',
   pageSubtitle = 'Daily schedule view across all suites and lounge areas',
-}: {
-  onViewDetail?: (bookingId: number) => void;
-  onPreOrder?: (booking: ScheduleBooking) => void;
-  venueTypeFilter?: 'all' | 'suites' | 'tables';
-  pageTitle?: string;
-  pageSubtitle?: string;
-}) {
+}: BookingSchedulesProps = {}) {
+  const bookings: ScheduleBooking[] = bookingsProp?.length ? bookingsProp : ALL_BOOKINGS;
   const today = todayISO();
   const [selectedDate, setSelectedDate]   = useState(today);
   const [venueFilter, setVenueFilter]     = useState('all');
@@ -226,7 +231,7 @@ export function BookingSchedules({
     : filteredVenuePool.filter(v => v === venueFilter);
 
   // filtered bookings for this date
-  const dayBookings = ALL_BOOKINGS.filter(b => {
+  const dayBookings = bookings.filter(b => {
     if (b.date !== selectedDate) return false;
     if (!filteredVenuePool.includes(b.venue)) return false;
     if (venueFilter !== 'all' && b.venue !== venueFilter) return false;

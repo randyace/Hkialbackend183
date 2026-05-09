@@ -97,19 +97,22 @@ const generateMockAccounts = (): Account[] => {
 
 const mockAccounts: Account[] = generateMockAccounts();
 
-interface AccountListProps {
+export interface AccountListProps {
+  accounts?: Account[];
+  isLoading?: boolean;
   onViewDetail?: (accountNumber: string) => void;
+  onDeleteAccount?: (accountNumber: string) => void;
 }
 
-export function AccountList({ onViewDetail }: AccountListProps) {
+export function AccountList({ accounts: accountsProp, onViewDetail, onDeleteAccount }: AccountListProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [accounts] = useState<Account[]>(mockAccounts);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const accounts: Account[] = accountsProp?.length ? accountsProp : mockAccounts;
   const today = new Date().toISOString().split('T')[0];
 
   const isMember = (account: Account) =>
@@ -385,7 +388,7 @@ export function AccountList({ onViewDetail }: AccountListProps) {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => console.log('Delete account:', account.accountNumber)}
+                        onClick={() => onDeleteAccount?.(account.accountNumber)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         title="Delete Account"
                       >

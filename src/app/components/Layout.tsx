@@ -6,7 +6,9 @@ import { Button } from './ui/button';
 import { Menu } from 'lucide-react';
 import { Toaster } from 'sonner';
 
-export function Layout() {
+export interface LayoutProps {}
+
+export function Layout({}: LayoutProps = {}) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();

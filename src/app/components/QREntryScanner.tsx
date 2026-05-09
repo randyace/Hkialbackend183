@@ -69,14 +69,13 @@ function formatDate(iso: string) {
 // ── Scan result states ────────────────────────────────────────────────────────
 type ScanState = 'idle' | 'scanning' | 'found' | 'not-found' | 'entry-granted' | 'entry-denied';
 
-interface QREntryScannerProps {
-  bookings: ScheduleBooking[];
-  open: boolean;
-  onClose: () => void;
-  onViewDetail?: (bookingId: number) => void;
+export interface QREntryScannerProps {
+  onScan?: (bookingNo: string) => void;
+  onClose?: () => void;
+  onCheckIn?: (bookingId: number) => void;
 }
 
-export function QREntryScanner({ bookings, open, onClose, onViewDetail }: QREntryScannerProps) {
+export function QREntryScanner({ onScan, onClose, onCheckIn }: QREntryScannerProps) {
   const videoRef       = useRef<HTMLVideoElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const streamRef      = useRef<MediaStream | null>(null);
@@ -167,7 +166,7 @@ export function QREntryScanner({ bookings, open, onClose, onViewDetail }: QREntr
         scheduleFrame();
       }
     });
-  }, [lastRawQR, bookings]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [lastRawQR, onScan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleQRDetected = useCallback((raw: string) => {
     setLastRawQR(raw);
@@ -175,18 +174,8 @@ export function QREntryScanner({ bookings, open, onClose, onViewDetail }: QREntr
 
     // Look up booking by booking number or booking ID embedded in QR
     const trimmed = raw.trim();
-    const match = bookings.find(
-      b => b.bookingNo === trimmed || String(b.id) === trimmed
-    );
-
-    if (match) {
-      setFoundBooking(match);
-      setScanState('found');
-    } else {
-      setFoundBooking(null);
-      setScanState('not-found');
-    }
-  }, [bookings]);
+    if (onScan) onScan(trimmed);
+  }, [onScan]);
 
   const stopCamera = useCallback((fullStop = true) => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
@@ -236,7 +225,7 @@ export function QREntryScanner({ bookings, open, onClose, onViewDetail }: QREntr
 
   const handleClose = () => {
     stopCamera(true);
-    onClose();
+    onClose?.();
   };
 
   if (!open) return null;

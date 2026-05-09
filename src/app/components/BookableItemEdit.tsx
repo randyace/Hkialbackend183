@@ -4,12 +4,29 @@ import { Button } from './ui/button';
 import { ArrowLeft, Save, Shuffle } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
-interface BookableItemEditProps {
-  itemId: number | null;
-  onBack: () => void;
+export interface BookableItemFormData {
+  nameEn: string;
+  nameSimp: string;
+  nameTrad: string;
+  category: string;
+  descriptionEn: string;
+  descriptionSimp: string;
+  descriptionTrad: string;
+  price: number;
+  discountRate: number;
+  priceCalEquation: string;
+  availability: string;
+  stock: string;
+  priority: number;
 }
 
-export function BookableItemEdit({ itemId, onBack }: BookableItemEditProps) {
+export interface BookableItemEditProps {
+  itemId?: number | null;
+  onBack?: () => void;
+  onSave?: (formData: BookableItemFormData) => void;
+}
+
+export function BookableItemEdit({ itemId, onBack, onSave }: BookableItemEditProps) {
   const isEditMode = !!itemId;
 
   // Mock data - in real app, this would fetch based on itemId
@@ -33,7 +50,12 @@ export function BookableItemEdit({ itemId, onBack }: BookableItemEditProps) {
     e.preventDefault();
     console.log('Saving bookable item:', formData);
     // In real app, save the data here
-    onBack();
+    if (onSave) {
+      onSave(formData);
+    }
+    if (onBack) {
+      onBack();
+    }
   };
 
   // ── Quick Fill for Demo ───────────────────────────────────────────────────
@@ -56,7 +78,9 @@ export function BookableItemEdit({ itemId, onBack }: BookableItemEditProps) {
   };
 
   const handleCancel = () => {
-    onBack();
+    if (onBack) {
+      onBack();
+    }
   };
 
   return (

@@ -43,10 +43,10 @@ function generateUniqueCodes(prefix: string, count: number): string[] {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-interface PromoCodeEditProps {
-  promoCodeId: number | null;
-  onBack: () => void;
-  onNavigateToCodesPage: (data: GeneratedCodesData) => void;
+export interface PromoCodeEditProps {
+  promoCodeId?: number | null;
+  onBack?: () => void;
+  onNavigateToCodesPage?: (data: GeneratedCodesData) => void;
 }
 
 // ─── Mock batch data for edit mode ───────────────────────────────────────────

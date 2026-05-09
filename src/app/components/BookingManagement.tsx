@@ -267,7 +267,16 @@ const generateMockBookings = (): Booking[] => {
   return bookings;
 };
 
-export function BookingManagement({ onViewDetail }: { onViewDetail?: (bookingId: number) => void }) {
+const MOCK_BOOKINGS: Booking[] = generateMockBookings();
+
+export interface BookingManagementProps {
+  bookings?: Booking[];
+  isLoading?: boolean;
+  onViewDetail?: (bookingId: number) => void;
+  onExportReport?: () => void;
+}
+
+export function BookingManagement({ bookings: bookingsProp, onViewDetail, onExportReport }: BookingManagementProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
@@ -278,7 +287,7 @@ export function BookingManagement({ onViewDetail }: { onViewDetail?: (bookingId:
   const [showDemoInfo, setShowDemoInfo] = useState(true);
   const itemsPerPage = 10;
 
-  const bookings: Booking[] = generateMockBookings();
+  const bookings: Booking[] = bookingsProp?.length ? bookingsProp : MOCK_BOOKINGS;
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -420,7 +429,9 @@ export function BookingManagement({ onViewDetail }: { onViewDetail?: (bookingId:
           <h1>Booking Management</h1>
           <p className="text-gray-600">Manage and review all lounge bookings</p>
         </div>
-        <Button>
+        <Button
+          onClick={onExportReport}
+        >
           <Download className="w-4 h-4 mr-2" />
           Export Report
         </Button>
