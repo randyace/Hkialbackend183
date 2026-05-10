@@ -2022,7 +2022,11 @@ export function MemberDetail({
           <div className="space-y-4">
             <div>
               <label>Category</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-md">
+              <select
+                value={preferenceForm?.category || 'Seating'}
+                onChange={e => { onPreferenceFormChange?.({ category: e.target.value, preference: preferenceForm?.preference || '' }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              >
                 <option value="Seating">Seating</option>
                 <option value="Service">Service</option>
                 <option value="Beverage">Beverage</option>
@@ -2035,6 +2039,8 @@ export function MemberDetail({
             <div>
               <label>Preference Details</label>
               <Textarea
+                value={preferenceForm?.preference || ''}
+                onChange={e => { onPreferenceFormChange?.({ category: preferenceForm?.category || 'Seating', preference: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Describe the customer's preference..."
                 rows={3}
               />
@@ -2043,7 +2049,10 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
+              if (!preferenceForm?.category?.trim()) { toast.error('Category is required'); return; }
+              if (!preferenceForm?.preference?.trim()) { toast.error('Preference details are required'); return; }
               toast.success('Preference added');
+              onAddPreference?.();
               onCloseAddPreference?.();
               setMockIsAddPreferenceOpen(false);
             }}>Add Preference</Button>
@@ -2117,6 +2126,7 @@ export function MemberDetail({
               } else {
                 setMockFoodAllergies(prev => [...prev, newItem]); // demo fallback
                 toast.success('Food allergy added');
+                onAddAllergy?.();  // <-- 加呢行：通知 container 有新建 allergy
               }
               onCloseAddAllergy?.();
               setMockIsAddAllergyOpen(false);
@@ -2356,7 +2366,11 @@ export function MemberDetail({
           <div className="space-y-4">
             <div>
               <label>Category</label>
-              <select className="w-full px-4 py-2 border border-gray-300 rounded-md">
+              <select
+                value={allergyForm?.allergen || 'General'}
+                onChange={e => { onAllergyFormChange?.({ ...allergyForm!, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md"
+              >
                 <option value="General">General</option>
                 <option value="Special Request">Special Request</option>
                 <option value="Service Note">Service Note</option>
@@ -2366,18 +2380,24 @@ export function MemberDetail({
             <div>
               <label>Remark</label>
               <Textarea
+                value={allergyForm?.notes || ''}
+                onChange={e => { onAllergyFormChange?.({ ...allergyForm!, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Enter your remark..."
                 rows={4}
               />
+
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
+              if (!allergyForm?.notes?.trim()) { toast.error('Remark text is required'); return; }
               toast.success('Remark added');
+              onAddRemark?.();  // <-- 加呢行：通知 container 有新建 remark
               onCloseAddRemark?.();
               setMockIsAddRemarkOpen(false);
             }}>Add Remark</Button>
+
           </DialogFooter>
         </DialogContent>
       </Dialog>
