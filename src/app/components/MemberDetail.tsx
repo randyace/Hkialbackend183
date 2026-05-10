@@ -546,6 +546,7 @@ export function MemberDetail({
   const activeAllergyForm             = allergyFormProp            ?? mockAllergyForm;
   const activeDietaryForm             = dietaryFormProp            ?? mockDietaryForm;
   const activeSpouseForm              = spouseFormProp             ?? mockSpouseForm;
+  const activePreferenceForm          = preferenceFormProp         ?? { category: 'Seating', preference: '' };
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -2023,8 +2024,8 @@ export function MemberDetail({
             <div>
               <label>Category</label>
               <select
-                value={preferenceForm?.category || 'Seating'}
-                onChange={e => { onPreferenceFormChange?.({ category: e.target.value, preference: preferenceForm?.preference || '' }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                value={activePreferenceForm.category}
+                onChange={e => { onPreferenceFormChange?.({ category: e.target.value, preference: activePreferenceForm.preference }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
                 <option value="Seating">Seating</option>
@@ -2039,8 +2040,8 @@ export function MemberDetail({
             <div>
               <label>Preference Details</label>
               <Textarea
-                value={preferenceForm?.preference || ''}
-                onChange={e => { onPreferenceFormChange?.({ category: preferenceForm?.category || 'Seating', preference: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
+                value={activePreferenceForm.preference}
+                onChange={e => { onPreferenceFormChange?.({ category: activePreferenceForm.category, preference: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Describe the customer's preference..."
                 rows={3}
               />
@@ -2049,8 +2050,8 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!preferenceForm?.category?.trim()) { toast.error('Category is required'); return; }
-              if (!preferenceForm?.preference?.trim()) { toast.error('Preference details are required'); return; }
+              if (!activePreferenceForm.category.trim()) { toast.error('Category is required'); return; }
+              if (!activePreferenceForm.preference.trim()) { toast.error('Preference details are required'); return; }
               toast.success('Preference added');
               onAddPreference?.();
               onCloseAddPreference?.();
@@ -2367,8 +2368,8 @@ export function MemberDetail({
             <div>
               <label>Category</label>
               <select
-                value={allergyForm?.allergen || 'General'}
-                onChange={e => { onAllergyFormChange?.({ ...allergyForm!, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                value={activeAllergyForm.allergen || 'General'}
+                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
                 <option value="General">General</option>
@@ -2380,8 +2381,8 @@ export function MemberDetail({
             <div>
               <label>Remark</label>
               <Textarea
-                value={allergyForm?.notes || ''}
-                onChange={e => { onAllergyFormChange?.({ ...allergyForm!, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
+                value={activeAllergyForm.notes || ''}
+                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Enter your remark..."
                 rows={4}
               />
@@ -2391,7 +2392,7 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!allergyForm?.notes?.trim()) { toast.error('Remark text is required'); return; }
+              if (!activeAllergyForm.notes?.trim()) { toast.error('Remark text is required'); return; }
               toast.success('Remark added');
               onAddRemark?.();  // <-- 加呢行：通知 container 有新建 remark
               onCloseAddRemark?.();
