@@ -23,6 +23,61 @@ import {
 // ── MOCK constant (isolated — container replaces via props) ───────────────────
 const MOCK_ACCOUNT_NUMBER = 'ACC-2024-1001';
 
+// ── Member shape ──────────────────────────────────────────────────────────────
+export interface Member {
+  accountNumber: string;
+  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  status: 'Active' | 'Pending' | 'Suspended';
+  name: string;
+  title: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  nationality: string;
+  passportNumber: string;
+  internalGrouping: string;
+  paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase';
+  companyCode: string;
+  bulkPurchaseCode?: string;
+  membershipNumber?: string;
+  membershipType?: string;
+  membershipExpiry?: string;
+  createdDate: string;
+  totalBookings: number;
+  totalSpent: string;
+  appearance: { ethnicity: string; age: string; height: string; hairColor: string; glasses: string; };
+  workInfo: { industry: string; company: string; position: string; previousWork: string; };
+  observations: { handedness: string; writingHand: string; preferredLanguage: string; interests: string; };
+}
+
+const MOCK_MEMBER: Member = {
+  accountNumber: 'ACC-2024-1001',
+  accountType: 'Individual',
+  status: 'Active',
+  name: 'Mr. John Smith',
+  title: 'Mr.',
+  firstName: 'John',
+  lastName: 'Smith',
+  email: 'john.smith@email.com',
+  phone: '+852 9876 5432',
+  nationality: 'United Kingdom',
+  passportNumber: 'UK123456789',
+  internalGrouping: 'HSBC',
+  paymentMethod: 'On-Credit',
+  companyCode: 'CORP-2024-001',
+  bulkPurchaseCode: '',
+  membershipNumber: 'MEM-2024-501',
+  membershipType: 'Gold',
+  membershipExpiry: '2025-12-31',
+  createdDate: '2024-01-15',
+  totalBookings: 24,
+  totalSpent: 'HK$68,500',
+  appearance: { ethnicity: 'Caucasian', age: '45-50', height: '180cm', hairColor: 'Brown', glasses: 'Yes' },
+  workInfo: { industry: 'Finance', company: 'Global Investment Bank', position: 'Managing Director', previousWork: 'Senior VP at Tech Corp' },
+  observations: { handedness: 'Right-handed', writingHand: 'Right', preferredLanguage: 'English', interests: 'Golf, Wine Tasting, Classical Music' },
+};
+
 export interface MemberDetailProps {
   /** Account number to fetch — falls back to MOCK_ACCOUNT_NUMBER in demo mode */
   accountNumber?: string;
@@ -30,6 +85,8 @@ export interface MemberDetailProps {
   member?: Member | null;
   onBack: () => void;
   onEdit?: () => void;
+  /** Called with the full updated Member when the user saves in Edit mode */
+  onSave?: (member: Member) => void;
   onUpgrade?: (packageId: string) => void;
   isLoading?: boolean;
 }
@@ -108,12 +165,35 @@ interface Spouse {
 
 export function MemberDetail({
   accountNumber = MOCK_ACCOUNT_NUMBER,
-  member,
+  member: memberProp,
   onBack,
   onEdit,
+  onSave,
   onUpgrade,
   isLoading = false,
 }: MemberDetailProps) {
+  // Use passed member or fall back to mock — single source of truth
+  const memberData: Member = memberProp ?? MOCK_MEMBER;
+
+  // ── Controlled form state (seeded from memberData) ──────────────────────────
+  const [basicForm, setBasicForm] = useState({
+    title: memberData.title,
+    firstName: memberData.firstName,
+    lastName: memberData.lastName,
+    email: memberData.email,
+    phone: memberData.phone,
+    nationality: memberData.nationality,
+    passportNumber: memberData.passportNumber,
+  });
+  const [accountForm, setAccountForm] = useState({
+    internalGrouping: memberData.internalGrouping,
+    paymentMethod: memberData.paymentMethod,
+    companyCode: memberData.companyCode,
+  });
+  const [appearanceForm, setAppearanceForm] = useState({ ...memberData.appearance });
+  const [workForm, setWorkForm] = useState({ ...memberData.workInfo });
+  const [observationsForm, setObservationsForm] = useState({ ...memberData.observations });
+
   const [isEditing, setIsEditing] = useState(false);
   const [isAddPreferenceOpen, setIsAddPreferenceOpen] = useState(false);
   const [isAddAllergyOpen, setIsAddAllergyOpen] = useState(false);
@@ -178,50 +258,7 @@ export function MemberDetail({
   const [isRemoveSpouseOpen, setIsRemoveSpouseOpen] = useState(false);
   const [spouseForm, setSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
 
-  // Mock member data
-  const memberData = {
-    accountNumber: 'ACC-2024-1001',
-    accountType: 'Individual', // Changed from 'Corporate' to 'Individual' for demo
-    status: 'Active',
-    name: 'Mr. John Smith',
-    title: 'Mr.',
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@email.com',
-    phone: '+852 9876 5432',
-    nationality: 'United Kingdom',
-    passportNumber: 'UK123456789',
-    internalGrouping: 'HSBC',
-    paymentMethod: 'On-Credit',
-    companyCode: 'CORP-2024-001',
-    bulkPurchaseCode: '',
-    membershipNumber: 'MEM-2024-501',
-    membershipType: 'Gold',
-    membershipExpiry: '2025-12-31',
-    createdDate: '2024-01-15',
-    totalBookings: 24,
-    totalSpent: 'HK$68,500',
-    // VIP Profile data
-    appearance: {
-      ethnicity: 'Caucasian',
-      age: '45-50',
-      height: '180cm',
-      hairColor: 'Brown',
-      glasses: 'Yes'
-    },
-    workInfo: {
-      industry: 'Finance',
-      company: 'Global Investment Bank',
-      position: 'Managing Director',
-      previousWork: 'Senior VP at Tech Corp'
-    },
-    observations: {
-      handedness: 'Right-handed',
-      writingHand: 'Right',
-      preferredLanguage: 'English',
-      interests: 'Golf, Wine Tasting, Classical Music'
-    }
-  };
+  // memberData is defined above (prop-driven)
 
   const [preferences, setPreferences] = useState<Preference[]>([
     { id: 1, category: 'Seating', preference: 'Prefers window-side suite with natural lighting', recordedDate: '2024-10-15', recordedBy: 'Staff A' },
@@ -317,7 +354,29 @@ export function MemberDetail({
   };
 
   const handleSave = () => {
+    const updated: Member = {
+      ...memberData,
+      ...basicForm,
+      name: `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`,
+      paymentMethod: accountForm.paymentMethod as Member['paymentMethod'],
+      internalGrouping: accountForm.internalGrouping,
+      companyCode: accountForm.companyCode,
+      appearance: appearanceForm,
+      workInfo: workForm,
+      observations: observationsForm,
+    };
+    onSave?.(updated);
     toast.success('Member details updated successfully');
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    // Reset all form state back to current memberData
+    setBasicForm({ title: memberData.title, firstName: memberData.firstName, lastName: memberData.lastName, email: memberData.email, phone: memberData.phone, nationality: memberData.nationality, passportNumber: memberData.passportNumber });
+    setAccountForm({ internalGrouping: memberData.internalGrouping, paymentMethod: memberData.paymentMethod, companyCode: memberData.companyCode });
+    setAppearanceForm({ ...memberData.appearance });
+    setWorkForm({ ...memberData.workInfo });
+    setObservationsForm({ ...memberData.observations });
     setIsEditing(false);
   };
 
@@ -367,7 +426,7 @@ export function MemberDetail({
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
@@ -461,7 +520,8 @@ export function MemberDetail({
                 <label>Title</label>
                 <input
                   type="text"
-                  defaultValue={memberData.title}
+                  value={basicForm.title}
+                  onChange={e => setBasicForm(f => ({ ...f, title: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -470,7 +530,8 @@ export function MemberDetail({
                 <label>First Name</label>
                 <input
                   type="text"
-                  defaultValue={memberData.firstName}
+                  value={basicForm.firstName}
+                  onChange={e => setBasicForm(f => ({ ...f, firstName: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -479,7 +540,8 @@ export function MemberDetail({
                 <label>Last Name</label>
                 <input
                   type="text"
-                  defaultValue={memberData.lastName}
+                  value={basicForm.lastName}
+                  onChange={e => setBasicForm(f => ({ ...f, lastName: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -488,7 +550,8 @@ export function MemberDetail({
                 <label>Email</label>
                 <input
                   type="email"
-                  defaultValue={memberData.email}
+                  value={basicForm.email}
+                  onChange={e => setBasicForm(f => ({ ...f, email: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -497,7 +560,8 @@ export function MemberDetail({
                 <label>Phone</label>
                 <input
                   type="tel"
-                  defaultValue={memberData.phone}
+                  value={basicForm.phone}
+                  onChange={e => setBasicForm(f => ({ ...f, phone: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -506,7 +570,8 @@ export function MemberDetail({
                 <label>Nationality</label>
                 <input
                   type="text"
-                  defaultValue={memberData.nationality}
+                  value={basicForm.nationality}
+                  onChange={e => setBasicForm(f => ({ ...f, nationality: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -515,7 +580,8 @@ export function MemberDetail({
                 <label>First 4 digits of Passport Number</label>
                 <input
                   type="text"
-                  defaultValue={memberData.passportNumber.slice(0, 4)}
+                  value={basicForm.passportNumber.slice(0, 4)}
+                  onChange={e => setBasicForm(f => ({ ...f, passportNumber: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -530,7 +596,8 @@ export function MemberDetail({
               <div>
                 <label>Internal Grouping</label>
                 <select
-                  defaultValue={memberData.internalGrouping}
+                  value={accountForm.internalGrouping}
+                  onChange={e => setAccountForm(f => ({ ...f, internalGrouping: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
@@ -564,7 +631,8 @@ export function MemberDetail({
               <div>
                 <label>Payment Method</label>
                 <select
-                  defaultValue={memberData.paymentMethod}
+                  value={accountForm.paymentMethod}
+                  onChange={e => setAccountForm(f => ({ ...f, paymentMethod: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
@@ -578,7 +646,8 @@ export function MemberDetail({
                 <label>Company Code</label>
                 <input
                   type="text"
-                  defaultValue={memberData.companyCode}
+                  value={accountForm.companyCode}
+                  onChange={e => setAccountForm(f => ({ ...f, companyCode: e.target.value }))}
                   disabled={!isEditing}
                   placeholder="Optional"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
@@ -735,7 +804,8 @@ export function MemberDetail({
                     <label>Ethnicity</label>
                     <input
                       type="text"
-                      defaultValue={memberData.appearance.ethnicity}
+                      value={appearanceForm.ethnicity}
+                      onChange={e => setAppearanceForm(f => ({ ...f, ethnicity: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -744,7 +814,8 @@ export function MemberDetail({
                     <label>Age Range</label>
                     <input
                       type="text"
-                      defaultValue={memberData.appearance.age}
+                      value={appearanceForm.age}
+                      onChange={e => setAppearanceForm(f => ({ ...f, age: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -753,7 +824,8 @@ export function MemberDetail({
                     <label>Height</label>
                     <input
                       type="text"
-                      defaultValue={memberData.appearance.height}
+                      value={appearanceForm.height}
+                      onChange={e => setAppearanceForm(f => ({ ...f, height: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -762,7 +834,8 @@ export function MemberDetail({
                     <label>Hair Color</label>
                     <input
                       type="text"
-                      defaultValue={memberData.appearance.hairColor}
+                      value={appearanceForm.hairColor}
+                      onChange={e => setAppearanceForm(f => ({ ...f, hairColor: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -770,7 +843,8 @@ export function MemberDetail({
                   <div>
                     <label>Glasses</label>
                     <select
-                      defaultValue={memberData.appearance.glasses}
+                      value={appearanceForm.glasses}
+                      onChange={e => setAppearanceForm(f => ({ ...f, glasses: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
@@ -790,7 +864,8 @@ export function MemberDetail({
                     <label>Industry</label>
                     <input
                       type="text"
-                      defaultValue={memberData.workInfo.industry}
+                      value={workForm.industry}
+                      onChange={e => setWorkForm(f => ({ ...f, industry: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -799,7 +874,8 @@ export function MemberDetail({
                     <label>Company Name</label>
                     <input
                       type="text"
-                      defaultValue={memberData.workInfo.company}
+                      value={workForm.company}
+                      onChange={e => setWorkForm(f => ({ ...f, company: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -808,7 +884,8 @@ export function MemberDetail({
                     <label>Position</label>
                     <input
                       type="text"
-                      defaultValue={memberData.workInfo.position}
+                      value={workForm.position}
+                      onChange={e => setWorkForm(f => ({ ...f, position: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -817,7 +894,8 @@ export function MemberDetail({
                     <label>Previous Work History</label>
                     <input
                       type="text"
-                      defaultValue={memberData.workInfo.previousWork}
+                      value={workForm.previousWork}
+                      onChange={e => setWorkForm(f => ({ ...f, previousWork: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
@@ -832,7 +910,8 @@ export function MemberDetail({
                   <div>
                     <label>Handedness</label>
                     <select
-                      defaultValue={memberData.observations.handedness}
+                      value={observationsForm.handedness}
+                      onChange={e => setObservationsForm(f => ({ ...f, handedness: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
@@ -844,7 +923,8 @@ export function MemberDetail({
                   <div>
                     <label>Writing Hand</label>
                     <select
-                      defaultValue={memberData.observations.writingHand}
+                      value={observationsForm.writingHand}
+                      onChange={e => setObservationsForm(f => ({ ...f, writingHand: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
@@ -855,7 +935,8 @@ export function MemberDetail({
                   <div>
                     <label>Preferred Language</label>
                     <select
-                      defaultValue={memberData.observations.preferredLanguage}
+                      value={observationsForm.preferredLanguage}
+                      onChange={e => setObservationsForm(f => ({ ...f, preferredLanguage: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
@@ -870,7 +951,8 @@ export function MemberDetail({
                     <label>Interest Topics</label>
                     <input
                       type="text"
-                      defaultValue={memberData.observations.interests}
+                      value={observationsForm.interests}
+                      onChange={e => setObservationsForm(f => ({ ...f, interests: e.target.value }))}
                       disabled={!isEditing}
                       placeholder="e.g., Golf, Wine, Art"
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
