@@ -89,9 +89,96 @@ export interface MemberDetailProps {
   onSave?: (member: Member) => void;
   onUpgrade?: (packageId: string) => void;
   isLoading?: boolean;
+
+  // ── Profile data arrays (prop-driven; fall back to internal mock) ────────
+  preferences?: Preference[];
+  foodAllergies?: FoodAllergy[];
+  dietaryRequirements?: DietaryRequirement[];
+  movements?: MovementLog[];
+  remarks?: Remark[];
+  spouse?: Spouse | null;
+  spouseFoodAllergies?: FoodAllergy[];
+  spouseDietaryRequirements?: DietaryRequirement[];
+
+  // ── Security / login data ────────────────────────────────────────────────
+  isAccountLocked?: boolean;
+  lockReason?: string;
+  lockedAt?: string;
+  twoFAEnabled?: boolean;
+  activeSessions?: number;
+  loginHistory?: LoginAttempt[];
+
+  // ── Delete callbacks ─────────────────────────────────────────────────────
+  onDeletePreference?: (id: number) => void;
+  onDeleteAllergy?: (id: number) => void;
+  onDeleteDietary?: (id: number) => void;
+  onDeleteSpouseAllergy?: (id: number) => void;
+  onDeleteSpouseDietary?: (id: number) => void;
+  onDeleteRemark?: (id: number) => void;
+
+  // ── Add / dialog open callbacks ──────────────────────────────────────────
+  onAddPreference?: () => void;
+  onAddAllergy?: () => void;
+  onAddDietary?: () => void;
+  onAddMovement?: () => void;
+  onAddRemark?: () => void;
+
+  // ── Dialog open/close state ──────────────────────────────────────────────
+  isAddPreferenceOpen?: boolean;
+  isAddAllergyOpen?: boolean;
+  isAddDietaryOpen?: boolean;
+  isAddMovementOpen?: boolean;
+  isAddRemarkOpen?: boolean;
+  onCloseAddPreference?: () => void;
+  onCloseAddAllergy?: () => void;
+  onCloseAddDietary?: () => void;
+  onCloseAddMovement?: () => void;
+  onCloseAddRemark?: () => void;
+
+  // ── Add form state & handlers ────────────────────────────────────────────
+  preferenceForm?: { category: string; preference: string; };
+  onPreferenceFormChange?: (form: { category: string; preference: string; }) => void;
+  allergyTarget?: 'customer' | 'spouse';
+  dietaryTarget?: 'customer' | 'spouse';
+  allergyForm?: { allergen: string; severity: string; notes: string; };
+  dietaryForm?: { requirement: string; notes: string; };
+  onAllergyTargetChange?: (target: 'customer' | 'spouse') => void;
+  onDietaryTargetChange?: (target: 'customer' | 'spouse') => void;
+  onAllergyFormChange?: (form: { allergen: string; severity: string; notes: string; }) => void;
+  onDietaryFormChange?: (form: { requirement: string; notes: string; }) => void;
+
+  // ── Movement dialog ──────────────────────────────────────────────────────
+  movementForm?: Partial<MovementLog>;
+  onMovementFormChange?: (form: Partial<MovementLog>) => void;
+  isMovementDialogOpen?: boolean;
+  isSavingMovement?: boolean;
+
+  // ── Spouse dialog ────────────────────────────────────────────────────────
+  isSpouseDialogOpen?: boolean;
+  isRemoveSpouseOpen?: boolean;
+  spouseForm?: Spouse;
+  onSpouseDialogOpen?: () => void;
+  onSpouseDialogClose?: () => void;
+  onRemoveSpouseOpen?: () => void;
+  onRemoveSpouseClose?: () => void;
+  onSpouseFormChange?: (form: Spouse) => void;
+
+  // ── Security action dialog state & callbacks ─────────────────────────────
+  showUnlockConfirm?: boolean;
+  showResetPwConfirm?: boolean;
+  showForceLogoutConfirm?: boolean;
+  showReset2FAConfirm?: boolean;
+  onShowUnlockConfirm?: () => void;
+  onHideUnlockConfirm?: () => void;
+  onShowResetPwConfirm?: () => void;
+  onHideResetPwConfirm?: () => void;
+  onShowForceLogoutConfirm?: () => void;
+  onHideForceLogoutConfirm?: () => void;
+  onShowReset2FAConfirm?: () => void;
+  onHideReset2FAConfirm?: () => void;
 }
 
-interface Preference {
+export interface Preference {
   id: number;
   category: string;
   preference: string;
@@ -99,7 +186,7 @@ interface Preference {
   recordedBy: string;
 }
 
-interface FoodAllergy {
+export interface FoodAllergy {
   id: number;
   allergen: string;
   severity: 'Mild' | 'Moderate' | 'Severe';
@@ -107,14 +194,14 @@ interface FoodAllergy {
   recordedDate: string;
 }
 
-interface DietaryRequirement {
+export interface DietaryRequirement {
   id: number;
   requirement: string;
   notes: string;
   recordedDate: string;
 }
 
-interface MovementLog {
+export interface MovementLog {
   id: number;                        // 1. Gp No. (auto)
   movementInCharge?: string;         // 2. Movement In Charge
   cicSupport?: string;               // 3. CIC & Support
@@ -144,7 +231,7 @@ interface MovementLog {
   remarksAdminIssue?: string;        // 27. Remarks for Admin issue
 }
 
-interface Remark {
+export interface Remark {
   id: number;
   remark: string;
   category: 'General' | 'Special Request' | 'Service Note' | 'VIP Note';
@@ -152,7 +239,7 @@ interface Remark {
   createdBy: string;
 }
 
-interface Spouse {
+export interface Spouse {
   title: string;
   firstName: string;
   lastName: string;
@@ -163,6 +250,16 @@ interface Spouse {
   linkedAccountNo?: string;
 }
 
+export interface LoginAttempt {
+  id: number;
+  datetime: string;
+  ip: string;
+  device: string;
+  deviceType: 'desktop' | 'mobile';
+  status: 'Success' | 'Failed' | 'Locked Out';
+  location: string;
+}
+
 export function MemberDetail({
   accountNumber = MOCK_ACCOUNT_NUMBER,
   member: memberProp,
@@ -171,6 +268,93 @@ export function MemberDetail({
   onSave,
   onUpgrade,
   isLoading = false,
+
+  // ── Data arrays ───────────────────────────────────────────────────────────
+  preferences: preferencesProp = [],
+  foodAllergies: foodAllergiesProp = [],
+  dietaryRequirements: dietaryRequirementsProp = [],
+  movements: movementsProp = [],
+  remarks: remarksProp = [],
+  spouse: spouseProp,               // undefined = not passed → use mock; null = explicitly no spouse
+  spouseFoodAllergies: spouseFoodAllergiesProp = [],
+  spouseDietaryRequirements: spouseDietaryRequirementsProp = [],
+
+  // ── Security ──────────────────────────────────────────────────────────────
+  isAccountLocked: isAccountLockedProp,
+  lockReason: lockReasonProp,
+  lockedAt: lockedAtProp,
+  twoFAEnabled: twoFAEnabledProp,
+  activeSessions: activeSessionsProp,
+  loginHistory: loginHistoryProp = [],
+
+  // ── Delete callbacks ──────────────────────────────────────────────────────
+  onDeletePreference,
+  onDeleteAllergy,
+  onDeleteDietary,
+  onDeleteSpouseAllergy,
+  onDeleteSpouseDietary,
+  onDeleteRemark,
+
+  // ── Add callbacks ─────────────────────────────────────────────────────────
+  onAddPreference,
+  onAddAllergy,
+  onAddDietary,
+  onAddMovement,
+  onAddRemark,
+
+  // ── Dialog open/close (prop-driven when container owns state) ─────────────
+  isAddPreferenceOpen: isAddPreferenceOpenProp,
+  isAddAllergyOpen: isAddAllergyOpenProp,
+  isAddDietaryOpen: isAddDietaryOpenProp,
+  isAddMovementOpen: isAddMovementOpenProp,
+  isAddRemarkOpen: isAddRemarkOpenProp,
+  onCloseAddPreference,
+  onCloseAddAllergy,
+  onCloseAddDietary,
+  onCloseAddMovement,
+  onCloseAddRemark,
+
+  // ── Form state ────────────────────────────────────────────────────────────
+  preferenceForm: preferenceFormProp,
+  onPreferenceFormChange,
+  allergyTarget: allergyTargetProp,
+  dietaryTarget: dietaryTargetProp,
+  allergyForm: allergyFormProp,
+  dietaryForm: dietaryFormProp,
+  onAllergyTargetChange,
+  onDietaryTargetChange,
+  onAllergyFormChange,
+  onDietaryFormChange,
+
+  // ── Movement dialog ───────────────────────────────────────────────────────
+  movementForm: movementFormProp,
+  onMovementFormChange,
+  isMovementDialogOpen: isMovementDialogOpenProp,
+  isSavingMovement = false,
+
+  // ── Spouse dialog ─────────────────────────────────────────────────────────
+  isSpouseDialogOpen: isSpouseDialogOpenProp,
+  isRemoveSpouseOpen: isRemoveSpouseOpenProp,
+  spouseForm: spouseFormProp,
+  onSpouseDialogOpen,
+  onSpouseDialogClose,
+  onRemoveSpouseOpen,
+  onRemoveSpouseClose,
+  onSpouseFormChange,
+
+  // ── Security dialog state ─────────────────────────────────────────────────
+  showUnlockConfirm: showUnlockConfirmProp,
+  showResetPwConfirm: showResetPwConfirmProp,
+  showForceLogoutConfirm: showForceLogoutConfirmProp,
+  showReset2FAConfirm: showReset2FAConfirmProp,
+  onShowUnlockConfirm,
+  onHideUnlockConfirm,
+  onShowResetPwConfirm,
+  onHideResetPwConfirm,
+  onShowForceLogoutConfirm,
+  onHideForceLogoutConfirm,
+  onShowReset2FAConfirm,
+  onHideReset2FAConfirm,
 }: MemberDetailProps) {
   // Use passed member or fall back to mock — single source of truth
   const memberData: Member = memberProp ?? MOCK_MEMBER;
@@ -201,30 +385,21 @@ export function MemberDetail({
   const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
   const [isAddRemarkOpen, setIsAddRemarkOpen] = useState(false);
 
-  // ── Security state ─────────────────────────────────────────────────────────
-  const [isAccountLocked, setIsAccountLocked] = useState(true);
-  const [lockReason] = useState('5 consecutive failed login attempts');
-  const [lockedAt] = useState('2026-03-05 14:23:11');
-  const [twoFAEnabled, setTwoFAEnabled] = useState(true);
-  const [activeSessions] = useState(2);
+  // ── Security mock state (demo fallback — kept as per spec) ────────────────
+  const [mockIsAccountLocked, setMockIsAccountLocked] = useState(true);
+  const [mockLockReason] = useState('5 consecutive failed login attempts');
+  const [mockLockedAt] = useState('2026-03-05 14:23:11');
+  const [mockTwoFAEnabled, setMockTwoFAEnabled] = useState(true);
+  const [mockActiveSessions] = useState(2);
 
-  // Security confirmation dialogs
-  const [showUnlockConfirm, setShowUnlockConfirm]         = useState(false);
-  const [showResetPwConfirm, setShowResetPwConfirm]       = useState(false);
-  const [showForceLogoutConfirm, setShowForceLogoutConfirm] = useState(false);
-  const [showReset2FAConfirm, setShowReset2FAConfirm]     = useState(false);
+  // Security confirmation dialog mock state (demo fallback)
+  const [mockShowUnlockConfirm, setMockShowUnlockConfirm]               = useState(false);
+  const [mockShowResetPwConfirm, setMockShowResetPwConfirm]             = useState(false);
+  const [mockShowForceLogoutConfirm, setMockShowForceLogoutConfirm]     = useState(false);
+  const [mockShowReset2FAConfirm, setMockShowReset2FAConfirm]           = useState(false);
 
-  // Mock login history
-  interface LoginAttempt {
-    id: number;
-    datetime: string;
-    ip: string;
-    device: string;
-    deviceType: 'desktop' | 'mobile';
-    status: 'Success' | 'Failed' | 'Locked Out';
-    location: string;
-  }
-  const [loginHistory] = useState<LoginAttempt[]>([
+  // Mock login history (demo fallback — LoginAttempt type is now top-level)
+  const [mockLoginHistory] = useState<LoginAttempt[]>([
     { id: 1, datetime: '2026-03-07 09:15:44', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Success',    location: 'Hong Kong, HK' },
     { id: 2, datetime: '2026-03-05 14:26:02', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Locked Out', location: 'Hong Kong, HK' },
     { id: 3, datetime: '2026-03-05 14:24:58', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Failed',     location: 'Hong Kong, HK' },
@@ -237,14 +412,21 @@ export function MemberDetail({
     { id: 10, datetime: '2026-02-20 14:55:39', ip: '172.16.0.88',  device: 'Safari / iPhone 15 Pro', deviceType: 'mobile',  status: 'Success',    location: 'Hong Kong, HK' },
   ]);
 
-  // ── Allergy / Dietary dialog targets ───────────────────────────────────
-  const [allergyTarget, setAllergyTarget] = useState<'customer' | 'spouse'>('customer');
-  const [dietaryTarget, setDietaryTarget] = useState<'customer' | 'spouse'>('customer');
-  const [allergyForm, setAllergyForm] = useState({ allergen: '', severity: 'Mild', notes: '' });
-  const [dietaryForm, setDietaryForm] = useState({ requirement: '', notes: '' });
+  // ── Allergy / Dietary dialog mock state (demo fallback) ────────────────
+  const [mockAllergyTarget, setMockAllergyTarget] = useState<'customer' | 'spouse'>('customer');
+  const [mockDietaryTarget, setMockDietaryTarget] = useState<'customer' | 'spouse'>('customer');
+  const [mockAllergyForm, setMockAllergyForm] = useState({ allergen: '', severity: 'Mild', notes: '' });
+  const [mockDietaryForm, setMockDietaryForm] = useState({ requirement: '', notes: '' });
 
-  // ── Spouse ──────────────────────────────────────────────────────────────
-  const [spouse, setSpouse] = useState<Spouse | null>({
+  // ── Dialog open mock state (demo fallback) ──────────────────────────────
+  const [mockIsAddPreferenceOpen, setMockIsAddPreferenceOpen] = useState(false);
+  const [mockIsAddAllergyOpen, setMockIsAddAllergyOpen] = useState(false);
+  const [mockIsAddDietaryOpen, setMockIsAddDietaryOpen] = useState(false);
+  const [mockIsAddMovementOpen, setMockIsAddMovementOpen] = useState(false);
+  const [mockIsAddRemarkOpen, setMockIsAddRemarkOpen] = useState(false);
+
+  // ── Spouse mock state (demo fallback) ───────────────────────────────────
+  const [mockSpouse, setMockSpouse] = useState<Spouse | null>({
     title: 'Mrs.',
     firstName: 'Amanda',
     lastName: 'Smith',
@@ -254,38 +436,38 @@ export function MemberDetail({
     passportFirst4: 'UK78',
     linkedAccountNo: '',
   });
-  const [isSpouseDialogOpen, setIsSpouseDialogOpen] = useState(false);
-  const [isRemoveSpouseOpen, setIsRemoveSpouseOpen] = useState(false);
-  const [spouseForm, setSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
+  const [mockIsSpouseDialogOpen, setMockIsSpouseDialogOpen] = useState(false);
+  const [mockIsRemoveSpouseOpen, setMockIsRemoveSpouseOpen] = useState(false);
+  const [mockSpouseForm, setMockSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
 
   // memberData is defined above (prop-driven)
 
-  const [preferences, setPreferences] = useState<Preference[]>([
+  // ── Mock data arrays (demo fallback — kept as per spec) ─────────────────
+  const [mockPreferences, setMockPreferences] = useState<Preference[]>([
     { id: 1, category: 'Seating', preference: 'Prefers window-side suite with natural lighting', recordedDate: '2024-10-15', recordedBy: 'Staff A' },
     { id: 2, category: 'Service', preference: 'Likes to be greeted by first name', recordedDate: '2024-09-20', recordedBy: 'Staff B' },
     { id: 3, category: 'Beverage', preference: 'Prefers Champagne (Dom Pérignon if available)', recordedDate: '2024-08-10', recordedBy: 'Staff C' },
     { id: 4, category: 'Temperature', preference: 'Suite temperature at 22°C', recordedDate: '2024-07-05', recordedBy: 'Staff A' },
   ]);
 
-  const [foodAllergies, setFoodAllergies] = useState<FoodAllergy[]>([
+  const [mockFoodAllergies, setMockFoodAllergies] = useState<FoodAllergy[]>([
     { id: 1, allergen: 'Shellfish', severity: 'Severe', notes: 'Anaphylactic reaction. Requires EpiPen.', recordedDate: '2024-01-15' },
     { id: 2, allergen: 'Peanuts', severity: 'Moderate', notes: 'Avoid all peanut products', recordedDate: '2024-01-15' },
   ]);
 
-  const [dietaryRequirements, setDietaryRequirements] = useState<DietaryRequirement[]>([
+  const [mockDietaryRequirements, setMockDietaryRequirements] = useState<DietaryRequirement[]>([
     { id: 1, requirement: 'Low Sodium', notes: 'Doctor recommended due to hypertension', recordedDate: '2024-02-20' },
     { id: 2, requirement: 'Prefers Organic Options', notes: 'When available', recordedDate: '2024-03-10' },
   ]);
 
-  // ── Spouse allergy / dietary state ─────────────────────────────────────
-  const [spouseFoodAllergies, setSpouseFoodAllergies] = useState<FoodAllergy[]>([
+  const [mockSpouseFoodAllergies, setMockSpouseFoodAllergies] = useState<FoodAllergy[]>([
     { id: 101, allergen: 'Tree Nuts', severity: 'Mild', notes: 'Mild sensitivity — avoid walnuts and cashews', recordedDate: '2024-06-10' },
   ]);
-  const [spouseDietaryRequirements, setSpouseDietaryRequirements] = useState<DietaryRequirement[]>([
+  const [mockSpouseDietaryRequirements, setMockSpouseDietaryRequirements] = useState<DietaryRequirement[]>([
     { id: 101, requirement: 'Vegan', notes: 'Strictly no animal products including dairy and eggs', recordedDate: '2024-06-10' },
   ]);
 
-  const [movements, setMovements] = useState<MovementLog[]>([
+  const [mockMovements, setMockMovements] = useState<MovementLog[]>([
     {
       id: 1,
       movementInCharge: 'Emily Chen', cicSupport: 'Tom Ng', driver: 'Peter Chan',
@@ -318,12 +500,52 @@ export function MemberDetail({
     },
   ]);
 
-  const [remarks, setRemarks] = useState<Remark[]>([
+  const [mockRemarks, setMockRemarks] = useState<Remark[]>([
     { id: 1, remark: 'Customer is a high-value client. Provide exceptional service.', category: 'VIP Note', createdDate: '2024-01-15', createdBy: 'Manager' },
     { id: 2, remark: 'Frequently travels with family. Inquire about family suite availability.', category: 'Service Note', createdDate: '2024-02-10', createdBy: 'Staff A' },
     { id: 3, remark: 'Requested limousine service for all future bookings.', category: 'Special Request', createdDate: '2024-05-20', createdBy: 'Staff B' },
     { id: 4, remark: 'Celebrates birthday in November. Consider special amenities.', category: 'General', createdDate: '2024-09-15', createdBy: 'Staff C' },
   ]);
+
+  // ── Prop-over-mock resolution — prop wins when provided ─────────────────
+  // Data arrays: prefer prop when non-empty, else fall back to local mock
+  const displayPreferences            = preferencesProp.length > 0            ? preferencesProp            : mockPreferences;
+  const displayFoodAllergies          = foodAllergiesProp.length > 0          ? foodAllergiesProp          : mockFoodAllergies;
+  const displayDietaryRequirements    = dietaryRequirementsProp.length > 0    ? dietaryRequirementsProp    : mockDietaryRequirements;
+  const displayMovements              = movementsProp.length > 0              ? movementsProp              : mockMovements;
+  const displayRemarks                = remarksProp.length > 0                ? remarksProp                : mockRemarks;
+  const displaySpouseFoodAllergies    = spouseFoodAllergiesProp.length > 0    ? spouseFoodAllergiesProp    : mockSpouseFoodAllergies;
+  const displaySpouseDietaryReqs      = spouseDietaryRequirementsProp.length > 0 ? spouseDietaryRequirementsProp : mockSpouseDietaryRequirements;
+  const displayLoginHistory           = loginHistoryProp.length > 0           ? loginHistoryProp           : mockLoginHistory;
+  // Spouse: undefined = not passed (use mock); null = explicitly no spouse
+  const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : mockSpouse;
+
+  // Security: undefined = not passed → use mock state
+  const activeIsAccountLocked         = isAccountLockedProp       ?? mockIsAccountLocked;
+  const activeLockReason              = lockReasonProp             ?? mockLockReason;
+  const activeLockedAt                = lockedAtProp               ?? mockLockedAt;
+  const activeTwoFAEnabled            = twoFAEnabledProp           ?? mockTwoFAEnabled;
+  const activeActiveSessions          = activeSessionsProp         ?? mockActiveSessions;
+
+  // Dialog open state: prop wins when explicitly provided
+  const activeIsAddPreferenceOpen     = isAddPreferenceOpenProp    ?? mockIsAddPreferenceOpen;
+  const activeIsAddAllergyOpen        = isAddAllergyOpenProp       ?? mockIsAddAllergyOpen;
+  const activeIsAddDietaryOpen        = isAddDietaryOpenProp       ?? mockIsAddDietaryOpen;
+  const activeIsAddMovementOpen       = isAddMovementOpenProp      ?? mockIsAddMovementOpen;
+  const activeIsAddRemarkOpen         = isAddRemarkOpenProp        ?? mockIsAddRemarkOpen;
+  const activeIsSpouseDialogOpen      = isSpouseDialogOpenProp     ?? mockIsSpouseDialogOpen;
+  const activeIsRemoveSpouseOpen      = isRemoveSpouseOpenProp     ?? mockIsRemoveSpouseOpen;
+  const activeShowUnlockConfirm       = showUnlockConfirmProp      ?? mockShowUnlockConfirm;
+  const activeShowResetPwConfirm      = showResetPwConfirmProp     ?? mockShowResetPwConfirm;
+  const activeShowForceLogoutConfirm  = showForceLogoutConfirmProp ?? mockShowForceLogoutConfirm;
+  const activeShowReset2FAConfirm     = showReset2FAConfirmProp    ?? mockShowReset2FAConfirm;
+
+  // Form state
+  const activeAllergyTarget           = allergyTargetProp          ?? mockAllergyTarget;
+  const activeDietaryTarget           = dietaryTargetProp          ?? mockDietaryTarget;
+  const activeAllergyForm             = allergyFormProp            ?? mockAllergyForm;
+  const activeDietaryForm             = dietaryFormProp            ?? mockDietaryForm;
+  const activeSpouseForm              = spouseFormProp             ?? mockSpouseForm;
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -381,32 +603,38 @@ export function MemberDetail({
   };
 
   const handleDeletePreference = (id: number) => {
-    setPreferences(preferences.filter(p => p.id !== id));
+    onDeletePreference?.(id);
+    setMockPreferences(prev => prev.filter(p => p.id !== id)); // local demo fallback
     toast.success('Preference removed');
   };
 
   const handleDeleteAllergy = (id: number) => {
-    setFoodAllergies(foodAllergies.filter(a => a.id !== id));
+    onDeleteAllergy?.(id);
+    setMockFoodAllergies(prev => prev.filter(a => a.id !== id)); // local demo fallback
     toast.success('Allergy information removed');
   };
 
   const handleDeleteDietary = (id: number) => {
-    setDietaryRequirements(dietaryRequirements.filter(d => d.id !== id));
+    onDeleteDietary?.(id);
+    setMockDietaryRequirements(prev => prev.filter(d => d.id !== id)); // local demo fallback
     toast.success('Dietary requirement removed');
   };
 
   const handleDeleteSpouseAllergy = (id: number) => {
-    setSpouseFoodAllergies(spouseFoodAllergies.filter(a => a.id !== id));
+    onDeleteSpouseAllergy?.(id);
+    setMockSpouseFoodAllergies(prev => prev.filter(a => a.id !== id)); // local demo fallback
     toast.success('Spouse allergy information removed');
   };
 
   const handleDeleteSpouseDietary = (id: number) => {
-    setSpouseDietaryRequirements(spouseDietaryRequirements.filter(d => d.id !== id));
+    onDeleteSpouseDietary?.(id);
+    setMockSpouseDietaryRequirements(prev => prev.filter(d => d.id !== id)); // local demo fallback
     toast.success('Spouse dietary requirement removed');
   };
 
   const handleDeleteRemark = (id: number) => {
-    setRemarks(remarks.filter(r => r.id !== id));
+    onDeleteRemark?.(id);
+    setMockRemarks(prev => prev.filter(r => r.id !== id)); // local demo fallback
     toast.success('Remark removed');
   };
 
@@ -503,7 +731,7 @@ export function MemberDetail({
           <TabsTrigger value="remarks">Remarks</TabsTrigger>
           <TabsTrigger value="movements">Movement Log</TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-1.5">
-            {isAccountLocked
+            {activeIsAccountLocked
               ? <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
               : <ShieldCheck className="w-3.5 h-3.5 text-green-500" />}
             Security
@@ -695,14 +923,14 @@ export function MemberDetail({
                 <Heart className="w-5 h-5 text-pink-500" />
                 Spouse / Partner
               </h3>
-              {spouse ? (
+              {displaySpouse ? (
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      setSpouseForm({ ...spouse });
-                      setIsSpouseDialogOpen(true);
+                      if (onSpouseDialogOpen) { onSpouseDialogOpen(); }
+                      else { setMockSpouseForm({ ...displaySpouse! }); setMockIsSpouseDialogOpen(true); }
                     }}
                   >
                     <Edit2 className="w-4 h-4 mr-1.5" />
@@ -712,7 +940,7 @@ export function MemberDetail({
                     variant="outline"
                     size="sm"
                     className="text-red-600 border-red-200 hover:bg-red-50"
-                    onClick={() => setIsRemoveSpouseOpen(true)}
+                    onClick={() => { onRemoveSpouseOpen?.(); setMockIsRemoveSpouseOpen(true); }}
                   >
                     <UserX className="w-4 h-4 mr-1.5" />
                     Remove
@@ -722,8 +950,8 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   onClick={() => {
-                    setSpouseForm({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
-                    setIsSpouseDialogOpen(true);
+                    if (onSpouseDialogOpen) { onSpouseDialogOpen(); }
+                    else { setMockSpouseForm({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' }); setMockIsSpouseDialogOpen(true); }
                   }}
                 >
                   <Plus className="w-4 h-4 mr-1.5" />
@@ -732,7 +960,7 @@ export function MemberDetail({
               )}
             </div>
 
-            {spouse ? (
+            {displaySpouse ? (
               <div className="grid grid-cols-3 gap-x-6 gap-y-4">
                 {/* Avatar + full name row */}
                 <div className="col-span-3 flex items-center gap-4 p-4 bg-pink-50 border border-pink-100 rounded-lg">
@@ -740,46 +968,46 @@ export function MemberDetail({
                     <User className="w-6 h-6 text-pink-500" />
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">{spouse.title} {spouse.firstName} {spouse.lastName}</p>
+                    <p className="font-semibold text-gray-900">{displaySpouse.title} {displaySpouse.firstName} {displaySpouse.lastName}</p>
                     <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                      {spouse.email && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{spouse.email}</span>}
-                      {spouse.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{spouse.phone}</span>}
+                      {displaySpouse.email && <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" />{displaySpouse.email}</span>}
+                      {displaySpouse.phone && <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" />{displaySpouse.phone}</span>}
                     </div>
                   </div>
-                  {spouse.linkedAccountNo && (
+                  {displaySpouse.linkedAccountNo && (
                     <span className="ml-auto text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full border border-blue-200">
-                      Linked: {spouse.linkedAccountNo}
+                      Linked: {displaySpouse.linkedAccountNo}
                     </span>
                   )}
                 </div>
 
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Title</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.title}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.title}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First Name</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.firstName}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.firstName}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Last Name</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.lastName}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.lastName}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Email</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.email || '—'}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.email || '—'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Phone</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.phone || '—'}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.phone || '—'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Nationality</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.nationality || '—'}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.nationality || '—'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First 4 Digits of Passport</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{spouse.passportFirst4 || '—'}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.passportFirst4 || '—'}</p>
                 </div>
               </div>
             ) : (
@@ -969,13 +1197,13 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Customer Preferences</h3>
-              <Button onClick={() => setIsAddPreferenceOpen(true)}>
+              <Button onClick={() => { onAddPreference?.(); setMockIsAddPreferenceOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Preference
               </Button>
             </div>
             <div className="space-y-3">
-              {preferences.map((pref) => (
+              {displayPreferences.map((pref) => (
                 <div key={pref.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -1026,17 +1254,17 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { setAllergyTarget('customer'); setAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); setIsAddAllergyOpen(true); }}
+                  onClick={() => { onAllergyTargetChange?.('customer'); setMockAllergyTarget('customer'); onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' }); setMockAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); onAddAllergy?.(); setMockIsAddAllergyOpen(true); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Allergy
                 </Button>
               </div>
-              {foodAllergies.length === 0 ? (
+              {displayFoodAllergies.length === 0 ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No allergies recorded.</div>
               ) : (
                 <div className="space-y-3">
-                  {foodAllergies.map((allergy) => (
+                  {displayFoodAllergies.map((allergy) => (
                     <div key={allergy.id} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1067,33 +1295,33 @@ export function MemberDetail({
                   <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center">
                     <Heart className="w-3.5 h-3.5 text-pink-500" />
                   </div>
-                  {spouse ? (
-                    <span className="text-sm text-gray-700">{spouse.title} {spouse.firstName} {spouse.lastName}</span>
+                  {displaySpouse ? (
+                    <span className="text-sm text-gray-700">{displaySpouse.title} {displaySpouse.firstName} {displaySpouse.lastName}</span>
                   ) : (
                     <span className="text-sm text-gray-400 italic">No spouse on record</span>
                   )}
                   <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
                 </div>
-                {spouse && (
+                {displaySpouse && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { setAllergyTarget('spouse'); setAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); setIsAddAllergyOpen(true); }}
+                    onClick={() => { onAllergyTargetChange?.('spouse'); setMockAllergyTarget('spouse'); onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' }); setMockAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); onAddAllergy?.(); setMockIsAddAllergyOpen(true); }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Add Allergy
                   </Button>
                 )}
               </div>
-              {!spouse ? (
+              {!displaySpouse ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
                   Add a spouse in the Profile tab to record their allergy information.
                 </div>
-              ) : spouseFoodAllergies.length === 0 ? (
+              ) : displaySpouseFoodAllergies.length === 0 ? (
                 <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No allergies recorded for spouse.</div>
               ) : (
                 <div className="space-y-3">
-                  {spouseFoodAllergies.map((allergy) => (
+                  {displaySpouseFoodAllergies.map((allergy) => (
                     <div key={allergy.id} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1136,17 +1364,17 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { setDietaryTarget('customer'); setDietaryForm({ requirement: '', notes: '' }); setIsAddDietaryOpen(true); }}
+                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onAddDietary?.(); setMockIsAddDietaryOpen(true); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Requirement
                 </Button>
               </div>
-              {dietaryRequirements.length === 0 ? (
+              {displayDietaryRequirements.length === 0 ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No dietary requirements recorded.</div>
               ) : (
                 <div className="space-y-3">
-                  {dietaryRequirements.map((dietary) => (
+                  {displayDietaryRequirements.map((dietary) => (
                     <div key={dietary.id} className="p-4 border border-gray-200 rounded-lg bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1174,33 +1402,33 @@ export function MemberDetail({
                   <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center">
                     <Heart className="w-3.5 h-3.5 text-pink-500" />
                   </div>
-                  {spouse ? (
-                    <span className="text-sm text-gray-700">{spouse.title} {spouse.firstName} {spouse.lastName}</span>
+                  {displaySpouse ? (
+                    <span className="text-sm text-gray-700">{displaySpouse.title} {displaySpouse.firstName} {displaySpouse.lastName}</span>
                   ) : (
                     <span className="text-sm text-gray-400 italic">No spouse on record</span>
                   )}
                   <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
                 </div>
-                {spouse && (
+                {displaySpouse && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { setDietaryTarget('spouse'); setDietaryForm({ requirement: '', notes: '' }); setIsAddDietaryOpen(true); }}
+                    onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onAddDietary?.(); setMockIsAddDietaryOpen(true); }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Add Requirement
                   </Button>
                 )}
               </div>
-              {!spouse ? (
+              {!displaySpouse ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
                   Add a spouse in the Profile tab to record their dietary requirements.
                 </div>
-              ) : spouseDietaryRequirements.length === 0 ? (
+              ) : displaySpouseDietaryReqs.length === 0 ? (
                 <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No dietary requirements recorded for spouse.</div>
               ) : (
                 <div className="space-y-3">
-                  {spouseDietaryRequirements.map((dietary) => (
+                  {displaySpouseDietaryReqs.map((dietary) => (
                     <div key={dietary.id} className="p-4 border border-gray-200 rounded-lg bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -1225,13 +1453,13 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Staff Remarks</h3>
-              <Button onClick={() => setIsAddRemarkOpen(true)}>
+              <Button onClick={() => { onAddRemark?.(); setMockIsAddRemarkOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Remark
               </Button>
             </div>
             <div className="space-y-3">
-              {remarks.map((remark) => (
+              {displayRemarks.map((remark) => (
                 <div key={remark.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -1269,7 +1497,7 @@ export function MemberDetail({
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Full movement details linked to booking records</p>
               </div>
-              <Button onClick={() => setIsAddMovementOpen(true)}>
+              <Button onClick={() => { onAddMovement?.(); setMockIsAddMovementOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Movement
               </Button>
@@ -1313,7 +1541,7 @@ export function MemberDetail({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {movements.map((m, idx) => {
+                  {displayMovements.map((m, idx) => {
                     const cell = 'px-3 py-2.5 whitespace-nowrap align-middle';
                     const dash = <span className="text-gray-300">—</span>;
                     const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
@@ -1369,7 +1597,7 @@ export function MemberDetail({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setMovements(prev => prev.filter(x => x.id !== m.id));
+                              setMockMovements(prev => prev.filter(x => x.id !== m.id)); // demo fallback
                               toast.success('Movement record removed');
                             }}
                             className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
@@ -1380,7 +1608,7 @@ export function MemberDetail({
                       </tr>
                     );
                   })}
-                  {movements.length === 0 && (
+                  {displayMovements.length === 0 && (
                     <tr>
                       <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
                         No movement records found. Click "Add Movement" to create the first entry.
@@ -1401,21 +1629,21 @@ export function MemberDetail({
         <TabsContent value="security" className="space-y-6">
 
           {/* Account Lock Banner (only shown when locked) */}
-          {isAccountLocked && (
+          {activeIsAccountLocked && (
             <div className="flex items-start gap-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <ShieldAlert className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-red-800">Account is currently locked</p>
                 <p className="text-xs text-red-600 mt-0.5">
-                  Reason: <span className="font-medium">{lockReason}</span>
+                  Reason: <span className="font-medium">{activeLockReason}</span>
                   <span className="mx-2 text-red-300">·</span>
-                  Locked at: <span className="font-medium">{lockedAt}</span>
+                  Locked at: <span className="font-medium">{activeLockedAt}</span>
                 </p>
               </div>
               <Button
                 size="sm"
                 className="bg-red-600 hover:bg-red-700 shrink-0"
-                onClick={() => setShowUnlockConfirm(true)}
+                onClick={() => { onShowUnlockConfirm?.(); setMockShowUnlockConfirm(true); }}
               >
                 <LockOpen className="w-3.5 h-3.5 mr-1.5" />
                 Unlock Now
@@ -1431,29 +1659,29 @@ export function MemberDetail({
             </h3>
             <div className="grid grid-cols-4 gap-4">
               {/* Account Lock Status */}
-              <div className={`rounded-lg p-4 border ${isAccountLocked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+              <div className={`rounded-lg p-4 border ${activeIsAccountLocked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  {isAccountLocked
+                  {activeIsAccountLocked
                     ? <Lock className="w-4 h-4 text-red-600" />
                     : <LockOpen className="w-4 h-4 text-green-600" />}
                   <span className="text-xs text-gray-500 uppercase tracking-wide">Account Lock</span>
                 </div>
-                <p className={`text-sm font-semibold ${isAccountLocked ? 'text-red-700' : 'text-green-700'}`}>
-                  {isAccountLocked ? 'Locked' : 'Unlocked'}
+                <p className={`text-sm font-semibold ${activeIsAccountLocked ? 'text-red-700' : 'text-green-700'}`}>
+                  {activeIsAccountLocked ? 'Locked' : 'Unlocked'}
                 </p>
-                {isAccountLocked && (
-                  <p className="text-xs text-red-500 mt-0.5 truncate" title={lockReason}>{lockReason}</p>
+                {activeIsAccountLocked && (
+                  <p className="text-xs text-red-500 mt-0.5 truncate" title={activeLockReason}>{activeLockReason}</p>
                 )}
               </div>
 
               {/* 2FA */}
-              <div className={`rounded-lg p-4 border ${twoFAEnabled ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+              <div className={`rounded-lg p-4 border ${activeTwoFAEnabled ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <Smartphone className={`w-4 h-4 ${twoFAEnabled ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <Smartphone className={`w-4 h-4 ${activeTwoFAEnabled ? 'text-green-600' : 'text-yellow-600'}`} />
                   <span className="text-xs text-gray-500 uppercase tracking-wide">2FA</span>
                 </div>
-                <p className={`text-sm font-semibold ${twoFAEnabled ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {twoFAEnabled ? 'Enabled' : 'Not Enabled'}
+                <p className={`text-sm font-semibold ${activeTwoFAEnabled ? 'text-green-700' : 'text-yellow-700'}`}>
+                  {activeTwoFAEnabled ? 'Enabled' : 'Not Enabled'}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">Authenticator App</p>
               </div>
@@ -1464,7 +1692,7 @@ export function MemberDetail({
                   <Monitor className="w-4 h-4 text-blue-600" />
                   <span className="text-xs text-gray-500 uppercase tracking-wide">Active Sessions</span>
                 </div>
-                <p className="text-sm font-semibold text-blue-700">{activeSessions} active</p>
+                <p className="text-sm font-semibold text-blue-700">{activeActiveSessions} active</p>
                 <p className="text-xs text-gray-400 mt-0.5">Devices signed in</p>
               </div>
 
@@ -1503,7 +1731,7 @@ export function MemberDetail({
                     size="sm"
                     variant="outline"
                     className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                    onClick={() => setShowResetPwConfirm(true)}
+                    onClick={() => { onShowResetPwConfirm?.(); setMockShowResetPwConfirm(true); }}
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                     Send Reset Link
@@ -1512,27 +1740,27 @@ export function MemberDetail({
               </div>
 
               {/* Unlock Account */}
-              <div className={`flex items-start gap-4 p-4 border rounded-lg ${isAccountLocked ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isAccountLocked ? 'bg-red-100' : 'bg-gray-100'}`}>
-                  {isAccountLocked
+              <div className={`flex items-start gap-4 p-4 border rounded-lg ${activeIsAccountLocked ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${activeIsAccountLocked ? 'bg-red-100' : 'bg-gray-100'}`}>
+                  {activeIsAccountLocked
                     ? <Lock className="w-5 h-5 text-red-600" />
                     : <LockOpen className="w-5 h-5 text-gray-400" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900">
-                    {isAccountLocked ? 'Unlock Account' : 'Account Unlocked'}
+                    {activeIsAccountLocked ? 'Unlock Account' : 'Account Unlocked'}
                   </p>
                   <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                    {isAccountLocked
-                      ? `Account locked: ${lockReason}. Unlock to restore customer access.`
+                    {activeIsAccountLocked
+                      ? `Account locked: ${activeLockReason}. Unlock to restore customer access.`
                       : 'This account is not currently locked. No action required.'}
                   </p>
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!isAccountLocked}
-                    className={isAccountLocked ? 'border-red-300 text-red-700 hover:bg-red-100' : ''}
-                    onClick={() => setShowUnlockConfirm(true)}
+                    disabled={!activeIsAccountLocked}
+                    className={activeIsAccountLocked ? 'border-red-300 text-red-700 hover:bg-red-100' : ''}
+                    onClick={() => { onShowUnlockConfirm?.(); setMockShowUnlockConfirm(true); }}
                   >
                     <LockOpen className="w-3.5 h-3.5 mr-1.5" />
                     Unlock Account
@@ -1554,7 +1782,7 @@ export function MemberDetail({
                     size="sm"
                     variant="outline"
                     className="border-orange-200 text-orange-700 hover:bg-orange-50"
-                    onClick={() => setShowForceLogoutConfirm(true)}
+                    onClick={() => { onShowForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(true); }}
                   >
                     <LogOut className="w-3.5 h-3.5 mr-1.5" />
                     Sign Out All Sessions
@@ -1575,9 +1803,9 @@ export function MemberDetail({
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!twoFAEnabled}
-                    className={twoFAEnabled ? 'border-purple-200 text-purple-700 hover:bg-purple-50' : ''}
-                    onClick={() => setShowReset2FAConfirm(true)}
+                    disabled={!activeTwoFAEnabled}
+                    className={activeTwoFAEnabled ? 'border-purple-200 text-purple-700 hover:bg-purple-50' : ''}
+                    onClick={() => { onShowReset2FAConfirm?.(); setMockShowReset2FAConfirm(true); }}
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
                     Reset 2FA
@@ -1607,7 +1835,7 @@ export function MemberDetail({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {loginHistory.map(entry => (
+                  {displayLoginHistory.map(entry => (
                     <tr key={entry.id} className={`hover:bg-gray-50 ${entry.status === 'Locked Out' ? 'bg-red-50/60' : ''}`}>
                       <td className="px-4 py-3 whitespace-nowrap text-gray-700 font-mono text-xs">{entry.datetime}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -1647,7 +1875,7 @@ export function MemberDetail({
       </Tabs>
 
       {/* ── Unlock Account Confirmation ─────────────────────────────────────── */}
-      <Dialog open={showUnlockConfirm} onOpenChange={setShowUnlockConfirm}>
+      <Dialog open={activeShowUnlockConfirm} onOpenChange={open => { if (!open) { onHideUnlockConfirm?.(); setMockShowUnlockConfirm(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1659,17 +1887,18 @@ export function MemberDetail({
             </DialogDescription>
           </DialogHeader>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 space-y-1">
-            <p><span className="font-medium">Lock reason:</span> {lockReason}</p>
-            <p><span className="font-medium">Locked at:</span> {lockedAt}</p>
+            <p><span className="font-medium">Lock reason:</span> {activeLockReason}</p>
+            <p><span className="font-medium">Locked at:</span> {activeLockedAt}</p>
             <p className="mt-2">After unlocking, the customer will be able to sign in immediately. Consider requiring a password reset if suspicious activity is suspected.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowUnlockConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideUnlockConfirm?.(); setMockShowUnlockConfirm(false); }}>Cancel</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
               onClick={() => {
-                setIsAccountLocked(false);
-                setShowUnlockConfirm(false);
+                setMockIsAccountLocked(false); // local demo fallback
+                onHideUnlockConfirm?.();
+                setMockShowUnlockConfirm(false);
                 toast.success('Account unlocked successfully. Customer can now sign in.');
               }}
             >
@@ -1681,7 +1910,7 @@ export function MemberDetail({
       </Dialog>
 
       {/* ── Reset Password Confirmation ─────────────────────────────────────── */}
-      <Dialog open={showResetPwConfirm} onOpenChange={setShowResetPwConfirm}>
+      <Dialog open={activeShowResetPwConfirm} onOpenChange={open => { if (!open) { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1698,11 +1927,12 @@ export function MemberDetail({
             <p>This action will be recorded in the audit log.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowResetPwConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); }}>Cancel</Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => {
-                setShowResetPwConfirm(false);
+                onHideResetPwConfirm?.();
+                setMockShowResetPwConfirm(false);
                 toast.success(`Password reset link sent to ${memberData.email}`);
               }}
             >
@@ -1714,7 +1944,7 @@ export function MemberDetail({
       </Dialog>
 
       {/* ── Force Logout Confirmation ──────────────────────────────────────── */}
-      <Dialog open={showForceLogoutConfirm} onOpenChange={setShowForceLogoutConfirm}>
+      <Dialog open={activeShowForceLogoutConfirm} onOpenChange={open => { if (!open) { onHideForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1726,16 +1956,17 @@ export function MemberDetail({
             </DialogDescription>
           </DialogHeader>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-800 space-y-1">
-            <p><span className="font-medium">{activeSessions} active session{activeSessions !== 1 ? 's' : ''}</span> will be signed out.</p>
+            <p><span className="font-medium">{activeActiveSessions} active session{activeActiveSessions !== 1 ? 's' : ''}</span> will be signed out.</p>
             <p>The customer will be logged out from all browsers and devices.</p>
             <p>They will need to sign in again to access their account.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowForceLogoutConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(false); }}>Cancel</Button>
             <Button
               className="bg-orange-600 hover:bg-orange-700"
               onClick={() => {
-                setShowForceLogoutConfirm(false);
+                onHideForceLogoutConfirm?.();
+                setMockShowForceLogoutConfirm(false);
                 toast.success('All sessions terminated. Customer has been signed out from all devices.');
               }}
             >
@@ -1747,7 +1978,7 @@ export function MemberDetail({
       </Dialog>
 
       {/* ── Reset 2FA Confirmation ─────────────────────────────────────────── */}
-      <Dialog open={showReset2FAConfirm} onOpenChange={setShowReset2FAConfirm}>
+      <Dialog open={activeShowReset2FAConfirm} onOpenChange={open => { if (!open) { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1764,12 +1995,13 @@ export function MemberDetail({
             <p>Use this if the customer has lost access to their authenticator app.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowReset2FAConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); }}>Cancel</Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={() => {
-                setTwoFAEnabled(false);
-                setShowReset2FAConfirm(false);
+                setMockTwoFAEnabled(false); // local demo fallback
+                onHideReset2FAConfirm?.();
+                setMockShowReset2FAConfirm(false);
                 toast.success('2FA has been reset. Customer will be prompted to set up 2FA on next login.');
               }}
             >
@@ -1781,7 +2013,7 @@ export function MemberDetail({
       </Dialog>
 
       {/* Add Preference Dialog */}
-      <Dialog open={isAddPreferenceOpen} onOpenChange={setIsAddPreferenceOpen}>
+      <Dialog open={activeIsAddPreferenceOpen} onOpenChange={open => { if (!open) { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Customer Preference</DialogTitle>
@@ -1809,27 +2041,28 @@ export function MemberDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddPreferenceOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
               toast.success('Preference added');
-              setIsAddPreferenceOpen(false);
+              onCloseAddPreference?.();
+              setMockIsAddPreferenceOpen(false);
             }}>Add Preference</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Allergy Dialog */}
-      <Dialog open={isAddAllergyOpen} onOpenChange={setIsAddAllergyOpen}>
+      <Dialog open={activeIsAddAllergyOpen} onOpenChange={open => { if (!open) { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {allergyTarget === 'spouse'
+              {activeAllergyTarget === 'spouse'
                 ? <><Heart className="w-4 h-4 text-pink-500" />Add Spouse Food Allergy</>
                 : <><User className="w-4 h-4 text-blue-600" />Add Customer Food Allergy</>}
             </DialogTitle>
             <DialogDescription>
-              {allergyTarget === 'spouse'
-                ? `Recording allergy for ${spouse ? `${spouse.title} ${spouse.firstName} ${spouse.lastName}` : 'spouse'}`
+              {activeAllergyTarget === 'spouse'
+                ? `Recording allergy for ${displaySpouse ? `${displaySpouse.title} ${displaySpouse.firstName} ${displaySpouse.lastName}` : 'spouse'}`
                 : `Recording allergy for ${memberData.name}`}
             </DialogDescription>
           </DialogHeader>
@@ -1838,8 +2071,8 @@ export function MemberDetail({
               <label style={{ marginBottom: '10px', display: 'block' }}>Allergen</label>
               <input
                 type="text"
-                value={allergyForm.allergen}
-                onChange={e => setAllergyForm(f => ({ ...f, allergen: e.target.value }))}
+                value={activeAllergyForm.allergen}
+                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
                 placeholder="e.g., Peanuts, Shellfish, Dairy"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               />
@@ -1847,8 +2080,8 @@ export function MemberDetail({
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Severity</label>
               <select
-                value={allergyForm.severity}
-                onChange={e => setAllergyForm(f => ({ ...f, severity: e.target.value }))}
+                value={activeAllergyForm.severity}
+                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, severity: e.target.value }); setMockAllergyForm(f => ({ ...f, severity: e.target.value })); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
                 <option value="Mild">Mild</option>
@@ -1859,50 +2092,51 @@ export function MemberDetail({
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Notes</label>
               <Textarea
-                value={allergyForm.notes}
-                onChange={e => setAllergyForm(f => ({ ...f, notes: e.target.value }))}
+                value={activeAllergyForm.notes}
+                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Additional information about the allergy..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddAllergyOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!allergyForm.allergen.trim()) { toast.error('Allergen name is required'); return; }
+              if (!activeAllergyForm.allergen.trim()) { toast.error('Allergen name is required'); return; }
               const today = new Date().toISOString().split('T')[0];
               const newItem: FoodAllergy = {
                 id: Date.now(),
-                allergen: allergyForm.allergen.trim(),
-                severity: allergyForm.severity as FoodAllergy['severity'],
-                notes: allergyForm.notes,
+                allergen: activeAllergyForm.allergen.trim(),
+                severity: activeAllergyForm.severity as FoodAllergy['severity'],
+                notes: activeAllergyForm.notes,
                 recordedDate: today,
               };
-              if (allergyTarget === 'spouse') {
-                setSpouseFoodAllergies(prev => [...prev, newItem]);
+              if (activeAllergyTarget === 'spouse') {
+                setMockSpouseFoodAllergies(prev => [...prev, newItem]); // demo fallback
                 toast.success('Spouse food allergy added');
               } else {
-                setFoodAllergies(prev => [...prev, newItem]);
+                setMockFoodAllergies(prev => [...prev, newItem]); // demo fallback
                 toast.success('Food allergy added');
               }
-              setIsAddAllergyOpen(false);
+              onCloseAddAllergy?.();
+              setMockIsAddAllergyOpen(false);
             }}>Add Allergy</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Dietary Requirement Dialog */}
-      <Dialog open={isAddDietaryOpen} onOpenChange={setIsAddDietaryOpen}>
+      <Dialog open={activeIsAddDietaryOpen} onOpenChange={open => { if (!open) { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {dietaryTarget === 'spouse'
+              {activeDietaryTarget === 'spouse'
                 ? <><Heart className="w-4 h-4 text-pink-500" />Add Spouse Dietary Requirement</>
                 : <><User className="w-4 h-4 text-blue-600" />Add Customer Dietary Requirement</>}
             </DialogTitle>
             <DialogDescription>
-              {dietaryTarget === 'spouse'
-                ? `Recording dietary requirement for ${spouse ? `${spouse.title} ${spouse.firstName} ${spouse.lastName}` : 'spouse'}`
+              {activeDietaryTarget === 'spouse'
+                ? `Recording dietary requirement for ${displaySpouse ? `${displaySpouse.title} ${displaySpouse.firstName} ${displaySpouse.lastName}` : 'spouse'}`
                 : `Recording dietary requirement for ${memberData.name}`}
             </DialogDescription>
           </DialogHeader>
@@ -1911,8 +2145,8 @@ export function MemberDetail({
               <label style={{ marginBottom: '10px', display: 'block' }}>Requirement</label>
               <input
                 type="text"
-                value={dietaryForm.requirement}
-                onChange={e => setDietaryForm(f => ({ ...f, requirement: e.target.value }))}
+                value={activeDietaryForm.requirement}
+                onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, requirement: e.target.value }); setMockDietaryForm(f => ({ ...f, requirement: e.target.value })); }}
                 placeholder="e.g., Vegetarian, Low Sodium, Halal"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               />
@@ -1920,39 +2154,40 @@ export function MemberDetail({
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Notes</label>
               <Textarea
-                value={dietaryForm.notes}
-                onChange={e => setDietaryForm(f => ({ ...f, notes: e.target.value }))}
+                value={activeDietaryForm.notes}
+                onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, notes: e.target.value }); setMockDietaryForm(f => ({ ...f, notes: e.target.value })); }}
                 placeholder="Additional details..."
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDietaryOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!dietaryForm.requirement.trim()) { toast.error('Requirement name is required'); return; }
+              if (!activeDietaryForm.requirement.trim()) { toast.error('Requirement name is required'); return; }
               const today = new Date().toISOString().split('T')[0];
               const newItem: DietaryRequirement = {
                 id: Date.now(),
-                requirement: dietaryForm.requirement.trim(),
-                notes: dietaryForm.notes,
+                requirement: activeDietaryForm.requirement.trim(),
+                notes: activeDietaryForm.notes,
                 recordedDate: today,
               };
-              if (dietaryTarget === 'spouse') {
-                setSpouseDietaryRequirements(prev => [...prev, newItem]);
+              if (activeDietaryTarget === 'spouse') {
+                setMockSpouseDietaryRequirements(prev => [...prev, newItem]); // demo fallback
                 toast.success('Spouse dietary requirement added');
               } else {
-                setDietaryRequirements(prev => [...prev, newItem]);
+                setMockDietaryRequirements(prev => [...prev, newItem]); // demo fallback
                 toast.success('Dietary requirement added');
               }
-              setIsAddDietaryOpen(false);
+              onCloseAddDietary?.();
+              setMockIsAddDietaryOpen(false);
             }}>Add Requirement</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Movement Dialog */}
-      <Dialog open={isAddMovementOpen} onOpenChange={setIsAddMovementOpen}>
+      <Dialog open={activeIsAddMovementOpen} onOpenChange={open => { if (!open) { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); } }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2098,10 +2333,11 @@ export function MemberDetail({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setIsAddMovementOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
               toast.success('Movement record added successfully');
-              setIsAddMovementOpen(false);
+              onCloseAddMovement?.();
+              setMockIsAddMovementOpen(false);
             }}>
               <Plus className="w-4 h-4 mr-2" />
               Add Movement
@@ -2111,7 +2347,7 @@ export function MemberDetail({
       </Dialog>
 
       {/* Add Remark Dialog */}
-      <Dialog open={isAddRemarkOpen} onOpenChange={setIsAddRemarkOpen}>
+      <Dialog open={activeIsAddRemarkOpen} onOpenChange={open => { if (!open) { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Staff Remark</DialogTitle>
@@ -2136,25 +2372,26 @@ export function MemberDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddRemarkOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
               toast.success('Remark added');
-              setIsAddRemarkOpen(false);
+              onCloseAddRemark?.();
+              setMockIsAddRemarkOpen(false);
             }}>Add Remark</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Add / Edit Spouse Dialog ───────────────────────────────────── */}
-      <Dialog open={isSpouseDialogOpen} onOpenChange={setIsSpouseDialogOpen}>
+      <Dialog open={activeIsSpouseDialogOpen} onOpenChange={open => { if (!open) { onSpouseDialogClose?.(); setMockIsSpouseDialogOpen(false); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Heart className="w-5 h-5 text-pink-500" />
-              {spouse ? 'Edit Spouse / Partner' : 'Add Spouse / Partner'}
+              {displaySpouse ? 'Edit Spouse / Partner' : 'Add Spouse / Partner'}
             </DialogTitle>
             <DialogDescription>
-              {spouse
+              {displaySpouse
                 ? 'Update the spouse / partner information for this customer.'
                 : 'Add spouse or partner details. One customer can only have one spouse on record.'}
             </DialogDescription>
@@ -2166,8 +2403,8 @@ export function MemberDetail({
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Title</label>
                 <select
-                  value={spouseForm.title}
-                  onChange={e => setSpouseForm(f => ({ ...f, title: e.target.value }))}
+                  value={activeSpouseForm.title}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, title: e.target.value }); setMockSpouseForm(f => ({ ...f, title: e.target.value })); }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   {['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Prof.'].map(t => (
@@ -2179,8 +2416,8 @@ export function MemberDetail({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  value={spouseForm.firstName}
-                  onChange={e => setSpouseForm(f => ({ ...f, firstName: e.target.value }))}
+                  value={activeSpouseForm.firstName}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, firstName: e.target.value }); setMockSpouseForm(f => ({ ...f, firstName: e.target.value })); }}
                   placeholder="First name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2189,8 +2426,8 @@ export function MemberDetail({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name <span className="text-red-500">*</span></label>
                 <input
                   type="text"
-                  value={spouseForm.lastName}
-                  onChange={e => setSpouseForm(f => ({ ...f, lastName: e.target.value }))}
+                  value={activeSpouseForm.lastName}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, lastName: e.target.value }); setMockSpouseForm(f => ({ ...f, lastName: e.target.value })); }}
                   placeholder="Last name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2203,8 +2440,8 @@ export function MemberDetail({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Email</label>
                 <input
                   type="email"
-                  value={spouseForm.email}
-                  onChange={e => setSpouseForm(f => ({ ...f, email: e.target.value }))}
+                  value={activeSpouseForm.email}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, email: e.target.value }); setMockSpouseForm(f => ({ ...f, email: e.target.value })); }}
                   placeholder="email@example.com"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2213,8 +2450,8 @@ export function MemberDetail({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Phone</label>
                 <input
                   type="tel"
-                  value={spouseForm.phone}
-                  onChange={e => setSpouseForm(f => ({ ...f, phone: e.target.value }))}
+                  value={activeSpouseForm.phone}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, phone: e.target.value }); setMockSpouseForm(f => ({ ...f, phone: e.target.value })); }}
                   placeholder="+852 XXXX XXXX"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2227,8 +2464,8 @@ export function MemberDetail({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality</label>
                 <input
                   type="text"
-                  value={spouseForm.nationality}
-                  onChange={e => setSpouseForm(f => ({ ...f, nationality: e.target.value }))}
+                  value={activeSpouseForm.nationality}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, nationality: e.target.value }); setMockSpouseForm(f => ({ ...f, nationality: e.target.value })); }}
                   placeholder="e.g., United Kingdom"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2238,8 +2475,8 @@ export function MemberDetail({
                 <input
                   type="text"
                   maxLength={4}
-                  value={spouseForm.passportFirst4}
-                  onChange={e => setSpouseForm(f => ({ ...f, passportFirst4: e.target.value }))}
+                  value={activeSpouseForm.passportFirst4}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, passportFirst4: e.target.value }); setMockSpouseForm(f => ({ ...f, passportFirst4: e.target.value })); }}
                   placeholder="e.g., UK78"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -2253,8 +2490,8 @@ export function MemberDetail({
               </label>
               <input
                 type="text"
-                value={spouseForm.linkedAccountNo || ''}
-                onChange={e => setSpouseForm(f => ({ ...f, linkedAccountNo: e.target.value }))}
+                value={activeSpouseForm.linkedAccountNo || ''}
+                onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, linkedAccountNo: e.target.value }); setMockSpouseForm(f => ({ ...f, linkedAccountNo: e.target.value })); }}
                 placeholder="e.g., ACC-2024-1099"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
@@ -2262,15 +2499,16 @@ export function MemberDetail({
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setIsSpouseDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onSpouseDialogClose?.(); setMockIsSpouseDialogOpen(false); }}>Cancel</Button>
             <Button
               onClick={() => {
-                if (!spouseForm.firstName.trim() || !spouseForm.lastName.trim()) {
+                if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
                   toast.error('First Name and Last Name are required.'); return;
                 }
-                setSpouse({ ...spouseForm });
-                toast.success(spouse ? 'Spouse information updated.' : 'Spouse added successfully.');
-                setIsSpouseDialogOpen(false);
+                setMockSpouse({ ...activeSpouseForm }); // demo fallback
+                toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
+                onSpouseDialogClose?.();
+                setMockIsSpouseDialogOpen(false);
               }}
             >
               {spouse ? 'Save Changes' : 'Add Spouse'}
@@ -2279,8 +2517,8 @@ export function MemberDetail({
         </DialogContent>
       </Dialog>
 
-      {/* ── Remove Spouse Confirmation ─────────────────────────────────── */}
-      <Dialog open={isRemoveSpouseOpen} onOpenChange={setIsRemoveSpouseOpen}>
+      {/* ─��� Remove Spouse Confirmation ─────────────────────────────────── */}
+      <Dialog open={activeIsRemoveSpouseOpen} onOpenChange={open => { if (!open) { onRemoveSpouseClose?.(); setMockIsRemoveSpouseOpen(false); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -2288,17 +2526,18 @@ export function MemberDetail({
               Remove Spouse
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <strong>{spouse?.title} {spouse?.firstName} {spouse?.lastName}</strong> as the spouse / partner of this customer? This action cannot be undone.
+              Are you sure you want to remove <strong>{displaySpouse?.title} {displaySpouse?.firstName} {displaySpouse?.lastName}</strong> as the spouse / partner of this customer? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setIsRemoveSpouseOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onRemoveSpouseClose?.(); setMockIsRemoveSpouseOpen(false); }}>Cancel</Button>
             <Button
               variant="destructive"
               onClick={() => {
-                setSpouse(null);
+                setMockSpouse(null); // demo fallback
                 toast.success('Spouse removed from this customer\'s profile.');
-                setIsRemoveSpouseOpen(false);
+                onRemoveSpouseClose?.();
+                setMockIsRemoveSpouseOpen(false);
               }}
             >
               Remove Spouse
