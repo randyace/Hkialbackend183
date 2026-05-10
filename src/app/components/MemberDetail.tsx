@@ -2511,7 +2511,7 @@ export function MemberDetail({
                 setMockIsSpouseDialogOpen(false);
               }}
             >
-              {spouse ? 'Save Changes' : 'Add Spouse'}
+              {displaySpouse ? 'Save Changes' : 'Add Spouse'}
             </Button>
           </DialogFooter>
         </DialogContent>
