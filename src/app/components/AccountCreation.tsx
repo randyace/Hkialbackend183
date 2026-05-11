@@ -20,6 +20,8 @@ const MOCK_COMPANIES = [
 export interface AccountCreationProps {
   type?: 'individual' | 'corporate' | 'travel-agency';
   companies?: typeof MOCK_COMPANIES;
+  countries?: { code: string; name: string }[];
+  regionCodes?: { code: string; name: string }[];
   onSubmit?: (data: FormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
@@ -52,11 +54,14 @@ const emptySubForm = (id: number): CorporateSubForm => ({
 export function AccountCreation({
   type,
   companies: companiesProp,
+  countries,
+  regionCodes: regionCodesProp,
   onSubmit,
   onCancel,
   isSubmitting = false,
 }: AccountCreationProps = {}) {
   const displayCompanies = companiesProp && companiesProp.length > 0 ? companiesProp : MOCK_COMPANIES;
+  const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>('individual');
   const [selectedCompanyAccount, setSelectedCompanyAccount] = useState<string>('');
   const [companySearch, setCompanySearch] = useState('');
@@ -230,9 +235,20 @@ export function AccountCreation({
         <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <Label htmlFor={`rc-${subForm.id}`} style={{ marginBottom: 10 }}>Region Code *</Label>
-            <Input id={`rc-${subForm.id}`} value={subForm.regionCode}
-              onChange={e => updateCorporateForm(subForm.id, 'regionCode', e.target.value)}
-              placeholder="852" required />
+            {displayRegionCodes ? (
+              <Select value={subForm.regionCode} onValueChange={v => updateCorporateForm(subForm.id, 'regionCode', v)}>
+                <SelectTrigger id={`rc-${subForm.id}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {displayRegionCodes.map(rc => (
+                    <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input id={`rc-${subForm.id}`} value={subForm.regionCode}
+                onChange={e => updateCorporateForm(subForm.id, 'regionCode', e.target.value)}
+                placeholder="852" required />
+            )}
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor={`cn-${subForm.id}`} style={{ marginBottom: 10 }}>Contact Number *</Label>
@@ -483,7 +499,18 @@ export function AccountCreation({
                 <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
-                    <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
+                    {displayRegionCodes ? (
+                      <Select value={formData.regionCode} onValueChange={v => setFormData({...formData, regionCode: v})}>
+                        <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
+                        <SelectContent>
+                          {displayRegionCodes.map(rc => (
+                            <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
+                    )}
                   </div>
                   <div className="sm:col-span-2">
                     <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
@@ -492,18 +519,29 @@ export function AccountCreation({
                 </div>
                 <div>
                   <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
-                  <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
-                    <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="hk">Hong Kong</SelectItem>
-                      <SelectItem value="cn">China</SelectItem>
-                      <SelectItem value="us">United States</SelectItem>
-                      <SelectItem value="uk">United Kingdom</SelectItem>
-                      <SelectItem value="jp">Japan</SelectItem>
-                      <SelectItem value="kr">South Korea</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {countries && countries.length > 0 ? (
+                    <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
+                      <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
+                      <SelectContent>
+                        {countries.map(c => (
+                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
+                      <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hk">Hong Kong</SelectItem>
+                        <SelectItem value="cn">China</SelectItem>
+                        <SelectItem value="us">United States</SelectItem>
+                        <SelectItem value="uk">United Kingdom</SelectItem>
+                        <SelectItem value="jp">Japan</SelectItem>
+                        <SelectItem value="kr">South Korea</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
@@ -548,7 +586,18 @@ export function AccountCreation({
                   <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
-                      <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
+                      {displayRegionCodes ? (
+                        <Select value={formData.regionCode} onValueChange={v => setFormData({...formData, regionCode: v})}>
+                          <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
+                          <SelectContent>
+                            {displayRegionCodes.map(rc => (
+                              <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
+                      )}
                     </div>
                     <div className="sm:col-span-2">
                       <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
