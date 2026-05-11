@@ -326,6 +326,10 @@ export function MemberDetail({
   onAllergyFormChange,
   onDietaryFormChange,
 
+  // ── Remark form ─────────────────────────────────────────────────────────
+  remarkForm: remarkFormProp,
+  onRemarkFormChange,
+
   // ── Movement dialog ───────────────────────────────────────────────────────
   movementForm: movementFormProp,
   onMovementFormChange,
@@ -1198,7 +1202,7 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Customer Preferences</h3>
-              <Button onClick={() => { onAddPreference?.(); setMockIsAddPreferenceOpen(true); }}>
+              <Button onClick={() => { onAddPreference?.(); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Preference
               </Button>
@@ -1498,7 +1502,7 @@ export function MemberDetail({
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Full movement details linked to booking records</p>
               </div>
-              <Button onClick={() => { onAddMovement?.(); setMockIsAddMovementOpen(true); }}>
+              <Button onClick={() => { onOpenMovementDialog?.(); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Movement
               </Button>
@@ -2216,15 +2220,33 @@ export function MemberDetail({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
-                  <input type="text" placeholder="Staff name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="Staff name"
+                  value={movementFormProp.movementInCharge || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, movementInCharge: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
-                  <input type="text" placeholder="Staff name(s)" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="Staff name(s)"
+                  value={movementFormProp.cicSupport || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, cicSupport: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Driver</label>
-                  <input type="text" placeholder="Driver name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="Driver name"
+                  value={movementFormProp.driver || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, driver: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
               </div>
             </div>
@@ -2235,27 +2257,61 @@ export function MemberDetail({
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-3 md:col-span-1">
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Order No. (Booking No.) <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="e.g. A-20260308-000012" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono" />
+                  <input
+                  type="text"
+                  placeholder="e.g. A-20260308-000012"
+                  value={movementFormProp.orderNo || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, orderNo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="date"
+                  value={movementFormProp.deptDate || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, deptDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arr Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="date"
+                  value={movementFormProp.arrDate || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, arrDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight No. <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="e.g. CX880" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
+                  <input
+                  type="text"
+                  placeholder="e.g. CX880"
+                  value={movementFormProp.flightNo || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, flightNo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.flightTime || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, flightTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="IATA code, e.g. LHR" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
+                  <input
+                  type="text"
+                  placeholder="IATA code, e.g. LHR"
+                  maxLength={3}
+                  value={movementFormProp.destinationOrigin || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, destinationOrigin: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase"
+                />
                 </div>
               </div>
             </div>
@@ -2266,35 +2322,85 @@ export function MemberDetail({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>
-                  <input type="text" placeholder="e.g. VIP Suite A" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="e.g. VIP Suite A"
+                  value={movementFormProp.lobbySuite || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, lobbySuite: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Pax</label>
-                  <input type="number" min={1} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="number"
+                  min={1}
+                  placeholder="0"
+                  value={movementFormProp.noOfPax || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, noOfPax: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of C/I Baggage</label>
-                  <input type="number" min={0} placeholder="0" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="number"
+                  min={0}
+                  placeholder="0"
+                  value={movementFormProp.noOfCIBaggage || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, noOfCIBaggage: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Title</label>
-                  <input type="text" placeholder="Mr. / Mrs. / Ms." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="Mr. / Mrs. / Ms."
+                  value={movementFormProp.title || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>First Name</label>
-                  <input type="text" placeholder="First name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="First name"
+                  value={movementFormProp.firstName || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, firstName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Last Name</label>
-                  <input type="text" placeholder="Last name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="Last name"
+                  value={movementFormProp.lastName || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, lastName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
-                  <input type="text" placeholder="e.g. United Kingdom" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="e.g. United Kingdom"
+                  value={movementFormProp.nationality || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, nationality: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div className="col-span-2">
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
-                  <Textarea placeholder="General remarks for this movement..." rows={2} className="text-sm" />
+                  <Textarea
+                  placeholder="General remarks for this movement..."
+                  rows={2}
+                  className="text-sm"
+                  value={movementFormProp.remarks || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, remarks: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
@@ -2305,39 +2411,86 @@ export function MemberDetail({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.arrTimeNonFlyingGuests || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, arrTimeNonFlyingGuests: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.timeMetVIPAtGate || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeMetVIPAtGate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.timeBackToHKIAL || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeBackToHKIAL: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.baggageRetrievalStart || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalStart: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.baggageRetrievalEnd || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalEnd: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.baggageArrivalAtHKIAL || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageArrivalAtHKIAL: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="time"
+                  value={movementFormProp.timeLeftHKIAL || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeLeftHKIAL: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
-                  <input type="text" placeholder="e.g. 1h 30m" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                  <input
+                  type="text"
+                  placeholder="e.g. 1h 30m"
+                  value={movementFormProp.totalProcessingTime || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, totalProcessingTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks for Admin Issue</label>
-                  <Textarea placeholder="Admin issue details..." rows={2} className="text-sm" />
+                  <Textarea
+                  placeholder="Admin issue details..."
+                  rows={2}
+                  className="text-sm"
+                  value={movementFormProp.remarksAdminIssue || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, remarksAdminIssue: e.target.value })}
+                  />
                 </div>
               </div>
             </div>
@@ -2346,9 +2499,7 @@ export function MemberDetail({
           <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              toast.success('Movement record added successfully');
-              onCloseAddMovement?.();
-              setMockIsAddMovementOpen(false);
+              onAddMovement?.();
             }}>
               <Plus className="w-4 h-4 mr-2" />
               Add Movement
@@ -2368,8 +2519,8 @@ export function MemberDetail({
             <div>
               <label>Category</label>
               <select
-                value={activeAllergyForm.allergen || 'General'}
-                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                value={remarkFormProp?.category || 'General'}
+                onChange={e => onRemarkFormChange?.({ ...remarkFormProp!, category: e.target.value, remark: remarkFormProp?.remark || '' })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
                 <option value="General">General</option>
@@ -2381,8 +2532,8 @@ export function MemberDetail({
             <div>
               <label>Remark</label>
               <Textarea
-                value={activeAllergyForm.notes || ''}
-                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
+                value={remarkFormProp?.remark || ''}
+                onChange={e => onRemarkFormChange?.({ ...remarkFormProp!, remark: e.target.value })}
                 placeholder="Enter your remark..."
                 rows={4}
               />
@@ -2392,11 +2543,7 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!activeAllergyForm.notes?.trim()) { toast.error('Remark text is required'); return; }
-              toast.success('Remark added');
-              onAddRemark?.();  // <-- 加呢行：通知 container 有新建 remark
-              onCloseAddRemark?.();
-              setMockIsAddRemarkOpen(false);
+              onAddRemark?.();
             }}>Add Remark</Button>
 
           </DialogFooter>
