@@ -97,18 +97,33 @@ export interface TravelAgencyProps {
   isLoading?: boolean;
   onEditAgency?: (agencyId: number) => void;
   onCreateAgency?: () => void;
+  // Controlled dialog props (container drives these)
+  isDialogOpen?: boolean;
+  onOpenDialog?: (open: boolean) => void;
+  formData?: Record<string, string>;
+  onFormChange?: (field: string, value: string) => void;
+  onSubmit?: () => void;
+  isEditing?: boolean;
+  onDelete?: (id: number) => void;
 }
 
-export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency }: TravelAgencyProps = {}) {
+export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete }: TravelAgencyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAgency, setEditingAgency] = useState<TravelAgency | null>(null);
+  // View-level state for when container doesn't provide controlled props
+  const [internalIsDialogOpen, setInternalIsDialogOpen] = useState(false);
+  const [internalEditingAgency, setInternalEditingAgency] = useState<TravelAgency | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Use controlled props if provided, otherwise use internal state
+  const isDialogOpen = isDialogOpenProp ?? internalIsDialogOpen;
+  const setIsDialogOpen = onOpenDialog ? (v: boolean) => onOpenDialog(v) : setInternalIsDialogOpen;
+  const editingAgency = isEditing !== undefined ? (isEditing ? internalEditingAgency : null) : internalEditingAgency;
+  const setEditingAgency = setInternalEditingAgency;
 
   const agencies: TravelAgency[] = agenciesProp?.length ? agenciesProp : MOCK_AGENCIES;
 
@@ -144,8 +159,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
   };
 
   const handleDelete = (id: number) => {
-    if (confirm('Are you sure you want to delete this travel agency?')) {
-      // Delete logic here
+    if (onDelete) {
+      onDelete(id);
+    } else if (confirm('Are you sure you want to delete this travel agency?')) {
       console.log('Deleting agency:', id);
     }
   };
@@ -297,7 +313,8 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedAgencies.map((agency) => {
-                const creditUtilization = ((agency.creditLimit - agency.creditBalance) / agency.creditLimit * 100).toFixed(1);
+                const creditUsed = agency.creditLimit > 0 ? agency.creditLimit - agency.creditBalance : 0;
+                const creditUtilization = agency.creditLimit > 0 ? (creditUsed / agency.creditLimit * 100).toFixed(1) : '0';
                 return (
                   <tr key={agency.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
@@ -386,10 +403,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(agency)}>
+                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEdit(agency); }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => handleDelete(agency.id)}>
+                        <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(agency.id); }}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -456,14 +473,16 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 <Label className="mb-2">Agency Name</Label>
                 <Input
                   placeholder="Enter agency name"
-                  defaultValue={editingAgency?.agencyName}
+                  value={formDataProp?.agency_name ?? ''}
+                  onChange={e => onFormChange?.('agency_name', e.target.value)}
                 />
               </div>
               <div>
                 <Label className="mb-2">Agency Code</Label>
                 <Input
                   placeholder="TA-XXX-001"
-                  defaultValue={editingAgency?.agencyCode}
+                  value={formDataProp?.agency_code ?? ''}
+                  onChange={e => onFormChange?.('agency_code', e.target.value)}
                 />
               </div>
             </div>
@@ -473,14 +492,16 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 <Label className="mb-2">Contact Person</Label>
                 <Input
                   placeholder="Enter contact name"
-                  defaultValue={editingAgency?.contactPerson}
+                  value={formDataProp?.contact_person ?? ''}
+                  onChange={e => onFormChange?.('contact_person', e.target.value)}
                 />
               </div>
               <div>
                 <Label className="mb-2">Phone Number</Label>
                 <Input
                   placeholder="+852 XXXX XXXX"
-                  defaultValue={editingAgency?.phone}
+                  value={formDataProp?.contact_phone ?? ''}
+                  onChange={e => onFormChange?.('contact_phone', e.target.value)}
                 />
               </div>
             </div>
@@ -490,14 +511,15 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               <Input
                 type="email"
                 placeholder="contact@agency.com"
-                defaultValue={editingAgency?.email}
+                value={formDataProp?.contact_email ?? ''}
+                onChange={e => onFormChange?.('contact_email', e.target.value)}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Payment Method</Label>
-                <Select defaultValue={editingAgency?.paymentMethod || 'Upfront'}>
+                <Select value={formDataProp?.payment_method ?? 'Upfront'} onValueChange={v => onFormChange?.('payment_method', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -516,7 +538,8 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   placeholder="0-30"
                   min="0"
                   max="30"
-                  defaultValue={editingAgency?.discountRate || 10}
+                  value={formDataProp?.discount_rate ?? '10'}
+                  onChange={e => onFormChange?.('discount_rate', e.target.value)}
                 />
               </div>
             </div>
@@ -527,12 +550,13 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 <Input
                   type="number"
                   placeholder="100000"
-                  defaultValue={editingAgency?.creditLimit}
+                  value={formDataProp?.credit_limit ?? ''}
+                  onChange={e => onFormChange?.('credit_limit', e.target.value)}
                 />
               </div>
               <div>
                 <Label className="mb-2">Status</Label>
-                <Select defaultValue={editingAgency?.status || 'active'}>
+                <Select value={formDataProp?.status ?? 'active'} onValueChange={v => onFormChange?.('status', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -550,6 +574,8 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               <Textarea
                 placeholder="Additional information about this agency..."
                 rows={3}
+                value={formDataProp?.remarks ?? ''}
+                onChange={e => onFormChange?.('remarks', e.target.value)}
               />
             </div>
           </div>
@@ -558,7 +584,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmitDialog}>
+            <Button onClick={() => { onSubmit?.(); }}>
               {editingAgency ? 'Update Agency' : 'Add Agency'}
             </Button>
           </div>

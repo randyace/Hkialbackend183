@@ -348,6 +348,7 @@ export function MemberDetail({
   spouseForm: spouseFormProp,
   onSpouseDialogOpen,
   onSpouseDialogClose,
+  onAddSpouse,
   onRemoveSpouseOpen,
   onRemoveSpouseClose,
   onSpouseFormChange,
@@ -1162,8 +1163,8 @@ export function MemberDetail({
               </Button>
             </div>
             <div className="space-y-3">
-              {displayPreferences.map((pref) => (
-                <div key={pref.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              {displayPreferences.map((pref, idx) => (
+                <div key={`pref-${pref.id ?? idx}-${pref.recordedDate ?? ''}`} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -1227,8 +1228,8 @@ export function MemberDetail({
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No allergies recorded.</div>
               ) : (
                 <div className="space-y-3">
-                  {displayFoodAllergies.map((allergy) => (
-                    <div key={allergy.id} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
+                  {displayFoodAllergies.map((allergy, idx) => (
+                    <div key={`allergy-${allergy.id ?? idx}-${allergy.recordedDate ?? ''}`} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
@@ -1341,8 +1342,8 @@ export function MemberDetail({
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No dietary requirements recorded.</div>
               ) : (
                 <div className="space-y-3">
-                  {displayDietaryRequirements.map((dietary) => (
-                    <div key={dietary.id} className="p-4 border border-gray-200 rounded-lg bg-green-50">
+                  {displayDietaryRequirements.map((dietary, idx) => (
+                    <div key={`dietary-${dietary.id ?? idx}-${dietary.recordedDate ?? ''}`} className="p-4 border border-gray-200 rounded-lg bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="text-gray-900 mb-1">{dietary.requirement}</h4>
@@ -1513,7 +1514,7 @@ export function MemberDetail({
                     const dash = <span className="text-gray-300">—</span>;
                     const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
                     return (
-                      <tr key={m.id} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
+                      <tr key={`mov-${m.id ?? idx}-${m.orderNo ?? ''}`} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
                         {/* Gp No. — sticky */}
                         <td className={`${cell} sticky left-0 z-10 ${rowBg} border-r border-gray-200 text-center`}>
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>

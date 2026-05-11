@@ -39,6 +39,10 @@ export interface CompanyEditProps {
   companyId?: number | null;
   /** Pass full company from CI4; when null falls back to MOCK_COMPANY for demo */
   initialData?: Company | null;
+  /** Pass real company members (from API); falls back to MOCK_MEMBERS when omitted */
+  members?: Member[] | null;
+  /** Pass real company contracts (from API); falls back to MOCK_CONTRACTS when omitted */
+  contracts?: Contract[] | null;
   onSave?: (data: Company) => void;
   onBack: () => void;
   onCancel?: () => void;
@@ -172,6 +176,8 @@ function BalanceBadge({ used, total }: { used: number; total: number }) {
 export function CompanyEdit({
   companyId,
   initialData,
+  members,
+  contracts,
   onSave,
   onBack,
   onCancel,
@@ -186,8 +192,9 @@ export function CompanyEdit({
   const [formRemarks, setFormRemarks] = useState('');
 
   // ── Core company state ───────────────────────────────────────────────────
+  // companyId: null = create mode (no mock), undefined = edit mode (no data yet), number = edit with data
   const [company, setCompany] = useState<Company | null>(
-    initialData !== undefined ? initialData : companyId ? MOCK_COMPANY : null,
+    initialData !== undefined ? initialData : companyId ? MOCK_COMPANY : undefined,
   );
 
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
@@ -332,26 +339,40 @@ export function CompanyEdit({
 
       {/* Main Form Card */}
       <Card className="p-6">
-        <form
+<form
           className="space-y-6"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!company) return;
             // Build final Company object from form state + contact persons
+            // In create mode (company === undefined), build payload directly from form fields
             const primaryContact = contactPersons[0];
-            const payload: Company = {
-              ...company,
-              companyName: formCompanyName,
-              companyCode: formCompanyCode,
-              paymentMethod: formPaymentMethod,
-              discountRate: formDiscountRate,
-              status: companyStatus ? 'active' : 'inactive',
-              address: formBillingAddress,
-              remarks: formRemarks,
-              contactPerson: primaryContact?.name || '',
-              email: primaryContact?.email || '',
-              phone: primaryContact?.phone || '',
-            };
+            const payload: Company = company
+              ? {
+                  ...company,
+                  companyName: formCompanyName,
+                  companyCode: formCompanyCode,
+                  paymentMethod: formPaymentMethod,
+                  discountRate: formDiscountRate,
+                  status: companyStatus ? 'active' : 'inactive',
+                  address: formBillingAddress,
+                  remarks: formRemarks,
+                  contactPerson: primaryContact?.name || '',
+                  email: primaryContact?.email || '',
+                  phone: primaryContact?.phone || '',
+                }
+              : {
+                  id: 0,
+                  companyName: formCompanyName,
+                  companyCode: formCompanyCode,
+                  paymentMethod: formPaymentMethod,
+                  discountRate: formDiscountRate,
+                  status: companyStatus ? 'active' : 'inactive',
+                  address: formBillingAddress,
+                  remarks: formRemarks,
+                  contactPerson: primaryContact?.name || '',
+                  email: primaryContact?.email || '',
+                  phone: primaryContact?.phone || '',
+                };
             onSave?.(payload);
           }}
         >
@@ -534,19 +555,19 @@ export function CompanyEdit({
           <div className="grid grid-cols-4 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Members</p>
-              <p className="text-2xl font-semibold text-blue-900">{MOCK_MEMBERS.length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{(members ?? MOCK_MEMBERS).length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Active</p>
-              <p className="text-2xl font-semibold text-green-900">{MOCK_MEMBERS.filter(m => m.status === 'active').length}</p>
+              <p className="text-2xl font-semibold text-green-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'active').length}</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
               <p className="text-xs text-gray-700 mb-1">Inactive</p>
-              <p className="text-2xl font-semibold text-gray-900">{MOCK_MEMBERS.filter(m => m.status === 'inactive').length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'inactive').length}</p>
             </Card>
             <Card className="p-4 bg-red-50 border-red-200">
               <p className="text-xs text-red-700 mb-1">Suspended</p>
-              <p className="text-2xl font-semibold text-red-900">{MOCK_MEMBERS.filter(m => m.status === 'suspended').length}</p>
+              <p className="text-2xl font-semibold text-red-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'suspended').length}</p>
             </Card>
           </div>
 
@@ -566,7 +587,7 @@ export function CompanyEdit({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {MOCK_MEMBERS.map((member) => (
+                {(members ?? MOCK_MEMBERS).map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{member.accountNumber}</td>
                     <td className="px-4 py-3">
@@ -615,7 +636,7 @@ export function CompanyEdit({
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Contracts</p>
-              <p className="text-2xl font-semibold text-blue-900">{MOCK_CONTRACTS.length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{(contracts ?? MOCK_CONTRACTS).length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Total Sessions</p>
@@ -632,7 +653,7 @@ export function CompanyEdit({
 
           {/* Contracts List */}
           <div className="space-y-4">
-            {MOCK_CONTRACTS.map((contract) => {
+            {(contracts ?? MOCK_CONTRACTS).map((contract) => {
               const days = daysUntilExpiry(contract.expiryDate);
               const expiryColor = days < 30 ? 'text-red-600' : days < 90 ? 'text-amber-600' : 'text-gray-600';
               
