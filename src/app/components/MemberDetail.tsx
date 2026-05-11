@@ -135,6 +135,7 @@ export interface MemberDetailProps {
   onCloseAddAllergy?: () => void;
   onCloseAddDietary?: () => void;
   onCloseAddMovement?: () => void;
+  onOpenMovementDialog?: () => void;
   onCloseAddRemark?: () => void;
 
   // ── Add form state & handlers ────────────────────────────────────────────
@@ -316,6 +317,7 @@ export function MemberDetail({
   onCloseAddAllergy,
   onCloseAddDietary,
   onCloseAddMovement,
+  onOpenMovementDialog,
   onCloseAddRemark,
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -1462,7 +1464,7 @@ export function MemberDetail({
                 </h3>
                 <p className="text-sm text-gray-600 mt-1">Full movement details linked to booking records</p>
               </div>
-              <Button onClick={() => { onOpenMovementDialog?.(); }}>
+              <Button onClick={() => { onOpenMovementDialog?.(); setMockIsAddMovementOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Movement
               </Button>

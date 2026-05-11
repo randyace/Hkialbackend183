@@ -55,6 +55,8 @@ interface Company {
   paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase';
   discountRate: number;
   status: 'active' | 'inactive';
+  address?: string;
+  remarks?: string;
 }
 
 interface ContactPerson {
@@ -175,6 +177,15 @@ export function CompanyEdit({
   onCancel,
   isSubmitting = false,
 }: CompanyEditProps) {
+  // ── Form field state (controlled inputs) ──────────────────────────────────
+  const [formCompanyName, setFormCompanyName] = useState('');
+  const [formCompanyCode, setFormCompanyCode] = useState('');
+  const [formPaymentMethod, setFormPaymentMethod] = useState<'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase'>('Upfront');
+  const [formDiscountRate, setFormDiscountRate] = useState(0);
+  const [formBillingAddress, setFormBillingAddress] = useState('');
+  const [formRemarks, setFormRemarks] = useState('');
+
+  // ── Core company state ───────────────────────────────────────────────────
   const [company, setCompany] = useState<Company | null>(
     initialData !== undefined ? initialData : companyId ? MOCK_COMPANY : null,
   );
@@ -187,10 +198,53 @@ export function CompanyEdit({
   ]);
   const [companyStatus, setCompanyStatus] = useState<boolean>(company?.status === 'active');
 
+  // ── Sync initialData (from API fetch) into all form fields ────────────────
+  useEffect(() => {
+    if (initialData !== undefined && initialData !== null) {
+      setCompany(initialData);
+      setFormCompanyName(initialData.companyName || '');
+      setFormCompanyCode(initialData.companyCode || '');
+      setFormPaymentMethod(initialData.paymentMethod || 'Upfront');
+      setFormDiscountRate(initialData.discountRate ?? 0);
+      setFormBillingAddress(initialData.address || '');
+      setFormRemarks(initialData.remarks || '');
+      setCompanyStatus(initialData.status === 'active');
+      // Sync first contact person from initialData
+      if (initialData.contactPerson || initialData.email || initialData.phone) {
+        setContactPersons([{
+          id: '1',
+          name: initialData.contactPerson || '',
+          email: initialData.email || '',
+          phone: initialData.phone || '',
+        }]);
+      }
+    }
+  }, [initialData]);
+
+  // ── Re-sync contact persons when company changes ─────────────────────────
+  useEffect(() => {
+    if (company && contactPersons.length === 1 && contactPersons[0].id === '1' &&
+        !contactPersons[0].name && !contactPersons[0].email && !contactPersons[0].phone) {
+      setContactPersons([{
+        id: '1',
+        name: company.contactPerson || '',
+        email: company.email || '',
+        phone: company.phone || '',
+      }]);
+    }
+  }, [company]);
+
   const isEditMode = companyId !== null;
 
   // ── Quick Fill for Demo ───────────────────────────────────────────────────
   const handleQuickFill = () => {
+    setFormCompanyName('Hong Kong Airlines');
+    setFormCompanyCode('CORP-HX-001');
+    setFormPaymentMethod('On-Credit');
+    setFormDiscountRate(12);
+    setFormBillingAddress('Hong Kong International Airport, 1 Sky Plaza Road, Lantau, Hong Kong');
+    setFormRemarks('Preferred corporate partner since 2023. Excellent payment record.');
+    setCompanyStatus(true);
     setCompany({
       id: companyId ?? 99,
       companyName: 'Hong Kong Airlines',
@@ -201,12 +255,13 @@ export function CompanyEdit({
       paymentMethod: 'On-Credit',
       discountRate: 12,
       status: 'active',
+      address: 'Hong Kong International Airport, 1 Sky Plaza Road, Lantau, Hong Kong',
+      remarks: 'Preferred corporate partner since 2023. Excellent payment record.',
     });
     setContactPersons([
       { id: '1', name: 'Peter Leung', email: 'peter.leung@hkairlines.com', phone: '+852 3916 3666' },
       { id: '2', name: 'Amy Chan', email: 'amy.chan@hkairlines.com', phone: '+852 3916 3888' },
     ]);
-    setCompanyStatus(true);
   };
 
   const handleAddContactPerson = () => {
@@ -277,7 +332,29 @@ export function CompanyEdit({
 
       {/* Main Form Card */}
       <Card className="p-6">
-        <form className="space-y-6">
+        <form
+          className="space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!company) return;
+            // Build final Company object from form state + contact persons
+            const primaryContact = contactPersons[0];
+            const payload: Company = {
+              ...company,
+              companyName: formCompanyName,
+              companyCode: formCompanyCode,
+              paymentMethod: formPaymentMethod,
+              discountRate: formDiscountRate,
+              status: companyStatus ? 'active' : 'inactive',
+              address: formBillingAddress,
+              remarks: formRemarks,
+              contactPerson: primaryContact?.name || '',
+              email: primaryContact?.email || '',
+              phone: primaryContact?.phone || '',
+            };
+            onSave?.(payload);
+          }}
+        >
           {/* Company Information Section */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Company Information</h4>
@@ -286,7 +363,8 @@ export function CompanyEdit({
                 <label>Company Name</label>
                 <input
                   type="text"
-                  defaultValue={company?.companyName}
+                  value={formCompanyName}
+                  onChange={(e) => setFormCompanyName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., Cathay Pacific Airways"
                 />
@@ -295,7 +373,8 @@ export function CompanyEdit({
                 <label>Company Code</label>
                 <input
                   type="text"
-                  defaultValue={company?.companyCode}
+                  value={formCompanyCode}
+                  onChange={(e) => setFormCompanyCode(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., CORP-CX-001"
                 />
@@ -306,7 +385,8 @@ export function CompanyEdit({
               <div>
                 <label>Payment Method</label>
                 <select
-                  defaultValue={company?.paymentMethod}
+                  value={formPaymentMethod}
+                  onChange={(e) => setFormPaymentMethod(e.target.value as typeof formPaymentMethod)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
                   <option value="Upfront">Upfront Payment</option>
@@ -319,7 +399,8 @@ export function CompanyEdit({
                 <label>Discount Rate (%)</label>
                 <input
                   type="number"
-                  defaultValue={company?.discountRate}
+                  value={formDiscountRate}
+                  onChange={(e) => setFormDiscountRate(Number(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="0"
                   min="0"
@@ -411,6 +492,8 @@ export function CompanyEdit({
             <div>
               <label>Billing Address</label>
               <Textarea
+                value={formBillingAddress}
+                onChange={(e) => setFormBillingAddress(e.target.value)}
                 placeholder="Enter company billing address..."
                 rows={3}
               />
@@ -419,6 +502,8 @@ export function CompanyEdit({
             <div>
               <label>Remarks / Notes</label>
               <Textarea
+                value={formRemarks}
+                onChange={(e) => setFormRemarks(e.target.value)}
                 placeholder="Any additional notes about this company..."
                 rows={3}
               />
@@ -429,9 +514,9 @@ export function CompanyEdit({
             <Button type="button" variant="outline" onClick={onBack}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={isSubmitting}>
               <Save className="w-4 h-4 mr-2" />
-              {isEditMode ? 'Update Company' : 'Create Company'}
+              {isSubmitting ? 'Saving...' : isEditMode ? 'Update Company' : 'Create Company'}
             </Button>
           </div>
         </form>

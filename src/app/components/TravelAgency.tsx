@@ -558,7 +558,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddOrEdit}>
+            <Button onClick={handleSubmitDialog}>
               {editingAgency ? 'Update Agency' : 'Add Agency'}
             </Button>
           </div>

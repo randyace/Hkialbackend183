@@ -80,9 +80,10 @@ export interface MemberCompanyProps {
   isLoading?: boolean;
   onEditCompany?: (companyId: number) => void;
   onCreateCompany?: () => void;
+  onDeleteCompany?: (companyId: number) => void;
 }
 
-export function MemberCompany({ companies: companiesProp, onEditCompany, onCreateCompany }: MemberCompanyProps = {}) {
+export function MemberCompany({ companies: companiesProp, onEditCompany, onCreateCompany, onDeleteCompany }: MemberCompanyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -353,7 +354,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => console.log('Delete company:', company.id)}
+                        onClick={() => onDeleteCompany?.(company.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         title="Delete Company"
                       >
