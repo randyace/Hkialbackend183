@@ -2,7 +2,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Search, Calendar, Edit2, Trash2, Eye } from 'lucide-react';
+import { Search, Calendar, Eye, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -339,7 +339,7 @@ export function AccountList({
                   <TableCell>{account.paymentMethod}</TableCell>
                   <TableCell>
                     {account.creditBalance !== undefined ? (
-                      <span className="text-green-600">HK${account.creditBalance.toLocaleString()}</span>
+                      <span className="text-green-600">{`HK$${account.creditBalance.toLocaleString()}`}</span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}

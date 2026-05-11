@@ -62,6 +62,7 @@ export function AccountCreation({
 }: AccountCreationProps = {}) {
   const displayCompanies = companiesProp && companiesProp.length > 0 ? companiesProp : MOCK_COMPANIES;
   const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
+  const displayCountries = countries && countries.length > 0 ? countries : null;
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>('individual');
   const [selectedCompanyAccount, setSelectedCompanyAccount] = useState<string>('');
   const [companySearch, setCompanySearch] = useState('');
@@ -237,10 +238,10 @@ export function AccountCreation({
             <Label htmlFor={`rc-${subForm.id}`} style={{ marginBottom: 10 }}>Region Code *</Label>
             {displayRegionCodes ? (
               <Select value={subForm.regionCode} onValueChange={v => updateCorporateForm(subForm.id, 'regionCode', v)}>
-                <SelectTrigger id={`rc-${subForm.id}`}><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectTrigger id={`rc-${subForm.id}`}><SelectValue placeholder="Select region code" /></SelectTrigger>
                 <SelectContent>
                   {displayRegionCodes.map(rc => (
-                    <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
+                    <SelectItem key={rc.code} value={rc.code}>{rc.code} - {rc.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -504,7 +505,7 @@ export function AccountCreation({
                         <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
                         <SelectContent>
                           {displayRegionCodes.map(rc => (
-                            <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
+                            <SelectItem key={rc.code} value={rc.code}>{rc.code} - {rc.name}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -519,11 +520,11 @@ export function AccountCreation({
                 </div>
                 <div>
                   <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
-                  {countries && countries.length > 0 ? (
+                  {displayCountries ? (
                     <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
                       <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
                       <SelectContent>
-                        {countries.map(c => (
+                        {displayCountries.map(c => (
                           <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -586,18 +587,7 @@ export function AccountCreation({
                   <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
-                      {displayRegionCodes ? (
-                        <Select value={formData.regionCode} onValueChange={v => setFormData({...formData, regionCode: v})}>
-                          <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
-                          <SelectContent>
-                            {displayRegionCodes.map(rc => (
-                              <SelectItem key={rc.code} value={rc.code}>{rc.code} — {rc.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
-                      )}
+                      <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
                     </div>
                     <div className="sm:col-span-2">
                       <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
