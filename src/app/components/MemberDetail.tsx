@@ -564,37 +564,31 @@ export function MemberDetail({
 
   const handleDeletePreference = (id: number) => {
     onDeletePreference?.(id);
-    setMockPreferences(prev => prev.filter(p => p.id !== id)); // local demo fallback
     toast.success('Preference removed');
   };
 
   const handleDeleteAllergy = (id: number) => {
     onDeleteAllergy?.(id);
-    setMockFoodAllergies(prev => prev.filter(a => a.id !== id)); // local demo fallback
     toast.success('Allergy information removed');
   };
 
   const handleDeleteDietary = (id: number) => {
     onDeleteDietary?.(id);
-    setMockDietaryRequirements(prev => prev.filter(d => d.id !== id)); // local demo fallback
     toast.success('Dietary requirement removed');
   };
 
   const handleDeleteSpouseAllergy = (id: number) => {
     onDeleteSpouseAllergy?.(id);
-    setMockSpouseFoodAllergies(prev => prev.filter(a => a.id !== id)); // local demo fallback
     toast.success('Spouse allergy information removed');
   };
 
   const handleDeleteSpouseDietary = (id: number) => {
     onDeleteSpouseDietary?.(id);
-    setMockSpouseDietaryRequirements(prev => prev.filter(d => d.id !== id)); // local demo fallback
     toast.success('Spouse dietary requirement removed');
   };
 
   const handleDeleteRemark = (id: number) => {
     onDeleteRemark?.(id);
-    setMockRemarks(prev => prev.filter(r => r.id !== id)); // local demo fallback
     toast.success('Remark removed');
   };
 
@@ -1289,8 +1283,8 @@ export function MemberDetail({
                 <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No allergies recorded for spouse.</div>
               ) : (
                 <div className="space-y-3">
-                  {displaySpouseFoodAllergies.map((allergy) => (
-                    <div key={allergy.id} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
+                  {displaySpouseFoodAllergies.map((allergy, idx) => (
+                    <div key={`sp-allergy-${allergy.id ?? idx}-${allergy.recordedDate ?? ''}`} className={`p-4 border rounded-lg ${allergy.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
@@ -1396,8 +1390,8 @@ export function MemberDetail({
                 <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No dietary requirements recorded for spouse.</div>
               ) : (
                 <div className="space-y-3">
-                  {displaySpouseDietaryReqs.map((dietary) => (
-                    <div key={dietary.id} className="p-4 border border-gray-200 rounded-lg bg-green-50">
+                  {displaySpouseDietaryReqs.map((dietary, idx) => (
+                    <div key={`sp-dietary-${dietary.id ?? idx}-${dietary.recordedDate ?? ''}`} className="p-4 border border-gray-200 rounded-lg bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="text-gray-900 mb-1">{dietary.requirement}</h4>
@@ -1427,8 +1421,8 @@ export function MemberDetail({
               </Button>
             </div>
             <div className="space-y-3">
-              {displayRemarks.map((remark) => (
-                <div key={remark.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+              {displayRemarks.map((remark, idx) => (
+                <div key={`remark-${remark.id ?? idx}-${remark.createdDate ?? ''}`} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">

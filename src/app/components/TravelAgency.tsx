@@ -174,7 +174,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           <h1>Travel Agency Management</h1>
           <p className="text-gray-600">Manage travel agency partnerships and credit accounts</p>
         </div>
-        <Button onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
+        <Button type="button" onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
           Add Travel Agency
         </Button>
@@ -403,10 +403,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEdit(agency); }}>
+                        <Button type="button" size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEdit(agency); }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(agency.id); }}>
+                        <Button type="button" size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(agency.id); }}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -581,10 +581,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => { onSubmit?.(); }}>
+            <Button type="button" onClick={() => { onSubmit?.(); }}>
               {editingAgency ? 'Update Agency' : 'Add Agency'}
             </Button>
           </div>
