@@ -449,48 +449,8 @@ export function MemberDetail({
   // memberData is defined above (prop-driven)
 
   // ── Mock data arrays (demo fallback — kept as per spec) ─────────────────
-  const [mockPreferences, setMockPreferences] = useState<Preference[]>([
-    { id: 1, category: 'Seating', preference: 'Prefers window-side suite with natural lighting', recordedDate: '2024-10-15', recordedBy: 'Staff A' },
-    { id: 2, category: 'Service', preference: 'Likes to be greeted by first name', recordedDate: '2024-09-20', recordedBy: 'Staff B' },
-    { id: 3, category: 'Beverage', preference: 'Prefers Champagne (Dom Pérignon if available)', recordedDate: '2024-08-10', recordedBy: 'Staff C' },
-    { id: 4, category: 'Temperature', preference: 'Suite temperature at 22°C', recordedDate: '2024-07-05', recordedBy: 'Staff A' },
-  ]);
-
-  const [mockFoodAllergies, setMockFoodAllergies] = useState<FoodAllergy[]>([
-    { id: 1, allergen: 'Shellfish', severity: 'Severe', notes: 'Anaphylactic reaction. Requires EpiPen.', recordedDate: '2024-01-15' },
-    { id: 2, allergen: 'Peanuts', severity: 'Moderate', notes: 'Avoid all peanut products', recordedDate: '2024-01-15' },
-  ]);
-
-  const [mockDietaryRequirements, setMockDietaryRequirements] = useState<DietaryRequirement[]>([
-    { id: 1, requirement: 'Low Sodium', notes: 'Doctor recommended due to hypertension', recordedDate: '2024-02-20' },
-    { id: 2, requirement: 'Prefers Organic Options', notes: 'When available', recordedDate: '2024-03-10' },
-  ]);
-
-  const [mockSpouseFoodAllergies, setMockSpouseFoodAllergies] = useState<FoodAllergy[]>([
-    { id: 101, allergen: 'Tree Nuts', severity: 'Mild', notes: 'Mild sensitivity — avoid walnuts and cashews', recordedDate: '2024-06-10' },
-  ]);
-  const [mockSpouseDietaryRequirements, setMockSpouseDietaryRequirements] = useState<DietaryRequirement[]>([
-    { id: 101, requirement: 'Vegan', notes: 'Strictly no animal products including dairy and eggs', recordedDate: '2024-06-10' },
-  ]);
-
-  const [mockMovements, setMockMovements] = useState<MovementLog[]>([
-    {
-      id: 1,
-      movementInCharge: 'Emily Chen', cicSupport: 'Tom Ng', driver: 'Peter Chan',
-      orderNo: 'A-20241025-000012', arrDate: '2024-10-25',
-      flightNo: 'CX880', flightTime: '14:30', destinationOrigin: 'LHR',
-      lobbySuite: 'VIP Suite A', noOfPax: 2, title: 'Mr.', firstName: 'John', lastName: 'Smith',
-      noOfCIBaggage: 3, remarks: 'VIP escort required', nationality: 'United Kingdom',
-      timeMetVIPAtGate: '14:15', baggageRetrievalStart: '15:10', baggageRetrievalEnd: '15:25',
-      baggageArrivalAtHKIAL: '15:30', timeLeftHKIAL: '16:00', totalProcessingTime: '1h 45m',
-    },
-    {
-      id: 2,
-      movementInCharge: 'David Wong', cicSupport: 'Amy Lau', driver: 'Henry Yip',
-      orderNo: 'D-20241018-000008', deptDate: '2024-10-18',
-      flightNo: 'BA028', flightTime: '12:45', destinationOrigin: 'LHR',
-      lobbySuite: 'Executive Suite', noOfPax: 1, title: 'Mr.', firstName: 'John', lastName: 'Smith',
-      noOfCIBaggage: 2, nationality: 'United Kingdom',
+  // NOTE: All displayXxx = xxxProp || fallback chains removed.
+  // UI should show empty state when container data is empty.
       timeMetVIPAtGate: '11:30', timeLeftHKIAL: '12:15', totalProcessingTime: '45m',
     },
     {
@@ -515,16 +475,18 @@ export function MemberDetail({
 
   // ── Prop-over-mock resolution — prop wins when provided ─────────────────
   // Data arrays: prefer prop when non-empty, else fall back to local mock
-  const displayPreferences            = preferencesProp.length > 0            ? preferencesProp            : mockPreferences;
-  const displayFoodAllergies          = foodAllergiesProp.length > 0          ? foodAllergiesProp          : mockFoodAllergies;
-  const displayDietaryRequirements    = dietaryRequirementsProp.length > 0    ? dietaryRequirementsProp    : mockDietaryRequirements;
-  const displayMovements              = movementsProp.length > 0              ? movementsProp              : mockMovements;
-  const displayRemarks                = remarksProp.length > 0                ? remarksProp                : mockRemarks;
-  const displaySpouseFoodAllergies    = spouseFoodAllergiesProp.length > 0    ? spouseFoodAllergiesProp    : mockSpouseFoodAllergies;
-  const displaySpouseDietaryReqs      = spouseDietaryRequirementsProp.length > 0 ? spouseDietaryRequirementsProp : mockSpouseDietaryRequirements;
-  const displayLoginHistory           = loginHistoryProp.length > 0           ? loginHistoryProp           : mockLoginHistory;
+  // (Figma demo site has real data so this never triggers;
+  //  local dev with empty API response shows empty instead of mock)
+  const displayPreferences            = preferencesProp.length > 0            ? preferencesProp            : [];
+  const displayFoodAllergies          = foodAllergiesProp.length > 0          ? foodAllergiesProp          : [];
+  const displayDietaryRequirements    = dietaryRequirementsProp.length > 0    ? dietaryRequirementsProp    : [];
+  const displayMovements              = movementsProp.length > 0              ? movementsProp              : [];
+  const displayRemarks                = remarksProp.length > 0                ? remarksProp                : [];
+  const displaySpouseFoodAllergies    = spouseFoodAllergiesProp.length > 0    ? spouseFoodAllergiesProp    : [];
+  const displaySpouseDietaryReqs      = spouseDietaryRequirementsProp.length > 0 ? spouseDietaryRequirementsProp : [];
+  const displayLoginHistory           = loginHistoryProp.length > 0           ? loginHistoryProp           : [];
   // Spouse: undefined = not passed (use mock); null = explicitly no spouse
-  const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : mockSpouse;
+  const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : null;
 
   // Security: undefined = not passed → use mock state
   const activeIsAccountLocked         = isAccountLockedProp       ?? mockIsAccountLocked;
