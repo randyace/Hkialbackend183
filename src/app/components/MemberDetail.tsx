@@ -126,6 +126,7 @@ export interface MemberDetailProps {
   // ── Dialog open/close state ──────────────────────────────────────────────
   isAddPreferenceOpen?: boolean;
   isAddAllergyOpen?: boolean;
+  onOpenAllergyDialog?: () => void;
   isAddDietaryOpen?: boolean;
   isAddMovementOpen?: boolean;
   isAddRemarkOpen?: boolean;
@@ -306,6 +307,7 @@ export function MemberDetail({
   // ── Dialog open/close (prop-driven when container owns state) ─────────────
   isAddPreferenceOpen: isAddPreferenceOpenProp,
   isAddAllergyOpen: isAddAllergyOpenProp,
+  onOpenAllergyDialog,
   isAddDietaryOpen: isAddDietaryOpenProp,
   isAddMovementOpen: isAddMovementOpenProp,
   isAddRemarkOpen: isAddRemarkOpenProp,
@@ -451,20 +453,6 @@ export function MemberDetail({
   // ── Mock data arrays (demo fallback — kept as per spec) ─────────────────
   // NOTE: All displayXxx = xxxProp || fallback chains removed.
   // UI should show empty state when container data is empty.
-      timeMetVIPAtGate: '11:30', timeLeftHKIAL: '12:15', totalProcessingTime: '45m',
-    },
-    {
-      id: 3,
-      movementInCharge: 'Sarah Lee',
-      orderNo: 'A-20241005-000005', arrDate: '2024-10-05',
-      flightNo: 'CX100', flightTime: '16:00', destinationOrigin: 'JFK',
-      lobbySuite: 'VIP Suite B', noOfPax: 3, title: 'Mr.', firstName: 'John', lastName: 'Smith',
-      nationality: 'United Kingdom', timeMetVIPAtGate: '15:45',
-      baggageRetrievalStart: '16:30', baggageRetrievalEnd: '16:50',
-      timeLeftHKIAL: '17:10', totalProcessingTime: '1h 25m',
-      remarksAdminIssue: 'Late departure due to flight delay',
-    },
-  ]);
 
   const [mockRemarks, setMockRemarks] = useState<Remark[]>([
     { id: 1, remark: 'Customer is a high-value client. Provide exceptional service.', category: 'VIP Note', createdDate: '2024-01-15', createdBy: 'Manager' },
@@ -1223,7 +1211,11 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { onAllergyTargetChange?.('customer'); setMockAllergyTarget('customer'); onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' }); setMockAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); onAddAllergy?.(); setMockIsAddAllergyOpen(true); }}
+                  onClick={() => {
+                    onAllergyTargetChange?.('customer');
+                    onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' });
+                    onOpenAllergyDialog?.();
+                  }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Allergy
@@ -1275,7 +1267,11 @@ export function MemberDetail({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { onAllergyTargetChange?.('spouse'); setMockAllergyTarget('spouse'); onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' }); setMockAllergyForm({ allergen: '', severity: 'Mild', notes: '' }); onAddAllergy?.(); setMockIsAddAllergyOpen(true); }}
+                    onClick={() => {
+                    onAllergyTargetChange?.('spouse');
+                    onAllergyFormChange?.({ allergen: '', severity: 'Mild', notes: '' });
+                    onOpenAllergyDialog?.();
+                  }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Add Allergy
