@@ -2086,12 +2086,10 @@ export function MemberDetail({
                 recordedDate: today,
               };
               if (activeAllergyTarget === 'spouse') {
-                setMockSpouseFoodAllergies(prev => [...prev, newItem]); // demo fallback
                 toast.success('Spouse food allergy added');
               } else {
-                setMockFoodAllergies(prev => [...prev, newItem]); // demo fallback
                 toast.success('Food allergy added');
-                onAddAllergy?.();  // <-- 加呢行：通知 container 有新建 allergy
+                onAddAllergy?.();  // trigger container to save
               }
               onCloseAddAllergy?.();
               setMockIsAddAllergyOpen(false);
