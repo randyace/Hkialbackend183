@@ -130,6 +130,7 @@ export interface MemberDetailProps {
   isAddMovementOpen?: boolean;
   isAddRemarkOpen?: boolean;
   onCloseAddPreference?: () => void;
+  onOpenPreferenceDialog?: () => void;
   onCloseAddAllergy?: () => void;
   onCloseAddDietary?: () => void;
   onCloseAddMovement?: () => void;
@@ -309,6 +310,7 @@ export function MemberDetail({
   isAddMovementOpen: isAddMovementOpenProp,
   isAddRemarkOpen: isAddRemarkOpenProp,
   onCloseAddPreference,
+  onOpenPreferenceDialog,
   onCloseAddAllergy,
   onCloseAddDietary,
   onCloseAddMovement,
@@ -1202,7 +1204,7 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Customer Preferences</h3>
-              <Button onClick={() => { onAddPreference?.(); }}>
+              <Button onClick={() => { onOpenPreferenceDialog?.(); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Preference
               </Button>
