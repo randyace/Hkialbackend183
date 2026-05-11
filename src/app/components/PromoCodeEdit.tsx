@@ -161,6 +161,20 @@ export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: Pr
         companyName: contract?.primaryName,
         purchaseCategory: contract?.purchaseCategory as 'Corporate' | 'Travel Agency' | undefined,
         mode: 'generate',
+        // pass full form state through so container can call batch API
+        codeType,
+        amount,
+        useLimit,
+        reusable,
+        startDate,
+        endDate,
+        titleEn,
+        titleSimpChi,
+        titleTradChi,
+        descriptionEn,
+        descriptionSimpChi,
+        descriptionTradChi,
+        selectedContractId,
       });
     }, 800);
   };

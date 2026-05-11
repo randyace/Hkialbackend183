@@ -122,12 +122,14 @@ export interface MemberDetailProps {
   onAddDietary?: () => void;
   onAddMovement?: () => void;
   onAddRemark?: () => void;
+  onOpenRemarkDialog?: () => void;
 
   // ── Dialog open/close state ──────────────────────────────────────────────
   isAddPreferenceOpen?: boolean;
   isAddAllergyOpen?: boolean;
   onOpenAllergyDialog?: () => void;
   isAddDietaryOpen?: boolean;
+  onOpenDietaryDialog?: () => void;
   isAddMovementOpen?: boolean;
   isAddRemarkOpen?: boolean;
   onCloseAddPreference?: () => void;
@@ -135,7 +137,6 @@ export interface MemberDetailProps {
   onCloseAddAllergy?: () => void;
   onCloseAddDietary?: () => void;
   onCloseAddMovement?: () => void;
-  onOpenMovementDialog?: () => void;
   onCloseAddRemark?: () => void;
 
   // ── Add form state & handlers ────────────────────────────────────────────
@@ -162,6 +163,7 @@ export interface MemberDetailProps {
   spouseForm?: Spouse;
   onSpouseDialogOpen?: () => void;
   onSpouseDialogClose?: () => void;
+  onAddSpouse?: (spouse: Spouse) => void;
   onRemoveSpouseOpen?: () => void;
   onRemoveSpouseClose?: () => void;
   onSpouseFormChange?: (form: Spouse) => void;
@@ -310,6 +312,7 @@ export function MemberDetail({
   isAddAllergyOpen: isAddAllergyOpenProp,
   onOpenAllergyDialog,
   isAddDietaryOpen: isAddDietaryOpenProp,
+  onOpenDietaryDialog,
   isAddMovementOpen: isAddMovementOpenProp,
   isAddRemarkOpen: isAddRemarkOpenProp,
   onCloseAddPreference,
@@ -317,8 +320,8 @@ export function MemberDetail({
   onCloseAddAllergy,
   onCloseAddDietary,
   onCloseAddMovement,
-  onOpenMovementDialog,
   onCloseAddRemark,
+  onOpenRemarkDialog,
 
   // ── Form state ────────────────────────────────────────────────────────────
   preferenceForm: preferenceFormProp,
@@ -348,6 +351,7 @@ export function MemberDetail({
   spouseForm: spouseFormProp,
   onSpouseDialogOpen,
   onSpouseDialogClose,
+  onAddSpouse,
   onRemoveSpouseOpen,
   onRemoveSpouseClose,
   onSpouseFormChange,
@@ -1331,7 +1335,7 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onAddDietary?.(); setMockIsAddDietaryOpen(true); }}
+                  onClick={() => { onOpenDietaryDialog?.(); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); setMockIsAddDietaryOpen(true); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Requirement
@@ -1420,7 +1424,7 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Staff Remarks</h3>
-              <Button onClick={() => { onAddRemark?.(); setMockIsAddRemarkOpen(true); }}>
+              <Button onClick={() => { onOpenRemarkDialog?.(); setMockIsAddRemarkOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Remark
               </Button>
@@ -2148,11 +2152,10 @@ export function MemberDetail({
                 recordedDate: today,
               };
               if (activeDietaryTarget === 'spouse') {
-                setMockSpouseDietaryRequirements(prev => [...prev, newItem]); // demo fallback
                 toast.success('Spouse dietary requirement added');
               } else {
-                setMockDietaryRequirements(prev => [...prev, newItem]); // demo fallback
                 toast.success('Dietary requirement added');
+                onAddDietary?.();  // trigger container to save
               }
               onCloseAddDietary?.();
               setMockIsAddDietaryOpen(false);
@@ -2633,8 +2636,8 @@ export function MemberDetail({
                 if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
                   toast.error('First Name and Last Name are required.'); return;
                 }
-                setMockSpouse({ ...activeSpouseForm }); // demo fallback
                 toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
+                onAddSpouse?.({ ...activeSpouseForm });
                 onSpouseDialogClose?.();
                 setMockIsSpouseDialogOpen(false);
               }}
