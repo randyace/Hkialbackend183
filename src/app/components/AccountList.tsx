@@ -339,7 +339,7 @@ export function AccountList({
                   <TableCell>{account.paymentMethod}</TableCell>
                   <TableCell>
                     {account.creditBalance !== undefined ? (
-                      <span className="text-green-600">{`HK$${account.creditBalance.toLocaleString()}`}</span>
+                      <span className="text-green-600">HK${account.creditBalance.toLocaleString()}</span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
