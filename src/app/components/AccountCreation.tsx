@@ -241,7 +241,7 @@ export function AccountCreation({
               <Label htmlFor={typeOption} className="cursor-pointer flex items-center gap-1">
                 {typeOption === 'individual' && <><UserPlus className="w-4 h-4" /> Individual</>}
                 {typeOption === 'corporate' && <><Building2 className="w-4 h-4" /> Corporate</>}
-                {typeOption === 'travel-agency' && <><Plane className="w-4 h-4" /> Travel Agency</>}
+                {typeOption === 'travel-agency' && <><Plane className="w-4 h-4" /> Agency</>}
               </Label>
             </div>
           ))}
