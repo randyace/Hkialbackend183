@@ -39,6 +39,7 @@ interface Account {
 export interface AccountListProps {
   accounts?: Account[];
   loading?: boolean;
+  isSearching?: boolean;
   error?: string | null;
   total?: number;
   itemsPerPage?: number;
@@ -71,6 +72,7 @@ export interface AccountListProps {
 export function AccountList({
   accounts = [],
   loading = false,
+  isSearching = false,
   error = null,
   total = 0,
   currentPage = 1,
@@ -274,8 +276,13 @@ export function AccountList({
       {/* Accounts Table */}
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            Showing {total > 0 ? `${startIndex + 1}-${Math.min(endIndex, total)}` : '0'} of {total} accounts
+          <div className="text-sm text-gray-500 flex items-center gap-1.5">
+            <span>
+              Showing {total > 0 ? `${startIndex + 1}-${Math.min(endIndex, total)}` : '0'} of {total} accounts
+            </span>
+            {isSearching && (
+              <span className="text-blue-600 text-xs animate-pulse">Searching…</span>
+            )}
           </div>
           <div>
             {renderPagination()}
