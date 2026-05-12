@@ -310,6 +310,7 @@ export function MemberDetail({
   isAddAllergyOpen: isAddAllergyOpenProp,
   onOpenAllergyDialog,
   isAddDietaryOpen: isAddDietaryOpenProp,
+  onOpenDietaryDialog,
   isAddMovementOpen: isAddMovementOpenProp,
   isAddRemarkOpen: isAddRemarkOpenProp,
   onCloseAddPreference,
@@ -1326,7 +1327,7 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); setMockIsAddDietaryOpen(true); }}
+                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onOpenDietaryDialog?.(); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Requirement
@@ -1375,7 +1376,7 @@ export function MemberDetail({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); setMockIsAddDietaryOpen(true); }}
+                    onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onOpenDietaryDialog?.(); }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Add Requirement
