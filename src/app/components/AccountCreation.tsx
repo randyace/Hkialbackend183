@@ -7,25 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
-import { MOCK_ACCOUNTS } from './PurchaseCreate';
-import { Building2, Plane, Search, Shuffle, Copy, X, UserPlus } from 'lucide-react';
-
-// ── MOCK companies (isolated — container replaces via props) ──────────────────
-const MOCK_COMPANIES = [
-  { id: '1', name: 'Cathay Pacific Airways', code: 'CORP-CX-001' },
-  { id: '2', name: 'HSBC Holdings',          code: 'CORP-HS-001' },
-  { id: '3', name: 'AIA Group',              code: 'CORP-AI-001' },
-];
-
-export interface AccountCreationProps {
-  type?: 'individual' | 'corporate' | 'travel-agency';
-  companies?: typeof MOCK_COMPANIES;
-  countries?: { code: string; name: string }[];
-  regionCodes?: { code: string; name: string }[];
-  onSubmit?: (data: FormData) => void;
-  onCancel?: () => void;
-  isSubmitting?: boolean;
-}
+import { Building2, Plane, Shuffle, X, UserPlus } from 'lucide-react';
 
 interface CorporateSubForm {
   id: number;
@@ -51,21 +33,47 @@ const emptySubForm = (id: number): CorporateSubForm => ({
   remarks: '',
 });
 
+export interface AccountCreationProps {
+  type?: 'individual' | 'corporate' | 'travel-agency';
+  companies?: { id: number; name: string }[];
+  countries?: { code: string; name: string }[];
+  regionCodes?: { code: string; name: string }[];
+  companySearchResults?: { id: number; account_id: number; company_name: string; company_registration: string }[];
+  agencySearchResults?: { id: number; account_id: number; agency_name: string; agency_code: string }[];
+  onCompanySearchChange?: (value: string) => void;
+  onAgencySearchChange?: (value: string) => void;
+  onSubmit?: (data: any) => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+}
+
 export function AccountCreation({
   type,
-  companies: companiesProp,
   countries,
   regionCodes: regionCodesProp,
+  companySearchResults = [],
+  agencySearchResults = [],
+  onCompanySearchChange,
+  onAgencySearchChange,
   onSubmit,
   onCancel,
   isSubmitting = false,
 }: AccountCreationProps = {}) {
-  const displayCompanies = companiesProp && companiesProp.length > 0 ? companiesProp : MOCK_COMPANIES;
   const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
   const displayCountries = countries && countries.length > 0 ? countries : null;
-  const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>('individual');
-  const [selectedCompanyAccount, setSelectedCompanyAccount] = useState<string>('');
+  const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>(
+    type === 'corporate' ? 'corporate' : type === 'travel-agency' ? 'travel-agency' : 'individual'
+  );
+
+  // Corporate: selected company id + search state
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [companySearch, setCompanySearch] = useState('');
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+
+  // Agency: selected agency id + search state
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string>('');
+  const [agencySearch, setAgencySearch] = useState('');
+  const [showAgencyDropdown, setShowAgencyDropdown] = useState(false);
 
   // ── Corporate bulk sub-forms ─────────────────────────────────────────────
   const [corporateForms, setCorporateForms] = useState<CorporateSubForm[]>([emptySubForm(Date.now())]);
@@ -89,11 +97,7 @@ export function AccountCreation({
     email: '',
     nationality: '',
     passportNumber: '',
-    companyId: '',
-    companyName: '',
-    agencyCode: '',
     paymentMethod: 'upfront',
-    membershipPackage: '',
     remarks: '',
   });
 
@@ -105,8 +109,7 @@ export function AccountCreation({
         title: 'mr', firstName: 'James', lastName: 'Wong',
         regionCode: '852', contactNumber: '91234567',
         email: 'james.wong@gmail.com', nationality: 'hk',
-        passportNumber: 'H123', membershipPackage: 'gold', remarks: '',
-        companyId: '', companyName: '', agencyCode: '', paymentMethod: 'upfront',
+        passportNumber: 'H123', remarks: '',
       });
     } else if (accountType === 'corporate') {
       setCorporateForms([{
@@ -116,95 +119,77 @@ export function AccountCreation({
         regionCode: '852', contactNumber: '98765432',
         paymentMethod: 'on-credit', remarks: 'VIP corporate client',
       }]);
-      if (filteredCompanyAccounts.length > 0)
-        setSelectedCompanyAccount(filteredCompanyAccounts[0].accountNumber);
     } else {
       setFormData({
         ...formData,
         title: 'ms', firstName: 'Fiona', lastName: 'Cheung',
         regionCode: '852', contactNumber: '95556789',
         email: 'fiona@pacificworld.hk', nationality: '', passportNumber: '',
-        membershipPackage: '', companyName: 'Pacific World Travel',
-        agencyCode: 'TA-PW-001', paymentMethod: 'on-credit',
-        remarks: 'New agency partnership', companyId: '',
       });
     }
   };
 
-  // ── Company selector logic ──────────────────────────────────────────────
-  const filteredCompanyAccounts = MOCK_ACCOUNTS.filter(a =>
-    a.type === 'Corporate' &&
-    (a.name.toLowerCase().includes(companySearch.toLowerCase()) ||
-     a.accountNumber.toLowerCase().includes(companySearch.toLowerCase()))
-  ).slice(0, 5);
+  // ── Company search handler ───────────────────────────────────────────────
+  const handleCompanySearchChange = (value: string) => {
+    setCompanySearch(value);
+    onCompanySearchChange?.(value);
+    setShowCompanyDropdown(value.length > 0);
+  };
 
-  const renderCompanySelector = () => (
-    <div className="mb-6">
-      <Label style={{ marginBottom: 10 }}>Select Company Account *</Label>
-      <div className="relative">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" />
-        <Input
-          placeholder="Search company by name or account number..."
-          value={companySearch}
-          onChange={(e) => setCompanySearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-      {companySearch && (
-        <div className="mt-2 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto">
-          {filteredCompanyAccounts.length === 0 ? (
-            <div className="p-3 text-gray-500 text-sm">No matching accounts found</div>
-          ) : (
-            filteredCompanyAccounts.map(company => (
-              <div
-                key={company.accountNumber}
-                className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
-                  selectedCompanyAccount === company.accountNumber ? 'bg-blue-50' : ''
-                }`}
-                onClick={() => {
-                  setSelectedCompanyAccount(company.accountNumber);
-                  setCompanySearch('');
-                }}
-              >
-                <div className="font-medium">{company.name}</div>
-                <div className="text-xs text-gray-500">{company.accountNumber}</div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-      {selectedCompanyAccount && (
-        <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
-          <span className="text-sm text-green-700">
-            Selected: <span className="font-medium">{selectedCompanyAccount}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setSelectedCompanyAccount('')}
-            className="text-red-500 hover:text-red-700"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  const handleSelectCompany = (id: string, name: string) => {
+    setSelectedCompanyId(id);
+    setCompanySearch(name);
+    setShowCompanyDropdown(false);
+    onCompanySearchChange?.('');
+  };
+
+  // ── Agency search handler ────────────────────────────────────────────────
+  const handleAgencySearchChange = (value: string) => {
+    setAgencySearch(value);
+    onAgencySearchChange?.(value);
+    setShowAgencyDropdown(value.length > 0);
+  };
+
+  const handleSelectAgency = (id: string, name: string) => {
+    setSelectedAgencyId(id);
+    setAgencySearch(name);
+    setShowAgencyDropdown(false);
+    onAgencySearchChange?.('');
+  };
 
   // ── Form submission ─────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (accountType === 'corporate' && !selectedCompanyAccount) {
-      toast.error('Please select a company account');
+    if (accountType === 'corporate' && !selectedCompanyId) {
+      toast.error('Please select a company');
+      return;
+    }
+    if (accountType === 'travel-agency' && !selectedAgencyId) {
+      toast.error('Please select a travel agency');
       return;
     }
 
     const payload = {
       type: accountType,
-      companyAccountNumber: selectedCompanyAccount,
       ...(accountType === 'corporate'
-        ? { contacts: corporateForms }
-        : { ...formData }),
+        ? {
+            companyId: selectedCompanyId,
+            contacts: corporateForms.map(f => ({
+              title: f.title,
+              firstName: f.firstName,
+              lastName: f.lastName,
+              email: f.email,
+              regionCode: f.regionCode,
+              contactNumber: f.contactNumber,
+              paymentMethod: f.paymentMethod,
+              remarks: f.remarks,
+            })),
+          }
+        : {
+            ...formData,
+            agencyId: selectedAgencyId,
+          }),
     };
 
     toast.success('Account creation form submitted (check console for payload)');
@@ -249,10 +234,59 @@ export function AccountCreation({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+
         {/* Corporate Account Form */}
         {accountType === 'corporate' && (
           <>
-            {renderCompanySelector()}
+            {/* Company Search */}
+            <div className="mb-6">
+              <Label style={{ marginBottom: 10 }}>Select Company *</Label>
+              <div className="relative">
+                <Input
+                  placeholder="Search company by name..."
+                  value={companySearch}
+                  onChange={(e) => handleCompanySearchChange(e.target.value)}
+                  onFocus={() => companySearch.length > 0 && setShowCompanyDropdown(true)}
+                />
+                {showCompanyDropdown && (
+                  <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                    {companySearchResults.length === 0 ? (
+                      <div className="p-3 text-gray-500 text-sm">No matching companies found</div>
+                    ) : (
+                      companySearchResults.map(company => (
+                        <div
+                          key={company.id}
+                          className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                            selectedCompanyId === String(company.id) ? 'bg-blue-50' : ''
+                          }`}
+                          onClick={() => handleSelectCompany(String(company.id), company.company_name)}
+                        >
+                          <div className="font-medium">{company.company_name}</div>
+                          {company.company_registration && (
+                            <div className="text-xs text-gray-500">{company.company_registration}</div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+              {selectedCompanyId && (
+                <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                  <span className="text-sm text-green-700">
+                    Selected: <span className="font-medium">{companySearch}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedCompanyId(''); setCompanySearch(''); }}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-gray-800">Corporate Contacts ({corporateForms.length})</h4>
@@ -349,7 +383,7 @@ export function AccountCreation({
                       <RadioGroup value={subForm.paymentMethod}
                         onValueChange={v => updateCorporateForm(subForm.id, 'paymentMethod', v)}
                         className="flex flex-wrap gap-4 mt-2">
-                        {[['upfront', 'Upfront'], ['net-upfront', 'Net Upfront'], ['on-credit', 'On-Credit']].map(([val, lbl]) => (
+                        {([['upfront', 'Upfront'], ['net-upfront', 'Net Upfront'], ['on-credit', 'On-Credit']] as const).map(([val, lbl]) => (
                           <div key={val} className="flex items-center space-x-2">
                             <RadioGroupItem value={val} id={`pm-${subForm.id}-${val}`} />
                             <Label htmlFor={`pm-${subForm.id}-${val}`} className="cursor-pointer">{lbl}</Label>
@@ -377,7 +411,55 @@ export function AccountCreation({
           <>
             {accountType === 'travel-agency' && (
               <>
-                {renderCompanySelector()}
+                {/* Agency Search */}
+                <div className="mb-6">
+                  <Label style={{ marginBottom: 10 }}>Select Travel Agency *</Label>
+                  <div className="relative">
+                    <Input
+                      placeholder="Search agency by name or code..."
+                      value={agencySearch}
+                      onChange={(e) => handleAgencySearchChange(e.target.value)}
+                      onFocus={() => agencySearch.length > 0 && setShowAgencyDropdown(true)}
+                    />
+                    {showAgencyDropdown && (
+                      <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                        {agencySearchResults.length === 0 ? (
+                          <div className="p-3 text-gray-500 text-sm">No matching agencies found</div>
+                        ) : (
+                          agencySearchResults.map(agency => (
+                            <div
+                              key={agency.id}
+                              className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                                selectedAgencyId === String(agency.id) ? 'bg-blue-50' : ''
+                              }`}
+                              onClick={() => handleSelectAgency(String(agency.id), `${agency.agency_name} (${agency.agency_code})`)}
+                            >
+                              <div className="font-medium">{agency.agency_name}</div>
+                              {agency.agency_code && (
+                                <div className="text-xs text-gray-500">{agency.agency_code}</div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {selectedAgencyId && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                      <span className="text-sm text-green-700">
+                        Selected: <span className="font-medium">{agencySearch}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedAgencyId(''); setAgencySearch(''); }}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <div className="pt-4 border-t">
                   <h4 className="text-gray-800 mb-4">Personal Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -545,64 +627,30 @@ export function AccountCreation({
                 </div>
               </>
             )}
-
-            {accountType === 'travel-agency' && (
-              <div className="pt-4 border-t">
-                <h4 className="text-gray-800 mb-4">Additional Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="companyName" style={{ marginBottom: 10 }}>Company Name *</Label>
-                    <Input id="companyName" value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} placeholder="Enter company name" required />
-                  </div>
-                  <div>
-                    <Label htmlFor="agencyCode" style={{ marginBottom: 10 }}>Agency / Allotment Code *</Label>
-                    <Input id="agencyCode" value={formData.agencyCode} onChange={e => setFormData({...formData, agencyCode: e.target.value})} placeholder="Enter agency / allotment code" required />
-                  </div>
-                  <div>
-                    <Label style={{ marginBottom: 10 }}>Payment Method *</Label>
-                    <RadioGroup value={formData.paymentMethod} onValueChange={v => setFormData({...formData, paymentMethod: v})} className="flex flex-wrap gap-4 mt-2">
-                      {[['upfront', 'Upfront'], ['net-upfront', 'Net Upfront'], ['on-credit', 'On-Credit']].map(([val, lbl]) => (
-                        <div key={val} className="flex items-center space-x-2">
-                          <RadioGroupItem value={val} id={val} />
-                          <Label htmlFor={val} className="cursor-pointer">{lbl}</Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label htmlFor="remarks" style={{ marginBottom: 10 }}>Remarks</Label>
-                    <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder="Enter any additional remarks" rows={3} />
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 
-        {/* Action buttons */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t">
-          <Button type="button" variant="outline" className="w-full sm:w-auto">Cancel</Button>
-          <Button type="submit" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-            {accountType === 'individual'
-              ? 'Submit Application'
-              : accountType === 'corporate' && corporateForms.length > 1
-              ? `Create ${corporateForms.length} Accounts`
-              : 'Create Account'}
+        {/* Common fields for Individual/Agency */}
+        {accountType !== 'corporate' && (
+          <>
+            <div>
+              <Label htmlFor="remarks" style={{ marginBottom: 10 }}>Remarks (optional)</Label>
+              <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder="Enter any additional remarks" />
+            </div>
+          </>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Create Account'}
           </Button>
         </div>
-      </form>
 
-      {/* API info card */}
-      {type === 'corporate' && (
-        <Card className="p-4 md:p-6 mt-6 bg-blue-50 border-blue-200">
-          <h4 className="text-gray-900 mb-2">API Integration</h4>
-          <p className="text-sm text-gray-600 mb-3">Account creation can also be triggered via API endpoint:</p>
-          <div className="bg-white p-3 rounded border font-mono text-sm">
-            <div className="text-gray-500 text-xs mb-1">POST /api/accounts/corporate/create-bulk</div>
-            <div className="text-blue-600">/api/v1/corporate/bulk-accounts</div>
-          </div>
-        </Card>
-      )}
+      </form>
     </Card>
   );
 }
