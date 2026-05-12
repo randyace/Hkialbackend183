@@ -113,10 +113,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
     { id: 2,  accountNo: 'ACC-2024-1002', name: 'Mary Johnson',    type: 'Individual',    email: 'mary.johnson@email.com',     phone: '+852 9111 0002', membershipType: 'Platinum', membershipExpiry: '2027-03-31', status: 'Active',    totalBookings: 18, createdDate: '2024-02-10' },
     { id: 3,  accountNo: 'ACC-2024-1003', name: 'David Lee',       type: 'Individual',    email: 'david.lee@email.com',        phone: '+852 9111 0003', membershipType: 'Sapphire', membershipExpiry: '2025-09-30', status: 'Active',    totalBookings: 7,  createdDate: '2024-03-05' },
     { id: 4,  accountNo: 'ACC-2024-1004', name: 'HSBC Group',      type: 'Corporate',     email: 'admin@hsbc-vip.com',         phone: '+852 9111 0004', status: 'Active',    totalBookings: 112, createdDate: '2023-07-01', company: 'HSBC' },
-    { id: 5,  accountNo: 'ACC-2024-1005', name: 'EGL Tours Ltd',   type: 'Travel Agency', email: 'ops@egltours.com',           phone: '+852 9111 0005', status: 'Active',    totalBookings: 67,  createdDate: '2023-09-15', company: 'EGL Tours' },
+    { id: 5,  accountNo: 'ACC-2024-1005', name: 'EGL Tours Ltd',   type: 'Agency', email: 'ops@egltours.com',           phone: '+852 9111 0005', status: 'Active',    totalBookings: 67,  createdDate: '2023-09-15', company: 'EGL Tours' },
     { id: 6,  accountNo: 'ACC-2024-1006', name: 'Sarah Chen',      type: 'Individual',    email: 'sarah.chen@email.com',       phone: '+852 9111 0006', membershipType: 'Diamond',  membershipExpiry: '2027-06-30', status: 'Active',    totalBookings: 41, createdDate: '2023-11-20' },
     { id: 7,  accountNo: 'ACC-2024-1007', name: 'Robert Wang',     type: 'Individual',    email: 'robert.wang@email.com',      phone: '+852 9111 0007', membershipType: 'Gold',     membershipExpiry: '2026-08-31', status: 'Inactive',  totalBookings: 9,  createdDate: '2024-01-28' },
-    { id: 8,  accountNo: 'ACC-2024-1008', name: 'Wing On Travel',  type: 'Travel Agency', email: 'booking@wingontravel.com',   phone: '+852 9111 0008', status: 'Active',    totalBookings: 53,  createdDate: '2023-06-10', company: 'Wing On Travel' },
+    { id: 8,  accountNo: 'ACC-2024-1008', name: 'Wing On Travel',  type: 'Agency', email: 'booking@wingontravel.com',   phone: '+852 9111 0008', status: 'Active',    totalBookings: 53,  createdDate: '2023-06-10', company: 'Wing On Travel' },
     { id: 9,  accountNo: 'ACC-2024-1009', name: 'Cathay Pacific',  type: 'Corporate',     email: 'vip@cathaypacific.com',      phone: '+852 9111 0009', status: 'Active',    totalBookings: 204, createdDate: '2022-12-01', company: 'Cathay Pacific' },
     { id: 10, accountNo: 'ACC-2024-1010', name: 'Emma Wilson',     type: 'Individual',    email: 'emma.wilson@email.com',      phone: '+852 9111 0010', membershipType: 'Sapphire', membershipExpiry: '2026-06-30', status: 'Active',    totalBookings: 5,  createdDate: '2024-04-18' },
   ];
@@ -3947,7 +3947,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
           {selectedCustomer && (() => {
             const today = new Date().toISOString().split('T')[0];
             const isMember = selectedCustomer.type === 'Individual' && !!selectedCustomer.membershipExpiry && selectedCustomer.membershipExpiry >= today;
-            const typeBadgeColor: Record<string, string> = { 'Individual': 'bg-blue-100 text-blue-800', 'Corporate': 'bg-purple-100 text-purple-800', 'Travel Agency': 'bg-orange-100 text-orange-800' };
+            const typeBadgeColor: Record<string, string> = { 'Individual': 'bg-blue-100 text-blue-800', 'Corporate': 'bg-purple-100 text-purple-800', 'Agency': 'bg-orange-100 text-orange-800' };
 
             // ── Mock detailed data ──────────────────────────────────────────
             const isIndividual = selectedCustomer.type === 'Individual';

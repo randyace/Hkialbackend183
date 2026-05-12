@@ -12,7 +12,7 @@ import {
 
 // ─── Shared Types (exported for PurchaseManagement) ───────────────────────────
 
-export type PurchaseCategory = 'Individual' | 'Corporate' | 'Travel Agency';
+export type PurchaseCategory = 'Individual' | 'Corporate' | 'Agency';
 export type Tier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 export type TierOrNone = Tier | 'None';
 export type PaymentMethod = 'Bank Transfer' | 'Branch Transfer' | 'Corporate Account';
@@ -102,9 +102,9 @@ export const MOCK_ACCOUNTS: AccountOption[] = [
   { accountNumber: 'CORP-2024-0002', primaryName: 'HSBC Hong Kong',         email: 'brian.wong@hsbc.com',         purchaseCategory: 'Corporate',     contactPerson: 'Brian Wong',   currentSessions: 0  },
   { accountNumber: 'CORP-2024-0003', primaryName: 'Jardine Matheson',        email: 'carol.chan@jardine.com',      purchaseCategory: 'Corporate',     contactPerson: 'Carol Chan',   currentSessions: 18 },
   { accountNumber: 'CORP-2024-0004', primaryName: 'AIA Group',               email: 'david.ho@aia.com',            purchaseCategory: 'Corporate',     contactPerson: 'David Ho',     currentSessions: 3  },
-  { accountNumber: 'TA-2024-0001',   primaryName: 'Wings Travel Agency',     email: 'eric.ng@wingstravel.hk',      purchaseCategory: 'Travel Agency', contactPerson: 'Eric Ng',      currentSessions: 12 },
-  { accountNumber: 'TA-2024-0002',   primaryName: 'Pacific World Travel',    email: 'fiona@pacificworld.hk',       purchaseCategory: 'Travel Agency', contactPerson: 'Fiona Cheung', currentSessions: 0  },
-  { accountNumber: 'TA-2024-0003',   primaryName: 'Fortune Travel Group',    email: 'gary.tsang@fortunetravel.com',purchaseCategory: 'Travel Agency', contactPerson: 'Gary Tsang',   currentSessions: 7  },
+  { accountNumber: 'TA-2024-0001',   primaryName: 'Wings Travel Agency',     email: 'eric.ng@wingstravel.hk',      purchaseCategory: 'Agency', contactPerson: 'Eric Ng',      currentSessions: 12 },
+  { accountNumber: 'TA-2024-0002',   primaryName: 'Pacific World Travel',    email: 'fiona@pacificworld.hk',       purchaseCategory: 'Agency', contactPerson: 'Fiona Cheung', currentSessions: 0  },
+  { accountNumber: 'TA-2024-0003',   primaryName: 'Fortune Travel Group',    email: 'gary.tsang@fortunetravel.com',purchaseCategory: 'Agency', contactPerson: 'Gary Tsang',   currentSessions: 7  },
 ];
 
 export const INITIAL_RECORDS: PurchaseRecord[] = [
@@ -114,10 +114,10 @@ export const INITIAL_RECORDS: PurchaseRecord[] = [
   { id: 4,   purchaseRef: 'PKG-2024-00004',  purchaseDate: '2024-08-18', purchaseCategory: 'Individual',    accountNumber: 'ACC-2024-1007',  primaryName: 'Emma Wilson',           primaryEmail: 'emma.wilson@email.com',       previousTier: 'Platinum',newTier: 'Diamond',  creditsAdded: 55,  totalCreditsAfter: 60,  packagePrice: 6800,  paymentMethod: 'Credit Card',      transactionRef: 'TXN-CC-77820',  processedBy: 'HKIAL Staff', notes: 'VIP upgrade requested.',            expiryDate: '2025-08-18', status: 'Invoice Sent', invoiceSentDate: '2024-08-18' },
   { id: 5,   purchaseRef: 'PKG-2024-00005',  purchaseDate: '2024-12-01', purchaseCategory: 'Individual',    accountNumber: 'ACC-2024-1009',  primaryName: 'James Brown',           primaryEmail: 'james.brown@email.com',       previousTier: 'None',    newTier: 'Gold',     creditsAdded: 8,   totalCreditsAfter: 8,   packagePrice: 32000, paymentMethod: 'Cash',             transactionRef: 'TXN-CASH-0312', processedBy: 'HKIAL Staff', notes: '',                                  expiryDate: '2025-12-01', status: 'Pending Invoice' },
   { id: 101, purchaseRef: 'BULK-2024-00001', purchaseDate: '2024-11-10', purchaseCategory: 'Corporate',     accountNumber: 'CORP-2024-0001', primaryName: 'Cathay Pacific Airways', primaryEmail: 'alice.lam@cathaypacific.com', bundleLabel: 'Standard Bundle',  sessionsAdded: 20,  totalSessionsAfter: 20,  packagePrice: 7000,  paymentMethod: 'Corporate Account',transactionRef: 'TXN-CA-10011',  processedBy: 'HKIAL Staff', notes: 'Annual corporate package.',         expiryDate: '2025-11-10', status: 'Invoice Sent', invoiceSentDate: '2024-11-10' },
-  { id: 102, purchaseRef: 'BULK-2024-00002', purchaseDate: '2024-10-05', purchaseCategory: 'Travel Agency', accountNumber: 'TA-2024-0001',   primaryName: 'Wings Travel Agency',   primaryEmail: 'eric.ng@wingstravel.hk',      bundleLabel: 'Business Bundle',  sessionsAdded: 50,  totalSessionsAfter: 50,  packagePrice: 16000, paymentMethod: 'Bank Transfer',    transactionRef: 'TXN-BT-20045',  processedBy: 'HKIAL Staff', notes: '',                                  expiryDate: '2025-10-05', status: 'Invoice Sent', invoiceSentDate: '2024-10-05' },
+  { id: 102, purchaseRef: 'BULK-2024-00002', purchaseDate: '2024-10-05', purchaseCategory: 'Agency', accountNumber: 'TA-2024-0001',   primaryName: 'Wings Travel Agency',   primaryEmail: 'eric.ng@wingstravel.hk',      bundleLabel: 'Business Bundle',  sessionsAdded: 50,  totalSessionsAfter: 50,  packagePrice: 16000, paymentMethod: 'Bank Transfer',    transactionRef: 'TXN-BT-20045',  processedBy: 'HKIAL Staff', notes: '',                                  expiryDate: '2025-10-05', status: 'Invoice Sent', invoiceSentDate: '2024-10-05' },
   { id: 103, purchaseRef: 'BULK-2024-00003', purchaseDate: '2024-09-20', purchaseCategory: 'Corporate',     accountNumber: 'CORP-2024-0003', primaryName: 'Jardine Matheson',       primaryEmail: 'carol.chan@jardine.com',       bundleLabel: 'Enterprise Bundle', sessionsAdded: 100, totalSessionsAfter: 100, packagePrice: 28000, paymentMethod: 'Bank Transfer',    transactionRef: 'TXN-BT-19900',  processedBy: 'HKIAL Staff', notes: 'Enterprise deal — 2-year validity.',expiryDate: '2026-09-20', status: 'Invoice Sent', invoiceSentDate: '2024-09-21' },
   { id: 104, purchaseRef: 'BULK-2025-00004', purchaseDate: '2025-02-20', purchaseCategory: 'Corporate',     accountNumber: 'CORP-2024-0002', primaryName: 'HSBC Hong Kong',         primaryEmail: 'brian.wong@hsbc.com',          bundleLabel: 'Basic Bundle',     sessionsAdded: 10,  totalSessionsAfter: 10,  packagePrice: 3800,  paymentMethod: 'Corporate Account',transactionRef: 'TXN-CA-30012',  processedBy: 'HKIAL Staff', notes: '',                                  expiryDate: '2025-08-20', status: 'Pending Invoice' },
-  { id: 105, purchaseRef: 'BULK-2025-00005', purchaseDate: '2025-02-22', purchaseCategory: 'Travel Agency', accountNumber: 'TA-2024-0002',   primaryName: 'Pacific World Travel',  primaryEmail: 'fiona@pacificworld.hk',        bundleLabel: 'Standard Bundle',  sessionsAdded: 20,  totalSessionsAfter: 20,  packagePrice: 7000,  paymentMethod: 'Bank Transfer',    transactionRef: 'TXN-BT-50023',  processedBy: 'HKIAL Staff', notes: 'New agency onboarding bundle.',     expiryDate: '2026-02-22', status: 'Pending Invoice' },
+  { id: 105, purchaseRef: 'BULK-2025-00005', purchaseDate: '2025-02-22', purchaseCategory: 'Agency', accountNumber: 'TA-2024-0002',   primaryName: 'Pacific World Travel',  primaryEmail: 'fiona@pacificworld.hk',        bundleLabel: 'Standard Bundle',  sessionsAdded: 20,  totalSessionsAfter: 20,  packagePrice: 7000,  paymentMethod: 'Bank Transfer',    transactionRef: 'TXN-BT-50023',  processedBy: 'HKIAL Staff', notes: 'New agency onboarding bundle.',     expiryDate: '2026-02-22', status: 'Pending Invoice' },
 ];
 
 // ─── Shared UI Helpers (exported) ─────────────────────────────────────────────
@@ -245,7 +245,7 @@ export function PurchaseCreate({
   };
 
   const isIndividual = selectedAccount?.purchaseCategory === 'Individual';
-  const isTravelAgency = selectedAccount?.purchaseCategory === 'Travel Agency';
+  const isTravelAgency = selectedAccount?.purchaseCategory === 'Agency';
   const isCorporate = selectedAccount?.purchaseCategory === 'Corporate';
   
   const canConfirm = selectedAccount 
@@ -352,7 +352,7 @@ export function PurchaseCreate({
         id: newId,
         purchaseRef: `BULK-2025-${String(newId).padStart(5, '0')}`,
         purchaseDate: today,
-        purchaseCategory: 'Travel Agency',
+        purchaseCategory: 'Agency',
         accountNumber: selectedAccount.accountNumber,
         primaryName: selectedAccount.primaryName,
         primaryEmail: selectedAccount.email,
@@ -460,7 +460,7 @@ export function PurchaseCreate({
 
             {/* Type filter pills */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {(['all', 'Individual', 'Corporate', 'Travel Agency'] as const).map(cat => (
+              {(['all', 'Individual', 'Corporate', 'Agency'] as const).map(cat => (
                 <button
                   key={cat}
                   onClick={() => setCatFilter(cat)}

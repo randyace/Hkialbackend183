@@ -25,7 +25,7 @@ import {
 // ── MOCK agency (isolated — container replaces via props) ─────────────────────
 const MOCK_AGENCY: TravelAgency = {
   id: 1,
-  agencyName: 'Wings Travel Agency',
+  agencyName: 'Wings Agency',
   agencyCode: 'TA-WG-001',
   contactPerson: 'Alice Chan',
   email: 'alice.chan@wingstravel.hk',
@@ -181,7 +181,7 @@ export function TravelAgencyDetail({
     agencyProp !== undefined ? agencyProp :
     agencyId ? {
       id: agencyId,
-      agencyName: 'Wings Travel Agency',
+      agencyName: 'Wings Agency',
       agencyCode: 'TA-WG-001',
       contactPerson: 'Eric Ng',
       email: 'eric.ng@wingstravel.hk',
@@ -269,9 +269,9 @@ export function TravelAgencyDetail({
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1>{isEditMode ? 'Edit Travel Agency' : 'Create New Travel Agency'}</h1>
+          <h1>{isEditMode ? 'Edit Agency' : 'Create New Agency'}</h1>
           <p className="text-gray-600">
-            {isEditMode ? 'Edit the details of the travel agency' : 'Enter the details of the new travel agency'}
+            {isEditMode ? 'Edit the details of the agency' : 'Enter the details of the new agency'}
           </p>
         </div>
         <div className="ml-auto">
@@ -292,7 +292,7 @@ export function TravelAgencyDetail({
         <form className="space-y-6">
           {/* Agency Information Section */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Travel Agency Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Agency Information</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label>Agency Name</label>
@@ -300,7 +300,7 @@ export function TravelAgencyDetail({
                   type="text"
                   defaultValue={agency?.agencyName}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., Wings Travel Agency"
+                  placeholder="e.g., Wings Agency"
                 />
               </div>
               <div>

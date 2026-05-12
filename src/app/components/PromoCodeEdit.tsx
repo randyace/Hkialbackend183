@@ -13,7 +13,7 @@ import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
 // ─── Get available contracts ──────────────────────────────────────────────────
 function getAvailableContracts(): PurchaseRecord[] {
   return INITIAL_RECORDS.filter(r =>
-    r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Travel Agency'
+    r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Agency'
   );
 }
 
@@ -137,7 +137,7 @@ export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: Pr
 
     const contract = selectedContract;
     const isCorporateOrTA = contract &&
-      (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Travel Agency');
+      (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Agency');
 
     toast.success('Promo code batch saved successfully!', {
       description: 'Batch record created. Generating unique codes…',
@@ -159,7 +159,7 @@ export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: Pr
         prefix,
         codes: generatedCodes,
         companyName: contract?.primaryName,
-        purchaseCategory: contract?.purchaseCategory as 'Corporate' | 'Travel Agency' | undefined,
+        purchaseCategory: contract?.purchaseCategory as 'Corporate' | 'Agency' | undefined,
         mode: 'generate',
         // pass full form state through so container can call batch API
         codeType,
@@ -186,7 +186,7 @@ export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: Pr
       prefix,
       codes: generatedCodes,
       companyName: selectedContract?.primaryName,
-      purchaseCategory: selectedContract?.purchaseCategory as 'Corporate' | 'Travel Agency' | undefined,
+      purchaseCategory: selectedContract?.purchaseCategory as 'Corporate' | 'Agency' | undefined,
       mode: 'view',
     });
   };

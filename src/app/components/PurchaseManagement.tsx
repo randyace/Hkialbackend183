@@ -76,7 +76,7 @@ export function PurchaseManagement({
     const matchTab =
       activeTab === 'all' ||
       (activeTab === 'individual' && r.purchaseCategory === 'Individual') ||
-      (activeTab === 'corporate'  && (r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Travel Agency'));
+      (activeTab === 'corporate'  && (r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Agency'));
     const matchSearch = !searchTerm ||
       r.primaryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.accountNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -96,7 +96,7 @@ export function PurchaseManagement({
   const pendingCount = records.filter(r => r.status === 'Pending Invoice').length;
   const indivCount   = records.filter(r => r.purchaseCategory === 'Individual').length;
   const corpCount    = records.filter(r => r.purchaseCategory === 'Corporate').length;
-  const taCount      = records.filter(r => r.purchaseCategory === 'Travel Agency').length;
+  const taCount      = records.filter(r => r.purchaseCategory === 'Agency').length;
 
   // ── Tab helpers ──────────────────────────────────────────────────────────────
 
@@ -275,7 +275,7 @@ export function PurchaseManagement({
                 <SelectItem value="all">{activeTab === 'all' ? 'All Account Types' : 'All Types'}</SelectItem>
                 {activeTab === 'all' && <SelectItem value="Individual">Individual</SelectItem>}
                 <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+                <SelectItem value="Agency">Agency</SelectItem>
               </SelectContent>
             </Select>
           )}

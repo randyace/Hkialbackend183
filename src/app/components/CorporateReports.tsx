@@ -25,14 +25,14 @@ const COMPANY_SUMMARY = [
   { company: 'Jardine Matheson',       type: 'Corporate',     totalSessions: 100, used: 82, utilPct: 82,  revenue: 504000, lastBooking: '2025-02-20' },
   { company: 'HSBC Hong Kong',         type: 'Corporate',     totalSessions: 10,  used: 3,  utilPct: 30,  revenue: 9000,   lastBooking: '2025-01-15' },
   { company: 'AIA Group',              type: 'Corporate',     totalSessions: 10,  used: 7,  utilPct: 70,  revenue: 30000,  lastBooking: '2025-02-10' },
-  { company: 'Wings Travel Agency',    type: 'Travel Agency', totalSessions: 50,  used: 38, utilPct: 76,  revenue: 192000, lastBooking: '2025-02-19' },
-  { company: 'Fortune Travel Group',   type: 'Travel Agency', totalSessions: 50,  used: 43, utilPct: 86,  revenue: 220000, lastBooking: '2025-02-21' },
-  { company: 'Pacific World Travel',   type: 'Travel Agency', totalSessions: 20,  used: 0,  utilPct: 0,   revenue: 0,      lastBooking: '—'          },
+  { company: 'Wings Travel Agency',    type: 'Agency', totalSessions: 50,  used: 38, utilPct: 76,  revenue: 192000, lastBooking: '2025-02-19' },
+  { company: 'Fortune Travel Group',   type: 'Agency', totalSessions: 50,  used: 43, utilPct: 86,  revenue: 220000, lastBooking: '2025-02-21' },
+  { company: 'Pacific World Travel',   type: 'Agency', totalSessions: 20,  used: 0,  utilPct: 0,   revenue: 0,      lastBooking: '—'          },
 ];
 
 const PIE_DATA = [
   { name: 'Corporate',     value: 107, color: '#3b82f6' },
-  { name: 'Travel Agency', value: 81,  color: '#8b5cf6' },
+  { name: 'Agency', value: 81,  color: '#8b5cf6' },
 ];
 
 const REVENUE_TREND = [
@@ -116,7 +116,7 @@ export function CorporateReports({
           <SelectContent>
             <SelectItem value="all">All Account Types</SelectItem>
             <SelectItem value="Corporate">Corporate Only</SelectItem>
-            <SelectItem value="Travel Agency">Travel Agency Only</SelectItem>
+            <SelectItem value="Agency">Agency Only</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -187,7 +187,7 @@ export function CorporateReports({
 
       {/* Revenue Trend */}
       <Card className="p-4 mb-6">
-        <p className="text-sm text-gray-700 mb-4">Revenue Trend — Corporate vs Travel Agency (HKD)</p>
+        <p className="text-sm text-gray-700 mb-4">Revenue Trend — Corporate vs Agency (HKD)</p>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={displayTrend} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -196,7 +196,7 @@ export function CorporateReports({
             <Tooltip formatter={(v: number) => `HKD ${v.toLocaleString()}`} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Line type="monotone" dataKey="corporate" name="Corporate"     stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-            <Line type="monotone" dataKey="agency"    name="Travel Agency" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="agency"    name="Agency" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} />
           </LineChart>
         </ResponsiveContainer>
       </Card>
@@ -226,7 +226,7 @@ export function CorporateReports({
                   <TableCell>
                     {c.type === 'Corporate'
                       ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />Corporate</span>
-                      : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Travel Agency</span>}
+                      : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Agency</span>}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">{c.used}/{c.totalSessions}</TableCell>
                   <TableCell>

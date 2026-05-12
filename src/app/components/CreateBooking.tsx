@@ -157,7 +157,7 @@ export function CreateBooking({
 }: CreateBookingProps = {}) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
-  const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Travel Agency' | ''>('');
+  const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');
   const [accountNumber, setAccountNumber] = useState('');
   const [guestName, setGuestName] = useState('');
   const [selectedAgencyCode, setSelectedAgencyCode] = useState('');
@@ -420,7 +420,7 @@ export function CreateBooking({
   const paymentModeOptions = (): PaymentMode[] => {
     if (accountType === 'Individual')    return ['Upfront', 'Net Upfront'];
     if (accountType === 'Corporate')     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
-    if (accountType === 'Travel Agency') return ['Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
+    if (accountType === 'Agency') return ['Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
   };
 
@@ -469,7 +469,7 @@ export function CreateBooking({
           <div className="mb-6">
             <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Type <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-3 gap-4">
-              {(['Individual', 'Corporate', 'Travel Agency'] as const).map(type => (
+              {(['Individual', 'Corporate', 'Agency'] as const).map(type => (
                 <button key={type} type="button"
                   onClick={() => { setAccountType(type); setSelectedAgencyCode(''); setMembershipTier(''); setCompanyName(''); setPaymentMode(''); }}
                   className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center ${accountType === type ? 'border-[#0f2942] bg-[#0f2942]/5 text-[#0f2942]' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
@@ -477,20 +477,20 @@ export function CreateBooking({
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm ${accountType === type ? 'bg-[#0f2942] text-white' : 'bg-gray-100 text-gray-500'}`}>
                     {type === 'Individual' && <User className="w-5 h-5" />}
                     {type === 'Corporate' && <Building2 className="w-5 h-5" />}
-                    {type === 'Travel Agency' && <Plane className="w-5 h-5" />}
+                    {type === 'Agency' && <Plane className="w-5 h-5" />}
                   </div>
                   <span className="text-sm font-medium">{type}</span>
-                  {type === 'Travel Agency' && <span className="text-xs text-green-600 flex items-center gap-1"><BadgePercent className="w-3 h-3" />Discount auto-applies</span>}
+                  {type === 'Agency' && <span className="text-xs text-green-600 flex items-center gap-1"><BadgePercent className="w-3 h-3" />Discount auto-applies</span>}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Travel Agency Selector */}
-          {accountType === 'Travel Agency' && (
+          {accountType === 'Agency' && (
             <div className="mb-6 space-y-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Select Travel Agency <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Select Agency <span className="text-red-500">*</span></label>
                 <Select value={selectedAgencyCode} onValueChange={setSelectedAgencyCode}>
                   <SelectTrigger><SelectValue placeholder="— Choose a travel agency —" /></SelectTrigger>
                   <SelectContent>

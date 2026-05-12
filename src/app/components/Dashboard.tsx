@@ -57,7 +57,7 @@ export type PaymentStatus =
 
 export type ApprovalType     = 'New' | 'Edit' | 'Cancel';
 export type ApprovalPriority = 'urgent' | 'normal';
-export type AccountType      = 'Individual' | 'Corporate' | 'Travel Agency';
+export type AccountType      = 'Individual' | 'Corporate' | 'Agency';
 
 // ─── Data Interfaces ──────────────────────────────────────────────────────────
 

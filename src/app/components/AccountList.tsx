@@ -23,7 +23,7 @@ import {
 interface Account {
   id: number;
   accountNumber: string;
-  type: 'Individual' | 'Corporate' | 'Travel Agency';
+  type: 'Individual' | 'Corporate' | 'Agency';
   name: string;
   email: string;
   phone: string;
@@ -228,7 +228,7 @@ export function AccountList({
                 <SelectItem value="Individual">Individual</SelectItem>
                 <SelectItem value="Member">Member</SelectItem>
                 <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+                <SelectItem value="Agency">Agency</SelectItem>
               </SelectContent>
             </Select>
           </div>

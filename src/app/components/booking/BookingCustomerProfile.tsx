@@ -39,7 +39,7 @@ const prefCategoryColor  = (c: string) => ({ 'Seating': 'bg-blue-100 text-blue-7
 const TYPE_BADGE: Record<string, string> = {
   Individual: 'bg-blue-100 text-blue-800',
   Corporate: 'bg-purple-100 text-purple-800',
-  'Travel Agency': 'bg-orange-100 text-orange-800',
+  'Agency': 'bg-orange-100 text-orange-800',
 };
 
 export function BookingCustomerProfile({ open, onClose, customer }: BookingCustomerProfileProps) {

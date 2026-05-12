@@ -12,7 +12,7 @@ import {
 import { Search, Plus, Eye, Edit, Building2, Plane, Phone, Mail, FileText, Calendar, Users, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
-type AccountType = 'Corporate' | 'Travel Agency';
+type AccountType = 'Corporate' | 'Agency';
 
 interface Contact {
   name: string;
@@ -105,7 +105,7 @@ const MOCK_PROFILES: CompanyProfile[] = [
     ],
   },
   {
-    id: 4, accountNumber: 'TA-2024-0001', companyName: 'Wings Travel Agency', accountType: 'Travel Agency',
+    id: 4, accountNumber: 'TA-2024-0001', companyName: 'Wings Travel Agency', accountType: 'Agency',
     industry: 'Travel & Tourism', country: 'Hong Kong', address: 'Unit 5A, 22/F Tower 1, Times Square',
     website: 'www.wingstravel.hk', status: 'Active', creditBalance: 32000, currentSessions: 12,
     totalSessionsAllotted: 50, joinedDate: '2024-04-10', notes: 'High-volume agency. Monthly billing.',
@@ -120,7 +120,7 @@ const MOCK_PROFILES: CompanyProfile[] = [
     ],
   },
   {
-    id: 5, accountNumber: 'TA-2024-0002', companyName: 'Pacific World Travel', accountType: 'Travel Agency',
+    id: 5, accountNumber: 'TA-2024-0002', companyName: 'Pacific World Travel', accountType: 'Agency',
     industry: 'Travel & Tourism', country: 'Hong Kong', address: '12/F Hennessy Centre, 500 Hennessy Rd',
     website: 'www.pacificworld.hk', status: 'Pending', creditBalance: 7000, currentSessions: 0,
     totalSessionsAllotted: 20, joinedDate: '2025-02-22', notes: 'Newly onboarded. Invoice pending.',
@@ -194,7 +194,7 @@ export function CorporateProfiles({
         <Card className="p-4 bg-[#0f2942] text-white"><p className="text-xs text-blue-200 mb-1">Total Profiles</p><p className="text-2xl text-white">{profiles.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Active</p><p className="text-2xl text-green-600">{profiles.filter(p => p.status === 'Active').length}</p></Card>
         <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Corporate</p><p className="text-2xl text-blue-600">{profiles.filter(p => p.accountType === 'Corporate').length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Travel Agency</p><p className="text-2xl text-purple-600">{profiles.filter(p => p.accountType === 'Travel Agency').length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Agency</p><p className="text-2xl text-purple-600">{profiles.filter(p => p.accountType === 'Agency').length}</p></Card>
       </div>
 
       {/* Filters */}
@@ -210,7 +210,7 @@ export function CorporateProfiles({
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+              <SelectItem value="Agency">Agency</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>

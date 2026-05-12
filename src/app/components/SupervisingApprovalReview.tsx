@@ -28,7 +28,7 @@ export interface SupervisingBooking {
   requestType: 'New Booking' | 'Edit Booking' | 'Cancellation';
   guestName: string;
   accountNo: string;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   membershipTier?: 'Sapphire' | 'Diamond' | 'Platinum' | 'Gold';
   companyName?: string;
   agencyName?: string;
@@ -71,7 +71,7 @@ export interface SupervisingBooking {
 const accountTypeBadgeClass = (type: SupervisingBooking['accountType']) => {
   if (type === 'Individual')    return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
   if (type === 'Corporate')     return 'bg-blue-100 text-blue-800 border border-blue-200';
-  if (type === 'Travel Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
+  if (type === 'Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
   return 'bg-gray-100 text-gray-700';
 };
 

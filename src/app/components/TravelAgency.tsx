@@ -171,12 +171,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>Travel Agency Management</h1>
-          <p className="text-gray-600">Manage travel agency partnerships and credit accounts</p>
+          <h1>Agency Management</h1>
+          <p className="text-gray-600">Manage agency partnerships and credit accounts</p>
         </div>
         <Button type="button" onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Travel Agency
+          Add Agency
         </Button>
       </div>
 
@@ -461,9 +461,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingAgency ? 'Edit Travel Agency' : 'Add New Travel Agency'}</DialogTitle>
+            <DialogTitle>{editingAgency ? 'Edit Agency' : 'Add New Agency'}</DialogTitle>
             <DialogDescription>
-              {editingAgency ? 'Update travel agency information' : 'Create a new travel agency partnership'}
+              {editingAgency ? 'Update agency information' : 'Create a new agency partnership'}
             </DialogDescription>
           </DialogHeader>
           

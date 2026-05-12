@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Search, Building2, Plane, AlertTriangle, CheckCircle, XCircle, TrendingDown, ChevronDown, ChevronRight, FileText, Calendar, Edit2 } from 'lucide-react';
 
-type AccountType = 'Corporate' | 'Travel Agency' | 'Individual';
+type AccountType = 'Corporate' | 'Agency' | 'Individual';
 
 interface Contract {
   id: string;
@@ -82,7 +82,7 @@ const MOCK_ACCOUNTS: Account[] = [
     id: 5,
     accountNumber: 'TA-2024-0001',
     name: 'Wings Travel Agency',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     contactEmail: 'eric.ng@wingstravel.hk',
     contracts: [
       { id: 'C5-1', contractNumber: 'CT-2024-0045', offerName: 'Business Credit Account', purchaseDate: '2024-04-05', startDate: '2024-04-10', expiryDate: '2025-10-05', creditLimit: 160000, creditUsed: 121600, status: 'Active', notes: 'High-volume travel agency' },
@@ -93,7 +93,7 @@ const MOCK_ACCOUNTS: Account[] = [
     id: 6,
     accountNumber: 'TA-2024-0002',
     name: 'Pacific World Travel',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     contactEmail: 'fiona@pacificworld.hk',
     contracts: [
       { id: 'C6-1', contractNumber: 'CT-2025-0022', offerName: 'Standard Credit Account', purchaseDate: '2025-02-22', startDate: '2025-02-22', expiryDate: '2026-02-22', creditLimit: 70000, creditUsed: 0, status: 'Active', notes: 'New agency onboarding' }
@@ -103,7 +103,7 @@ const MOCK_ACCOUNTS: Account[] = [
     id: 7,
     accountNumber: 'TA-2024-0003',
     name: 'Fortune Travel Group',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     contactEmail: 'gary.tsang@fortunetravel.com',
     contracts: [
       { id: 'C7-1', contractNumber: 'CT-2024-0033', offerName: 'Business Credit Account', purchaseDate: '2024-01-01', startDate: '2024-01-01', expiryDate: '2025-07-01', creditLimit: 160000, creditUsed: 137600, status: 'Expiring Soon', notes: 'Renewal pending' },
@@ -418,7 +418,7 @@ export function BalanceTracker({
   };
 
   const calculateAccountTotals = (account: Account) => {
-    if (account.accountType === 'Travel Agency') {
+    if (account.accountType === 'Agency') {
       const totalCredit = account.contracts.reduce((sum, c) => sum + (c.creditLimit || 0), 0);
       const usedCredit = account.contracts.reduce((sum, c) => sum + (c.creditUsed || 0), 0);
       return { total: totalCredit, used: usedCredit };
@@ -491,14 +491,14 @@ export function BalanceTracker({
   }).length;
 
   const totalSessions = MOCK_ACCOUNTS
-    .filter(a => a.accountType !== 'Travel Agency')
+    .filter(a => a.accountType !== 'Agency')
     .reduce((sum, acc) => {
       const totals = calculateAccountTotals(acc);
       return sum + totals.total;
     }, 0);
   
   const usedSessions = MOCK_ACCOUNTS
-    .filter(a => a.accountType !== 'Travel Agency')
+    .filter(a => a.accountType !== 'Agency')
     .reduce((sum, acc) => {
       const totals = calculateAccountTotals(acc);
       return sum + totals.used;
@@ -556,7 +556,7 @@ export function BalanceTracker({
               <SelectContent>
                 <SelectItem value="all">All Account Types</SelectItem>
                 <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+                <SelectItem value="Agency">Agency</SelectItem>
                 <SelectItem value="Individual">Individual</SelectItem>
               </SelectContent>
             </Select>
@@ -648,8 +648,8 @@ export function BalanceTracker({
                     <TableCell>
                       {account.accountType === 'Corporate'
                         ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800"><Building2 className="w-3 h-3" />Corporate</span>
-                        : account.accountType === 'Travel Agency'
-                          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800"><Plane className="w-3 h-3" />Travel Agency</span>
+                        : account.accountType === 'Agency'
+                          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800"><Plane className="w-3 h-3" />Agency</span>
                           : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800">Individual</span>}
                     </TableCell>
                     <TableCell>
@@ -657,12 +657,12 @@ export function BalanceTracker({
                       <span className="text-xs text-gray-500 ml-1">active</span>
                     </TableCell>
                     <TableCell>
-                      {account.accountType === 'Travel Agency'
+                      {account.accountType === 'Agency'
                         ? <CreditBar used={totals.used} total={totals.total} />
                         : <SessionBar used={totals.used} total={totals.total} />}
                     </TableCell>
                     <TableCell className="text-sm text-gray-700">
-                      {account.accountType === 'Travel Agency'
+                      {account.accountType === 'Agency'
                         ? `HKD ${totals.used.toLocaleString()}/HKD ${totals.total.toLocaleString()}`
                         : `${totals.used}/${totals.total}`}
                     </TableCell>
@@ -711,7 +711,7 @@ export function BalanceTracker({
 
                             {/* Balance */}
                             <div className="col-span-3">
-                              {account.accountType === 'Travel Agency' ? (
+                              {account.accountType === 'Agency' ? (
                                 <>
                                   <p className="text-xs text-gray-500 mb-1">Credit Balance</p>
                                   <CreditBar used={contract.creditUsed || 0} total={contract.creditLimit || 0} />
@@ -782,7 +782,7 @@ export function BalanceTracker({
               />
             </div>
 
-            {editingContract?.accountType === 'Travel Agency' ? (
+            {editingContract?.accountType === 'Agency' ? (
               <>
                 <div>
                   <Label className="mb-[10px] block">Credit Limit (HKD) *</Label>

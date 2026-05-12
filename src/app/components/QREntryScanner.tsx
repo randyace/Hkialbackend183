@@ -42,7 +42,7 @@ interface ScheduleBooking {
   flightTime: string;
   numberOfGuests: number;
   status: BookingStatus;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   paymentMode: 'Upfront' | 'On-Credit';
   amount: string;
 }

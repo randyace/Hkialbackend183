@@ -53,7 +53,7 @@ interface POSBooking {
   // Member Details
   memberName: string;
   accountNo: string;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   membershipTier: 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
   email: string;
   phone: string;

@@ -26,7 +26,7 @@ export interface GeneratedCodesData {
   prefix: string;
   codes: string[];
   companyName?: string;
-  purchaseCategory?: 'Corporate' | 'Travel Agency';
+  purchaseCategory?: 'Corporate' | 'Agency';
   mode: 'generate' | 'view';
 }
 

@@ -50,7 +50,7 @@ interface Booking {
   hasLimousine?: boolean;
   hasShopping?: boolean;
   cutoffHours?: number;
-  accountType?: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType?: 'Individual' | 'Corporate' | 'Agency';
   paymentMode?: 'Upfront' | 'On-Credit';
   rejectionReason?: string;
   bookingType: 'Online' | 'Email/Call to HKIAL';
@@ -80,7 +80,7 @@ const generateMockBookings = (): Booking[] => {
   const airlines = ['CX', 'BA', 'NH', 'SQ', 'QF', 'EK', 'LH'];
   const origins = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA'];
   const destinations = ['TPE', 'ICN', 'BKK', 'SIN', 'NRT', 'PVG', 'KIX'];
-  const accountTypes: Booking['accountType'][] = ['Individual', 'Corporate', 'Travel Agency'];
+  const accountTypes: Booking['accountType'][] = ['Individual', 'Corporate', 'Agency'];
   const paymentModes: Booking['paymentMode'][] = ['Upfront', 'On-Credit'];
   const flightTypes: Booking['flightType'][] = ['Arrival', 'Departure', 'Transit'];
 
@@ -101,7 +101,7 @@ const generateMockBookings = (): Booking[] => {
 
     // Booking category based on account type
     let bookingCategory: Booking['bookingCategory'];
-    if (accountType === 'Travel Agency') {
+    if (accountType === 'Agency') {
       bookingCategory = 'Agent Booking';
     } else if (accountType === 'Corporate') {
       bookingCategory = 'Corporate Booking';
@@ -165,7 +165,7 @@ const generateMockBookings = (): Booking[] => {
     } else if (i % 19 === 0) {
       amount = 'Manual Adjustment';
     } else {
-      if (accountType === 'Travel Agency') {
+      if (accountType === 'Agency') {
         // Auto-apply the agency's default discount rate
         const agency = TRAVEL_AGENCY_DATA[i % TRAVEL_AGENCY_DATA.length];
         agencyName = agency.name;
@@ -258,7 +258,7 @@ const generateMockBookings = (): Booking[] => {
       bookingCategory: 'Agent Booking', status: 'Confirmed', paymentStatus: 'Paid',
       services: ['Limousine Transfer'], amount: 'HK$4,590',
       numberOfGuests: 3, nonFlyingGuests: 0, isAdHoc: false, hasLimousine: true, hasShopping: false,
-      accountType: 'Travel Agency', paymentMode: 'Upfront', bookingType: 'Email/Call to HKIAL',
+      accountType: 'Agency', paymentMode: 'Upfront', bookingType: 'Email/Call to HKIAL',
       agencyName: 'EGL Tours', agencyDiscountRate: 20, originalAmountValue: 5738, finalAmountValue: 4590,
     },
   ];
@@ -346,7 +346,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onExpo
     let matchesBookingCategory = true;
     if (bookingCategoryFilter !== 'all') {
       if (bookingCategoryFilter === 'Agent Booking') {
-        matchesBookingCategory = booking.accountType === 'Travel Agency';
+        matchesBookingCategory = booking.accountType === 'Agency';
       } else if (bookingCategoryFilter === 'Corporate Booking') {
         matchesBookingCategory = booking.accountType === 'Corporate';
       } else if (bookingCategoryFilter === 'Individual Booking') {

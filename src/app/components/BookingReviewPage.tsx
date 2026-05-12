@@ -21,7 +21,7 @@ interface PendingBooking {
   requestType: 'New Booking Request' | 'Edit Booking Request' | 'Cancel';
   guestName: string;
   accountNo: string;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   membershipTier?: 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
   companyName?: string;
   suite: string;
@@ -95,7 +95,7 @@ const FLIGHT_CLASSES = ['Economy Class', 'Business Class', 'First Class'] as con
 const accountTypeBadgeClass = (type: PendingBooking['accountType']) => {
   if (type === 'Individual')    return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
   if (type === 'Corporate')     return 'bg-blue-100 text-blue-800 border border-blue-200';
-  if (type === 'Travel Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
+  if (type === 'Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
   return 'bg-gray-100 text-gray-700';
 };
 
@@ -431,7 +431,7 @@ export function BookingReviewPage({
                 </Field>
               )}
               {booking.agencyName && (
-                <Field label="Travel Agency">
+                <Field label="Agency">
                   <div className="flex items-center gap-1.5">
                     <Building2 className="w-4 h-4 text-purple-500" />
                     <span>{booking.agencyName}</span>

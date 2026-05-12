@@ -18,7 +18,7 @@ import { toast } from 'sonner@2.0.3';
 
 type DealStage = 'Prospecting' | 'Proposal Sent' | 'Negotiation' | 'Renewal Due' | 'Closed Won' | 'Closed Lost';
 type InteractionType = 'Meeting' | 'Call' | 'Email' | 'Site Visit';
-type AccountType = 'Corporate' | 'Travel Agency';
+type AccountType = 'Corporate' | 'Agency';
 
 interface Interaction {
   id: number;
@@ -94,7 +94,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
   },
   {
     id: 3, opportunityRef: 'OPP-2025-0003', companyName: 'Fortune Travel Group', accountNumber: 'TA-2024-0003',
-    accountType: 'Travel Agency', contactName: 'Gary Tsang', contactEmail: 'gary.tsang@fortunetravel.com',
+    accountType: 'Agency', contactName: 'Gary Tsang', contactEmail: 'gary.tsang@fortunetravel.com',
     stage: 'Negotiation', estimatedValue: 160000, currency: 'HKD',
     expectedCloseDate: '2025-03-15', assignedTo: 'Kelly Chan', createdDate: '2025-01-05', lastActivityDate: '2025-02-21',
     description: 'Upsell from Business to Enterprise Bundle. Balance nearly depleted.',
@@ -106,7 +106,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
   },
   {
     id: 4, opportunityRef: 'OPP-2025-0004', companyName: 'Pacific World Travel', accountNumber: 'TA-2024-0002',
-    accountType: 'Travel Agency', contactName: 'Fiona Cheung', contactEmail: 'fiona@pacificworld.hk',
+    accountType: 'Agency', contactName: 'Fiona Cheung', contactEmail: 'fiona@pacificworld.hk',
     stage: 'Prospecting', estimatedValue: 32000, currency: 'HKD',
     expectedCloseDate: '2025-05-01', assignedTo: 'David Lau', createdDate: '2025-02-22', lastActivityDate: '2025-02-22',
     description: 'Newly onboarded. Standard Bundle trial. Assess utilisation for upsell in Q3.',
@@ -298,7 +298,7 @@ export function OpportunityTracking({
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+              <SelectItem value="Agency">Agency</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex border rounded-md overflow-hidden">

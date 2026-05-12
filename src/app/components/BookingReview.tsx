@@ -42,7 +42,7 @@ const MOCK_BOOKINGS = [
     requestType: 'Edit Booking Request' as const,
     guestName: 'William Leung',
     accountNo: 'ACC-2026-1003',
-    accountType: 'Travel Agency' as const,
+    accountType: 'Agency' as const,
     agencyName: 'Wings Travel Agency',
     agencyDiscountRate: 15,
     suite: 'Lounge Deluxe',
@@ -93,7 +93,7 @@ const REJECTION_REASONS = [
 const accountTypeBadgeClass = (type: string) => {
   if (type === 'Individual') return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
   if (type === 'Corporate') return 'bg-blue-100 text-blue-800 border border-blue-200';
-  if (type === 'Travel Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
+  if (type === 'Agency') return 'bg-purple-100 text-purple-800 border border-purple-200';
   return 'bg-gray-100 text-gray-700';
 };
 

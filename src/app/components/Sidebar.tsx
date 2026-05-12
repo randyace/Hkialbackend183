@@ -80,7 +80,7 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
       { id: 'approve-customers',label: 'Approve Customers',  path: '/customers/approve' },
       { id: 'create-customers', label: 'Create Customer',    path: '/customers/create' },
       { id: 'customer-company', label: 'Customer Companies', path: '/customers/company' },
-      { id: 'travel-agency',    label: 'Travel Agency',      path: '/travel-agency' },
+      { id: 'travel-agency',    label: 'Agency',           path: '/travel-agency' },
       { id: 'grading-packages', label: 'Grading Packages',   path: '/grading-packages' },
     ],
   },

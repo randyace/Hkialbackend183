@@ -26,7 +26,7 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type QueueRequestType = 'New Booking Request' | 'Edit Booking Request' | 'Cancel';
-export type QueueAccountType = 'Individual' | 'Corporate' | 'Travel Agency';
+export type QueueAccountType = 'Individual' | 'Corporate' | 'Agency';
 export type QueuePaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 
 export interface QueueBooking {
@@ -72,7 +72,7 @@ const MOCK_QUEUE_BOOKINGS: QueueBooking[] = [
   },
   {
     id: 3, bookingNo: 'A-202604-000003', requestType: 'New Booking Request',
-    guestName: 'Wings Travel — Sarah Lee', accountNo: 'TA-WG-001-ACC', accountType: 'Travel Agency',
+    guestName: 'Wings Travel — Sarah Lee', accountNo: 'TA-WG-001-ACC', accountType: 'Agency',
     agencyName: 'Wings Travel Agency', suite: 'Lounge Deluxe',
     dateTime: '2026-04-17 11:00', flightNo: 'SQ001', flightTime: '14:20',
     numberOfGuests: 3, nonFlyingGuests: 0, paymentMode: 'On-Credit',
@@ -226,7 +226,7 @@ export function BookingApprovalQueue({
               <SelectItem value="all">All Account Types</SelectItem>
               <SelectItem value="Individual">Individual</SelectItem>
               <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+              <SelectItem value="Agency">Agency</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterRequest} onValueChange={v => setFilterRequest(v as typeof filterRequest)}>
@@ -310,7 +310,7 @@ export function BookingApprovalQueue({
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-xs text-gray-400">{booking.accountNo}</span>
                           <Badge className={`text-xs px-1.5 py-0 ${accountTypeBadge(booking.accountType)}`}>
-                            {booking.accountType === 'Travel Agency' ? 'TA' : booking.accountType.slice(0, 4)}
+                            {booking.accountType === 'Agency' ? 'TA' : booking.accountType.slice(0, 4)}
                           </Badge>
                           {booking.membershipTier && (
                             <Badge className={`text-xs px-1.5 py-0 ${tierBadge(booking.membershipTier)}`}>

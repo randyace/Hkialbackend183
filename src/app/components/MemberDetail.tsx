@@ -26,7 +26,7 @@ const MOCK_ACCOUNT_NUMBER = 'ACC-2024-1001';
 // ── Member shape ──────────────────────────────────────────────────────────────
 export interface Member {
   accountNumber: string;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   status: 'Active' | 'Pending' | 'Suspended';
   name: string;
   title: string;
@@ -1326,7 +1326,7 @@ export function MemberDetail({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onAddDietary?.(); setMockIsAddDietaryOpen(true); }}
+                  onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); setMockIsAddDietaryOpen(true); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
                   Add Requirement
@@ -1375,7 +1375,7 @@ export function MemberDetail({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onAddDietary?.(); setMockIsAddDietaryOpen(true); }}
+                    onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); setMockIsAddDietaryOpen(true); }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Add Requirement
@@ -2082,14 +2082,17 @@ export function MemberDetail({
                 notes: activeAllergyForm.notes,
                 recordedDate: today,
               };
-              if (activeAllergyTarget === 'spouse') {
+              // Always close the dialog immediately and clear mock state
+              const target = activeAllergyTarget;
+              onCloseAddAllergy?.();
+              setMockIsAddAllergyOpen(false);
+              // Then trigger container to save (container reads form state synchronously)
+              onAddAllergy?.();
+              if (target === 'spouse') {
                 toast.success('Spouse food allergy added');
               } else {
                 toast.success('Food allergy added');
-                onAddAllergy?.();  // trigger container to save
               }
-              onCloseAddAllergy?.();
-              setMockIsAddAllergyOpen(false);
             }}>Add Allergy</Button>
           </DialogFooter>
         </DialogContent>
@@ -2135,22 +2138,17 @@ export function MemberDetail({
             <Button variant="outline" onClick={() => { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
               if (!activeDietaryForm.requirement.trim()) { toast.error('Requirement name is required'); return; }
-              const today = new Date().toISOString().split('T')[0];
-              const newItem: DietaryRequirement = {
-                id: Date.now(),
-                requirement: activeDietaryForm.requirement.trim(),
-                notes: activeDietaryForm.notes,
-                recordedDate: today,
-              };
-              if (activeDietaryTarget === 'spouse') {
-                setMockSpouseDietaryRequirements(prev => [...prev, newItem]); // demo fallback
-                toast.success('Spouse dietary requirement added');
-              } else {
-                setMockDietaryRequirements(prev => [...prev, newItem]); // demo fallback
-                toast.success('Dietary requirement added');
-              }
+              // Always close the dialog immediately and clear mock state
+              const target = activeDietaryTarget;
               onCloseAddDietary?.();
               setMockIsAddDietaryOpen(false);
+              // Trigger container to save (container reads form state synchronously)
+              onAddDietary?.();
+              if (target === 'spouse') {
+                toast.success('Spouse dietary requirement added');
+              } else {
+                toast.success('Dietary requirement added');
+              }
             }}>Add Requirement</Button>
           </DialogFooter>
         </DialogContent>

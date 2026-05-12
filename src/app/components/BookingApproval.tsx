@@ -43,7 +43,7 @@ export interface PendingBooking {
   requestType: 'New Booking Request' | 'Edit Booking Request' | 'Cancel';
   guestName: string;
   accountNo: string;
-  accountType: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType: 'Individual' | 'Corporate' | 'Agency';
   membershipTier?: 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
   companyName?: string;
   suite: string;
@@ -119,9 +119,9 @@ const generatePendingBookings = (): PendingBooking[] => {
   const origins  = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA', 'ICN', 'PVG', 'CDG'];
 
   const accountTypesCycle: PendingBooking['accountType'][] = [
-    'Individual', 'Corporate', 'Travel Agency', 'Individual', 'Corporate',
-    'Travel Agency', 'Individual', 'Individual', 'Corporate', 'Travel Agency',
-    'Individual', 'Corporate', 'Individual', 'Travel Agency', 'Corporate',
+    'Individual', 'Corporate', 'Agency', 'Individual', 'Corporate',
+    'Agency', 'Individual', 'Individual', 'Corporate', 'Agency',
+    'Individual', 'Corporate', 'Individual', 'Agency', 'Corporate',
   ];
   const paymentModesCycle: PendingBooking['paymentMode'][] = [
     'Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice', 'Net Upfront', 'On-Credit',
@@ -154,7 +154,7 @@ const generatePendingBookings = (): PendingBooking[] => {
     let companyName: string | undefined;
     let membershipTier: PendingBooking['membershipTier'];
 
-    if (accountType === 'Travel Agency') {
+    if (accountType === 'Agency') {
       const agency = TRAVEL_AGENCIES[idx % TRAVEL_AGENCIES.length];
       agencyName = agency.name;
       agencyDiscountRate = agency.discountRate;
@@ -222,7 +222,7 @@ const generatePendingBookings = (): PendingBooking[] => {
 const accountTypeBadgeClass = (type: PendingBooking['accountType']) => {
   if (type === 'Individual')     return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
   if (type === 'Corporate')      return 'bg-blue-100 text-blue-800 border border-blue-200';
-  if (type === 'Travel Agency')  return 'bg-purple-100 text-purple-800 border border-purple-200';
+  if (type === 'Agency')  return 'bg-purple-100 text-purple-800 border border-purple-200';
   return 'bg-gray-100 text-gray-700';
 };
 
@@ -424,7 +424,7 @@ export function BookingApproval({
   const adHocCount  = staffPendingBookings.filter(b => b.isAdHoc).length;
   const indCount    = staffPendingBookings.filter(b => b.accountType === 'Individual').length;
   const corpCount   = staffPendingBookings.filter(b => b.accountType === 'Corporate').length;
-  const agencyCount = staffPendingBookings.filter(b => b.accountType === 'Travel Agency').length;
+  const agencyCount = staffPendingBookings.filter(b => b.accountType === 'Agency').length;
 
   const supAdHocCount = supervisorPendingBookings.filter(b => b.isAdHoc).length;
 
@@ -724,7 +724,7 @@ export function BookingApproval({
                 <SelectItem value="all">All Account Types</SelectItem>
                 <SelectItem value="Individual">Individual</SelectItem>
                 <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Travel Agency">Travel Agency</SelectItem>
+                <SelectItem value="Agency">Agency</SelectItem>
               </SelectContent>
             </Select>
             <Select value={paymentModeFilter} onValueChange={v => { setPaymentModeFilter(v); setCurrentPage(1); }}>

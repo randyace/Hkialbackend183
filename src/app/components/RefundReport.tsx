@@ -35,7 +35,7 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type RefundStatus = 'Pending Review' | 'Processing' | 'Completed' | 'Cancelled';
-type AccountType = 'Individual' | 'Corporate' | 'Travel Agency';
+type AccountType = 'Individual' | 'Corporate' | 'Agency';
 type AdjustmentReason =
   | 'Suite Downgrade'
   | 'Guest Count Reduction'
@@ -122,7 +122,7 @@ const MOCK_REFUND_RECORDS: RefundRecord[] = [
     bookingNo: 'A-202601-000038',
     accountNo: 'TA-KL-001-ACC',
     accountName: 'Klook Travel',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     bookingDate: '2026-01-15',
     adjustmentDate: '2026-01-16',
     originalAmount: 15000,
@@ -206,7 +206,7 @@ const MOCK_REFUND_RECORDS: RefundRecord[] = [
     bookingNo: 'A-202602-000008',
     accountNo: 'TA-EG-001-ACC',
     accountName: 'EGL Tours',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     bookingDate: '2026-02-03',
     adjustmentDate: '2026-02-05',
     originalAmount: 18500,
@@ -268,7 +268,7 @@ const MOCK_REFUND_RECORDS: RefundRecord[] = [
     bookingNo: 'A-202602-000047',
     accountNo: 'TA-HT-001-ACC',
     accountName: 'Hong Thai Travel',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     bookingDate: '2026-02-14',
     adjustmentDate: '2026-02-15',
     originalAmount: 27000,
@@ -354,7 +354,7 @@ const STATUS_CONFIG: Record<RefundStatus, { color: string; icon: React.ReactNode
 const ACCOUNT_TYPE_COLOR: Record<AccountType, string> = {
   Individual: 'bg-violet-100 text-violet-700',
   Corporate: 'bg-sky-100 text-sky-700',
-  'Travel Agency': 'bg-teal-100 text-teal-700',
+  'Agency': 'bg-teal-100 text-teal-700',
 };
 
 const fmtHKD = (v: number) => `HK$${v.toLocaleString()}`;
@@ -843,7 +843,7 @@ export function RefundReport({
                   <option value="All">All Types</option>
                   <option value="Individual">Individual</option>
                   <option value="Corporate">Corporate</option>
-                  <option value="Travel Agency">Travel Agency</option>
+                  <option value="Agency">Agency</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400 pointer-events-none" />
               </div>
@@ -978,7 +978,7 @@ export function RefundReport({
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span className="text-xs text-gray-400 font-mono">{r.accountNo}</span>
                             <Badge className={`text-xs px-1.5 py-0 ${ACCOUNT_TYPE_COLOR[r.accountType]}`}>
-                              {r.accountType === 'Travel Agency' ? 'TA' : r.accountType.slice(0, 4)}
+                              {r.accountType === 'Agency' ? 'TA' : r.accountType.slice(0, 4)}
                             </Badge>
                           </div>
                         </div>
