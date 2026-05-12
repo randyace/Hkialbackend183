@@ -273,10 +273,11 @@ export interface BookingManagementProps {
   bookings?: Booking[];
   isLoading?: boolean;
   onViewDetail?: (bookingId: number) => void;
+  onEditBooking?: (bookingId: number) => void;
   onExportReport?: () => void;
 }
 
-export function BookingManagement({ bookings: bookingsProp, onViewDetail, onExportReport }: BookingManagementProps = {}) {
+export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEditBooking, onExportReport }: BookingManagementProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
@@ -705,7 +706,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onExpo
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => console.log('Edit booking:', booking.id)}
+                        onClick={() => onEditBooking?.(booking.id)}
                         className="h-8 w-8 p-0"
                         title="Edit Booking"
                       >

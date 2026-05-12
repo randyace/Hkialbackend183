@@ -368,11 +368,35 @@ export function CreateBooking({
     if (!flightNo)               { toast.error('Please enter the flight number.');       return; }
     if (!flightTime)             { toast.error('Please enter the flight time.');         return; }
     if (hasGuestErrors)          { toast.error('Please fix the guest detail errors before submitting.'); return; }
-    const prefix = flightType === 'Arrival' ? 'A' : flightType === 'Departure' ? 'D' : 'T';
-    const bookingNo = `${prefix}-${yyyymmdd}-${BOOKING_SEQ}`;
-    toast.success(`Booking ${bookingNo} created successfully!`, {
-      description: `${accountType} booking for ${guestName || 'Guest'} — ${suite} on ${visitDate}.`,
-    });
+    const formData: BookingFormData = {
+      accountType,
+      accountNumber,
+      guestName,
+      suite,
+      visitDate,
+      visitTime,
+      flightType,
+      flightNo,
+      flightTime,
+      flightOrigin,
+      flightDestination,
+      numberOfLuggage,
+      flightClass,
+      numPremiereSuites,
+      vipPS,
+      nonFlyingPS,
+      vipLD,
+      nonFlyingLD,
+      passengers,
+      nonFlyingGuests,
+      contactName,
+      contactEmail,
+      contactNo,
+      promoCode,
+      specialRequests,
+      paymentMode,
+    };
+    onSubmit?.(formData);
   };
 
   // ── Quick Fill for Demo ───────────────────────────────────────────────────

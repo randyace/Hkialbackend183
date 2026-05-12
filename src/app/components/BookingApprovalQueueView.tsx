@@ -3,12 +3,12 @@
  *
  * New view per refactor spec (item 20).
  * Pure presentational component — zero internal business state.
- * CI4 container passes real bookings; empty array falls back to MOCK_QUEUE_BOOKINGS.
+ * CI4 container passes real bookings; empty array renders an empty view.
  */
 
 import { useState } from 'react';
 import {
-  Search, Calendar, CheckCircle, XCircle, Eye, Clock,
+  Search, Calendar, CheckCircle, XCircle, Eye, Clock, RotateCcw,
   Building2, Plane, User, BadgePercent, ChevronDown, ChevronUp,
   Filter, AlertCircle,
 } from 'lucide-react';
@@ -99,11 +99,13 @@ const MOCK_QUEUE_BOOKINGS: QueueBooking[] = [
 // ── Props interface ───────────────────────────────────────────────────────────
 
 export interface BookingApprovalQueueProps {
-  /** Pass populated array from CI4; falls back to MOCK_QUEUE_BOOKINGS when empty */
+  /** Pass populated array from CI4; empty array renders an empty view */
   bookings?: QueueBooking[];
   onApprove?: (id: number) => void;
   onReject?: (id: number) => void;
+  onSendBack?: (id: number) => void;
   onViewDetail?: (id: number) => void;
+  mode?: 'staff' | 'supervisor';
   isLoading?: boolean;
   page?: number;
   totalPages?: number;
@@ -138,13 +140,15 @@ export function BookingApprovalQueue({
   bookings: bookingsProp = [],
   onApprove = () => {},
   onReject  = () => {},
+  onSendBack = () => {},
   onViewDetail = () => {},
+  mode = 'staff',
   isLoading  = false,
   page       = 1,
   totalPages = 1,
   onPageChange = () => {},
 }: BookingApprovalQueueProps) {
-  const displayBookings = bookingsProp.length > 0 ? bookingsProp : MOCK_QUEUE_BOOKINGS;
+  const displayBookings = bookingsProp.length > 0 ? bookingsProp : [];
 
   // Local UI-only state
   const [searchTerm,    setSearchTerm]    = useState('');
@@ -378,10 +382,21 @@ export function BookingApprovalQueue({
                           size="sm"
                           className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
                           onClick={() => onApprove(booking.id)}
-                          title="Approve"
+                          title={mode === 'staff' ? 'Approve & Forward' : 'Final Approve'}
                         >
                           <CheckCircle className="w-4 h-4" />
                         </Button>
+                        {mode === 'supervisor' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-blue-600 hover:bg-blue-50"
+                            onClick={() => onSendBack?.(booking.id)}
+                            title="Send Back"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"

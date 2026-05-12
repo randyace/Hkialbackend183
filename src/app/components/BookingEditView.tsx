@@ -226,6 +226,7 @@ export function BookingEdit({
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Flight Number</label>
             <input
+              id="edit-flight-no"
               type="text"
               value={flightNo}
               onChange={e => setFlightNo(e.target.value.toUpperCase())}
@@ -296,6 +297,7 @@ export function BookingEdit({
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Visit Date</label>
             <input
+              id="edit-visit-date"
               type="date"
               value={visitDate}
               onChange={e => setVisitDate(e.target.value)}
@@ -326,6 +328,7 @@ export function BookingEdit({
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">VIP Passengers</label>
             <input
+              id="edit-guests"
               type="number"
               min={1}
               value={numGuests}
