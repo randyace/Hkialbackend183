@@ -42,10 +42,19 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Pass fully-loaded Booking from CI4; when null component uses mock data internally */
   booking?: Booking | null;
   onEdit?: () => void;
+  onApprove?: (id: number) => void;
   isLoading?: boolean;
+  /**
+   * Called by the edit dialog with the new assignments. The parent
+   * should PATCH the booking and return once the API call resolves.
+   * The dialog stays open while the promise is pending and shows an
+   * error toast on rejection (without closing).
+   */
+  onSaveEdit?: (payload: import('./booking/BookingEditDialog').BookingEditPayload) => Promise<void>;
+  isSavingEdit?: boolean;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading = false }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -121,7 +130,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
     { id: 10, accountNo: 'ACC-2024-1010', name: 'Emma Wilson',     type: 'Individual',    email: 'emma.wilson@email.com',      phone: '+852 9111 0010', membershipType: 'Sapphire', membershipExpiry: '2026-06-30', status: 'Active',    totalBookings: 5,  createdDate: '2024-04-18' },
   ];
 
-  const booking = generateMockBooking(bookingId);
+  const booking = bookingProp || generateMockBooking(bookingId);
 
   // Editable guest fields — Premiere Suite
   const [numPremiereSuites, setNumPremiereSuites] = useState(booking.numberOfPremiereSuites ?? 0);
@@ -133,10 +142,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
 
   // VIP Passenger detail forms — one entry per VIP passenger (PS + LD)
   const [passengers, setPassengers] = useState<PassengerDetail[]>(() =>
-    buildInitialPassengers(
-      (booking.vipPassengersInPremiereSuite ?? 0) + (booking.vipPassengersInLoungeDeluxe ?? 0),
-      bookingId
-    )
+    booking.passengers && booking.passengers.length > 0
+      ? booking.passengers.map(p => ({
+          title: (p.title || '') as PassengerTitle,
+          firstName: p.firstName || '',
+          lastName: p.lastName || '',
+          travelDocNo: p.travelDocNo || '',
+          membershipNo: p.membershipNo || '',
+          ageGroup: (p.ageGroup || '') as AgeGroup,
+          birthdayDay: p.birthdayDay || '',
+          birthdayMonth: p.birthdayMonth || '',
+          birthdayYear: p.birthdayYear || '',
+          foodAllergies: p.foodAllergies || '',
+        }))
+      : buildInitialPassengers(
+          (booking.vipPassengersInPremiereSuite ?? 0) + (booking.vipPassengersInLoungeDeluxe ?? 0),
+          bookingId
+        )
   );
 
   // Sync passenger list length whenever the total VIP count changes
@@ -238,11 +260,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
   const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
 
-  // ── Contact Person ───────────────────────────────────────────────────────
-  const [contactName,  setContactName]  = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactNo,    setContactNo]    = useState('');
-  const [bookingMemo,  setBookingMemo]  = useState('');
+  // ── Contact Person (from booking data) ──────────────────────────────────
+  const [contactName,  setContactName]  = useState(booking.contactPerson?.name ?? '');
+  const [contactEmail, setContactEmail] = useState(booking.contactPerson?.email ?? '');
+  const [contactNo,    setContactNo]    = useState(booking.contactPerson?.phone ?? '');
+  const [bookingMemo,  setBookingMemo]  = useState(booking.contactPerson?.memo ?? '');
 
   // ── Promotion / Redemption Code ──────────────────────────────────────────
   const MOCK_PROMOS: Record<string, { label: string; benefit: string; type: 'percent' | 'fixed' }> = {
@@ -633,19 +655,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
             </>
           )}
 
-          {/* Approval Actions */}
-          {booking.status === 'Pending for Approval' && (
-            <>
-              <Button className="bg-green-600 hover:bg-green-700">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Approve Booking
-              </Button>
-              <Button variant="outline">
-                <Edit2 className="w-4 h-4 mr-2" />
-                Request Changes
-              </Button>
-            </>
-          )}
+          {/* Approval Actions — removed, use /bookings/review/:id for approval */}
 
           {/* Payment Actions */}
           {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
@@ -1237,23 +1247,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
           </div>
           <div>
             <label className="text-sm text-gray-600">Payment Method</label>
-            <p className="text-lg">Credit Card (Visa ***1234)</p>
+            <p className="text-lg">{booking.paymentMode || '—'}</p>
           </div>
           <div>
             <label className="text-sm text-gray-600">Account Discount</label>
             <p className="text-lg text-green-600">
               {booking.agencyDiscountRate
                 ? `${booking.agencyDiscountRate}% (Agency Default)`
-                : bookingId % 4 === 0 ? '10%' : '—'}
+                : '—'}
             </p>
           </div>
           <div>
             <label className="text-sm text-gray-600">Promotion Code</label>
-            <p className="text-lg">{bookingId % 3 === 0 ? 'SUMMER2024' : '—'}</p>
+            <p className="text-lg">{booking.agencyCode || '—'}</p>
           </div>
           <div>
             <label className="text-sm text-gray-600">Account Remark</label>
-            <p className="text-lg">{bookingId % 2 === 0 ? 'VIP Member - Priority Service' : '—'}</p>
+            <p className="text-lg">—</p>
           </div>
         </div>
       </Card>
@@ -1286,7 +1296,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
             )}
           </div>
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Arrival Date</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">
+              {booking.flightType === 'Arrival' ? 'Arrival Date' : 'Departure Date'}
+            </label>
             <p className="text-lg">{booking.arrivalDate || '—'}</p>
           </div>
           {/* Row 1 continued — Flight Number & Flight Time */}
@@ -1345,7 +1357,31 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <label className="text-sm text-gray-600">Suite/Lounge</label>
-            <p className="text-lg">{booking.suite}</p>
+            <p className="text-lg">{booking.suite || 'Not assigned'}</p>
+            {(booking.assignedSuiteNames?.length || booking.assignedLoungeNames?.length) ? (
+              <div className="mt-2 space-y-1.5">
+                {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Suites</span>
+                    {booking.assignedSuiteNames.map(name => (
+                      <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Lounges</span>
+                    {booking.assignedLoungeNames.map(name => (
+                      <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                        {name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
           <div>
             <label className="text-sm text-gray-600">Date & Time</label>
@@ -2262,15 +2298,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
                     <textarea 
                       className="w-full px-3 py-2 border rounded text-sm resize-none"
                       rows={2}
-                      defaultValue={bookingId % 2 === 0 ? 'VIP Member Discount Applied' : 'Standard Rate'}
+                      defaultValue={''}
                     />
                   </div>
                 </td>
               </tr>
 
               {/* SECTION 2: Additional Services */}
-              {(booking.hasLimousine || booking.hasShopping || bookingId % 3 === 0 || bookingId % 5 === 0 || bookingId % 7 === 0) && (
-                <>
+              <>
                   <tr className="bg-purple-50">
                     <td colSpan={5} className="px-4 py-2">
                       <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Additional Services</p>
@@ -2278,7 +2313,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
                   </tr>
 
                   {/* Food & Beverage — always complimentary */}
-                  {bookingId % 3 === 0 && (
+                  {true && (
                 <>
                   <tr>
                     <td className="px-4 py-3">
@@ -2405,7 +2440,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
               )}
 
               {/* Spa Service */}
-              {bookingId % 5 === 0 && (
+              {false && (
                 <>
                   <tr>
                     <td className="px-4 py-3">
@@ -2447,8 +2482,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
                 </>
               )}
 
-              {/* Meeting Room */}
-              {bookingId % 7 === 0 && (
+              {false && (
                 <>
                   <tr>
                     <td className="px-4 py-3">
@@ -2489,8 +2523,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
                   </tr>
                 </>
               )}
-                </>
-              )}
+              </>
 
               {/* ADD NEW ITEM SECTION */}
               <tr className="bg-green-50">
@@ -2898,15 +2931,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
         <div className="grid grid-cols-3 gap-6">
           <div>
             <label className="text-sm text-gray-600">Total</label>
-            <p className="text-lg font-semibold text-gray-900">{booking.amount}</p>
+            {/*
+             * If staff has set a final amount, show that.
+             * Otherwise compute an estimated total from head-count + services
+             * so the user sees a number, not a placeholder. The amount is only
+             * committed to the API after Review & Set Price.
+             */}
+            <p className="text-lg font-semibold text-gray-900">
+              {booking.amount
+                ? booking.amount
+                : `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`}
+            </p>
+            {!booking.amount && (
+              <p className="text-xs text-amber-600 mt-1">Estimated (not yet priced)</p>
+            )}
           </div>
           <div>
             <label className="text-sm text-gray-600">Payment</label>
             <p className="text-lg font-semibold text-blue-600">
-              {booking.paymentStatus === 'Paid' 
-                ? booking.amount 
+              {booking.paymentStatus === 'Paid'
+                ? booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`
                 : booking.paymentStatus === 'Refunded'
-                ? booking.amount
+                ? booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`
                 : 'HK$0'}
             </p>
           </div>
@@ -2914,8 +2960,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
             <label className="text-sm text-gray-600">Balance</label>
             <p className="text-lg font-semibold text-red-600">
               {booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Refunded'
-                ? 'HK$0' 
-                : booking.amount}
+                ? 'HK$0'
+                : booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`}
             </p>
           </div>
         </div>
@@ -3254,6 +3300,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, onBack, isLoading =
         open={isEditBookingOpen}
         onClose={() => setIsEditBookingOpen(false)}
         booking={booking}
+        onSave={onSaveEdit}
+        isSaving={isSavingEdit}
       />
       {false && false && <div>
           <DialogHeader>

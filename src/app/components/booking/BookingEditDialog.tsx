@@ -1,8 +1,10 @@
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { Edit2, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search, X, Plus, Minus, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
+import { suiteService, type Suite } from '@/services/suiteService';
 
 interface EditBooking {
   bookingNo: string;
@@ -18,11 +20,56 @@ interface EditBooking {
   nonFlyingGuests?: number;
   numberOfLuggage?: number;
   services?: string[];
+  /**
+   * Names of physical suites (CIP 1-6, Function Room) currently assigned.
+   * Used as the initial value of the suite checkbox grid.
+   */
+  assignedSuiteNames?: string[];
+  /** Names of physical lounge seats (Lobby 1-8) currently assigned. */
+  assignedLoungeNames?: string[];
 }
 
 interface EditLimoStop { id: number; type: 'Pick-up' | 'Destination'; location: string; }
 
 interface AddonService { key: string; icon: ReactNode; desc: string; defaultPrice: string; }
+
+interface BookingEditDialogProps {
+  open: boolean;
+  onClose: () => void;
+  booking: EditBooking;
+  /**
+   * Called when the user clicks "Save Changes". Receives the full edit
+   * payload including `assigned_suite_ids` / `assigned_lounge_ids` derived
+   * from the checkbox grids. The parent decides whether to PATCH the API
+   * (and how to handle loading / error states). The dialog itself does not
+   * call the API — keeping it presentational.
+   */
+  onSave?: (payload: BookingEditPayload) => void | Promise<void>;
+  /** Optional callback fired when the user clicks Save but before onSave resolves. */
+  isSaving?: boolean;
+}
+
+/** Edit payload returned by the dialog's onSave. */
+export interface BookingEditPayload {
+  flightType: 'Arrival' | 'Departure' | 'Transition';
+  flightNo: string;
+  flightTime: string;
+  flightOrigin: string;
+  flightDestination: string;
+  flightClass: string;
+  visitDate: string;
+  visitTime: string;
+  numberOfGuests: number;
+  nonFlyingGuests: number;
+  numberOfLuggage: number;
+  specialRequests: string;
+  selectedServices: string[];
+  assignedSuiteIds: number[];
+  assignedLoungeIds: number[];
+  /** Names of the assigned suites/lounges — set for the wrapper to mirror onto `booking.suite`. */
+  assignedSuiteNames: string[];
+  assignedLoungeNames: string[];
+}
 
 const ADDON_SERVICES: AddonService[] = [
   { key: 'Lounge Extension',              icon: null, desc: 'Extend lounge access time',              defaultPrice: '500.00'  },
@@ -55,14 +102,13 @@ interface BookingEditDialogProps {
   booking: EditBooking;
 }
 
-export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogProps) {
+export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = false }: BookingEditDialogProps) {
   const [editFlightType,    setEditFlightType]    = useState<'Arrival' | 'Departure' | 'Transition'>(booking.flightType ?? 'Departure');
   const [editFlightNo,      setEditFlightNo]      = useState(booking.flightNo);
   const [editFlightTime,    setEditFlightTime]    = useState(booking.flightTime);
   const [editFlightOrigin,  setEditFlightOrigin]  = useState(booking.flightOrigin ?? '');
   const [editFlightDest,    setEditFlightDest]    = useState(booking.flightDestination ?? '');
   const [editFlightClass,   setEditFlightClass]   = useState(booking.flightClass ?? '');
-  const [editSuite,         setEditSuite]         = useState(booking.suite);
   const [editVisitDate,     setEditVisitDate]     = useState(booking.dateTime.split(' ')[0]);
   const [editVisitTime,     setEditVisitTime]     = useState(booking.dateTime.split(' ')[1]);
   const [editNumGuests,     setEditNumGuests]     = useState(booking.numberOfGuests ?? 1);
@@ -73,6 +119,56 @@ export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogP
   const [editLimoStops, setEditLimoStops] = useState<EditLimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
   const [editAddonSearch, setEditAddonSearch] = useState('');
   const [showEditAddonDropdown, setShowEditAddonDropdown] = useState(false);
+
+  // ── Physical resource state ────────────────────────────────────────────
+  // Fetched once when the dialog opens. Sorted by name (numeric-aware) so
+  // "CIP 2" comes before "CIP 10".
+  const [physicalSuites,  setPhysicalSuites]  = useState<Suite[]>([]);
+  const [physicalLounges, setPhysicalLounges] = useState<Suite[]>([]);
+  // Suite/lounge IDs the user has currently checked in the dialog.
+  // Initial value is derived from `booking.assignedSuiteNames` /
+  // `booking.assignedLoungeNames` (matched against fetched IDs by name).
+  const [editAssignedSuiteIds,  setEditAssignedSuiteIds]  = useState<number[]>([]);
+  const [editAssignedLoungeIds, setEditAssignedLoungeIds] = useState<number[]>([]);
+
+  // Re-seed the assigned state each time the dialog opens with a new
+  // booking, so opening booking B after booking A doesn't carry over
+  // A's selections.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await suiteService.getSuites();
+        if (cancelled) return;
+        const all = res.data || [];
+        const sortByName = (a: Suite, b: Suite) =>
+          a.suite_name.localeCompare(b.suite_name, 'en', { numeric: true });
+        const suites  = all.filter(s => s.kind === 'suite'  && s.is_active).sort(sortByName);
+        const lounges = all.filter(s => s.kind === 'lounge' && s.is_active).sort(sortByName);
+        setPhysicalSuites(suites);
+        setPhysicalLounges(lounges);
+        // Match the current booking's assigned names to fetched IDs.
+        const initialSuiteIds  = (booking.assignedSuiteNames  || [])
+          .map(name => suites.find(s => s.suite_name === name)?.id)
+          .filter((id): id is number => typeof id === 'number');
+        const initialLoungeIds = (booking.assignedLoungeNames || [])
+          .map(name => lounges.find(l => l.suite_name === name)?.id)
+          .filter((id): id is number => typeof id === 'number');
+        setEditAssignedSuiteIds(initialSuiteIds);
+        setEditAssignedLoungeIds(initialLoungeIds);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Failed to load physical suites/lounges:', error);
+        toast.error('Failed to load physical resources. Please try again.');
+        setPhysicalSuites([]);
+        setPhysicalLounges([]);
+        setEditAssignedSuiteIds([]);
+        setEditAssignedLoungeIds([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open, booking.bookingNo]); // re-seed on dialog open / different booking
 
   const addEditLimoStop    = () => setEditLimoStops(prev => [...prev, { id: Date.now(), type: 'Destination', location: '' }]);
   const removeEditLimoStop = (id: number) => setEditLimoStops(prev => prev.length > 1 ? prev.filter(s => s.id !== id) : prev);
@@ -87,11 +183,55 @@ export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogP
     }
   };
 
-  const handleSave = () => {
+  const toggleEditSuite = (id: number) => {
+    setEditAssignedSuiteIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleEditLounge = (id: number) => {
+    setEditAssignedLoungeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSave = async () => {
     if (!editFlightNo.trim()) { toast.error('Flight number is required.'); return; }
     if (!editVisitDate)       { toast.error('Visit date is required.'); return; }
-    toast.success('Booking updated successfully!');
-    onClose();
+    if (!onSave) {
+      // No parent handler wired — preserve the legacy "toast + close" behaviour.
+      toast.success('Booking updated successfully!');
+      onClose();
+      return;
+    }
+    const suiteNames  = editAssignedSuiteIds
+      .map(id => physicalSuites.find(s => s.id === id)?.suite_name)
+      .filter((n): n is string => Boolean(n));
+    const loungeNames = editAssignedLoungeIds
+      .map(id => physicalLounges.find(l => l.id === id)?.suite_name)
+      .filter((n): n is string => Boolean(n));
+    const payload: BookingEditPayload = {
+      flightType:        editFlightType,
+      flightNo:          editFlightNo,
+      flightTime:        editFlightTime,
+      flightOrigin:      editFlightOrigin,
+      flightDestination: editFlightDest,
+      flightClass:       editFlightClass,
+      visitDate:         editVisitDate,
+      visitTime:         editVisitTime,
+      numberOfGuests:    editNumGuests,
+      nonFlyingGuests:   editNonFlying,
+      numberOfLuggage:   editNumLuggage,
+      specialRequests:   editSpecialReqs,
+      selectedServices:  editSelectedServices,
+      assignedSuiteIds:  editAssignedSuiteIds,
+      assignedLoungeIds: editAssignedLoungeIds,
+      assignedSuiteNames:  suiteNames,
+      assignedLoungeNames: loungeNames,
+    };
+    try {
+      await onSave(payload);
+      // Parent decides whether to close the dialog on success.
+    } catch (error) {
+      // Parent already showed an error toast — keep the dialog open so
+      // the user can retry without re-entering all the fields.
+      console.error('BookingEditDialog save failed:', error);
+    }
   };
 
   return (
@@ -164,14 +304,6 @@ export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogP
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Suite / Area <span className="text-red-500">*</span></label>
-                <select value={editSuite} onChange={e => setEditSuite(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
-                  {['VIP Suite A', 'VIP Suite B', 'Executive Suite', 'Business Suite', 'Premier Suite', 'Open Lounge'].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
                 <input type="date" value={editVisitDate} onChange={e => setEditVisitDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
               </div>
@@ -187,6 +319,76 @@ export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogP
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Non-Flying Guests</label>
                 <input type="number" value={editNonFlying} min={0} onChange={e => setEditNonFlying(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
               </div>
+            </div>
+
+            {/* Premiere Suite — physical suite checkboxes */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">Premiere Suite Assignment <span className="text-gray-400 font-normal">(optional)</span></p>
+                {editAssignedSuiteIds.length > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                    {editAssignedSuiteIds.length} assigned
+                  </span>
+                )}
+              </div>
+              {physicalSuites.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No physical suites available — ask an administrator to seed CIP 1-6 / Function Room.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {physicalSuites.map(s => {
+                    const checked = editAssignedSuiteIds.includes(s.id);
+                    return (
+                      <label key={s.id}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${
+                          checked
+                            ? 'border-purple-300 bg-purple-50 text-purple-800'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}>
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleEditSuite(s.id)}
+                        />
+                        <span className="font-medium">{s.suite_name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Lounge Deluxe — physical lobby checkboxes */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-gray-700">Lounge Deluxe Assignment <span className="text-gray-400 font-normal">(optional, free choice)</span></p>
+                {editAssignedLoungeIds.length > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
+                    {editAssignedLoungeIds.length} assigned
+                  </span>
+                )}
+              </div>
+              {physicalLounges.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No physical lounges available — ask an administrator to seed Lobby 1-8.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {physicalLounges.map(l => {
+                    const checked = editAssignedLoungeIds.includes(l.id);
+                    return (
+                      <label key={l.id}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${
+                          checked
+                            ? 'border-blue-300 bg-blue-50 text-blue-800'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}>
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggleEditLounge(l.id)}
+                        />
+                        <span className="font-medium">{l.suite_name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -308,9 +510,9 @@ export function BookingEditDialog({ open, onClose, booking }: BookingEditDialogP
         </div>
 
         <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave}>
-            <CheckCircle className="w-4 h-4 mr-2" />Save Changes
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            <CheckCircle className="w-4 h-4 mr-2" />{isSaving ? 'Saving…' : 'Save Changes'}
           </Button>
         </div>
       </DialogContent>

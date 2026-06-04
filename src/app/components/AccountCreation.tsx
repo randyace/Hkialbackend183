@@ -35,7 +35,6 @@ const emptySubForm = (id: number): CorporateSubForm => ({
 
 export interface AccountCreationProps {
   type?: 'individual' | 'corporate' | 'travel-agency';
-  companies?: { id: number; name: string }[];
   countries?: { code: string; name: string }[];
   regionCodes?: { code: string; name: string }[];
   companySearchResults?: { id: number; account_id: number; company_name: string; company_registration: string }[];
@@ -45,6 +44,8 @@ export interface AccountCreationProps {
   onSubmit?: (data: any) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  /** Field-level validation errors keyed by snake_case field name, e.g. { email: "The email has already been taken." } */
+  fieldErrors?: Record<string, string>;
 }
 
 export function AccountCreation({
@@ -58,6 +59,7 @@ export function AccountCreation({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  fieldErrors = {},
 }: AccountCreationProps = {}) {
   const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
   const displayCountries = countries && countries.length > 0 ? countries : null;
@@ -192,8 +194,6 @@ export function AccountCreation({
           }),
     };
 
-    toast.success('Account creation form submitted (check console for payload)');
-    console.log('Form payload:', payload);
     onSubmit?.(payload);
   };
 
@@ -485,7 +485,20 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
-                      <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="Enter email address" required />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={e => setFormData({...formData, email: e.target.value})}
+                        placeholder="Enter email address"
+                        required
+                        style={fieldErrors.email ? { borderColor: '#dc2626', borderWidth: 2 } : undefined}
+                      />
+                      {fieldErrors.email && (
+                        <p style={{ margin: '4px 0 0', color: '#dc2626', fontSize: '13px' }}>
+                          {fieldErrors.email}
+                        </p>
+                      )}
                     </div>
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
@@ -570,7 +583,20 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
-                      <Input id="email" type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="Enter email address" required />
+                      <Input
+                        id="email"
+                        type="email"
+                        value={formData.email}
+                        onChange={e => setFormData({...formData, email: e.target.value})}
+                        placeholder="Enter email address"
+                        required
+                        style={fieldErrors.email ? { borderColor: '#dc2626', borderWidth: 2 } : undefined}
+                      />
+                      {fieldErrors.email && (
+                        <p style={{ margin: '4px 0 0', color: '#dc2626', fontSize: '13px' }}>
+                          {fieldErrors.email}
+                        </p>
+                      )}
                     </div>
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>

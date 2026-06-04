@@ -337,8 +337,22 @@ export function BookingApprovalQueue({
 
                     {/* Suite & Flight */}
                     <td className="px-4 py-3">
-                      <p className="text-gray-800">{booking.suite}</p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                      <p className="text-gray-800">{booking.suite || '—'}</p>
+                      {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {booking.assignedSuiteNames.map(n => (
+                            <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800 border border-purple-200">{n}</span>
+                          ))}
+                        </div>
+                      )}
+                      {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {booking.assignedLoungeNames.map(n => (
+                            <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">{n}</span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-1.5">
                         <Plane className="w-3 h-3" />{booking.flightNo} · {booking.flightTime}
                       </p>
                       <p className="text-xs text-gray-400 flex items-center gap-1">

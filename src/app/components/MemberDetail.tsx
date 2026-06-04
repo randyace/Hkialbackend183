@@ -134,8 +134,10 @@ export interface MemberDetailProps {
   onOpenPreferenceDialog?: () => void;
   onCloseAddAllergy?: () => void;
   onCloseAddDietary?: () => void;
+  onOpenDietaryDialog?: () => void;
   onCloseAddMovement?: () => void;
   onOpenMovementDialog?: () => void;
+  onOpenRemarkDialog?: () => void;
   onCloseAddRemark?: () => void;
 
   // ── Add form state & handlers ────────────────────────────────────────────
@@ -319,6 +321,7 @@ export function MemberDetail({
   onCloseAddDietary,
   onCloseAddMovement,
   onOpenMovementDialog,
+  onOpenRemarkDialog,
   onCloseAddRemark,
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -784,6 +787,7 @@ export function MemberDetail({
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
+                  <option value="">Not set</option>
                   <optgroup label="Corporate Groups">
                     <option value="HSBC">HSBC</option>
                     <option value="Cathay Pacific">Cathay Pacific</option>
@@ -1416,7 +1420,7 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3>Staff Remarks</h3>
-              <Button onClick={() => { onAddRemark?.(); setMockIsAddRemarkOpen(true); }}>
+              <Button onClick={() => { onOpenRemarkDialog?.(); setMockIsAddRemarkOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Remark
               </Button>

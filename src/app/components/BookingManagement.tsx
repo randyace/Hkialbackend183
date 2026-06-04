@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -274,10 +274,11 @@ export interface BookingManagementProps {
   isLoading?: boolean;
   onViewDetail?: (bookingId: number) => void;
   onEditBooking?: (bookingId: number) => void;
+  onDeleteBooking?: (bookingId: number, bookingNo: string) => void;
   onExportReport?: () => void;
 }
 
-export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEditBooking, onExportReport }: BookingManagementProps = {}) {
+export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEditBooking, onDeleteBooking, onExportReport }: BookingManagementProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
@@ -712,6 +713,17 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
+                      {onDeleteBooking && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteBooking?.(booking.id, booking.bookingNo)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          title="Delete Booking"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

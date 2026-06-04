@@ -14,7 +14,15 @@ export interface Booking {
   bookingNo: string;
   guestName: string;
   accountNo: string;
+  /**
+   * Legacy field — the first assigned suite's name (e.g. "CIP 1"),
+   * surfaced on review / approval list pages.
+   */
   suite: string;
+  /** Physical suites (CIP 1-6, Function Room) assigned to this booking. */
+  assignedSuiteNames?: string[];
+  /** Physical lounge seats (Lobby 1-8) assigned to this booking. */
+  assignedLoungeNames?: string[];
   dateTime: string;
   flightType?: 'Arrival' | 'Departure';
   arrivalDate?: string;
@@ -28,6 +36,15 @@ export interface Booking {
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   services: string[];
   amount: string | 'Pending Calculation' | 'Re-calculation' | 'Manual Adjustment';
+  totalPrice?: number;
+  priceBreakdown?: Array<{
+    key: string;
+    label: string;
+    qty: number;
+    unit_price: number;
+    subtotal: number;
+    note?: string;
+  }>;
   numberOfGuests?: number;
   nonFlyingGuests?: number;
   numberOfPremiereSuites?: number;
@@ -48,6 +65,24 @@ export interface Booking {
   agencyDiscountRate?: number;
   originalAmountValue?: number;
   finalAmountValue?: number;
+  contactPerson?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    memo?: string;
+  };
+  passengers?: Array<{
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    travelDocNo?: string;
+    membershipNo?: string;
+    ageGroup?: string;
+    birthdayDay?: string;
+    birthdayMonth?: string;
+    birthdayYear?: string;
+    foodAllergies?: string;
+  }>;
 }
 
 // ── Passenger form types ──────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Building2, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, DollarSign, Plus, Trash2, Mail, Phone, Shuffle } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -22,29 +22,6 @@ import {
   DialogTitle,
 } from './ui/dialog';
 
-// ── MOCK agency (isolated — container replaces via props) ─────────────────────
-const MOCK_AGENCY: TravelAgency = {
-  id: 1,
-  agencyName: 'Wings Agency',
-  agencyCode: 'TA-WG-001',
-  contactPerson: 'Alice Chan',
-  email: 'alice.chan@wingstravel.hk',
-  phone: '+852 9111 2222',
-  paymentMethod: 'On-Credit',
-  discountRate: 15,
-  status: 'active',
-};
-
-export interface TravelAgencyDetailProps {
-  agencyId?: number | null;
-  /** Pass full agency from CI4; when null falls back to MOCK_AGENCY for demo */
-  agency?: TravelAgency | null;
-  onBack: () => void;
-  onEdit?: () => void;
-  onAddContact?: (contact: ContactPerson) => void;
-  isLoading?: boolean;
-}
-
 interface TravelAgency {
   id: number;
   agencyName: string;
@@ -57,14 +34,14 @@ interface TravelAgency {
   status: 'active' | 'inactive' | 'suspended';
 }
 
-interface ContactPerson {
+export interface ContactPerson {
   id: string;
   name: string;
   email: string;
   phone: string;
 }
 
-interface Contract {
+export interface Contract {
   id: string;
   contractNumber: string;
   offerName: string;
@@ -77,7 +54,7 @@ interface Contract {
   notes?: string;
 }
 
-interface Member {
+export interface Member {
   id: number;
   accountNumber: string;
   name: string;
@@ -90,26 +67,26 @@ interface Member {
   lastLogin?: string;
 }
 
-// Mock contracts for the travel agency
-const MOCK_CONTRACTS: Contract[] = [
-  { id: 'C1', contractNumber: 'CT-2024-0045', offerName: 'Business Credit Account', purchaseDate: '2024-04-05', startDate: '2024-04-10', expiryDate: '2025-10-05', creditLimit: 160000, creditUsed: 121600, status: 'Active', notes: 'High-volume travel agency' },
-  { id: 'C2', contractNumber: 'CT-2025-0003', offerName: 'Spring Promotion Credit', purchaseDate: '2025-01-15', startDate: '2025-02-01', expiryDate: '2025-05-31', creditLimit: 50000, creditUsed: 12000, status: 'Active', notes: 'Seasonal promotional offer' },
-  { id: 'C3', contractNumber: 'CT-2024-0089', offerName: 'Exclusive VIP Credit', purchaseDate: '2024-09-15', startDate: '2024-10-01', expiryDate: '2025-09-30', creditLimit: 80000, creditUsed: 45000, status: 'Active', notes: 'VIP client tier' }
-];
-
-// Mock members for the travel agency
-const MOCK_MEMBERS: Member[] = [
-  { id: 1, accountNumber: 'ACC-2024-2001', name: 'Alice Chan', email: 'alice.chan@wingstravel.hk', phone: '+852 9111 2222', travelGroup: 'VIP Group A', memberType: 'Premium', status: 'active', joinDate: '2024-02-10', lastLogin: '2025-02-25' },
-  { id: 2, accountNumber: 'ACC-2024-2078', name: 'Brian Leung', email: 'brian.leung@wingstravel.hk', phone: '+852 9222 3333', travelGroup: 'Corporate Team', memberType: 'Standard', status: 'active', joinDate: '2024-04-15', lastLogin: '2025-02-24' },
-  { id: 3, accountNumber: 'ACC-2024-2134', name: 'Catherine Wong', email: 'catherine.wong@wingstravel.hk', phone: '+852 9333 4444', travelGroup: 'Family Tour', memberType: 'Standard', status: 'active', joinDate: '2024-05-20', lastLogin: '2025-02-23' },
-  { id: 4, accountNumber: 'ACC-2024-2201', name: 'Daniel Ng', email: 'daniel.ng@wingstravel.hk', phone: '+852 9444 5555', travelGroup: 'VIP Group B', memberType: 'Premium', status: 'active', joinDate: '2024-06-08', lastLogin: '2025-02-22' },
-  { id: 5, accountNumber: 'ACC-2024-2289', name: 'Emily Tsang', email: 'emily.tsang@wingstravel.hk', phone: '+852 9555 6666', travelGroup: 'Student Group', memberType: 'Economy', status: 'inactive', joinDate: '2024-08-12', lastLogin: '2025-01-10' },
-  { id: 6, accountNumber: 'ACC-2024-2356', name: 'Frank Liu', email: 'frank.liu@wingstravel.hk', phone: '+852 9666 7777', travelGroup: 'Business Elite', memberType: 'Premium', status: 'active', joinDate: '2024-09-05', lastLogin: '2025-02-25' },
-  { id: 7, accountNumber: 'ACC-2024-2423', name: 'Grace Cheung', email: 'grace.cheung@wingstravel.hk', phone: '+852 9777 8888', travelGroup: 'Honeymoon Package', memberType: 'Standard', status: 'active', joinDate: '2024-10-18', lastLogin: '2025-02-20' },
-  { id: 8, accountNumber: 'ACC-2024-2501', name: 'Henry Tam', email: 'henry.tam@wingstravel.hk', phone: '+852 9888 9999', travelGroup: 'Senior Tour', memberType: 'Standard', status: 'active', joinDate: '2024-11-22', lastLogin: '2025-02-21' },
-  { id: 9, accountNumber: 'ACC-2024-2589', name: 'Iris Lam', email: 'iris.lam@wingstravel.hk', phone: '+852 9999 0000', travelGroup: 'VIP Group A', memberType: 'Premium', status: 'suspended', joinDate: '2024-12-05', lastLogin: '2025-01-28' },
-  { id: 10, accountNumber: 'ACC-2025-2602', name: 'Jason Ho', email: 'jason.ho@wingstravel.hk', phone: '+852 9000 1111', travelGroup: 'Adventure Team', memberType: 'Standard', status: 'active', joinDate: '2025-01-08', lastLogin: '2025-02-24' }
-];
+export interface TravelAgencyDetailProps {
+  agencyId?: number | null;
+  agency?: TravelAgency | null;
+  onBack: () => void;
+  onEdit?: (e: FormEvent<HTMLFormElement>) => void;
+  onAddContact?: () => void;
+  contactPersons?: ContactPerson[];
+  onContactPersonsChange?: (next: ContactPerson[]) => void;
+  isLoading?: boolean;
+  contracts?: Contract[];
+  members?: Member[];
+  onSaveContract?: (
+    contract: Contract,
+    form: { expiryDate: string; creditLimit: number; creditUsed: number }
+  ) => void | Promise<unknown>;
+  onDeleteContract?: (contractId: string) => void;
+  onAddContract?: () => void;
+  onAddMember?: () => void;
+  onDeleteMember?: (memberId: number) => void;
+}
 
 type BalanceStatus = 'critical' | 'low' | 'ok' | 'full' | 'depleted';
 
@@ -123,7 +100,7 @@ function getBalanceStatus(used: number, total: number): BalanceStatus {
   return 'ok';
 }
 
-const STATUS_CONFIG: Record<BalanceStatus, { label: string; barColor: string; textColor: string; bg: string; icon: React.ReactNode }> = {
+const STATUS_CONFIG: Record<BalanceStatus, { label: string; barColor: string; textColor: string; bg: string; icon: ReactNode }> = {
   full:     { label: 'Full',     barColor: 'bg-blue-500',   textColor: 'text-blue-700',  bg: 'bg-blue-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
   ok:       { label: 'OK',       barColor: 'bg-green-500',  textColor: 'text-green-700', bg: 'bg-green-50',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
   low:      { label: 'Low',      barColor: 'bg-amber-500',  textColor: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
@@ -174,66 +151,70 @@ export function TravelAgencyDetail({
   agency: agencyProp,
   onBack,
   onEdit,
-  onAddContact,
+  onAddContact: _onAddContact,
+  contactPersons: contactPersonsProp,
+  onContactPersonsChange,
   isLoading = false,
+  contracts: contractsProp,
+  members: membersProp,
+  onSaveContract,
+  onDeleteContract,
+  onAddContract,
+  onAddMember,
+  onDeleteMember,
 }: TravelAgencyDetailProps) {
-  const [agency, setAgency] = useState<TravelAgency | null>(
-    agencyProp !== undefined ? agencyProp :
-    agencyId ? {
-      id: agencyId,
-      agencyName: 'Wings Agency',
-      agencyCode: 'TA-WG-001',
-      contactPerson: 'Eric Ng',
-      email: 'eric.ng@wingstravel.hk',
-      phone: '+852 2789 4567',
-      paymentMethod: 'On-Credit',
-      discountRate: 15,
-      status: 'active'
-    } : null
-  );
+  const contracts = contractsProp ?? [];
+  const members = membersProp ?? [];
 
+  const [localContacts, setLocalContacts] = useState<ContactPerson[]>([
+    { id: '1', name: '', email: '', phone: '' },
+  ]);
+  const contactPersons = contactPersonsProp ?? localContacts;
+
+  const setContactPersonsNext = (next: ContactPerson[]) => {
+    onContactPersonsChange?.(next);
+    if (contactPersonsProp === undefined) {
+      setLocalContacts(next);
+    }
+  };
+
+  const [agency, setAgency] = useState<TravelAgency | null>(agencyProp ?? null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [editForm, setEditForm] = useState({ expiryDate: '', creditLimit: 0, creditUsed: 0 });
-  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([
-    { id: '1', name: agency?.contactPerson || '', email: agency?.email || '', phone: agency?.phone || '' }
-  ]);
-  const [agencyStatus, setAgencyStatus] = useState<boolean>(agency?.status === 'active');
+  const [agencyStatus, setAgencyStatus] = useState<boolean>(agencyProp?.status === 'active');
 
   const isEditMode = agencyId !== null;
 
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setAgency({
-      id: agencyId ?? 99,
-      agencyName: 'Global Star Travel',
-      agencyCode: 'TA-GS-001',
-      contactPerson: 'Michelle Yip',
-      email: 'michelle.yip@globalstar.hk',
-      phone: '+852 2456 7890',
-      paymentMethod: 'On-Credit',
-      discountRate: 18,
-      status: 'active',
-    });
-    setContactPersons([
-      { id: '1', name: 'Michelle Yip', email: 'michelle.yip@globalstar.hk', phone: '+852 2456 7890' },
-      { id: '2', name: 'Tom Kwok', email: 'tom.kwok@globalstar.hk', phone: '+852 2456 7891' },
-    ]);
-    setAgencyStatus(true);
-  };
+  useEffect(() => {
+    setAgency(agencyProp ?? null);
+    if (agencyProp) {
+      setAgencyStatus(agencyProp.status === 'active');
+      setContactPersonsNext([
+        {
+          id: '1',
+          name: agencyProp.contactPerson || '',
+          email: agencyProp.email || '',
+          phone: agencyProp.phone || '',
+        },
+      ]);
+    } else if (agencyId === null) {
+      setContactPersonsNext([{ id: '1', name: '', email: '', phone: '' }]);
+    }
+  }, [agencyProp?.id, agencyId]);
 
   const handleAddContactPerson = () => {
     const newId = (contactPersons.length + 1).toString();
-    setContactPersons([...contactPersons, { id: newId, name: '', email: '', phone: '' }]);
+    setContactPersonsNext([...contactPersons, { id: newId, name: '', email: '', phone: '' }]);
   };
 
   const handleRemoveContactPerson = (id: string) => {
     if (contactPersons.length > 1) {
-      setContactPersons(contactPersons.filter(cp => cp.id !== id));
+      setContactPersonsNext(contactPersons.filter(cp => cp.id !== id));
     }
   };
 
   const handleUpdateContactPerson = (id: string, field: keyof Omit<ContactPerson, 'id'>, value: string) => {
-    setContactPersons(contactPersons.map(cp => 
+    setContactPersonsNext(contactPersons.map(cp =>
       cp.id === id ? { ...cp, [field]: value } : cp
     ));
   };
@@ -247,9 +228,16 @@ export function TravelAgencyDetail({
     });
   };
 
-  const handleSaveContract = () => {
-    console.log('Saving contract:', editingContract?.contractNumber, editForm);
-    setEditingContract(null);
+  const handleSaveContract = async () => {
+    if (!editingContract) return;
+    try {
+      if (onSaveContract) {
+        await Promise.resolve(onSaveContract(editingContract, editForm));
+      }
+      setEditingContract(null);
+    } catch {
+      // Keep dialog open on failure
+    }
   };
 
   const daysUntilExpiry = (dateStr: string) => {
@@ -257,9 +245,26 @@ export function TravelAgencyDetail({
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const totalCredit = MOCK_CONTRACTS.reduce((sum, c) => sum + c.creditLimit, 0);
-  const usedCredit = MOCK_CONTRACTS.reduce((sum, c) => sum + c.creditUsed, 0);
+  const totalCredit = contracts.reduce((sum, c) => sum + c.creditLimit, 0);
+  const usedCredit = contracts.reduce((sum, c) => sum + c.creditUsed, 0);
   const remainingCredit = totalCredit - usedCredit;
+
+  if (isLoading && agencyId != null && agencyProp == null) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack} type="button">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1>Agency</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[240px] text-gray-600 gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-400" aria-hidden />
+          <p className="text-sm">Loading agency details…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -274,22 +279,17 @@ export function TravelAgencyDetail({
             {isEditMode ? 'Edit the details of the agency' : 'Enter the details of the new agency'}
           </p>
         </div>
-        <div className="ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleQuickFill}
-            className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-          >
-            <Shuffle className="w-3 h-3" />
-            Quick Fill Demo
-          </Button>
-        </div>
       </div>
 
       {/* Main Form Card */}
       <Card className="p-6">
-        <form className="space-y-6">
+        <form
+          className="space-y-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void onEdit?.(e);
+          }}
+        >
           {/* Agency Information Section */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Agency Information</h4>
@@ -449,18 +449,25 @@ export function TravelAgencyDetail({
       </Card>
 
       {/* Contracts Section (Only show when editing) */}
-      {isEditMode && agency && (
+      {isEditMode && !isLoading && (
         <Card className="p-6">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Contracts</h2>
-            <p className="text-sm text-gray-600">View and manage all contracts for this travel agency</p>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Contracts</h2>
+              <p className="text-sm text-gray-600">View and manage all contracts for this travel agency</p>
+            </div>
+            {onAddContract && (
+              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onAddContract}>
+                Add contract
+              </Button>
+            )}
           </div>
 
           {/* Contract Summary */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Contracts</p>
-              <p className="text-2xl font-semibold text-blue-900">{MOCK_CONTRACTS.length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{contracts.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Total Credit Limit</p>
@@ -477,7 +484,10 @@ export function TravelAgencyDetail({
 
           {/* Contracts List */}
           <div className="space-y-4">
-            {MOCK_CONTRACTS.map((contract) => {
+            {contracts.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">No contracts found for this agency.</p>
+            ) : (
+            contracts.map((contract) => {
               const days = daysUntilExpiry(contract.expiryDate);
               const expiryColor = days < 30 ? 'text-red-600' : days < 90 ? 'text-amber-600' : 'text-gray-600';
               
@@ -515,17 +525,29 @@ export function TravelAgencyDetail({
 
                     {/* Status & Actions */}
                     <div className="col-span-3">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap justify-end">
                         <ContractStatusBadge status={contract.status} />
                         <Button
+                          type="button"
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 ml-auto"
+                          className="h-7 px-2"
                           onClick={() => handleEditContract(contract)}
                         >
                           <Edit2 className="w-3 h-3 mr-1" />
                           Edit
                         </Button>
+                        {onDeleteContract && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-red-600 hover:bg-red-50"
+                            onClick={() => onDeleteContract(contract.id)}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
                       </div>
                       {contract.notes && (
                         <p className="text-xs text-gray-500 italic">{contract.notes}</p>
@@ -534,36 +556,44 @@ export function TravelAgencyDetail({
                   </div>
                 </Card>
               );
-            })}
+            })
+            )}
           </div>
         </Card>
       )}
 
       {/* Agency Members Section (Only show when editing) */}
-      {isEditMode && agency && (
+      {isEditMode && !isLoading && (
         <Card className="p-6">
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Agency Members</h2>
-            <p className="text-sm text-gray-600">All customer accounts associated with this travel agency</p>
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Agency Members</h2>
+              <p className="text-sm text-gray-600">All customer accounts associated with this travel agency</p>
+            </div>
+            {onAddMember && (
+              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onAddMember}>
+                Add member
+              </Button>
+            )}
           </div>
 
           {/* Members Summary */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Members</p>
-              <p className="text-2xl font-semibold text-blue-900">{MOCK_MEMBERS.length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{members.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Active</p>
-              <p className="text-2xl font-semibold text-green-900">{MOCK_MEMBERS.filter(m => m.status === 'active').length}</p>
+              <p className="text-2xl font-semibold text-green-900">{members.filter(m => m.status === 'active').length}</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
               <p className="text-xs text-gray-700 mb-1">Inactive</p>
-              <p className="text-2xl font-semibold text-gray-900">{MOCK_MEMBERS.filter(m => m.status === 'inactive').length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{members.filter(m => m.status === 'inactive').length}</p>
             </Card>
             <Card className="p-4 bg-red-50 border-red-200">
               <p className="text-xs text-red-700 mb-1">Suspended</p>
-              <p className="text-2xl font-semibold text-red-900">{MOCK_MEMBERS.filter(m => m.status === 'suspended').length}</p>
+              <p className="text-2xl font-semibold text-red-900">{members.filter(m => m.status === 'suspended').length}</p>
             </Card>
           </div>
 
@@ -580,14 +610,24 @@ export function TravelAgencyDetail({
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                  {onDeleteMember && (
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {MOCK_MEMBERS.map((member) => (
+                {members.length === 0 ? (
+                  <tr>
+                    <td colSpan={onDeleteMember ? 9 : 8} className="px-4 py-8 text-center text-sm text-gray-500">
+                      No members linked to this agency yet.
+                    </td>
+                  </tr>
+                ) : (
+                members.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{member.accountNumber}</td>
                     <td className="px-4 py-3">
-                      <button className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                      <button type="button" className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
                         {member.name}
                       </button>
                     </td>
@@ -609,8 +649,22 @@ export function TravelAgencyDetail({
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {member.lastLogin ? new Date(member.lastLogin).toLocaleDateString() : 'Never'}
                     </td>
+                    {onDeleteMember && (
+                      <td className="px-4 py-3 text-right">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-2 text-red-600 hover:bg-red-50"
+                          onClick={() => onDeleteMember(member.id)}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </td>
+                    )}
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>

@@ -158,10 +158,11 @@ export interface BookableItemsProps {
   items?: BookableItem[];
   isLoading?: boolean;
   onEditItem?: (itemId: number) => void;
+  onDeleteItem?: (itemId: number) => void;
   onCreateItem?: () => void;
 }
 
-export function BookableItems({ items: itemsProp, onEditItem, onCreateItem }: BookableItemsProps = {}) {
+export function BookableItems({ items: itemsProp, onEditItem, onDeleteItem, onCreateItem }: BookableItemsProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -485,7 +486,7 @@ export function BookableItems({ items: itemsProp, onEditItem, onCreateItem }: Bo
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => console.log('Delete item:', item.id)}
+                        onClick={() => onDeleteItem?.(item.id)}
                         className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                         title="Delete Item"
                       >

@@ -532,7 +532,29 @@ export function BookingReviewPage({
 
             {/* Basic booking info */}
             <div className="grid grid-cols-3 gap-6 mb-6">
-              <Field label="Suite / Lounge"><span className="font-medium">{booking.suite}</span></Field>
+              <Field label="Suite / Lounge">
+                <span className="font-medium">{booking.suite}</span>
+                {(booking.assignedSuiteNames?.length || booking.assignedLoungeNames?.length) ? (
+                  <div className="mt-1.5 space-y-1">
+                    {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Suites</span>
+                        {booking.assignedSuiteNames.map(name => (
+                          <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{name}</span>
+                        ))}
+                      </div>
+                    )}
+                    {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Lounges</span>
+                        {booking.assignedLoungeNames.map(name => (
+                          <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">{name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </Field>
               <Field label="Visit Date &amp; Time"><span>{booking.dateTime}</span></Field>
               <Field label="Payment Mode">
                 <Badge className={`text-xs ${paymentModeBadgeClass(booking.paymentMode)}`}>{booking.paymentMode}</Badge>

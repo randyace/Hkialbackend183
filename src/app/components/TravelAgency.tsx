@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Building2, Calendar, UserPlus, Mail, Phone, User, DollarSign, CreditCard, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User, DollarSign, Users, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,51 +47,6 @@ interface TravelAgency {
   createdDate: string;
 }
 
-const generateMockAgencies = (): TravelAgency[] => {
-  const agencyNames = [
-    'EGL Tours', 'Wing On Travel', 'Hong Thai Travel', 'TravelExpert', 'Goldjoy Travel', 'Zuji Travel',
-    'Expedia Hong Kong', 'Trip.com', 'Klook Travel', 'KKday', 'CTrip Hong Kong', 'Agoda Travel',
-    'Asia World-Expo Travel', 'China Travel Service', 'Pak Kong Travel', 'Sincerity Travel',
-    'Morning Star Travel', 'Brilliant Tour', 'Jetour Holidays', 'Sunflower Travel',
-    'Concorde Tours', 'Miramar Travel', 'JTB Hong Kong', 'HIS Travel', 'Phoenix Travel',
-    'Dragonair Holidays', 'Cathay Holidays', 'Premier Holidays', 'Royal Holiday', 'Elite Tours',
-    'Executive Travel', 'Premium Voyages', 'Luxury Escapes', 'First Class Travel', 'Diamond Tours',
-    'Platinum Journeys', 'Golden Gate Travel', 'Silk Road Tours', 'Orient Express', 'Asia Pacific Travel',
-    'Global Gateway', 'Worldwide Ventures', 'International Tours', 'Universal Travel', 'Cosmos Holidays'
-  ];
-  
-  const contactNames = ['Sarah Wong', 'John Chen', 'Michael Lee', 'Emily Tam', 'David Cheng', 'Lisa Wang', 'Peter Chan', 'Jennifer Lam', 'Raymond Ho', 'Angela Ng'];
-  const paymentMethods: ('Upfront' | 'Net Upfront' | 'On-Credit' | 'Monthly Invoice')[] = ['Upfront', 'Net Upfront', 'On-Credit', 'Monthly Invoice'];
-  const statuses: ('active' | 'inactive' | 'suspended')[] = ['active', 'active', 'active', 'active', 'active', 'inactive', 'suspended'];
-  
-  const agencies: TravelAgency[] = [];
-  for (let i = 1; i <= 45; i++) {
-    const date = new Date(2024, Math.floor(i / 10), (i % 28) + 1);
-    const creditLimit = 50000 + (i * 10000) % 300000;
-    const creditUsed = Math.floor(creditLimit * (0.2 + (i % 5) * 0.15));
-    
-    agencies.push({
-      id: i,
-      agencyName: agencyNames[i % agencyNames.length],
-      agencyCode: `TA-${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + ((i * 2) % 26))}-${String(i).padStart(3, '0')}`,
-      contactPerson: contactNames[i % contactNames.length],
-      email: `${contactNames[i % contactNames.length].toLowerCase().replace(' ', '.')}@${agencyNames[i % agencyNames.length].toLowerCase().replace(/ /g, '')}${i > 20 ? i : ''}.com.hk`,
-      phone: `+852 ${2000 + (i * 123) % 9000} ${1000 + (i * 456) % 9000}`,
-      paymentMethod: paymentMethods[i % paymentMethods.length],
-      creditLimit: creditLimit,
-      creditBalance: creditLimit - creditUsed,
-      discountRate: 10 + (i % 3) * 5,
-      memberCount: 20 + (i * 5) % 100,
-      totalBookings: 50 + (i * 15) % 500,
-      status: statuses[i % statuses.length],
-      createdDate: date.toISOString().split('T')[0]
-    });
-  }
-  return agencies;
-};
-
-const MOCK_AGENCIES: TravelAgency[] = generateMockAgencies();
-
 export interface TravelAgencyProps {
   agencies?: TravelAgency[];
   isLoading?: boolean;
@@ -105,9 +60,11 @@ export interface TravelAgencyProps {
   onSubmit?: () => void;
   isEditing?: boolean;
   onDelete?: (id: number) => void;
+  /** True while create/update mutation is in flight */
+  isSubmitting?: boolean;
 }
 
-export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete }: TravelAgencyProps = {}) {
+export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete, isLoading = false, isSubmitting = false }: TravelAgencyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -125,7 +82,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
   const editingAgency = isEditing !== undefined ? (isEditing ? internalEditingAgency : null) : internalEditingAgency;
   const setEditingAgency = setInternalEditingAgency;
 
-  const agencies: TravelAgency[] = agenciesProp?.length ? agenciesProp : MOCK_AGENCIES;
+  const agencies: TravelAgency[] = agenciesProp ?? [];
 
   const filteredAgencies = agencies.filter(agency => {
     const matchesSearch = agency.agencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -146,6 +103,11 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
   const totalPages = Math.ceil(filteredAgencies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedAgencies = filteredAgencies.slice(startIndex, startIndex + itemsPerPage);
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredAgencies.length / itemsPerPage));
+    setCurrentPage((p) => (p > maxPage ? maxPage : p));
+  }, [filteredAgencies.length, itemsPerPage]);
 
   const handleAddOrEdit = () => {
     setIsDialogOpen(false);
@@ -312,7 +274,20 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {paginatedAgencies.map((agency) => {
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-16 text-center text-gray-600">
+                    <Loader2 className="w-8 h-8 animate-spin inline-block text-gray-400" aria-hidden />
+                    <p className="mt-3 text-sm">Loading agencies…</p>
+                  </td>
+                </tr>
+              ) : paginatedAgencies.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-gray-600 text-sm">
+                    No agencies found. {agencies.length === 0 ? 'Add an agency to get started.' : 'Try adjusting your filters.'}
+                  </td>
+                </tr>
+              ) : paginatedAgencies.map((agency) => {
                 const creditUsed = agency.creditLimit > 0 ? agency.creditLimit - agency.creditBalance : 0;
                 const creditUtilization = agency.creditLimit > 0 ? (creditUsed / agency.creditLimit * 100).toFixed(1) : '0';
                 return (
@@ -421,8 +396,13 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         {/* Pagination */}
         <div className="border-t p-4 flex items-center justify-between">
           <p className="text-sm text-gray-600">
-            Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredAgencies.length)} of {filteredAgencies.length} agencies
+            {isLoading
+              ? 'Loading agencies…'
+              : filteredAgencies.length === 0
+                ? 'No agencies match your filters.'
+                : `Showing ${startIndex + 1} to ${Math.min(startIndex + itemsPerPage, filteredAgencies.length)} of ${filteredAgencies.length} agencies`}
           </p>
+          {!isLoading && filteredAgencies.length > 0 && (
           <Pagination>
             <PaginationContent>
               <PaginationItem>
@@ -448,12 +428,13 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               {totalPages > 5 && <PaginationEllipsis />}
               <PaginationItem>
                 <PaginationNext 
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  onClick={() => setCurrentPage(p => Math.min(Math.max(1, totalPages), p + 1))}
+                  className={currentPage === totalPages || totalPages === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                 />
               </PaginationItem>
             </PaginationContent>
           </Pagination>
+          )}
         </div>
       </Card>
 
@@ -556,14 +537,23 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               </div>
               <div>
                 <Label className="mb-2">Status</Label>
-                <Select value={formDataProp?.status ?? 'active'} onValueChange={v => onFormChange?.('status', v)}>
+                <Select
+                  value={(() => {
+                    const s = formDataProp?.status;
+                    if (!s) return 'Active';
+                    if (s === 'Inactive' || s.toLowerCase() === 'inactive' || s.toLowerCase() === 'suspended') {
+                      return 'Inactive';
+                    }
+                    return 'Active';
+                  })()}
+                  onValueChange={v => onFormChange?.('status', v)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -581,11 +571,26 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={() => { onSubmit?.(); }}>
-              {editingAgency ? 'Update Agency' : 'Add Agency'}
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              aria-busy={isSubmitting}
+              onClick={() => {
+                onSubmit?.();
+              }}
+              className="min-w-[8.5rem]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" aria-hidden />
+                  {editingAgency ? 'Saving…' : 'Creating…'}
+                </>
+              ) : (
+                <>{editingAgency ? 'Update Agency' : 'Add Agency'}</>
+              )}
             </Button>
           </div>
         </DialogContent>

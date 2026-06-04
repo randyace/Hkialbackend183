@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -77,7 +77,7 @@ const MOCK_APPLICATIONS = mockApplications;
 export interface ApplicationReviewProps {
   /** Pass populated array from CI4; falls back to MOCK_APPLICATIONS when empty */
   applications?: Application[];
-  onApprove?: (id: string) => void;
+  onApprove?: (id: string, data?: { accountNumber: string; internalGrouping: string; companyCode?: string; paymentMethod?: string; bulkPurchaseCode?: string; remarks?: string }) => void;
   onReject?: (id: string, reason: string) => void;
   onViewDetail?: (id: string) => void;
   isLoading?: boolean;
@@ -90,9 +90,11 @@ export function ApplicationReview({
   onViewDetail,
   isLoading = false,
 }: ApplicationReviewProps) {
-  const [applications, setApplications] = useState<Application[]>(
-    applicationsProp.length > 0 ? applicationsProp : MOCK_APPLICATIONS,
-  );
+  const [applications, setApplications] = useState<Application[]>([]);
+
+  useEffect(() => {
+    setApplications(applicationsProp);
+  }, [applicationsProp]);
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [isRejectionDialogOpen, setIsRejectionDialogOpen] = useState(false);
@@ -129,7 +131,14 @@ export function ApplicationReview({
     setIsApprovalDialogOpen(false);
     setSelectedApp(null);
     resetForm();
-    onApprove?.(selectedApp.id);
+    onApprove?.(selectedApp.id, {
+      accountNumber,
+      internalGrouping,
+      companyCode,
+      paymentMethod,
+      bulkPurchaseCode,
+      remarks,
+    });
   };
 
   const handleReject = () => {

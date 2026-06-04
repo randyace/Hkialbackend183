@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Calendar, Plus, BadgePercent, Building2, CheckCircle, Info, Tag,
   AlertCircle, Plane, Car, ShoppingBag, Accessibility, ShieldCheck,
@@ -39,19 +39,11 @@ const TRAVEL_AGENCY_LIST = [
   { name: 'Jetour Holidays',     code: 'TA-JT-001', discountRate:  5, paymentMethod: 'Upfront'                      },
 ];
 
-const SUITE_OPTIONS = [
-  'VIP Suite A', 'VIP Suite B', 'Executive Suite',
-  'Business Suite', 'Premier Suite', 'Open Lounge',
-];
+const SUITE_OPTIONS: string[] = [];
 
-const SUITE_RATES: Record<string, number> = {
-  'VIP Suite A':     3800,
-  'VIP Suite B':     3200,
-  'Executive Suite': 2800,
-  'Business Suite':  2200,
-  'Premier Suite':   2500,
-  'Open Lounge':     1800,
-};
+const SUITE_RATES: Record<string, number> = {};
+
+const ENTRY_FEE_RATE = 1800;
 
 const NON_FLYING_RATE  = 500;
 const LIMO_RATE        = 1500;
@@ -63,14 +55,6 @@ const MONTHS = [
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
 ];
-
-const MOCK_PROMOS: Record<string, { label: string; benefit: string; discountPct: number }> = {
-  'SUMMER2024': { label: 'Summer 2024 Promotion',     benefit: '10%', discountPct: 10 },
-  'VIP20':      { label: 'VIP Member Discount',        benefit: '20%', discountPct: 20 },
-  'WELCOME':    { label: 'Welcome Offer',              benefit: '5%',  discountPct:  5 },
-  'TRAVEL10':   { label: 'Travel Agency Partner Rate', benefit: '10%', discountPct: 10 },
-  'DIAMOND15':  { label: 'Diamond Member Exclusive',   benefit: '15%', discountPct: 15 },
-};
 
 const MEMBERSHIP_DISCOUNT: Record<string, number> = {
   Gold: 5, Platinum: 8, Diamond: 12, Sapphire: 15,
@@ -135,10 +119,22 @@ export interface BookingFormData {
   guestName: string;
   flightNo: string;
   flightTime: string;
-  suite: string;
   visitDate: string;
+  visitTime: string;
   numberOfGuests: number;
   paymentMode: string;
+  selectedAddonKeys: string[];
+  assignedSuiteIds: number[];
+  assignedLoungeIds: number[];
+}
+
+// ── Account searcher ───────────────────────────────────────────────────────────
+
+interface AccountOption {
+  id: number;
+  accountNumber: string;
+  name: string;
+  type: 'Individual' | 'Corporate' | 'Agency';
 }
 
 // ── Props interface ───────────────────────────────────────────────────────────
@@ -146,6 +142,43 @@ export interface CreateBookingProps {
   onSubmit?: (data: BookingFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  accountSearchResults?: AccountOption[];
+  accountSearchLoading?: boolean;
+  showAccountDropdown?: boolean;
+  setShowAccountDropdown?: (open: boolean) => void;
+  onAccountSearch?: (query: string) => void;
+  onAccountSelect?: (account: AccountOption) => void;
+  onAccountClear?: () => void;
+  onGuestSearch?: (query: string) => void;
+  onGuestSearchSelect?: (account: AccountOption) => void;
+  /** undefined = not searched yet, [] = searched but empty, [...] = results */
+  guestSearchResults?: AccountOption[] | undefined;
+  guestSearchLoading?: boolean;
+  showGuestDropdown?: boolean;
+  setShowGuestDropdown?: (open: boolean) => void;
+  selectedAccount?: {
+    id: number;
+    account_number: string;
+    type: string;
+    name: string;
+    first_name?: string;
+    last_name?: string;
+    email: string;
+    phone: string;
+    membership_type?: string;
+    company_name?: string;
+  } | null;
+  onApplyPromo?: (code: string) => void;
+  selectedAddonKeys?: string[];
+  handleQuickFill?: () => void;
+  /** Physical resources fetched by the wrapper from /api/suites. */
+  physicalSuites?: Array<{ id: number; suite_name: string; capacity: number; kind: 'suite' | 'lounge' }>;
+  physicalLounges?: Array<{ id: number; suite_name: string; capacity: number; kind: 'suite' | 'lounge' }>;
+  /** Selected suite/lounge ids (owned by the wrapper, synced both ways). */
+  assignedSuiteIds?: number[];
+  setAssignedSuiteIds?: (ids: number[]) => void;
+  assignedLoungeIds?: number[];
+  setAssignedLoungeIds?: (ids: number[]) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -154,6 +187,29 @@ export function CreateBooking({
   onSubmit,
   onCancel,
   isSubmitting = false,
+  accountSearchResults,
+  accountSearchLoading,
+  showAccountDropdown = false,
+  setShowAccountDropdown,
+  onAccountSearch,
+  onAccountSelect,
+  onAccountClear,
+  onGuestSearch,
+  onGuestSearchSelect,
+  guestSearchResults = undefined,
+  guestSearchLoading = false,
+  showGuestDropdown = false,
+  setShowGuestDropdown,
+  selectedAccount = null,
+  onApplyPromo,
+  selectedAddonKeys = [],
+  handleQuickFill,
+  physicalSuites = [],
+  physicalLounges = [],
+  assignedSuiteIds = [],
+  setAssignedSuiteIds,
+  assignedLoungeIds = [],
+  setAssignedLoungeIds,
 }: CreateBookingProps = {}) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -182,7 +238,6 @@ export function CreateBooking({
   const [flightClass, setFlightClass] = useState<FlightClass | ''>('');
 
   // ── Booking ─────────────────────────────────────────────────────────────────
-  const [suite, setSuite] = useState('');
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
 
@@ -215,6 +270,9 @@ export function CreateBooking({
   const [hasPrivateSales, setHasPrivateSales] = useState(false);
   const [addonSearch, setAddonSearch]             = useState('');
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
+
+  // ── Guest Search Focus ──────────────────────────────────────────────────────
+  const [guestSearchFocused, setGuestSearchFocused] = useState(false);
 
   // ── Special Requests ────────────────────────────────────────────────────────
   const [specialRequests, setSpecialRequests] = useState('');
@@ -309,15 +367,7 @@ export function CreateBooking({
   const handleApplyPromo = () => {
     const code = promoInput.trim().toUpperCase();
     if (!code) { setPromoError('Please enter a promo or redemption code.'); return; }
-    const found = MOCK_PROMOS[code];
-    if (found) {
-      setPromoApplied({ code, ...found });
-      setPromoError('');
-      setPromoInput('');
-      toast.success(`Code "${code}" applied — ${found.benefit} off!`);
-    } else {
-      setPromoError('Invalid or expired code. Please check and try again.');
-    }
+    onApplyPromo?.(code);
   };
 
   // ─── Validation ──────────────────────────────────────────────────────────────
@@ -341,10 +391,12 @@ export function CreateBooking({
   const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
 
   // ─── Live Price Calculation ───────────────────────────────────────────────────
+  // Per-pax "head count entry fee" — applied to every flying guest no
+  // matter which physical resource they end up assigned to. Non-flying
+  // guests are charged at the lower nonFlying rate.
   const flyingGuests   = vipPS + vipLD;
   const totalNonFlying = nonFlyingPS + nonFlyingLD;
-  const suiteRate      = SUITE_RATES[suite] ?? 0;
-  const suiteCharge    = suiteRate * flyingGuests;
+  const suiteCharge    = ENTRY_FEE_RATE * flyingGuests;
   const nfCharge       = NON_FLYING_RATE * totalNonFlying;
   const limoCharge     = hasLimousine ? LIMO_RATE : 0;
   const shopCharge     = hasShopping  ? SHOPPING_RATE : 0;
@@ -357,22 +409,25 @@ export function CreateBooking({
   const afterDiscount  = subtotal - totalDiscount;
   const serviceCharge  = Math.round(afterDiscount * SERVICE_CHARGE_RATE);
   const totalPayable   = afterDiscount + serviceCharge;
-  const showPriceBreakdown = suiteRate > 0 && flyingGuests > 0;
+  const showPriceBreakdown = flyingGuests > 0;
 
   // ─── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountType)            { toast.error('Please select an account type.');       return; }
-    if (!suite)                  { toast.error('Please select a suite or lounge.');     return; }
     if (!visitDate || !visitTime){ toast.error('Please enter the visit date and time.'); return; }
     if (!flightNo)               { toast.error('Please enter the flight number.');       return; }
     if (!flightTime)             { toast.error('Please enter the flight time.');         return; }
     if (hasGuestErrors)          { toast.error('Please fix the guest detail errors before submitting.'); return; }
+    // Premiere Suite: cap assigned suites to numPremiereSuites.
+    if (numPremiereSuites > 0 && assignedSuiteIds.length > numPremiereSuites) {
+      toast.error(`Premiere Suite assignments (${assignedSuiteIds.length}) cannot exceed Quantity of Premiere Suite (${numPremiereSuites}).`);
+      return;
+    }
     const formData: BookingFormData = {
       accountType,
       accountNumber,
       guestName,
-      suite,
       visitDate,
       visitTime,
       flightType,
@@ -392,58 +447,20 @@ export function CreateBooking({
       contactName,
       contactEmail,
       contactNo,
-      promoCode,
+      promoCode: promoApplied?.code ?? '',
       specialRequests,
       paymentMode,
+      selectedAddonKeys,
+      assignedSuiteIds,
+      assignedLoungeIds,
     };
     onSubmit?.(formData);
   };
 
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setAccountType('Corporate');
-    setAccountNumber('CORP-2024-0001');
-    setGuestName('Alice Lam');
-    setCompanyName('Cathay Pacific Airways');
-    setMembershipTier('');
-    setPaymentMode('On-Credit');
-    setBookingChannel('Email/Call to HKIAL');
-    setAccountRemark('VIP Corporate Client – Priority Service');
-    setIsAdHoc(false);
-    setFlightType('Departure');
-    setArrivalDate('2026-04-15');
-    setFlightNo('CX882');
-    setFlightTime('14:30');
-    setFlightOrigin('Hong Kong (HKG)');
-    setFlightDestination('London Heathrow (LHR)');
-    setNumberOfLuggage(2);
-    setFlightClass('Business Class');
-    setSuite('VIP Suite A');
-    setVisitDate('2026-04-15');
-    setVisitTime('12:00');
-    setNumPremiereSuites(0);
-    setVipPS(0);
-    setNonFlyingPS(0);
-    setVipLD(2);
-    setNonFlyingLD(1);
-    setContactName('Alice Lam');
-    setContactEmail('alice.lam@cathaypacific.com');
-    setContactNo('+852 2123 4567');
-    setBookingMemo('Corporate VIP booking – priority handling');
-    setHasLimousine(true);
-    setLimoStops([
-      { id: 1, type: 'Pick-up', location: 'The Peninsula Hong Kong' },
-      { id: 2, type: 'Destination', location: 'HKIA Terminal 1' },
-    ]);
-    setHasShopping(false);
-    setHasWheelchair(false);
-    setHasSecurity(false);
-    setSpecialRequests('Please prepare champagne and fresh fruit platter upon arrival.');
-  };
-
   const paymentModeOptions = (): PaymentMode[] => {
     if (accountType === 'Individual')    return ['Upfront', 'Net Upfront'];
-    if (accountType === 'Corporate')     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
+    if (accountType === 'Corporate')     return ['Bulk Purchase/Monthly Invoice'];
+    if (accountType === 'Agency') return ['Upfront', 'Net Upfront', 'On-Credit'];
     if (accountType === 'Agency') return ['Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
   };
@@ -547,18 +564,91 @@ export function CreateBooking({
 
           {/* Core Guest Fields */}
           <div className="grid grid-cols-2 gap-6">
-            <div>
+            <div className="relative">
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Number <span className="text-red-500">*</span></label>
-              <input type="text" value={accountNumber} onChange={e => setAccountNumber(e.target.value)}
-                placeholder="e.g. ACC-2024-0012"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              {accountSearchResults !== undefined ? (
+                <div className="relative">
+                  <input type="text"
+                    value={accountNumber}
+                    onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); }}
+                    onFocus={() => { onAccountSearch?.(accountNumber); setShowAccountDropdown(true); }}
+                    placeholder="Search account number or name…"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  {showAccountDropdown && (
+                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
+                      {accountSearchLoading ? (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Searching…</div>
+                      ) : accountSearchResults.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-500">No accounts found</div>
+                      ) : accountSearchResults.map(acc => (
+                        <button key={acc.id} type="button"
+                          onMouseDown={e => { e.preventDefault(); setAccountNumber(acc.accountNumber); setAccountType(acc.type); setShowAccountDropdown(false); if (onAccountSelect) onAccountSelect(acc); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-left border-b border-gray-100 last:border-0 hover:bg-blue-50 transition-colors">
+                          <span className="text-xs font-mono text-gray-500 w-32 shrink-0">{acc.accountNumber}</span>
+                          <span className="text-sm font-medium text-gray-900">{acc.name}</span>
+                          <span className="ml-auto text-xs text-gray-400">{acc.type}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <input type="text" value={accountNumber} onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); }}
+                  placeholder="e.g. ACC-2024-0012"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              )}
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Guest Name</label>
-              <input type="text" value={guestName} onChange={e => setGuestName(e.target.value)}
-                placeholder="Full name of main guest"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Search Guest</label>
+              <div className="relative">
+                <input type="text"
+                  value={guestName}
+                  onChange={e => { setGuestName(e.target.value); onGuestSearch?.(e.target.value); }}
+                  onFocus={() => { setGuestSearchFocused(true); setShowGuestDropdown(true); if (guestName.length >= 1) onGuestSearch?.(guestName); }}
+                  onBlur={() => setTimeout(() => setGuestSearchFocused(false), 200)}
+                  placeholder="Search by name, phone, or email…"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                {(showGuestDropdown || guestSearchFocused) && guestSearchResults !== undefined && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
+                    {guestSearchLoading ? (
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">Searching…</div>
+                    ) : guestSearchResults.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-500">No guests found</div>
+                    ) : guestSearchResults.map(acc => (
+                      <button key={acc.id} type="button"
+                        onMouseDown={e => { e.preventDefault(); setGuestName(acc.name); setAccountNumber(acc.accountNumber); setAccountType(acc.type); setShowGuestDropdown(false); setGuestSearchFocused(false); if (onGuestSearchSelect) onGuestSearchSelect(acc); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left border-b border-gray-100 last:border-0 hover:bg-blue-50 transition-colors">
+                        <span className="text-xs font-mono text-gray-500 w-32 shrink-0">{acc.accountNumber}</span>
+                        <span className="text-sm font-medium text-gray-900">{acc.name}</span>
+                        <span className="ml-auto text-xs text-gray-400">{acc.type}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+            <div className="col-span-2 grid grid-cols-4 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>First Name</label>
+                  <input type="text" value={selectedAccount?.first_name || ''} readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>Last Name</label>
+                  <input type="text" value={selectedAccount?.last_name || ''} readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>Contact Number</label>
+                  <input type="text" value={selectedAccount?.phone || ''} readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>E-mail</label>
+                  <input type="text" value={selectedAccount?.email || ''} readOnly
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
+                </div>
+              </div>
             {accountType === 'Corporate' && (
               <div className="col-span-2">
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Company Name</label>
@@ -758,24 +848,8 @@ export function CreateBooking({
         <Card className="p-6">
           <h2 className="mb-6">Booking Details</h2>
 
-          {/* Suite, Date, Time, Mode */}
+          {/* Visit Date / Time + Resource Assignment Hint */}
           <div className="grid grid-cols-3 gap-6 mb-6">
-            <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Suite / Lounge <span className="text-red-500">*</span></label>
-              <Select value={suite} onValueChange={setSuite}>
-                <SelectTrigger><SelectValue placeholder="Select suite or lounge" /></SelectTrigger>
-                <SelectContent>
-                  {SUITE_OPTIONS.map(s => (
-                    <SelectItem key={s} value={s}>
-                      <span className="flex items-center justify-between gap-4 w-full">
-                        <span>{s}</span>
-                        {SUITE_RATES[s] && <span className="text-xs text-gray-400">HK${SUITE_RATES[s].toLocaleString()}/pax</span>}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
@@ -786,9 +860,15 @@ export function CreateBooking({
               <input type="time" value={visitTime} onChange={e => setVisitTime(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
+            <div>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Entry Fee</label>
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-600">
+                HK${ENTRY_FEE_RATE.toLocaleString()} per flying guest
+              </div>
+            </div>
           </div>
 
-          {/* Part 1: Premiere Suite */}
+          {/* Premiere Suite — physical suite checkboxes (CIP 1-6, Function Room) */}
           <div className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -823,6 +903,65 @@ export function CreateBooking({
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psOverCapacity ? 'border-red-400 bg-red-50' : ''}`} />
               </div>
             </div>
+
+            {/* Premiere Suite — physical suite checkboxes */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Assign Physical Suites <span className="text-gray-400 font-normal">(optional)</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Check up to {numPremiereSuites} suite{numPremiereSuites === 1 ? '' : 's'} (CIP 1–6, Function Room).
+                  </p>
+                </div>
+                {numPremiereSuites > 0 && (
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    assignedSuiteIds.length > numPremiereSuites
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {assignedSuiteIds.length} / {numPremiereSuites} assigned
+                  </span>
+                )}
+              </div>
+              {numPremiereSuites === 0 ? (
+                <p className="text-xs text-gray-400 italic">Set Quantity of Premiere Suite above to enable suite assignment.</p>
+              ) : physicalSuites.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No physical suites available — ask an administrator to seed CIP 1-6 / Function Room.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {physicalSuites.map(s => {
+                    const checked = assignedSuiteIds.includes(s.id);
+                    const isAtCap = !checked && assignedSuiteIds.length >= numPremiereSuites;
+                    return (
+                      <label key={s.id}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors ${
+                          checked
+                            ? 'border-purple-300 bg-purple-50 text-purple-800'
+                            : isAtCap
+                              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}>
+                        <Checkbox
+                          checked={checked}
+                          disabled={isAtCap}
+                          onCheckedChange={v => {
+                            if (!setAssignedSuiteIds) return;
+                            setAssignedSuiteIds(
+                              v
+                                ? [...assignedSuiteIds, s.id]
+                                : assignedSuiteIds.filter(id => id !== s.id)
+                            );
+                          }}
+                        />
+                        <span className="font-medium">{s.suite_name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">cap {s.capacity}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {psErrors.length > 0 && (
               <div className="mt-3 space-y-1">
                 {psErrors.map((err, i) => (
@@ -834,7 +973,7 @@ export function CreateBooking({
             )}
           </div>
 
-          {/* Part 2: Lounge Deluxe */}
+          {/* Lounge Deluxe — physical lobby checkboxes (Lobby 1-8) */}
           <div className={`border rounded-lg p-4 ${ldErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -861,6 +1000,53 @@ export function CreateBooking({
                 {ldNonFlyingOver && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Max 3 allowed</p>}
               </div>
             </div>
+
+            {/* Lounge Deluxe — physical lobby checkboxes */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Assign Lobby Seats <span className="text-gray-400 font-normal">(optional, free choice)</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">Check any subset of Lobby 1–8 that the guest will use.</p>
+                </div>
+                {assignedLoungeIds.length > 0 && (
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">
+                    {assignedLoungeIds.length} / {physicalLounges.length} assigned
+                  </span>
+                )}
+              </div>
+              {physicalLounges.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">No physical lounges available — ask an administrator to seed Lobby 1-8.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {physicalLounges.map(l => {
+                    const checked = assignedLoungeIds.includes(l.id);
+                    return (
+                      <label key={l.id}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors ${
+                          checked
+                            ? 'border-blue-300 bg-blue-50 text-blue-800'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}>
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={v => {
+                            if (!setAssignedLoungeIds) return;
+                            setAssignedLoungeIds(
+                              v
+                                ? [...assignedLoungeIds, l.id]
+                                : assignedLoungeIds.filter(id => id !== l.id)
+                            );
+                          }}
+                        />
+                        <span className="font-medium">{l.suite_name}</span>
+                        <span className="text-xs text-gray-400 ml-auto">cap {l.capacity}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {ldErrors.length > 0 && (
               <div className="mt-3 space-y-1">
                 {ldErrors.map((err, i) => (
@@ -1373,7 +1559,7 @@ export function CreateBooking({
             <div className="space-y-2 text-sm max-w-md ml-auto">
               {suiteCharge > 0 && (
                 <div className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-600">{suite} × {flyingGuests} flying guest{flyingGuests !== 1 ? 's' : ''}</span>
+                  <span className="text-gray-600">Entry Fee × {flyingGuests} flying guest{flyingGuests !== 1 ? 's' : ''} (HK${ENTRY_FEE_RATE.toLocaleString()}/pax)</span>
                   <span>HK${suiteCharge.toLocaleString()}</span>
                 </div>
               )}

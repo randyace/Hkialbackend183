@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Save, Shuffle } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, Shuffle } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
 export interface BookableItemFormData {
@@ -22,39 +22,41 @@ export interface BookableItemFormData {
 
 export interface BookableItemEditProps {
   itemId?: number | null;
+  isLoading?: boolean;
+  initialData?: BookableItemFormData;
   onBack?: () => void;
   onSave?: (formData: BookableItemFormData) => void;
 }
 
-export function BookableItemEdit({ itemId, onBack, onSave }: BookableItemEditProps) {
+export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSave }: BookableItemEditProps) {
   const isEditMode = !!itemId;
 
-  // Mock data - in real app, this would fetch based on itemId
-  const [formData, setFormData] = useState({
-    nameEn: isEditMode ? 'Airport Limousine Service' : '',
-    nameSimp: isEditMode ? '机场豪华轿车服务' : '',
-    nameTrad: isEditMode ? '機場豪華轎車服務' : '',
-    category: isEditMode ? 'Transfer Services' : 'Suite',
-    descriptionEn: isEditMode ? 'Professional transfer service with experienced chauffeur and luxury vehicle' : '',
-    descriptionSimp: isEditMode ? '专业接送服务，配备经验丰富的司机和豪华车辆' : '',
-    descriptionTrad: isEditMode ? '專業接送服務，配備經驗豐富的司機和豪華車輛' : '',
-    price: isEditMode ? 800 : 0,
-    discountRate: isEditMode ? 5 : 0,
-    priceCalEquation: isEditMode ? '(qty * unitPrice) - discount' : 'unitPrice',
-    availability: isEditMode ? 'available' : 'available',
-    stock: isEditMode ? '' : '',
-    priority: isEditMode ? 1 : 1,
+  const [formData, setFormData] = useState<BookableItemFormData>({
+    nameEn: '',
+    nameSimp: '',
+    nameTrad: '',
+    category: 'Suite',
+    descriptionEn: '',
+    descriptionSimp: '',
+    descriptionTrad: '',
+    price: 0,
+    discountRate: 0,
+    priceCalEquation: 'unitPrice',
+    availability: 'available',
+    stock: '',
+    priority: 1,
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData(initialData);
+    }
+  }, [initialData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Saving bookable item:', formData);
-    // In real app, save the data here
     if (onSave) {
       onSave(formData);
-    }
-    if (onBack) {
-      onBack();
     }
   };
 
@@ -118,13 +120,14 @@ export function BookableItemEdit({ itemId, onBack, onSave }: BookableItemEditPro
               Quick Fill Demo
             </Button>
           )}
-          <Button onClick={handleSubmit} className="gap-2">
-            <Save className="w-4 h-4" />
-            {isEditMode ? 'Save Changes' : 'Create Item'}
-          </Button>
         </div>
       </div>
 
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        </div>
+      ) : (
       <form onSubmit={handleSubmit}>
         <div className="space-y-6">
           {/* Basic Information */}
@@ -328,6 +331,7 @@ export function BookableItemEdit({ itemId, onBack, onSave }: BookableItemEditPro
           </Card>
         </div>
       </form>
+      )}
     </div>
   );
 }

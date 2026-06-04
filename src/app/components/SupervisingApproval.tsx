@@ -845,7 +845,21 @@ export function SupervisingApproval({
 
                         {/* Suite & Visit */}
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <div>{booking.suite}</div>
+                          <div>{booking.suite || '—'}</div>
+                          {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.assignedSuiteNames.map(n => (
+                                <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800 border border-purple-200">{n}</span>
+                              ))}
+                            </div>
+                          )}
+                          {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.assignedLoungeNames.map(n => (
+                                <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">{n}</span>
+                              ))}
+                            </div>
+                          )}
                           <div className="text-gray-500 text-xs mt-0.5">
                             <div>{booking.dateTime.split(' ')[0]}</div>
                             <div>{booking.dateTime.split(' ')[1]}</div>

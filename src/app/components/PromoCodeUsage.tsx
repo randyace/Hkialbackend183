@@ -526,7 +526,7 @@ export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBa
           <LayoutList className="w-4 h-4" />
           Batch Summary
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activeTab === 'batches' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
-            {MOCK_BATCH_USAGE.length}
+            {batchData.length}
           </span>
         </button>
         <button
@@ -540,7 +540,7 @@ export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBa
           <Receipt className="w-4 h-4" />
           Transaction Records
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activeTab === 'transactions' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
-            {MOCK_TRANSACTIONS.length}
+            {filteredTxns.length}
           </span>
         </button>
       </div>

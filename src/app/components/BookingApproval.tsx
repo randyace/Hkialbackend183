@@ -905,7 +905,21 @@ export function BookingApproval({
 
                         {/* Suite & Date */}
                         <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <div>{booking.suite}</div>
+                          <div>{booking.suite || '—'}</div>
+                          {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.assignedSuiteNames.map(n => (
+                                <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800 border border-purple-200">{n}</span>
+                              ))}
+                            </div>
+                          )}
+                          {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.assignedLoungeNames.map(n => (
+                                <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">{n}</span>
+                              ))}
+                            </div>
+                          )}
                           <div className="text-gray-500 text-xs mt-0.5">
                             <div>{booking.dateTime.split(' ')[0]}</div>
                             <div>{booking.dateTime.split(' ')[1]}</div>
@@ -1044,7 +1058,26 @@ export function BookingApproval({
                                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Booking Info</p>
                                 <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Booking No.:</span><span>{booking.bookingNo}</span></div>
                                 <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Booking Type:</span><span>{booking.bookingType}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Suite:</span><span>{booking.suite}</span></div>
+                                <div className="flex gap-2 items-start">
+                                  <span className="text-gray-500 w-28 flex-shrink-0">Suite:</span>
+                                  <span className="font-medium flex-1">
+                                    {booking.suite}
+                                    {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
+                                      <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                                        {booking.assignedSuiteNames.map(n => (
+                                          <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-800 border border-purple-200">{n}</span>
+                                        ))}
+                                      </span>
+                                    )}
+                                    {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
+                                      <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                                        {booking.assignedLoungeNames.map(n => (
+                                          <span key={n} className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800 border border-blue-200">{n}</span>
+                                        ))}
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
                                 <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Visit Date/Time:</span><span>{booking.dateTime}</span></div>
                                 <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Ad-hoc:</span><span>{booking.isAdHoc ? <span className="text-amber-600">Yes — within cut-off period</span> : 'No'}</span></div>
                               </div>

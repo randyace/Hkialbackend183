@@ -43,8 +43,27 @@ function generateUniqueCodes(prefix: string, count: number): string[] {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+export interface PromoCodeEditInitialData {
+  prefix: string;
+  codeCount: number;
+  codeType: 'Discount' | 'Free bookings';
+  amount: number;
+  useLimit: number;
+  reusable: boolean;
+  availability: boolean;
+  startDate: string;
+  endDate: string;
+  titleEn: string;
+  titleSimpChi: string;
+  titleTradChi: string;
+  descriptionEn: string;
+  descriptionSimpChi: string;
+  descriptionTradChi: string;
+}
+
 export interface PromoCodeEditProps {
   promoCodeId?: number | null;
+  initialData?: PromoCodeEditInitialData | null;
   onBack?: () => void;
   onNavigateToCodesPage?: (data: GeneratedCodesData) => void;
 }
@@ -70,7 +89,7 @@ const MOCK_BATCH_EDIT = {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: PromoCodeEditProps) {
+export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCodesPage }: PromoCodeEditProps) {
   const isEditMode = promoCodeId !== null;
   const availableContracts = getAvailableContracts();
 
@@ -99,26 +118,24 @@ export function PromoCodeEdit({ promoCodeId, onBack, onNavigateToCodesPage }: Pr
 
   // ── Prefill in edit mode ─────────────────────────────────────────────────
   useEffect(() => {
-    if (isEditMode) {
-      const d = MOCK_BATCH_EDIT;
-      setSelectedContractId(d.contractId);
-      setPrefix(d.prefix);
-      setCodeCount(d.codeCount);
-      setCodeType(d.codeType);
-      setAmount(d.amount);
-      setUseLimit(d.useLimit);
-      setReusable(d.reusable);
-      setAvailability(d.availability);
-      setStartDate(d.startDate);
-      setEndDate(d.endDate);
-      setTitleEn(d.titleEn);
-      setTitleSimpChi(d.titleSimpChi);
-      setTitleTradChi(d.titleTradChi);
-      setDescriptionEn(d.descriptionEn);
-      setDescriptionSimpChi(d.descriptionSimpChi);
-      setDescriptionTradChi(d.descriptionTradChi);
+    if (initialData) {
+      setPrefix(initialData.prefix);
+      setCodeCount(initialData.codeCount);
+      setCodeType(initialData.codeType);
+      setAmount(initialData.amount);
+      setUseLimit(initialData.useLimit);
+      setReusable(initialData.reusable);
+      setAvailability(initialData.availability);
+      setStartDate(initialData.startDate);
+      setEndDate(initialData.endDate);
+      setTitleEn(initialData.titleEn);
+      setTitleSimpChi(initialData.titleSimpChi);
+      setTitleTradChi(initialData.titleTradChi);
+      setDescriptionEn(initialData.descriptionEn);
+      setDescriptionSimpChi(initialData.descriptionSimpChi);
+      setDescriptionTradChi(initialData.descriptionTradChi);
     }
-  }, [isEditMode]);
+  }, [initialData]);
 
   // ── When contract changes, auto-fill prefix ───────────────────────────────
   const handleContractChange = (val: string) => {
