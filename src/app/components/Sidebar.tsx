@@ -14,7 +14,7 @@
 import React, { useState } from 'react';
 import {
   ChevronDown, LayoutDashboard, Users, Calendar, Package,
-  Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature,
+  Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature, DollarSign,
 } from 'lucide-react';
 import logoImage from 'figma:asset/5314118f44483d10b69aeb99485c2f5942c726a2.png';
 import {
@@ -128,8 +128,9 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     label: 'Lounge Management',
     icon: <Building2 className="w-5 h-5" />,
     submenu: [
-      { id: 'lounge-layout', label: 'Lounge Layout Plan', path: '/lounge-layout' },
-      { id: 'suites',        label: 'Suite Schedules',    path: '/suites' },
+      { id: 'lounge-layout',    label: 'Lounge Layout Plan', path: '/lounge-layout' },
+      { id: 'suites',           label: 'Suite Schedules',    path: '/suites' },
+      { id: 'price-management', label: 'Price Management',   path: '/price-management' },
     ],
   },
   {
@@ -181,7 +182,7 @@ function getInitialOpenGroups(pathname: string): string[] {
   if (pathname.startsWith('/bookings')) groups.push('bookings');
   if (pathname.startsWith('/items'))        groups.push('bookable-items');
   if (pathname.startsWith('/pos'))          groups.push('pos');
-  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/suites')) groups.push('lounge');
+  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/suites') || pathname.startsWith('/price-management')) groups.push('lounge');
   if (pathname.startsWith('/promo-codes'))  groups.push('promo');
   if (pathname.startsWith('/reports'))      groups.push('reports');
   if (pathname.startsWith('/system-users') || pathname.startsWith('/audit-logs')) groups.push('system-users');

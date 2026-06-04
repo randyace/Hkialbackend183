@@ -40,6 +40,9 @@ import { CorporateReports } from './components/CorporateReports';
 import { OpportunityTracking } from './components/OpportunityTracking';
 import { RefundReport } from './components/RefundReport';
 import { PreOrderPage } from './components/PreOrderPage';
+import { PriceManagement } from './components/PriceManagement';
+import { PriceManagementEdit } from './components/PriceManagementEdit';
+import { mockLoungeDeluxe, mockPremiereSuite, mockComboDiscount } from './components/__fixtures__/PriceManagement.mocks';
 
 // ── Fallback for unknown routes ───────────────────────────────────────────────
 function NotFound() {
@@ -347,6 +350,64 @@ function CustomerCreatePage() {
   return <AccountCreation type="individual" />;
 }
 
+// ── Price Management ──────────────────────────────────────────────────────────
+
+function PriceManagementPage() {
+  const navigate = useNavigate();
+  return (
+    <PriceManagement
+      onEditProduct={(productId) => navigate(`/price-management/edit/${productId}`)}
+      onEditComboDiscount={() => navigate('/price-management/edit/combo')}
+    />
+  );
+}
+
+function PriceManagementEditProductPage() {
+  const { productId } = useParams<{ productId: string }>();
+  const navigate = useNavigate();
+
+  if (productId === 'lounge-deluxe') {
+    return (
+      <PriceManagementEdit
+        mode="product"
+        product={mockLoungeDeluxe}
+        onBack={() => navigate('/price-management')}
+        onSave={(updated) => {
+          console.log('save lounge', updated);
+          navigate('/price-management');
+        }}
+      />
+    );
+  }
+  if (productId === 'premiere-suite') {
+    return (
+      <PriceManagementEdit
+        mode="product"
+        product={mockPremiereSuite}
+        onBack={() => navigate('/price-management')}
+        onSave={(updated) => {
+          console.log('save suite', updated);
+          navigate('/price-management');
+        }}
+      />
+    );
+  }
+  if (productId === 'combo') {
+    return (
+      <PriceManagementEdit
+        mode="combo"
+        comboDiscount={mockComboDiscount}
+        onBack={() => navigate('/price-management')}
+        onSave={(updated) => {
+          console.log('save combo', updated);
+          navigate('/price-management');
+        }}
+      />
+    );
+  }
+  return <Navigate to="/price-management" replace />;
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 export const router = createBrowserRouter([
   {
@@ -418,6 +479,10 @@ export const router = createBrowserRouter([
       { path: 'reports/corporate', Component: CorporateReports },
       { path: 'reports/refund',    Component: RefundReport },
       { path: 'reports',           Component: Reports },
+
+      // Price Management
+      { path: 'price-management',                Component: PriceManagementPage },
+      { path: 'price-management/edit/:productId', Component: PriceManagementEditProductPage },
 
       // System Users & Audit Logs
       { path: 'system-users', Component: SystemUsers },
