@@ -77,10 +77,9 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     icon: <Users className="w-5 h-5" />,
     submenu: [
       { id: 'all-customers',    label: 'All Customers',      path: '/customers' },
-      { id: 'approve-customers',label: 'Approve Customers',  path: '/customers/approve' },
       { id: 'create-customers', label: 'Create Customer',    path: '/customers/create' },
       { id: 'customer-company', label: 'Customer Companies', path: '/customers/company' },
-      { id: 'travel-agency',    label: 'Agency',           path: '/travel-agency' },
+      { id: 'travel-agency',    label: 'Agency',             path: '/travel-agency' },
       { id: 'grading-packages', label: 'Grading Packages',   path: '/grading-packages' },
     ],
   },
@@ -102,8 +101,17 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
       { id: 'approve-bookings',     label: 'Approve Booking Request', path: '/bookings/approve' },
       { id: 'supervising-approval', label: 'Supervising Approval',    path: '/bookings/supervising-approval' },
       { id: 'create-bookings',      label: 'Create Booking',          path: '/bookings/create' },
-      { id: 'bookings-schedules',   label: 'Booking Schedules',       path: '/bookings/schedules' },
       { id: 'bookings-settings',    label: 'Booking Settings',        path: '/bookings/settings' },
+    ],
+  },
+  {
+    id: 'booking-schedules',
+    label: 'Booking Schedules',
+    icon: <Calendar className="w-5 h-5" />,
+    submenu: [
+      { id: 'all-schedules',   label: 'All Booking Schedules',   path: '/bookings/schedules' },
+      { id: 'suite-schedules', label: 'Suite Booking Schedules', path: '/suites' },
+      { id: 'table-schedules', label: 'Table Booking Schedules', path: '/bookings/schedules/table' },
     ],
   },
   {
@@ -112,6 +120,7 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     icon: <Package className="w-5 h-5" />,
     submenu: [
       { id: 'all-items',    label: 'All Bookable Items',    path: '/items' },
+      { id: 'create-item',  label: 'Create Bookable Item',  path: '/items/create' },
     ],
   },
   {
@@ -120,7 +129,8 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     icon: <CreditCard className="w-5 h-5" />,
     submenu: [
       { id: 'pos-floor-plan',  label: 'POS Floor Plan',  path: '/pos' },
-      { id: 'kitchen-display', label: 'Kitchen Display', path: '/pos/kitchen' },
+      { id: 'pos-transaction', label: 'Transaction',      path: '/pos/transactions' },
+      { id: 'kitchen-display', label: 'Kitchen Display',  path: '/pos/kitchen' },
     ],
   },
   {
@@ -129,7 +139,6 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     icon: <Building2 className="w-5 h-5" />,
     submenu: [
       { id: 'lounge-layout',    label: 'Lounge Layout Plan', path: '/lounge-layout' },
-      { id: 'suites',           label: 'Suite Schedules',    path: '/suites' },
       { id: 'price-management', label: 'Price Management',   path: '/price-management' },
     ],
   },
@@ -179,10 +188,11 @@ function getInitialOpenGroups(pathname: string): string[] {
     pathname.startsWith('/membership/purchase') ||
     pathname.startsWith('/membership/balance')
   ) groups.push('contract');
-  if (pathname.startsWith('/bookings')) groups.push('bookings');
+  if (pathname.startsWith('/bookings') && !pathname.startsWith('/bookings/schedules')) groups.push('bookings');
+  if (pathname.startsWith('/bookings/schedules') || pathname.startsWith('/suites')) groups.push('booking-schedules');
   if (pathname.startsWith('/items'))        groups.push('bookable-items');
-  if (pathname.startsWith('/pos'))          groups.push('pos');
-  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/suites') || pathname.startsWith('/price-management')) groups.push('lounge');
+  if (pathname.startsWith('/pos') || pathname.startsWith('/pos/transactions')) groups.push('pos');
+  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/price-management')) groups.push('lounge');
   if (pathname.startsWith('/promo-codes'))  groups.push('promo');
   if (pathname.startsWith('/reports'))      groups.push('reports');
   if (pathname.startsWith('/system-users') || pathname.startsWith('/audit-logs')) groups.push('system-users');

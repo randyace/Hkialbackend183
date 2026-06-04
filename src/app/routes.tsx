@@ -40,6 +40,7 @@ import { CorporateReports } from './components/CorporateReports';
 import { OpportunityTracking } from './components/OpportunityTracking';
 import { RefundReport } from './components/RefundReport';
 import { PreOrderPage } from './components/PreOrderPage';
+import { POSTransactions } from './components/POSTransactions';
 import { PriceManagement } from './components/PriceManagement';
 import { PriceManagementEdit } from './components/PriceManagementEdit';
 import { mockLoungeDeluxe, mockPremiereSuite, mockComboDiscount } from './components/__fixtures__/PriceManagement.mocks';
@@ -461,6 +462,7 @@ export const router = createBrowserRouter([
 
       // POS
       { path: 'pos',                     Component: POSFloorPlanPage },
+      { path: 'pos/transactions',        Component: POSTransactions },
       { path: 'pos/booking/:bookingNo',  Component: POSBookingDetailPage },
       { path: 'pos/checkout/:bookingNo', Component: POSCheckoutPage },
       { path: 'pos/kitchen',             Component: KitchenDisplay },

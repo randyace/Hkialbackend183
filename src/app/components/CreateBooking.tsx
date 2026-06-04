@@ -43,13 +43,6 @@ const SUITE_OPTIONS: string[] = [];
 
 const SUITE_RATES: Record<string, number> = {};
 
-const ENTRY_FEE_RATE = 1800;
-
-const NON_FLYING_RATE  = 500;
-const LIMO_RATE        = 1500;
-const SHOPPING_RATE    = 400;
-const SECURITY_RATE    = 1200;
-const SERVICE_CHARGE_RATE = 0.10;
 
 const MONTHS = [
   'January','February','March','April','May','June',
@@ -179,6 +172,10 @@ export interface CreateBookingProps {
   setAssignedSuiteIds?: (ids: number[]) => void;
   assignedLoungeIds?: number[];
   setAssignedLoungeIds?: (ids: number[]) => void;
+  liveBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number }>;
+  liveTotal?: number | null;
+  liveRulesApplied?: string[];
+  liveWarnings?: string[];
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -210,6 +207,10 @@ export function CreateBooking({
   setAssignedSuiteIds,
   assignedLoungeIds = [],
   setAssignedLoungeIds,
+  liveBreakdown = [],
+  liveTotal = null,
+  liveRulesApplied = [],
+  liveWarnings = [],
 }: CreateBookingProps = {}) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -390,26 +391,6 @@ export function CreateBooking({
 
   const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
 
-  // ─── Live Price Calculation ───────────────────────────────────────────────────
-  // Per-pax "head count entry fee" — applied to every flying guest no
-  // matter which physical resource they end up assigned to. Non-flying
-  // guests are charged at the lower nonFlying rate.
-  const flyingGuests   = vipPS + vipLD;
-  const totalNonFlying = nonFlyingPS + nonFlyingLD;
-  const suiteCharge    = ENTRY_FEE_RATE * flyingGuests;
-  const nfCharge       = NON_FLYING_RATE * totalNonFlying;
-  const limoCharge     = hasLimousine ? LIMO_RATE : 0;
-  const shopCharge     = hasShopping  ? SHOPPING_RATE : 0;
-  const secCharge      = hasSecurity  ? SECURITY_RATE : 0;
-  const subtotal       = suiteCharge + nfCharge + limoCharge + shopCharge + secCharge;
-  const agencyDiscount = selectedAgency ? Math.round(subtotal * selectedAgency.discountRate / 100) : 0;
-  const memDiscount    = membershipTier ? Math.round(subtotal * MEMBERSHIP_DISCOUNT[membershipTier] / 100) : 0;
-  const promoDiscount  = promoApplied  ? Math.round(subtotal * promoApplied.discountPct / 100) : 0;
-  const totalDiscount  = agencyDiscount + memDiscount + promoDiscount;
-  const afterDiscount  = subtotal - totalDiscount;
-  const serviceCharge  = Math.round(afterDiscount * SERVICE_CHARGE_RATE);
-  const totalPayable   = afterDiscount + serviceCharge;
-  const showPriceBreakdown = flyingGuests > 0;
 
   // ─── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
@@ -848,8 +829,8 @@ export function CreateBooking({
         <Card className="p-6">
           <h2 className="mb-6">Booking Details</h2>
 
-          {/* Visit Date / Time + Resource Assignment Hint */}
-          <div className="grid grid-cols-3 gap-6 mb-6">
+          {/* Visit Date / Time */}
+          <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
@@ -859,12 +840,6 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
               <input type="time" value={visitTime} onChange={e => setVisitTime(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-            </div>
-            <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Entry Fee</label>
-              <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50 text-gray-600">
-                HK${ENTRY_FEE_RATE.toLocaleString()} per flying guest
-              </div>
             </div>
           </div>
 
@@ -1546,91 +1521,38 @@ export function CreateBooking({
         </Card>
 
         {/* ════════════════════════════════════════
-            10. PRICE BREAKDOWN
+            10. PRICE BREAKDOWN (backend-live)
             ════════════════════════════════════════ */}
-        {showPriceBreakdown && (
-          <Card className={`p-6 ${(agencyDiscount > 0 || memDiscount > 0) ? 'border-green-200 bg-green-50/20' : ''}`}>
+        {liveBreakdown.length > 0 && liveTotal !== null && (
+          <Card className="p-6">
             <div className="flex items-center gap-3 mb-5">
               <h2>Price Breakdown</h2>
-              {agencyDiscount > 0 && <Badge className="bg-green-100 text-green-800 border border-green-200"><BadgePercent className="w-3 h-3 mr-1" />Agency Discount</Badge>}
-              {memDiscount > 0 && <Badge className="bg-indigo-100 text-indigo-800 border border-indigo-200"><BadgePercent className="w-3 h-3 mr-1" />{membershipTier} Discount</Badge>}
-              {promoDiscount > 0 && <Badge className="bg-blue-100 text-blue-800 border border-blue-200"><Tag className="w-3 h-3 mr-1" />{promoApplied?.code}</Badge>}
+              <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs">
+                Live · backend PricingService
+              </Badge>
             </div>
             <div className="space-y-2 text-sm max-w-md ml-auto">
-              {suiteCharge > 0 && (
-                <div className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-600">Entry Fee × {flyingGuests} flying guest{flyingGuests !== 1 ? 's' : ''} (HK${ENTRY_FEE_RATE.toLocaleString()}/pax)</span>
-                  <span>HK${suiteCharge.toLocaleString()}</span>
+              {liveBreakdown.map((item, i) => (
+                <div key={i} className="flex justify-between py-1.5 border-b border-gray-100">
+                  <span className="text-gray-600">
+                    {item.label}{item.qty > 1 ? ` × ${item.qty}` : ''}
+                  </span>
+                  <span>HK${item.subtotal.toLocaleString()}</span>
                 </div>
-              )}
-              {nfCharge > 0 && (
-                <div className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-600">Non-Flying Guest × {totalNonFlying}</span>
-                  <span>HK${nfCharge.toLocaleString()}</span>
-                </div>
-              )}
-              {limoCharge > 0 && (
-                <div className="flex justify-between py-1.5 text-gray-600">
-                  <span className="flex items-center gap-1"><Car className="w-3.5 h-3.5" />Limousine Transfer</span>
-                  <span>HK${limoCharge.toLocaleString()}</span>
-                </div>
-              )}
-              {shopCharge > 0 && (
-                <div className="flex justify-between py-1.5 text-gray-600">
-                  <span className="flex items-center gap-1"><ShoppingBag className="w-3.5 h-3.5" />In-lounge Shopping</span>
-                  <span>HK${shopCharge.toLocaleString()}</span>
-                </div>
-              )}
-              {secCharge > 0 && (
-                <div className="flex justify-between py-1.5 text-gray-600">
-                  <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" />Security Escort</span>
-                  <span>HK${secCharge.toLocaleString()}</span>
-                </div>
-              )}
+              ))}
               <div className="flex justify-between py-2 border-t border-gray-200">
-                <span className="text-gray-700">Subtotal</span>
-                <span>HK${subtotal.toLocaleString()}</span>
+                <span className="font-semibold text-gray-900">Total</span>
+                <span className="text-xl font-bold text-[#0f2942]">HK${liveTotal.toLocaleString()}</span>
               </div>
-              {agencyDiscount > 0 && (
-                <div className="flex justify-between py-1.5 rounded px-3 -mx-3 bg-green-100/60">
-                  <span className="text-green-800 flex items-center gap-1"><BadgePercent className="w-3.5 h-3.5" />Agency Discount ({selectedAgency?.discountRate}%)</span>
-                  <span className="text-green-800 font-medium">−HK${agencyDiscount.toLocaleString()}</span>
-                </div>
+              {liveRulesApplied.length > 0 && (
+                <ul className="mt-2 text-xs text-emerald-700 space-y-1">
+                  {liveRulesApplied.map((r, i) => <li key={i}>• {r}</li>)}
+                </ul>
               )}
-              {memDiscount > 0 && (
-                <div className="flex justify-between py-1.5 rounded px-3 -mx-3 bg-indigo-50">
-                  <span className="text-indigo-700 flex items-center gap-1"><BadgePercent className="w-3.5 h-3.5" />{membershipTier} Discount ({MEMBERSHIP_DISCOUNT[membershipTier!]}%)</span>
-                  <span className="text-indigo-700 font-medium">−HK${memDiscount.toLocaleString()}</span>
-                </div>
-              )}
-              {promoDiscount > 0 && (
-                <div className="flex justify-between py-1.5 rounded px-3 -mx-3 bg-blue-50">
-                  <span className="text-blue-700 flex items-center gap-1"><Tag className="w-3.5 h-3.5" />Promo: {promoApplied?.code} ({promoApplied?.benefit})</span>
-                  <span className="text-blue-700 font-medium">−HK${promoDiscount.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-1.5 border-t border-gray-200">
-                <span className="text-gray-600">After Discount</span>
-                <span>HK${afterDiscount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-gray-600">Service Charge (10%)</span>
-                <span>+HK${serviceCharge.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between py-3 border-t-2 border-gray-300">
-                <span className="font-semibold text-gray-900">Total Payable</span>
-                <div className="text-right">
-                  {totalDiscount > 0 && <p className="text-xs text-gray-400 line-through">HK${(subtotal + serviceCharge).toLocaleString()}</p>}
-                  <p className="text-xl font-bold text-[#0f2942]">HK${totalPayable.toLocaleString()}</p>
-                </div>
-              </div>
-              {totalDiscount > 0 && (
-                <div className="bg-green-600 text-white rounded-lg px-4 py-2.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm">Saving <strong>HK${totalDiscount.toLocaleString()}</strong> on this booking</span>
-                  </div>
-                </div>
+              {liveWarnings.length > 0 && (
+                <ul className="mt-2 text-xs text-amber-700 space-y-1">
+                  {liveWarnings.map((w, i) => <li key={i}>• {w}</li>)}
+                </ul>
               )}
             </div>
           </Card>

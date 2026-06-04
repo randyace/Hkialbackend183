@@ -70,12 +70,13 @@ function formatDate(iso: string) {
 type ScanState = 'idle' | 'scanning' | 'found' | 'not-found' | 'entry-granted' | 'entry-denied';
 
 export interface QREntryScannerProps {
+  open?: boolean;
   onScan?: (bookingNo: string) => void;
   onClose?: () => void;
   onCheckIn?: (bookingId: number) => void;
 }
 
-export function QREntryScanner({ onScan, onClose, onCheckIn }: QREntryScannerProps) {
+export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QREntryScannerProps) {
   const videoRef       = useRef<HTMLVideoElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const streamRef      = useRef<MediaStream | null>(null);
