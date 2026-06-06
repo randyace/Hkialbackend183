@@ -176,6 +176,45 @@ export interface CreateBookingProps {
   liveTotal?: number | null;
   liveRulesApplied?: string[];
   liveWarnings?: string[];
+  /**
+   * HKIAL addons pricing fix round 5.3 (2026-06-05): the figma-ui
+   * sub-module owns the addons state in its local useState (hasLimousine,
+   * limoStops, hasShopping, hasWheelchair, wheelchairPassenger, hasSecurity,
+   * hasPrivateSales), and the wrapper parent needs the live values to feed
+   * `usePricePreview` so the in-form "Price Breakdown" card can show the
+   * addon subtotal in real time. The wrapper can't reach the figma-ui
+   * internal state directly, so we push every change out through this
+   * callback. A single useEffect watches the 7 state vars and fires
+   * `onAddonStateChange` whenever any of them change.
+   *
+   * IMPORTANT — submodule-handling note:
+   *
+   * This prop was added in a figma-ui sub-module commit on 2026-06-05
+   * (round 5.3 of the addons-pricing fix). Because the HKIAL backend
+   * repo does NOT commit the figma-ui sub-module pointer, this change
+   * must be:
+   *   (1) committed inside the figma-ui sub-module by you, the operator
+   *       (Randy's figma-ui pipeline is automated and would clobber
+   *       any in-submodule uncommitted change on the next sync);
+   *   (2) pushed to the figma-ui origin;
+   *   (3) the parent backend repo's `src/components/figma-ui` pointer
+   *       then needs to be advanced to that new commit.
+   * Until all three are done, the deployed form behaves as if this prop
+   * does not exist: the live "Price Breakdown" card stays at the base
+   * line (e.g. HKD 5,000 for one Lounge Deluxe booking) and does not
+   * reflect the addons subtotal in real time. See
+   * `HKIAL_BOOKING_ADDONS_PRICING_FIX_2026_06_05.md` Part 5.3 for the
+   * full rationale.
+   */
+  onAddonStateChange?: (state: {
+    hasLimousine: boolean;
+    limoStops: LimoStop[];
+    hasShopping: boolean;
+    hasWheelchair: boolean;
+    wheelchairPassenger: string;
+    hasSecurity: boolean;
+    hasPrivateSales: boolean;
+  }) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -211,7 +250,8 @@ export function CreateBooking({
   liveTotal = null,
   liveRulesApplied = [],
   liveWarnings = [],
-}: CreateBookingProps = {}) {
+  onAddonStateChange,
+}: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');
@@ -271,6 +311,33 @@ export function CreateBooking({
   const [hasPrivateSales, setHasPrivateSales] = useState(false);
   const [addonSearch, setAddonSearch]             = useState('');
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
+
+  // HKIAL addons pricing fix round 5.3 (2026-06-05): sync the 7 addons
+  // state variables out to the wrapper parent whenever any of them
+  // change. The wrapper feeds these into `usePricePreview` so the
+  // in-form "Price Breakdown" card can show the addon subtotal live.
+  // See the `onAddonStateChange` prop docblock above for the submodule
+  // handling note.
+  useEffect(() => {
+    onAddonStateChange?.({
+      hasLimousine,
+      limoStops,
+      hasShopping,
+      hasWheelchair,
+      wheelchairPassenger,
+      hasSecurity,
+      hasPrivateSales,
+    });
+  }, [
+    hasLimousine,
+    limoStops,
+    hasShopping,
+    hasWheelchair,
+    wheelchairPassenger,
+    hasSecurity,
+    hasPrivateSales,
+    onAddonStateChange,
+  ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
   const [guestSearchFocused, setGuestSearchFocused] = useState(false);
