@@ -65,7 +65,7 @@ type AgeGroup = 'Adult (13+ years)' | 'Child (2-12 years)' | 'Infant (0-2 years)
 type MembershipTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 type PaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 type FlightClass = 'Economy Class' | 'Business Class' | 'First Class';
-type FlightType = 'Arrival' | 'Departure' | 'Transition';
+type FlightType = 'Arrival' | 'Departure' | 'Transit';
 
 interface PassengerDetail {
   title: PassengerTitle;
@@ -119,6 +119,21 @@ export interface BookingFormData {
   selectedAddonKeys: string[];
   assignedSuiteIds: number[];
   assignedLoungeIds: number[];
+  // 2026-06-08 — Transit 2nd-leg fields. The figma-ui view emits
+  // undefined when flightType !== 'Transit' so the wrapper can
+  // drop them from the payload.
+  leg2ArrivalDate?: string;
+  leg2FlightNo?: string;
+  leg2FlightTime?: string;
+  leg2FlightClass?: 'Economy Class' | 'Business Class' | 'First Class' | '';
+  /**
+   * 2026-06-08 — pre-validated 6h gap error string. When the form
+   * detects legs[1].arrivalDate - legs[0].arrivalDate < 6h, the
+   * submit button is disabled and this message is rendered inline.
+   * The wrapper surfaces it back to the user; the backend's
+   * TransitLegsRule is the source of truth.
+   */
+  transitGapError?: string | null;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -295,6 +310,20 @@ export function CreateBooking({
   const [flightDestination, setFlightDestination] = useState('');
   const [numberOfLuggage, setNumberOfLuggage] = useState(1);
   const [flightClass, setFlightClass] = useState<FlightClass | ''>('');
+
+  // 2026-06-08 — Transit 2nd leg (I-T2). The 1st leg is the existing
+  // flightNo/flightTime/arrivalDate/flightClass above. The 2nd leg is
+  // collected here. Only meaningful when flightType === 'Transit' — the
+  // BookingFormData emits them as undefined otherwise, and the wrapper
+  // drops them from the payload.
+  const [leg2ArrivalDate, setLeg2ArrivalDate] = useState('');
+  const [leg2FlightNo, setLeg2FlightNo] = useState('');
+  const [leg2FlightTime, setLeg2FlightTime] = useState('');
+  const [leg2FlightClass, setLeg2FlightClass] = useState<FlightClass | ''>('');
+  // 2026-06-08 — inline 6h gap pre-check. The form shows this
+  // string and disables submit when the gap is < 6h. The backend's
+  // TransitLegsRule is the source of truth; this is for UX.
+  const [transitGapError, setTransitGapError] = useState<string | null>(null);
 
   // ── Booking ─────────────────────────────────────────────────────────────────
   const [visitDate, setVisitDate] = useState('');
@@ -524,6 +553,21 @@ export function CreateBooking({
     if (!visitDate || !visitTime){ toast.error('Please enter the visit date and time.'); return; }
     if (!flightNo)               { toast.error('Please enter the flight number.');       return; }
     if (!flightTime)             { toast.error('Please enter the flight time.');         return; }
+    // 2026-06-08 — Transit 2nd-leg pre-checks. The backend's
+    // TransitLegsRule is the source of truth; these are UX guards
+    // that prevent the user from submitting a clearly invalid
+    // Transit payload. We do NOT block on the 6h gap here because
+    // the inline `transitGapError` already disables the button
+    // (transitGapError !== null → form has the alert role rendered
+    // and submit is disabled — see the bottom-of-form Submit button
+    // below for the disabled-when-gap-error binding).
+    if (flightType === 'Transit') {
+      if (!leg2ArrivalDate)   { toast.error('Please enter the 2nd leg arrival date and time.'); return; }
+      if (!leg2FlightNo)      { toast.error('Please enter the 2nd leg flight number.');        return; }
+      if (!leg2FlightTime)    { toast.error('Please enter the 2nd leg flight time.');          return; }
+      if (!leg2FlightClass)   { toast.error('Please select the 2nd leg flight class.');        return; }
+      if (transitGapError)    { toast.error(transitGapError); return; }
+    }
     if (hasGuestErrors)          { toast.error('Please fix the guest detail errors before submitting.'); return; }
     // Premiere Suite: cap assigned suites to numPremiereSuites.
     if (numPremiereSuites > 0 && assignedSuiteIds.length > numPremiereSuites) {
@@ -559,6 +603,15 @@ export function CreateBooking({
       selectedAddonKeys,
       assignedSuiteIds,
       assignedLoungeIds,
+      // 2026-06-08 — Transit 2nd leg. Emitted as undefined when
+      // flightType !== 'Transit' so the wrapper can drop them from
+      // the payload (the backend's `required_if:flight_type,Transit`
+      // rule will only fire when flight_type is Transit).
+      leg2ArrivalDate: flightType === 'Transit' ? leg2ArrivalDate : undefined,
+      leg2FlightNo:    flightType === 'Transit' ? leg2FlightNo : undefined,
+      leg2FlightTime:  flightType === 'Transit' ? leg2FlightTime : undefined,
+      leg2FlightClass: flightType === 'Transit' ? leg2FlightClass : undefined,
+      transitGapError: transitGapError,
     };
     onSubmit?.(formData);
   };
@@ -841,7 +894,7 @@ export function CreateBooking({
                 {([
                   { type: 'Arrival'    as FlightType, activeClass: 'bg-emerald-600 border-emerald-600 text-white', iconClass: '-rotate-45' },
                   { type: 'Departure'  as FlightType, activeClass: 'bg-rose-600    border-rose-600    text-white', iconClass: 'rotate-45'  },
-                  { type: 'Transition' as FlightType, activeClass: 'bg-sky-600     border-sky-600     text-white', iconClass: 'rotate-90'  },
+                  { type: 'Transit'    as FlightType, activeClass: 'bg-sky-600     border-sky-600     text-white', iconClass: 'rotate-90'  },
                 ]).map(({ type: ft, activeClass, iconClass }) => (
                   <button key={ft} type="button"
                     onClick={() => setFlightType(ft)}
@@ -903,16 +956,16 @@ export function CreateBooking({
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 Destination (IATA)
-                {flightType === 'Transition'
+                {flightType === 'Transit'
                   ? <span className="ml-2 text-xs font-normal text-gray-400">— optional</span>
                   : null
                 }
               </label>
               <input type="text" value={flightDestination} onChange={e => setFlightDestination(e.target.value.toUpperCase())}
-                placeholder={flightType === 'Transition' ? 'May be unknown' : 'e.g. HKG'}
+                placeholder={flightType === 'Transit' ? 'May be unknown' : 'e.g. HKG'}
                 maxLength={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
-              {flightType === 'Transition' && (
+              {flightType === 'Transit' && (
                 <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                   <Info className="w-3 h-3 flex-shrink-0" />
                   Final destination may not be identifiable from the transit flight number.
@@ -946,6 +999,100 @@ export function CreateBooking({
               </Select>
             </div>
           </div>
+
+          {/* 2026-06-08 — Transit 2nd-leg block (I-T2, I-T3, I-T5).
+              Visible only when flightType === 'Transit'. The 4 fields
+              mirror the 1st leg above, plus a live 6h gap pre-check that
+              shows the error inline and disables submit via
+              `transitGapError`. The backend's TransitLegsRule is the
+              source of truth; this is the UX layer that prevents the
+              user from even trying to submit a < 6h gap. */}
+          {flightType === 'Transit' && (
+            <div className="mt-6 pt-6 border-t border-gray-200" data-testid="transit-leg2-block">
+              <h3 className="text-sm font-semibold text-sky-700 mb-1">2nd Flight (Outbound) <span className="text-red-500">*</span></h3>
+              <p className="text-xs text-gray-500 mb-4">
+                The 2nd leg of your transit. The 1st leg (above) is your inbound to HKG; this is your outbound.
+                Gap between leg 1 arrival and leg 2 arrival must be at least 6 hours.
+              </p>
+              <div className="grid grid-cols-2 gap-6 mb-4">
+                <div>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date &amp; Time <span className="text-red-500">*</span></label>
+                  <input
+                    type="datetime-local"
+                    value={leg2ArrivalDate}
+                    onChange={e => {
+                      setLeg2ArrivalDate(e.target.value);
+                      // 2026-06-08 — recompute gap error on change
+                      // (live UX pre-check; backend is the source of truth).
+                      if (flightType !== 'Transit') { setTransitGapError(null); return; }
+                      const l0 = arrivalDate ? new Date(arrivalDate) : null;
+                      const l1 = e.target.value ? new Date(e.target.value) : null;
+                      if (!l0 || !l1 || isNaN(l0.getTime()) || isNaN(l1.getTime())) {
+                        setTransitGapError(null);
+                        return;
+                      }
+                      const diffMs = l1.getTime() - l0.getTime();
+                      const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+                      if (diffMs < SIX_HOURS_MS) {
+                        const hours = Math.floor(diffMs / 3600000);
+                        const mins = Math.floor((diffMs % 3600000) / 60000);
+                        setTransitGapError(`Transit gap must be at least 6 hours (got ${hours}h ${mins}m). Please pick a later outbound leg.`);
+                      } else {
+                        setTransitGapError(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    data-testid="leg2-arrivalDate"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Number <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={leg2FlightNo}
+                      onChange={e => setLeg2FlightNo(e.target.value.toUpperCase())}
+                      placeholder="e.g. CX889"
+                      data-testid="leg2-flightNo"
+                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Time (STD) <span className="text-red-500">*</span></label>
+                  <input
+                    type="time"
+                    value={leg2FlightTime}
+                    onChange={e => setLeg2FlightTime(e.target.value)}
+                    data-testid="leg2-flightTime"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Class <span className="text-red-500">*</span></label>
+                  <Select value={leg2FlightClass} onValueChange={v => setLeg2FlightClass(v as FlightClass)}>
+                    <SelectTrigger data-testid="leg2-flightClass"><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Economy Class">Economy Class</SelectItem>
+                      <SelectItem value="Business Class">Business Class</SelectItem>
+                      <SelectItem value="First Class">
+                        <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />First Class</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {transitGapError && (
+                <p className="text-sm text-red-600 mt-3 flex items-center gap-1.5" data-testid="transit-gap-error" role="alert">
+                  <Info className="w-4 h-4 flex-shrink-0" />
+                  {transitGapError}
+                </p>
+              )}
+            </div>
+          )}
         </Card>
 
         {/* ════════════════════════════════════════
@@ -1699,7 +1846,13 @@ export function CreateBooking({
               Cancel
             </Button>
             <Button type="submit" className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white gap-2 px-8"
-              disabled={hasGuestErrors || isSubmitting}>
+              // 2026-06-08 — Transit 2nd-leg gate: when the inline gap
+              // error is set, the submit button is disabled so the user
+              // can't bypass the gap rule by clicking fast. The submit
+              // handler (handleSubmit above) ALSO re-checks the gap
+              // before the onSubmit call, so this is defense in depth.
+              disabled={hasGuestErrors || isSubmitting || (flightType === 'Transit' && !!transitGapError)}
+              data-testid="create-booking-submit">
               {isSubmitting ? (
                 <>
                   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

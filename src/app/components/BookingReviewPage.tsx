@@ -30,7 +30,7 @@ interface PendingBooking {
   flightTime: string;
   flightOrigin?: string;
   flightDestination?: string;
-  flightType?: 'Arrival' | 'Departure';
+  flightType?: 'Arrival' | 'Departure' | 'Transit';
   numberOfGuests: number;
   nonFlyingGuests: number;
   hasLimousine: boolean;
@@ -45,6 +45,62 @@ interface PendingBooking {
   bookingType: 'Online' | 'Email/Call to HKIAL';
   submittedAt: string;
   specialRequests?: string;
+  // 2026-06-08 round 6.2.1 (review page data fix): the local
+  // PendingBooking type now declares the 3 fields the view reads
+  // instead of the hard-coded mock seeds. Source of truth is
+  // ViewBooking in `services/bookingService.ts`; the wrapper
+  // (BookingReviewPage.tsx in the parent repo) maps from there.
+  // Optional so standalone-preview mode (no prop passed) still
+  // works and the MOCK_PENDING_BOOKING fallback (which doesn't
+  // have these fields) compiles.
+  passengers?: Array<{
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    travelDocNo?: string;
+    membershipNo?: string;
+    ageGroup?: string;
+    birthdayDay?: string;
+    birthdayMonth?: string;
+    birthdayYear?: string;
+    foodAllergies?: string;
+  }>;
+  nonFlyingGuestsList?: Array<{
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    ageGroup?: string;
+  }>;
+  contactPerson?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    memo?: string;
+  };
+  /**
+   * 2026-06-08 round 6.2.x (future ticket): addon items list,
+   * populated by `mapBookingFromApi` from `api.booking_items`.
+   * Not yet rendered by this view (wheelchair / private-sales
+   * flags still use the `id % N` mock formulas); declared so the
+   * wrapper mapper's spread doesn't fail the type check.
+   */
+  addons?: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+  }>;
+  // 2026-06-08 round 6.2 — Transit 2-leg round-trip. Read-only
+  // here; the mapper exposes it on ViewBooking.legs[]. Not
+  // rendered in this view yet (the 2-leg detail page is
+  // BookingDetail, not BookingReviewPage); declared so the type
+  // accepts the wrapper's mapped payload.
+  legs?: Array<{
+    flightNo: string;
+    flightTime: string;
+    arrivalDate: string;
+    flightClass: 'Economy Class' | 'Business Class' | 'First Class';
+  }>;
   originalData?: {
     suite?: string;
     dateTime?: string;
@@ -196,23 +252,74 @@ export function BookingReviewPage({
   const vipLD = Math.max(0, flyingGuests - vipPS);
   const nonFlyingLD = Math.max(0, booking.nonFlyingGuests - nonFlyingPS);
 
-  // Passenger details
-  const passengers = Array.from({ length: flyingGuests }, (_, idx) =>
-    PASSENGER_SEEDS[(id + idx) % PASSENGER_SEEDS.length]
-  );
-  const nonFlyingGuestList = Array.from({ length: booking.nonFlyingGuests }, (_, idx) =>
-    NON_FLYING_SEEDS[(id + idx + 2) % NON_FLYING_SEEDS.length]
-  );
+  // 2026-06-08 round 6.2.1 (review page data fix): the `passengers`
+  // and `nonFlyingGuestList` and `contact` arrays used to be derived
+  // exclusively from the hard-coded `*_SEEDS` mock data (selected by
+  // `id % N`). That made the review page show fake passengers like
+  // "John Smith / K12345678" even when the real booking had 3 different
+  // passengers. The fix: read from `booking.passengers[]` /
+  // `booking.nonFlyingGuestsList[]` / `booking.contactPerson{}` if
+  // they are populated, and ONLY fall back to the mock seeds when the
+  // booking is in standalone-preview mode (no prop passed). This keeps
+  // the standalone-preview behavior for the view's own use but
+  // ensures real data wins when the wrapper passes a real booking.
+  //
+  // The `psIdPS` and `psIdLD` indices map the Premiere Suite / Lounge
+  // Deluxe pax split (the `vipPS` / `vipLD` above) into the real
+  // passenger list: the first `vipPS` passengers belong to PS, the
+  // rest to LD. This is the round 6.0+6.1 mixed-kind pricing model.
+  const realPassengers = booking.passengers ?? [];
+  const realNonFlying = booking.nonFlyingGuestsList ?? [];
+  const hasRealPassengerData = realPassengers.length > 0;
+  const hasRealNonFlyingData = realNonFlying.length > 0;
+  const hasRealContact = !!booking.contactPerson;
+
+  const passengers = hasRealPassengerData
+    ? realPassengers.map((p) => ({
+        title: p.title ?? '',
+        firstName: p.firstName ?? '',
+        lastName: p.lastName ?? '',
+        doc: p.travelDocNo ?? '',
+        mem: p.membershipNo ?? '',
+        ageGroup: p.ageGroup ?? '',
+        day: p.birthdayDay ?? '',
+        month: p.birthdayMonth ?? '',
+        year: p.birthdayYear ?? '',
+      }))
+    : Array.from({ length: flyingGuests }, (_, idx) =>
+        PASSENGER_SEEDS[(id + idx) % PASSENGER_SEEDS.length],
+      );
+
+  const nonFlyingGuestList = hasRealNonFlyingData
+    ? realNonFlying.map((g) => ({
+        title: g.title ?? '',
+        firstName: g.firstName ?? '',
+        lastName: g.lastName ?? '',
+        ageGroup: g.ageGroup ?? '',
+      }))
+    : Array.from({ length: booking.nonFlyingGuests }, (_, idx) =>
+        NON_FLYING_SEEDS[(id + idx + 2) % NON_FLYING_SEEDS.length],
+      );
 
   // Contact person
-  const contact = CONTACT_SEEDS[id % CONTACT_SEEDS.length];
+  const contact = hasRealContact
+    ? {
+        name: booking.contactPerson?.name ?? '',
+        email: booking.contactPerson?.email ?? '',
+        phone: booking.contactPerson?.phone ?? '',
+        memo: booking.contactPerson?.memo ?? '',
+      }
+    : CONTACT_SEEDS[id % CONTACT_SEEDS.length];
   const promoCode = PROMO_CODES[id % PROMO_CODES.length];
   const accountDiscount = booking.agencyDiscountRate
     ? `${booking.agencyDiscountRate}% (Agency Default)`
     : id % 4 === 0 ? '10%' : '—';
   const accountRemark = id % 2 === 0 ? 'VIP Member - Priority Service' : '—';
 
-  // Extra services (wheelchair, private sales)
+  // Extra services (wheelchair, private sales) — TODO round 6.2.x:
+  // read from `booking.addons[]` (populated by `mapBookingFromApi`
+  // from `api.booking_items` via AddonsSyncService). For now the
+  // mock `id % N` formulas stay.
   const hasWheelchair = id % 7 === 0;
   const hasPrivateSales = id % 9 === 0;
 
