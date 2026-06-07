@@ -214,6 +214,24 @@ export interface CreateBookingProps {
     wheelchairPassenger: string;
     hasSecurity: boolean;
     hasPrivateSales: boolean;
+    // Round 5.7 (2026-06-06): pricing-relevant accommodation +
+    // guest-count state. The wrapper sums these into
+    // `number_of_guests` / `non_flying_guests` before calling
+    // `usePricePreview` (and ultimately the backend
+    // `PricingPreviewService`).
+    vipLD: number;
+    vipPS: number;
+    nonFlyingLD: number;
+    nonFlyingPS: number;
+    numPremiereSuites: number;
+    // Round 5.9 (2026-06-06): pricing-relevant passenger counts
+    // and additional-hours. The wrapper passes these straight
+    // through to `usePricePreview` (which already accepts them
+    // since round 1.5; they were just always 0 because the
+    // figma-ui form never pushed them through the callback).
+    childrenUnder2: number;
+    childrenAge2To11: number;
+    additionalHours: number;
   }) => void;
 }
 
@@ -312,13 +330,34 @@ export function CreateBooking({
   const [addonSearch, setAddonSearch]             = useState('');
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
 
-  // HKIAL addons pricing fix round 5.3 (2026-06-05): sync the 7 addons
+  // HKIAL addons pricing fix round 5.3 (2026-06-05): sync the addons
   // state variables out to the wrapper parent whenever any of them
   // change. The wrapper feeds these into `usePricePreview` so the
   // in-form "Price Breakdown" card can show the addon subtotal live.
-  // See the `onAddonStateChange` prop docblock above for the submodule
-  // handling note.
+  //
+  // Round 5.7 (2026-06-06): extended to also sync the 5 pricing-
+  // relevant accommodation / guest-count state variables
+  // (`vipLD`, `vipPS`, `nonFlyingLD`, `nonFlyingPS`,
+  // `numPremiereSuites`). The wrapper sums these into the
+  // `number_of_guests` and `non_flying_guests` fields that the
+  // backend's `PriceContext` consumes. The prop is still named
+  // `onAddonStateChange` for backward compatibility with the
+  // round 5.3 wiring; the payload simply now also carries
+  // accommodation + guest counts.
+  //
+  // Round 5.9 (2026-06-06): extended to also sync 3 child/extra
+  // pricing fields. The `passengers` and `nonFlyingGuests` arrays
+  // each carry an `ageGroup` enum; the counts of "Infant (0-2
+  // years)" and "Child (2-12 years)" rows map to
+  // `childrenUnder2` and `childrenAge2To11` in the backend's
+  // `PriceContext`. The figma-ui form does NOT expose an
+  // "additional hours" input yet (future ticket), so
+  // `additionalHours` is hardcoded to 0.
   useEffect(() => {
+    const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infant (0-2 years)').length
+      + nonFlyingGuests.filter((g) => g.ageGroup === 'Infant (0-2 years)').length;
+    const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Child (2-12 years)').length
+      + nonFlyingGuests.filter((g) => g.ageGroup === 'Child (2-12 years)').length;
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
@@ -327,6 +366,16 @@ export function CreateBooking({
       wheelchairPassenger,
       hasSecurity,
       hasPrivateSales,
+      // Round 5.7 additions — pricing-relevant accommodation state.
+      vipLD,
+      vipPS,
+      nonFlyingLD,
+      nonFlyingPS,
+      numPremiereSuites,
+      // Round 5.9 additions — pricing-relevant passenger counts.
+      childrenUnder2: childUnder2,
+      childrenAge2To11: childAge2To11,
+      additionalHours: 0,
     });
   }, [
     hasLimousine,
@@ -336,6 +385,15 @@ export function CreateBooking({
     wheelchairPassenger,
     hasSecurity,
     hasPrivateSales,
+    // Round 5.7 additions.
+    vipLD,
+    vipPS,
+    nonFlyingLD,
+    nonFlyingPS,
+    numPremiereSuites,
+    // Round 5.9 additions.
+    passengers,
+    nonFlyingGuests,
     onAddonStateChange,
   ]);
 
@@ -1641,8 +1699,17 @@ export function CreateBooking({
               Cancel
             </Button>
             <Button type="submit" className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white gap-2 px-8"
-              disabled={hasGuestErrors}>
-              <Plus className="w-4 h-4" />Create Booking
+              disabled={hasGuestErrors || isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Submitting…
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4" />Create Booking
+                </>
+              )}
             </Button>
           </div>
         </div>

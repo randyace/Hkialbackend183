@@ -2263,7 +2263,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </td>
               </tr>
               
-              {/* Lounge Access — Head Count Entry Fee */}
+              {/* Head Count Entry Fee — removed round 6.1.5 (2026-06-07).
+                  Backend PricingService no longer emits an `entry_fee`
+                  line in `price_breakdown` (the only items now are
+                  `base` + `add_on_non_flying_guest` + `addons`), and
+                  the previous UI formula (`max(4 pax counts,
+                  numberOfGuests) * HK$1200`) was a ghost charge that
+                  did not match the backend total. Confirmed with
+                  user: the Entry Fee (Head Count) line should not
+                  render at all. The line below is the empty stub
+                  kept for traceability; the wrapping fragment
+                  renders nothing.
+              */}
+              {false && (
               <tr>
                 <td className="px-4 py-3">
                   <div>
@@ -2291,11 +2303,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   HK${(headCountTotal - voucherTotal).toLocaleString()}
                 </td>
               </tr>
+              )}
               <tr>
                 <td colSpan={5} className="px-4 py-2 bg-gray-50">
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                    <textarea 
+                    <textarea
                       className="w-full px-3 py-2 border rounded text-sm resize-none"
                       rows={2}
                       defaultValue={''}
@@ -2348,50 +2361,74 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               )}
 
               {/* Limousine Service */}
-              {booking.hasLimousine && (
-                <>
-                  <tr>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Car className="w-4 h-4 text-purple-600" />
-                        <div>
-                          <p className="font-medium">Limousine Transfer Service</p>
-                          <p className="text-xs text-gray-500">Airport Transfer</p>
+              {booking.hasLimousine && (() => {
+                // Round 6.1.2 (2026-06-07): render the structured limo
+                // addon (quantity / unit_price / subtotal / destinations)
+                // from `booking.addons` instead of the previous hard-coded
+                // `defaultValue={1}` / `defaultValue="800.00"` /
+                // `defaultValue="Pickup at Terminal 1"` which never
+                // reflected the staff's actual input. Fall back to the
+                // legacy single-line display only when `booking.addons`
+                // is missing or empty (legacy bookings created before
+                // the round 4.x AddonsSyncService shipped).
+                const limoAddon = booking.addons?.find(
+                  (a) => a.name === 'Limousine Transfer',
+                );
+                const limoQty = limoAddon?.quantity ?? 1;
+                const limoUnit = limoAddon?.unitPrice ?? 800;
+                const limoSubtotal = limoAddon?.subtotal ?? 800;
+                const limoDestinations = limoAddon?.destinations ?? [];
+                const limoRemarks = limoDestinations.length > 0
+                  ? limoDestinations.join(' → ')
+                  : 'Pickup at Terminal 1';
+                return (
+                  <>
+                    <tr>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Car className="w-4 h-4 text-purple-600" />
+                          <div>
+                            <p className="font-medium">Limousine Transfer Service</p>
+                            <p className="text-xs text-gray-500">Airport Transfer</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <input 
-                        type="number" 
-                        defaultValue={1} 
-                        className="w-20 px-2 py-1 border rounded text-center"
-                        min="1"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <input 
-                        type="text" 
-                        defaultValue="800.00"
-                        className="w-32 px-2 py-1 border rounded text-right"
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-right">—</td>
-                    <td className="px-4 py-3 text-right font-medium">HK$800</td>
-                  </tr>
-                  <tr>
-                    <td colSpan={5} className="px-4 py-2 bg-gray-50">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                        <textarea 
-                          className="w-full px-3 py-2 border rounded text-sm resize-none"
-                          rows={2}
-                          defaultValue="Pickup at Terminal 1"
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="number"
+                          defaultValue={limoQty}
+                          className="w-20 px-2 py-1 border rounded text-center"
+                          min="1"
+                          readOnly
                         />
-                      </div>
-                    </td>
-                  </tr>
-                </>
-              )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="text"
+                          defaultValue={limoUnit.toFixed(2)}
+                          className="w-32 px-2 py-1 border rounded text-right"
+                          readOnly
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">—</td>
+                      <td className="px-4 py-3 text-right font-medium">HK${limoSubtotal.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 bg-gray-50">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                          <textarea
+                            className="w-full px-3 py-2 border rounded text-sm resize-none"
+                            rows={2}
+                            defaultValue={limoRemarks}
+                            readOnly
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  </>
+                );
+              })()}
 
               {/* Shopping Service */}
               {booking.hasShopping && (
@@ -2768,7 +2805,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </tr>
             </tbody>
             <tfoot className="border-t-2">
-              {/* Head Count Entry Fee row */}
+              {/* Head Count Entry Fee row — removed round 6.1.5
+                  (2026-06-07). The backend's `price_breakdown` no
+                  longer includes an `entry_fee` line, so this tfoot
+                  row would otherwise display a ghost charge. */}
+              {false && (
               <tr className="bg-gray-50">
                 <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-600">
                   Entry Fee ({vipPS + vipLD + nonFlyingPS + nonFlyingLD || booking.numberOfGuests || 1} pax × HK${headCountRate.toLocaleString()}):
@@ -2777,6 +2818,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   HK${headCountTotal.toLocaleString()}
                 </td>
               </tr>
+              )}
               {/* Food note — always free */}
               <tr className="bg-green-50">
                 <td colSpan={3} className="px-4 py-2 text-right text-sm text-green-700">

@@ -326,6 +326,7 @@ export function POSBookingDetail({
 }: POSBookingDetailFullProps) {
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([
@@ -430,11 +431,10 @@ export function POSBookingDetail({
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const handlePlaceOrder = () => {
-    // Here you would submit the order to the backend
-    console.log('Placing order:', cart);
+    console.log('Placing order:', cart, { urgent: isUrgent });
     setCart([]);
+    setIsUrgent(false);
     setIsAddOrderOpen(false);
-    // Show success message
   };
 
   return (
@@ -892,13 +892,36 @@ export function POSBookingDetail({
                   </div>
 
                   <div className="border-t pt-4 space-y-3">
+                    <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${isUrgent ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-sm font-medium ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
+                          Urgent Order
+                        </span>
+                        {isUrgent && (
+                          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
+                            Priority
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={isUrgent}
+                        onClick={() => setIsUrgent(v => !v)}
+                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 ${isUrgent ? 'bg-red-500' : 'bg-gray-300'}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${isUrgent ? 'translate-x-4' : 'translate-x-0'}`}
+                        />
+                      </button>
+                    </div>
                     <Button
-                      className="w-full bg-green-600 hover:bg-green-700"
+                      className={`w-full ${isUrgent ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                       onClick={handlePlaceOrder}
                       disabled={cart.length === 0}
                     >
                       <Utensils className="w-4 h-4 mr-2" />
-                      Submit Order ({cart.length} items)
+                      {isUrgent ? 'Submit Urgent Order' : 'Submit Order'} ({cart.length} items)
                     </Button>
                   </div>
                 </>
