@@ -24,7 +24,7 @@ export interface Booking {
   /** Physical lounge seats (Lobby 1-8) assigned to this booking. */
   assignedLoungeNames?: string[];
   dateTime: string;
-  flightType?: 'Arrival' | 'Departure';
+  flightType?: 'Arrival' | 'Departure' | 'Transit';
   arrivalDate?: string;
   flightNo: string;
   flightTime: string;
@@ -32,6 +32,60 @@ export interface Booking {
   flightDestination?: string;
   numberOfLuggage?: number;
   flightClass?: 'Economy Class' | 'Business Class' | 'First Class';
+  // 2026-06-08 round 6.2.6.1 — Transit 2-leg support added to
+  // the figma-ui internal Booking type. Pre-6.2.6 this was missing
+  // and the view's 2nd-leg block (line 1370+) failed TypeScript
+  // checks when `booking.legs` was accessed. Now matches the
+  // parent-repo ViewBooking.legs[] type (bookingService.ts:49-66)
+  // for the 4 core fields + flightOrigin/flightDestination for
+  // the new Route column.
+  legs?: Array<{
+    flightNo: string;
+    flightTime: string;
+    arrivalDate: string;
+    flightClass?: 'Economy Class' | 'Business Class' | 'First Class';
+    flightOrigin?: string;
+    flightDestination?: string;
+  }>;
+  // 2026-06-08 round 6.2.7 — INV-11 (next) + the Limo destination
+  // bug. The Limo display at line 2473-2541 reads
+  // `booking.addons?.find(a => a.name === 'Limousine Transfer')`
+  // and falls back to hard-coded defaults when undefined. The
+  // parent-repo ViewBooking.addons[] type (bookingService.ts:115-127)
+  // has the data; the mapper populates it from
+  // api.booking_items[].meta.destinations. Pre-6.2.7 the internal
+  // type didn't have this field, so the view always fell through
+  // to the fallback ("Pickup at Terminal 1" for destinations).
+  // Now matches the parent-repo shape.
+  addons?: Array<{
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    /** Limousine Transfer only — list of pickup/destination addresses. */
+    destinations?: string[];
+    /** Wheelchair / specific-passenger addons. */
+    passenger?: string;
+    /** Security / addons with a recipient. */
+    driverName?: string;
+    carPlateNo?: string;
+    hotelName?: string;
+  }>;
+  // 2026-06-08 round 6.2.7 — Non-Flying Guest detail forms. The
+  // parent-repo ViewBooking.nonFlyingGuestsList[] (bookingService.ts:165-174)
+  // has the data; the mapper populates it from
+  // api.advanced_details.nonFlyingGuests[]. Pre-6.2.7 the view's
+  // `useState` initializer at line 433 used `buildInitialNonFlyingGuests()`
+  // (a mock-data generator keyed by bookingId) and never read
+  // `booking.nonFlyingGuestsList`. Now the type is present so the
+  // view can read it (the view-side refactor at round 6.2.7
+  // uses this field for the initializer).
+  nonFlyingGuestsList?: Array<{
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    ageGroup?: string;
+  }>;
   status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   services: string[];

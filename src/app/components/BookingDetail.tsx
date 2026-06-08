@@ -1,5 +1,5 @@
-import { useState, useEffect, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, CalendarClock, Gem, Trophy, Star, Heart, Briefcase } from 'lucide-react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, CalendarClock, Gem, Trophy, Star, Heart, Briefcase, Info } from 'lucide-react';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 import { BookingEditDialog } from './booking/BookingEditDialog';
 import { BookingMovementLog } from './booking/BookingMovementLog';
@@ -162,7 +162,29 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   );
 
   // Sync passenger list length whenever the total VIP count changes
+  // 2026-06-08 round 6.2.9 — passengers useEffect (the count-based
+  // resize). Pre-6.2.9 this useEffect fired on mount + on every
+  // stepper change, growing/truncating the `passengers` array to
+  // match `vipPS + vipLD`. For bookings where the API's
+  // `advanced_details.premiereVipPassengers + loungeVipPassengers`
+  // (which feed `vipPS + vipLD`) didn't equal the actual
+  // `booking.passengers[]` length, the useEffect OVERWROTE the
+  // real data with empty placeholder cards. Example: booking
+  // 674 has passengers=[Keith Luk] (length 1) but
+  // vipPS + vipLD = 1 + 1 = 2, so the user saw [Keith Luk,
+  // empty card] instead of just [Keith Luk].
+  //
+  // The fix: use a `useRef` "is initial mount" flag to skip the
+  // mount-time fire. The useEffect now ONLY fires on user stepper
+  // changes (where growing/truncating is the intended behavior).
+  // Mount uses the `useState` initializer's value (which already
+  // reads from `booking.passengers` per the round 6.2.7 fix).
+  const isPassengersInitialMount = useRef(true);
   useEffect(() => {
+    if (isPassengersInitialMount.current) {
+      isPassengersInitialMount.current = false;
+      return;                                              // skip mount — initializer wins
+    }
     const total = vipPS + vipLD;
     setPassengers(prev => {
       if (prev.length === total) return prev;
@@ -430,14 +452,48 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [nonFlyingVoucherUsed, setNonFlyingVoucherUsed] = useState<boolean[]>([]);
 
   // Non-Flying Guest detail forms
-  const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>(() =>
-    buildInitialNonFlyingGuests(
+  // 2026-06-08 round 6.2.7 — read the initial non-flying guests from
+  // `booking.nonFlyingGuestsList` (the mapper populates this from
+  // api.advanced_details.nonFlyingGuests[]). Pre-6.2.7 the
+  // initializer always called `buildInitialNonFlyingGuests()` which
+  // generated MOCK data keyed by bookingId, so the view always
+  // showed mock data even when the booking had real non-flying
+  // guests. Fall back to the mock generator only when the
+  // prop is missing or empty (standalone-preview mode, e.g. the
+  // figma-ui view rendered without a real booking).
+  const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>(() => {
+    const realList = booking.nonFlyingGuestsList;
+    if (Array.isArray(realList) && realList.length > 0) {
+      return realList.map((g) => ({
+        title: g.title ?? '',
+        firstName: g.firstName ?? '',
+        lastName: g.lastName ?? '',
+        ageGroup: g.ageGroup ?? 'Adult (13+ years)',
+      }));
+    }
+    // Fallback for standalone-preview (no real booking) — generate
+    // mock data so the view is still usable in figma-make demos.
+    return buildInitialNonFlyingGuests(
       (booking.nonFlyingGuestsInPremiereSuite ?? 0) + (booking.nonFlyingGuestsInLoungeDeluxe ?? 0),
       bookingId
-    )
-  );
+    );
+  });
 
+  // 2026-06-08 round 6.2.9 — same fix as the passengers useEffect
+  // (line 165+). Skip the mount-time fire so the `useState`
+  // initializer's value (which reads from
+  // `booking.nonFlyingGuestsList` per the round 6.2.7 fix) is
+  // preserved. Example: booking 674 has
+  // nonFlyingGuestsList=[Will Boss, Mary Jane] (length 2) but
+  // nonFlyingPS + nonFlyingLD = 2 + 2 = 4, so the user saw
+  // [Will Boss, Mary Jane, empty, empty] instead of just
+  // [Will Boss, Mary Jane].
+  const isNonFlyingInitialMount = useRef(true);
   useEffect(() => {
+    if (isNonFlyingInitialMount.current) {
+      isNonFlyingInitialMount.current = false;
+      return;                                              // skip mount — initializer wins
+    }
     const total = nonFlyingPS + nonFlyingLD;
     setNonFlyingGuests(prev => {
       if (prev.length === total) return prev;
@@ -1284,6 +1340,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   Arrival
                 </span>
               </div>
+            ) : booking.flightType === 'Transit' ? (
+              // 2026-06-08 round 6.2.6 — added the Transit case.
+              // Distinct amber color (Q1=a) differentiates from
+              // Arrival (blue) + Departure (purple). Pre-6.2.6 this
+              // ternary fell through to the Departure branch, so
+              // Transit bookings showed the wrong badge.
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-800 border border-amber-200">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {/* Transfer / transit icon: 2 planes */}
+                    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
+                    <path d="M7 4l1.5 6L4 11.5l-.5 1 2 1 2 1.5 1-1.5L8 7l-1-3z"/>
+                  </svg>
+                  Transit
+                </span>
+              </div>
             ) : (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border border-purple-200">
@@ -1297,7 +1369,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
           <div>
             <label className="text-sm text-gray-600 block mb-[10px]">
-              {booking.flightType === 'Arrival' ? 'Arrival Date' : 'Departure Date'}
+              {booking.flightType === 'Arrival' ? 'Arrival Date'
+                : booking.flightType === 'Transit' ? '1st Leg Arrival Date'
+                : 'Departure Date'}
             </label>
             <p className="text-lg">{booking.arrivalDate || '—'}</p>
           </div>
@@ -1349,6 +1423,98 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             )}
           </div>
         </div>
+
+        {/* 2026-06-08 round 6.2.6 — Transit 2nd-leg display (Q2=b: same
+            Card, sub-heading, separator). Only renders for Transit
+            bookings where legs[] is populated. Pre-6.2.6 this section
+            didn't exist; Transit bookings showed only the 1st-leg
+            fields. The 1st-leg grid above shows the inbound (Flight
+            Date / Number / Time / Route / Class); this block shows
+            the outbound (2nd flight) + the 6h+ gap computed from the
+            1st-leg arrival vs the 2nd-leg arrival. The 2nd-leg
+            "Route" is omitted because ViewBooking.legs[] only has
+            4 fields (flightNo / flightTime / arrivalDate / flightClass)
+            per round 6.2.2's mapper — origin/destination are the
+            same as the 1st leg's (HKG is implicit for transit at
+            HKG). The gap display (Q3=a) makes the 6h rule visible
+            to staff. */}
+        {booking.flightType === 'Transit' && booking.legs && booking.legs.length >= 2 && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h4 className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-4">
+              2nd Flight (Outbound)
+            </h4>
+            <div className="grid grid-cols-5 gap-6">
+              <div>
+                <label className="text-sm text-gray-600 block mb-[10px]">Flight Number</label>
+                <div className="flex items-center gap-2">
+                  <Plane className="w-4 h-4 text-gray-400" />
+                  <p className="text-lg">{booking.legs[1].flightNo || '—'}</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-[10px]">Flight Time (STD)</label>
+                <p className="text-lg">{booking.legs[1].flightTime || '—'}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-[10px]">Route</label>
+                {/* 2026-06-08 round 6.2.6.1 — Route column for the
+                    2nd-leg block. Format: "{origin} → {destination}".
+                    For Transit at HKG, origin = legs[1].flightOrigin
+                    (= HKG, the transit hub) and destination =
+                    legs[1].flightDestination (= the 1st leg's
+                    origin, e.g. LHR). Falls back to just the
+                    destination if origin is missing (defensive
+                    for legacy/malformed data). */}
+                <p className="text-lg">
+                  {booking.legs[1].flightOrigin || '—'} → {booking.legs[1].flightDestination || '—'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-[10px]">Arrival Date & Time</label>
+                <p className="text-lg">{booking.legs[1].arrivalDate || '—'}</p>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 block mb-[10px]">Flight Class</label>
+                {booking.legs[1].flightClass ? (
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
+                    booking.legs[1].flightClass === 'First Class'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : booking.legs[1].flightClass === 'Business Class'
+                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                      : 'bg-gray-50 text-gray-700 border-gray-200'
+                  }`}>
+                    {booking.legs[1].flightClass}
+                  </span>
+                ) : (
+                  <p className="text-lg text-gray-400">—</p>
+                )}
+              </div>
+            </div>
+            {/* Gap display: computed from 1st-leg arrivalDate vs
+                2nd-leg arrivalDate. Round 6.2 backend's TransitLegsRule
+                enforces >= 6h; this display makes it visible to staff. */}
+            {(() => {
+              const l0 = booking.arrivalDate ? new Date(booking.arrivalDate.replace(' ', 'T')) : null;
+              const l1 = booking.legs[1].arrivalDate ? new Date(booking.legs[1].arrivalDate.replace(' ', 'T')) : null;
+              if (!l0 || !l1 || isNaN(l0.getTime()) || isNaN(l1.getTime())) return null;
+              const diffMs = l1.getTime() - l0.getTime();
+              const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+              const hours = Math.floor(diffMs / 3600000);
+              const mins = Math.floor((diffMs % 3600000) / 60000);
+              const isValid = diffMs >= SIX_HOURS_MS;
+              return (
+                <p
+                  className={`text-sm mt-4 flex items-center gap-1.5 ${isValid ? 'text-green-700' : 'text-red-700'}`}
+                  data-testid="transit-gap-display"
+                >
+                  <Info className="w-4 h-4 flex-shrink-0" />
+                  Transit gap: <strong>{hours}h {mins}m</strong>
+                  {isValid ? ' (compliant with 6h minimum)' : ' (BELOW 6h minimum — data error)'}.
+                </p>
+              );
+            })()}
+          </div>
+        )}
       </Card>
 
       {/* 8. Booking Details */}
@@ -1872,7 +2038,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <option value="">—</option>
                           <option value="Mr">Mr</option>
                           <option value="Mrs">Mrs</option>
+                          <option value="Ms">Ms</option>
                           <option value="Miss">Miss</option>
+                          <option value="Dr">Dr</option>
+                          <option value="Prof">Prof</option>
                         </select>
                       </div>
                       <div className="col-span-2">
@@ -2105,7 +2274,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <option value="">—</option>
                           <option value="Mr">Mr</option>
                           <option value="Mrs">Mrs</option>
+                          <option value="Ms">Ms</option>
                           <option value="Miss">Miss</option>
+                          <option value="Dr">Dr</option>
+                          <option value="Prof">Prof</option>
                         </select>
                       </div>
                       {/* First Name */}

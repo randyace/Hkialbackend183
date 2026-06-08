@@ -60,7 +60,7 @@ const BOOKING_SEQ = String(Math.floor(Math.random() * 999999) + 1).padStart(6, '
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type PassengerTitle = 'Mr' | 'Mrs' | 'Miss' | '';
+type PassengerTitle = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
 type AgeGroup = 'Adult (13+ years)' | 'Child (2-12 years)' | 'Infant (0-2 years)' | '';
 type MembershipTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 type PaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
@@ -112,6 +112,16 @@ export interface BookingFormData {
   guestName: string;
   flightNo: string;
   flightTime: string;
+  // 2026-06-08 round 6.2.2 — I-T-N1: add `arrivalDate` (the flight's
+  // date) to the formData shape. Previously the figma-ui view kept
+  // this in local state (`arrivalDate` useState, line 306) but never
+  // emitted it to the wrapper. For Transit bookings, the wrapper's
+  // payload builder reads `arrivalDate` for `legs[0].arrivalDate`;
+  // with the field missing the wrapper's own useState stayed `''`
+  // forever → `legs[0].arrivalDate = undefined` → backend 422
+  // "Leg 0.arrivalDate is required for Transit bookings." Now in
+  // the formData shape so the wrapper can read it.
+  arrivalDate?: string;
   visitDate: string;
   visitTime: string;
   numberOfGuests: number;
@@ -248,6 +258,23 @@ export interface CreateBookingProps {
     childrenAge2To11: number;
     additionalHours: number;
   }) => void;
+  /**
+   * 2026-06-08 round 6.2.8 — bookable items price map sourced from
+   * `GET /api/bookable-items` (populated by the wrapper via
+   * `fetchBookableItemPriceMap` in the parent repo). Used to render
+   * the form's addons chips + dropdown with the CORRECT prices
+   * from the DB, not the hard-coded "fictional" prices in the
+   * `CREATE_ADDON_SERVICES` array. Pre-6.2.8 the Limo chip showed
+   * "+HK$1,500" (hard-coded) while the actual charge was HK$800
+   * (DB). See `bookableItemsCache.ts` for the full rationale.
+   *
+   * Format: `{ 'Limousine Transfer': 800, 'Airport Limousine Service': 1000, ... }`
+   * Addons whose `name_en` is NOT in this map fall through to the
+   * hard-coded `price` + `badge` in `CREATE_ADDON_SERVICES` (these
+   * are the 25 fabricated "display-only" addons marked with
+   * "(coming soon)" in the key).
+   */
+  bookableItemPrices?: Record<string, number>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -532,7 +559,7 @@ export function CreateBooking({
   const psNoVip           = numPremiereSuites > 0 && vipPS === 0;
   const psGuestsNoSuite   = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
   const ldNonFlyingOver   = nonFlyingLD > 3;
-  const ldNoVip           = vipLD === 0;
+  const ldNoVip           = (assignedLoungeIds.length > 0 || vipLD > 0 || nonFlyingLD > 0) && vipLD === 0;
 
   const psErrors: string[] = [];
   if (psGuestsNoSuite) psErrors.push('Quantity of Premiere Suite must be at least 1 when guests are assigned to it.');
@@ -580,6 +607,13 @@ export function CreateBooking({
       guestName,
       visitDate,
       visitTime,
+      // 2026-06-08 round 6.2.2 — I-T-N1: emit `arrivalDate` (the
+      // flight's date, was stuck in local state). Wrapper's
+      // payload builder reads it for `legs[0].arrivalDate` on
+      // Transit bookings. Without this emit, the wrapper's own
+      // `arrivalDate` useState stays `''` → legs[0].arrivalDate
+      // = undefined → backend 422.
+      arrivalDate,
       flightType,
       flightNo,
       flightTime,
@@ -1395,7 +1429,7 @@ export function CreateBooking({
                           <select value={p.title} onChange={e => updatePassenger(idx, 'title', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">—</option>
-                            <option>Mr</option><option>Mrs</option><option>Miss</option>
+                            <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Prof</option>
                           </select>
                         </div>
                         <div className="col-span-2">
@@ -1496,7 +1530,7 @@ export function CreateBooking({
                           <select value={g.title} onChange={e => updateNonFlying(idx, 'title', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">—</option>
-                            <option>Mr</option><option>Mrs</option><option>Miss</option>
+                            <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Prof</option>
                           </select>
                         </div>
                         <div>
@@ -1539,33 +1573,78 @@ export function CreateBooking({
 
           {(() => {
             // Full service catalogue for Create Booking
-            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string }[] = [
-              { key: 'Limousine Transfer',                    icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                price: '1500', badge: '+HK$1,500',    badgeClass: 'bg-purple-100 text-purple-700' },
-              { key: 'In-lounge Personal Shopping Assistance',icon: <ShoppingBag className="w-4 h-4" />,  desc: 'Dedicated in-lounge shopping concierge',      price: '400',  badge: '+HK$400',      badgeClass: 'bg-green-100 text-green-700'  },
-              { key: 'Wheelchair Assistance',                 icon: <Accessibility className="w-4 h-4" />,desc: 'Mobility & accessibility support',             price: '0',    badge: 'Complimentary',badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Security Escort Service',               icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',        price: '1200', badge: '+HK$1,200',    badgeClass: 'bg-amber-100 text-amber-700'  },
-              { key: 'Private Sales',                         icon: <Star className="w-4 h-4" />,         desc: 'Exclusive private sales access on request',   price: '0',    badge: 'On request',   badgeClass: 'bg-indigo-100 text-indigo-700'},
-              { key: 'Meet & Greet Service',                  icon: <User className="w-4 h-4" />,         desc: 'Dedicated greeter at arrival or departure',   price: '600',  badge: '+HK$600',      badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'Fast Track Immigration',                icon: <Plane className="w-4 h-4" />,        desc: 'Priority immigration clearance',              price: '400',  badge: '+HK$400',      badgeClass: 'bg-sky-100 text-sky-700'      },
-              { key: 'Buggy Transfer Service',                icon: <Car className="w-4 h-4" />,          desc: 'Electric buggy within terminal',              price: '0',    badge: 'Complimentary',badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Baggage Handling',                      icon: <Luggage className="w-4 h-4" />,      desc: 'Assisted luggage from check-in to lounge',   price: '150',  badge: '+HK$150',      badgeClass: 'bg-orange-100 text-orange-700'},
-              { key: 'Porter Service',                        icon: <Luggage className="w-4 h-4" />,      desc: 'On-demand porter assistance',                 price: '100',  badge: '+HK$100',      badgeClass: 'bg-orange-100 text-orange-700'},
-              { key: 'Shower Service',                        icon: <Building2 className="w-4 h-4" />,    desc: 'Private shower room with amenities',          price: '200',  badge: '+HK$200',      badgeClass: 'bg-teal-100 text-teal-700'    },
-              { key: 'Day Room (4 hrs)',                      icon: <Building2 className="w-4 h-4" />,    desc: 'Private suite day-use booking',               price: '1800', badge: '+HK$1,800',    badgeClass: 'bg-rose-100 text-rose-700'    },
-              { key: 'Day Room Extension (per hr)',           icon: <Clock className="w-4 h-4" />,        desc: 'Hourly extension of day room',                price: '450',  badge: '+HK$450',      badgeClass: 'bg-rose-100 text-rose-700'    },
-              { key: 'VIP Escort (Airside)',                  icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Escorted airside access with staff',          price: '1500', badge: '+HK$1,500',    badgeClass: 'bg-amber-100 text-amber-700'  },
-              { key: 'Printing Service',                      icon: <FileText className="w-4 h-4" />,     desc: 'Document printing (per page)',                price: '20',   badge: '+HK$20/pg',    badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Lounge Access – Extra Adult',           icon: <User className="w-4 h-4" />,         desc: 'Additional adult lounge entry',               price: '350',  badge: '+HK$350',      badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'Lounge Access – Extra Child',           icon: <User className="w-4 h-4" />,         desc: 'Additional child entry (2–11 yrs)',           price: '180',  badge: '+HK$180',      badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'SIM Card Arrangement',                  icon: <Phone className="w-4 h-4" />,        desc: 'Local SIM card for guest',                    price: '80',   badge: '+HK$80',       badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Currency Exchange Assistance',          icon: <DollarSign className="w-4 h-4" />,   desc: 'Guided to best exchange counter',             price: '0',    badge: 'Complimentary',badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Special Meal Request',                  icon: <Tag className="w-4 h-4" />,          desc: 'Dietary or custom meal arrangement',          price: '0',    badge: 'On request',   badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Flower / Gift Arrangement',             icon: <Tag className="w-4 h-4" />,          desc: 'In-lounge gift or floral setup',              price: '500',  badge: '+HK$500',      badgeClass: 'bg-pink-100 text-pink-700'    },
-              { key: 'Birthday / Celebration Setup',          icon: <Tag className="w-4 h-4" />,          desc: 'Cake, décor & personalised message',          price: '800',  badge: '+HK$800',      badgeClass: 'bg-pink-100 text-pink-700'    },
-              { key: 'Video Conference Room',                 icon: <MessageSquare className="w-4 h-4" />,desc: 'Private VC-equipped meeting room',            price: '1200', badge: '+HK$1,200',    badgeClass: 'bg-violet-100 text-violet-700'},
-              { key: 'Private Dining Room',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Exclusive dining space (up to 8 pax)',        price: '2500', badge: '+HK$2,500',    badgeClass: 'bg-red-100 text-red-700'      },
-              { key: 'Smoking Room Access',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Designated smoking area access',              price: '0',    badge: 'Complimentary',badgeClass: 'bg-gray-100 text-gray-600'    },
+            // ──────────────────────────────────────────────────────
+            // 2026-06-08 round 6.2.8 — INV-12 (next) refactor.
+            //   Pre-6.2.8 this array had 26 entries with HARD-CODED
+            //   `price` + `badge` values. Only 1 of those 26
+            //   (Limousine Transfer) actually mapped to a real
+            //   `bookable_items` row, and the form's hard-coded
+            //   price (HK$1,500) didn't match the DB price
+            //   (HK$800). The user clicked Limo Transfer, saw
+            //   "+HK$1,500" in the chip, but was actually
+            //   charged HK$800 on submit. The form was the
+            //   source of the misinformation.
+            //
+            //   The fix: for each entry, look up the `bookableItemPrices`
+            //   prop (sourced from `GET /api/bookable-items`). If
+            //   found, use the DB price + format the badge as
+            //   "+HK${price}". If NOT found, the addon is a
+            //   "display-only" placeholder (no real DB row);
+            //   flag it with "(coming soon)" in the key and
+            //   change the badge to "Contact us" so the user
+            //   knows it's not a real bookable item.
+            //
+            //   This preserves the 26-entry "rich service
+            //   catalog" UX (don't drop the placeholders) while
+            //   fixing the misleading pricing.
+            // ──────────────────────────────────────────────────────
+            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string; isPlaceholder?: boolean }[] = [
+              { key: 'Limousine Transfer',                    icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                price: '0',  badge: '+HK$—',        badgeClass: 'bg-purple-100 text-purple-700' },  // ← price/badge overridden at render time from bookableItemPrices prop
+              { key: 'In-lounge Personal Shopping Assistance (coming soon)', icon: <ShoppingBag className="w-4 h-4" />,  desc: 'Dedicated in-lounge shopping concierge',      price: '400',  badge: 'Contact us',  badgeClass: 'bg-green-100 text-green-700'  },
+              { key: 'Wheelchair Assistance (coming soon)',                 icon: <Accessibility className="w-4 h-4" />,desc: 'Mobility & accessibility support',             price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Security Escort Service (coming soon)',               icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',        price: '1200', badge: 'Contact us',  badgeClass: 'bg-amber-100 text-amber-700'  },
+              { key: 'Private Sales (coming soon)',                         icon: <Star className="w-4 h-4" />,         desc: 'Exclusive private sales access on request',   price: '0',    badge: 'On request',  badgeClass: 'bg-indigo-100 text-indigo-700'},
+              { key: 'Meet & Greet Service (coming soon)',                  icon: <User className="w-4 h-4" />,         desc: 'Dedicated greeter at arrival or departure',   price: '600',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
+              { key: 'Fast Track Immigration (coming soon)',                icon: <Plane className="w-4 h-4" />,        desc: 'Priority immigration clearance',              price: '400',  badge: 'Contact us',  badgeClass: 'bg-sky-100 text-sky-700'      },
+              { key: 'Buggy Transfer Service (coming soon)',                icon: <Car className="w-4 h-4" />,          desc: 'Electric buggy within terminal',              price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Baggage Handling (coming soon)',                      icon: <Luggage className="w-4 h-4" />,      desc: 'Assisted luggage from check-in to lounge',   price: '150',  badge: 'Contact us',  badgeClass: 'bg-orange-100 text-orange-700'},
+              { key: 'Porter Service (coming soon)',                        icon: <Luggage className="w-4 h-4" />,      desc: 'On-demand porter assistance',                 price: '100',  badge: 'Contact us',  badgeClass: 'bg-orange-100 text-orange-700'},
+              { key: 'Shower Service (coming soon)',                        icon: <Building2 className="w-4 h-4" />,    desc: 'Private shower room with amenities',          price: '200',  badge: 'Contact us',  badgeClass: 'bg-teal-100 text-teal-700'    },
+              { key: 'Day Room (4 hrs) (coming soon)',                      icon: <Building2 className="w-4 h-4" />,    desc: 'Private suite day-use booking',               price: '1800', badge: 'Contact us',  badgeClass: 'bg-rose-100 text-rose-700'    },
+              { key: 'Day Room Extension (per hr) (coming soon)',           icon: <Clock className="w-4 h-4" />,        desc: 'Hourly extension of day room',                price: '450',  badge: 'Contact us',  badgeClass: 'bg-rose-100 text-rose-700'    },
+              { key: 'VIP Escort (Airside) (coming soon)',                  icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Escorted airside access with staff',          price: '1500', badge: 'Contact us',  badgeClass: 'bg-amber-100 text-amber-700'  },
+              { key: 'Printing Service (coming soon)',                      icon: <FileText className="w-4 h-4" />,     desc: 'Document printing (per page)',                price: '20',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Lounge Access – Extra Adult (coming soon)',           icon: <User className="w-4 h-4" />,         desc: 'Additional adult lounge entry',               price: '350',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
+              { key: 'Lounge Access – Extra Child (coming soon)',           icon: <User className="w-4 h-4" />,         desc: 'Additional child entry (2–11 yrs)',           price: '180',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
+              { key: 'SIM Card Arrangement (coming soon)',                  icon: <Phone className="w-4 h-4" />,        desc: 'Local SIM card for guest',                    price: '80',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Currency Exchange Assistance (coming soon)',          icon: <DollarSign className="w-4 h-4" />,   desc: 'Guided to best exchange counter',             price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Special Meal Request (coming soon)',                  icon: <Tag className="w-4 h-4" />,          desc: 'Dietary or custom meal arrangement',          price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Flower / Gift Arrangement (coming soon)',             icon: <Tag className="w-4 h-4" />,          desc: 'In-lounge gift or floral setup',              price: '500',  badge: 'Contact us',  badgeClass: 'bg-pink-100 text-pink-700'    },
+              { key: 'Birthday / Celebration Setup (coming soon)',          icon: <Tag className="w-4 h-4" />,          desc: 'Cake, décor & personalised message',          price: '800',  badge: 'Contact us',  badgeClass: 'bg-pink-100 text-pink-700'    },
+              { key: 'Video Conference Room (coming soon)',                 icon: <MessageSquare className="w-4 h-4" />,desc: 'Private VC-equipped meeting room',            price: '1200', badge: 'Contact us',  badgeClass: 'bg-violet-100 text-violet-700'},
+              { key: 'Private Dining Room (coming soon)',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Exclusive dining space (up to 8 pax)',        price: '2500', badge: 'Contact us',  badgeClass: 'bg-red-100 text-red-700'      },
+              { key: 'Smoking Room Access (coming soon)',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Designated smoking area access',              price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
             ];
+
+            // 2026-06-08 round 6.2.8 — apply the DB price override for
+            // any addon whose key matches a `bookableItemPrices` entry.
+            // For "Limousine Transfer", the key is the exact match
+            // (the prop is keyed by `name_en`). For the 25 "(coming
+            // soon)" placeholders, the key has the suffix, so the
+            // match fails (intentional — we don't want to override
+            // a fabricated price with a real one for a different
+            // service).
+            const resolveServiceDisplay = (svc: typeof CREATE_ADDON_SERVICES[number]) => {
+              const dbPrice = bookableItemPrices?.[svc.key];
+              if (typeof dbPrice === 'number' && Number.isFinite(dbPrice) && dbPrice > 0) {
+                return {
+                  ...svc,
+                  price: String(dbPrice),
+                  badge: `+HK$${dbPrice.toLocaleString()}`,
+                };
+              }
+              return svc;
+            };
 
             // Map service keys to existing boolean states so price calculation stays intact
             const KEYED_BOOLEANS: Record<string, boolean> = {
@@ -1600,7 +1679,14 @@ export function CreateBooking({
                 {selectedKeys.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {selectedKeys.map(key => {
-                      const svc = CREATE_ADDON_SERVICES.find(s => s.key === key)!;
+                      // 2026-06-08 round 6.2.8 — apply DB price override
+                      // for addons with matching `bookableItemPrices` entry
+                      // (e.g. Limousine Transfer → DB HK$800 instead of
+                      // hard-coded HK$1,500). For 25 "(coming soon)"
+                      // placeholders, the key has a suffix so the match
+                      // fails and we fall through to the hard-coded
+                      // badge ("Contact us" / "On request").
+                      const svc = resolveServiceDisplay(CREATE_ADDON_SERVICES.find(s => s.key === key)!);
                       return (
                         <div key={key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-800">
                           <span className="text-blue-500 shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5">{svc.icon}</span>
@@ -1651,7 +1737,14 @@ export function CreateBooking({
                         <div className="px-4 py-3 text-sm text-gray-500">
                           No services found for "<span className="font-medium">{addonSearch}</span>"
                         </div>
-                      ) : dropdownResults.map(({ key, icon, desc, badge, badgeClass }) => {
+                      ) : dropdownResults.map((rawSvc) => {
+                        // 2026-06-08 round 6.2.8 — apply DB price override
+                        // (same pattern as the chip; resolved before
+                        // destructuring so the dropdown row shows the
+                        // real DB price for Limousine Transfer and the
+                        // "Contact us" badge for the 25 placeholders).
+                        const svc = resolveServiceDisplay(rawSvc);
+                        const { key, icon, desc, badge, badgeClass } = svc;
                         const isSelected = !!KEYED_BOOLEANS[key] || (selectedKeys.includes(key));
                         const isTracked  = key in KEYED_BOOLEANS;
                         return (

@@ -8,12 +8,31 @@ import { suiteService, type Suite } from '@/services/suiteService';
 
 interface EditBooking {
   bookingNo: string;
-  flightType?: 'Arrival' | 'Departure';
+  // 2026-06-08 round 6.2.6.1 — INV-11 (next). Added 'Transit' to
+  // the flightType enum. Pre-6.2.6 this was 'Arrival' | 'Departure'
+  // only, mirroring the same 2-way ternary anti-pattern that the
+  // BookingDetail view had at line 1278 (fixed in round 6.2.6).
+  // The 'Transition' value was renamed to 'Transit' in round 6.2's
+  // I-T1 backend normalisation, but the frontend type decls (here
+  // + line 54 + line 106) still used the old name. Now consistent.
+  flightType?: 'Arrival' | 'Departure' | 'Transit';
   flightNo: string;
   flightTime: string;
   flightOrigin?: string;
   flightDestination?: string;
   flightClass?: string;
+  // 2026-06-08 round 6.2.6.1 — 2nd-leg fields (read-only for now).
+  // Future ticket: persist these via the wrapper's handleSaveEdit
+  // (requires the backend PATCH /api/bookings/{id} to accept the
+  // 2nd-leg fields in advanced_details.flight.legs[1]).
+  legs?: Array<{
+    flightNo: string;
+    flightTime: string;
+    arrivalDate: string;
+    flightClass?: 'Economy Class' | 'Business Class' | 'First Class';
+    flightOrigin?: string;
+    flightDestination?: string;
+  }>;
   suite: string;
   dateTime: string;
   numberOfGuests?: number;
@@ -51,7 +70,10 @@ interface BookingEditDialogProps {
 
 /** Edit payload returned by the dialog's onSave. */
 export interface BookingEditPayload {
-  flightType: 'Arrival' | 'Departure' | 'Transition';
+  // 2026-06-08 round 6.2.6.1 — INV-11. Renamed 'Transition' to
+  // 'Transit' to match the round 6.2 I-T1 backend normalisation.
+  // Also affects the 2 select <option> at line 262 (Transition → Transit).
+  flightType: 'Arrival' | 'Departure' | 'Transit';
   flightNo: string;
   flightTime: string;
   flightOrigin: string;
@@ -103,7 +125,7 @@ interface BookingEditDialogProps {
 }
 
 export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = false }: BookingEditDialogProps) {
-  const [editFlightType,    setEditFlightType]    = useState<'Arrival' | 'Departure' | 'Transition'>(booking.flightType ?? 'Departure');
+  const [editFlightType,    setEditFlightType]    = useState<'Arrival' | 'Departure' | 'Transit'>(booking.flightType ?? 'Departure');
   const [editFlightNo,      setEditFlightNo]      = useState(booking.flightNo);
   const [editFlightTime,    setEditFlightTime]    = useState(booking.flightTime);
   const [editFlightOrigin,  setEditFlightOrigin]  = useState(booking.flightOrigin ?? '');
@@ -256,10 +278,10 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Type</label>
-                <select value={editFlightType} onChange={e => setEditFlightType(e.target.value as 'Arrival' | 'Departure' | 'Transition')} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
+                <select value={editFlightType} onChange={e => setEditFlightType(e.target.value as 'Arrival' | 'Departure' | 'Transit')} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
                   <option value="Arrival">Arrival</option>
                   <option value="Departure">Departure</option>
-                  <option value="Transition">Transition</option>
+                  <option value="Transit">Transit</option>
                 </select>
               </div>
               <div>
@@ -284,6 +306,25 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination (IATA)</label>
                   <input type="text" value={editFlightDest} onChange={e => setEditFlightDest(e.target.value.toUpperCase())} placeholder="e.g. LHR" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
                 </div>
+              ) : editFlightType === 'Transit' ? (
+                // 2026-06-08 round 6.2.6.1 — INV-11. For Transit,
+                // show BOTH Origin (1st-leg inbound origin, e.g. LHR)
+                // AND Destination (always HKG, the transit hub).
+                // Pre-6.2.6 the 2-way ternary only handled
+                // Departure (show Destination) and Arrival (show
+                // Origin), so Transit fell into the Arrival branch
+                // and the Destination field was hidden. For Transit
+                // bookings, Destination is always HKG.
+                <>
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>1st-Leg Origin (IATA)</label>
+                    <input type="text" value={editFlightOrigin} onChange={e => setEditFlightOrigin(e.target.value.toUpperCase())} placeholder="e.g. NRT" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>1st-Leg Destination (HKG)</label>
+                    <input type="text" value={editFlightDest} onChange={e => setEditFlightDest(e.target.value.toUpperCase())} placeholder="HKG" maxLength={3} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500 uppercase" />
+                  </div>
+                </>
               ) : (
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Origin (IATA)</label>
@@ -295,6 +336,45 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                 <input type="number" value={editNumLuggage} min={0} onChange={e => setEditNumLuggage(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
               </div>
             </div>
+
+            {/* 2026-06-08 round 6.2.6.1 — 2nd-leg section (Q2=read-only).
+                Only renders for Transit bookings where legs[] is
+                populated. Read-only per Q2 (the wrapper's handleSaveEdit
+                doesn't persist these fields yet; the API's
+                PATCH /api/bookings/{id} would need to accept
+                advanced_details.flight.legs[1] first). The data is
+                shown so staff can review it; the input controls are
+                disabled with a "view only" hint. */}
+            {editFlightType === 'Transit' && booking.legs && booking.legs.length >= 2 && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    2nd Flight (Outbound) — <span className="text-amber-600">view only</span>
+                  </h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number</label>
+                    <input type="text" value={booking.legs[1].flightNo ?? ''} disabled placeholder="—" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500 uppercase" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time (STD)</label>
+                    <input type="time" value={booking.legs[1].flightTime ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Date &amp; Time</label>
+                    <input type="text" value={booking.legs[1].arrivalDate ?? ''} disabled placeholder="—" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Class</label>
+                    <input type="text" value={booking.legs[1].flightClass ?? ''} disabled placeholder="—" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 italic" data-testid="leg2-view-only-hint">
+                  The 2nd-leg fields are read-only in this dialog. To edit, use the dedicated Transit editor (future feature).
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Section 2: Lounge Details */}
