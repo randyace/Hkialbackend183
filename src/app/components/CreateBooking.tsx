@@ -239,6 +239,12 @@ export interface CreateBookingProps {
     wheelchairPassenger: string;
     hasSecurity: boolean;
     hasPrivateSales: boolean;
+    // Round 6.2.20 (2026-06-09) — Lounge Extension (with qty).
+    // The wrapper maps these into the `addons.items[]` shape
+    // that the backend AddonsSyncService expects, with
+    // quantity = loungeExtensionQty.
+    hasLoungeExtension: boolean;
+    loungeExtensionQty: number;
     // Round 5.7 (2026-06-06): pricing-relevant accommodation +
     // guest-count state. The wrapper sums these into
     // `number_of_guests` / `non_flying_guests` before calling
@@ -311,6 +317,27 @@ export function CreateBooking({
   liveRulesApplied = [],
   liveWarnings = [],
   onAddonStateChange,
+  // Round 6.2.19 (2026-06-08) — round 6.2.8 added the
+  // prop to the interface (line 277) + the wrapper passes
+  // it, but the function destructure (lines 282-314)
+  // never picked it up. Result: `bookableItemPrices` was
+  // referenced at line 1628 inside `resolveServiceDisplay`
+  // (defined inline at line 1627) but the identifier was
+  // NOT in scope → runtime ReferenceError when the user
+  // clicked on an addon input:
+  //   "Uncaught ReferenceError: bookableItemPrices is
+  //    not defined at index-BBQSOAP0.js:98:63889"
+  // Per INV-13, the structural fix is to destructure the
+  // prop in the function signature. The figma-ui view's
+  // function-level destructure mirrors the prop list in
+  // CreateBookingProps; missing entries are silently
+  // undefined when accessed (TS doesn't error because
+  // `bookableItemPrices?.[svc.key]` uses optional chaining
+  // — the optional chaining compiles to `bookableItemPrices
+  // === undefined ? undefined : bookableItemPrices[svc.key]`,
+  // and if `bookableItemPrices` itself is undeclared the
+  // JS engine throws ReferenceError at parse time).
+  bookableItemPrices = {},
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -383,6 +410,16 @@ export function CreateBooking({
   const [wheelchairPassenger, setWheelchairPassenger] = useState('');
   const [hasSecurity, setHasSecurity] = useState(false);
   const [hasPrivateSales, setHasPrivateSales] = useState(false);
+  // (bookableItemPrices comes from the wrapper as a prop
+  // — see `bookableItemPrices?: Record<string, number>`
+  // in CreateBookingProps. No local state needed.)
+  // Round 6.2.20 (2026-06-09) — Lounge Extension now has a
+  // custom UI with a qty stepper (per user directive "for
+  // Lounge Extension, it should have qty"). The state holds
+  // both the boolean (whether the user wants the extension)
+  // and the qty (1-6 hours). Default qty=1, max=6.
+  const [hasLoungeExtension, setHasLoungeExtension] = useState(false);
+  const [loungeExtensionQty, setLoungeExtensionQty] = useState(1);
   const [addonSearch, setAddonSearch]             = useState('');
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
 
@@ -422,6 +459,10 @@ export function CreateBooking({
       wheelchairPassenger,
       hasSecurity,
       hasPrivateSales,
+      // Round 6.2.20 (2026-06-09) — Lounge Extension
+      // (with qty) per user directive.
+      hasLoungeExtension,
+      loungeExtensionQty,
       // Round 5.7 additions — pricing-relevant accommodation state.
       vipLD,
       vipPS,
@@ -441,6 +482,9 @@ export function CreateBooking({
     wheelchairPassenger,
     hasSecurity,
     hasPrivateSales,
+    // Round 6.2.20 (2026-06-09) — Lounge Extension deps.
+    hasLoungeExtension,
+    loungeExtensionQty,
     // Round 5.7 additions.
     vipLD,
     vipPS,
@@ -468,27 +512,78 @@ export function CreateBooking({
   }
   const [deleteDialog, setDeleteDialog] = useState<DeletePaxDialog | null>(null);
 
-  // ─── Sync passenger list with total VIP count ────────────────────────────────
+  // 2026-06-08 round 6.2.10 — passengers useEffect (Q1=b: only
+  // GROW, never TRUNCATE). Pre-6.2.10 this useEffect fired on
+  // every vipPS/vipLD change and BOTH grew (added empties when
+  // count went up) AND truncated (cut entries when count went
+  // down). The truncation branch was the source of the
+  // "user typed 4 VIPs, only 2 saved" data-loss bug — see
+  // `docs/handoff/2026-06-08-round-6.2.10-createform-only-grow.md`
+  // for the full story. The fix: ONLY add empties when the
+  // count went up. NEVER truncate. The user controls when
+  // entries are removed via the explicit "Remove" button
+  // (which calls `confirmDeletePassengers`).
+  //
+  // Round 6.2.22 (2026-06-09) — re-applied the round 6.2.10
+  // fix that was lost in a Figma Make regen. The Figma Make
+  // regen stripped the useEffect BODY, leaving only the
+  // comment block. Same class of bug as round 6.2.19 (the
+  // `bookableItemPrices` destructure was lost the same way).
+  // Per the user report "the VIP Passenger Details list is
+  // not expanded when I add vip" — the figma-ui view's
+  // `passengers` array was initialized to `[emptyPassenger()]`
+  // (1 entry) and NEVER grew, so the "VIP Passenger Details"
+  // section always showed 1 form regardless of `vipPS`/`vipLD`.
+  // The wrapper (parent) CreateBooking.tsx has its own copy
+  // of this useEffect at line 310-318, but the figma-ui view
+  // maintains its own local `passengers` state for the
+  // "VIP Passenger Details" rendering. We need the useEffect
+  // here too.
   useEffect(() => {
     const total = vipPS + vipLD;
-    setPassengers(prev => {
-      if (prev.length === total) return prev;
-      if (prev.length < total)
-        return [...prev, ...Array.from({ length: total - prev.length }, emptyPassenger)];
-      return prev.slice(0, total);
+    setPassengers((prev) => {
+      if (prev.length >= total) return prev; // already enough or more — never truncate
+      // Only-GROW: add empties to reach `total`.
+      return [...prev, ...Array.from({ length: total - prev.length }, () => ({
+        title: '',
+        firstName: '',
+        lastName: '',
+        travelDocNo: '',
+        membershipNo: '',
+        ageGroup: '',
+        birthdayDay: '',
+        birthdayMonth: '',
+        birthdayYear: '',
+      }))];
     });
   }, [vipPS, vipLD]);
 
-  // ─── Sync non-flying guest list ───────────────────────────────────────────────
+  // 2026-06-08 round 6.2.10 — non-flying useEffect (Q1=b: only
+  // GROW, never TRUNCATE). Same fix as the passengers useEffect
+  // (line 472+). Pre-6.2.10 this useEffect truncated the array
+  // when nonFlyingPS/nonFlyingLD went down, which LOST the
+  // user-typed data. Fix: only add empties, never truncate.
+  //
+  // Round 6.2.22 (2026-06-09) — re-applied. Lost in Figma
+  // Make regen.
   useEffect(() => {
     const total = nonFlyingPS + nonFlyingLD;
-    setNonFlyingGuests(prev => {
-      if (prev.length === total) return prev;
-      if (prev.length < total)
-        return [...prev, ...Array.from({ length: total - prev.length }, emptyNonFlying)];
-      return prev.slice(0, total);
+    setNonFlyingGuests((prev) => {
+      if (prev.length >= total) return prev; // already enough or more — never truncate
+      return [...prev, ...Array.from({ length: total - prev.length }, () => ({
+        title: '',
+        firstName: '',
+        lastName: '',
+        ageGroup: '',
+      }))];
     });
   }, [nonFlyingPS, nonFlyingLD]);
+
+  // 2026-06-08 round 6.2.10 — non-flying useEffect (Q1=b: only
+  // GROW, never TRUNCATE). Same fix as the passengers useEffect
+  // (line 472+). Pre-6.2.10 this useEffect truncated the array
+  // when nonFlyingPS/nonFlyingLD went down, which LOST the
+  // user-typed dat...[truncated]
 
   // ─── Derived ───────────────────────────────────────────────────────────────
   const selectedAgency = TRAVEL_AGENCY_LIST.find(a => a.code === selectedAgencyCode) || null;
@@ -1395,7 +1490,19 @@ export function CreateBooking({
             <div>
               <h2>VIP Passenger Details</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} —
+                {/* 2026-06-09 round 6.2.22 — badge count was
+                    `passengers.length` (the raw array length),
+                    which is wrong after decrement. The badge
+                    should report the CONFIGURED count
+                    (vipPS + vipLD), not the array length. The
+                    array can be longer than the configured count
+                    (the round 6.2.10 "only grow, never truncate"
+                    useEffect preserves extra entries for
+                    decrement-then-increment-back data preservation),
+                    so the two numbers can diverge. Pin the badge
+                    to the configured count to match what the user
+                    sees in the cards. */}
+                {vipPS + vipLD} passenger{(vipPS + vipLD) !== 1 ? 's' : ''} —
                 {vipPS > 0 && ` ${vipPS} from Premiere Suite`}
                 {vipPS > 0 && vipLD > 0 && ','}
                 {vipLD > 0 && ` ${vipLD} from Lounge Deluxe`}
@@ -1403,13 +1510,26 @@ export function CreateBooking({
             </div>
           </div>
 
-          {passengers.length === 0 ? (
+          {(vipPS + vipLD) === 0 ? (
             <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
               <p className="text-sm">Assign VIP Passengers in the Booking Details section above.</p>
             </div>
           ) : (
             <div className="space-y-6">
-              {passengers.map((p, idx) => {
+              {/* 2026-06-09 round 6.2.22 — cap the rendered cards
+                  to the CONFIGURED count (vipPS + vipLD), not the
+                  raw array length. The round 6.2.10 "only grow,
+                  never truncate" useEffect (line 542) intentionally
+                  keeps the `passengers` array longer than the
+                  configured count so that decrement-then-increment
+                  preserves the user's typed data. Pre-6.2.22, the
+                  render iterated the full array, so decrement left
+                  "ghost" cards on screen (user reported "the cards
+                  don't shorten when the qty decrease"). Same pattern
+                  as the customer frontend's
+                  `vipData.slice(0, totalVip).map` (which the admin
+                  view was missing). */}
+              {passengers.slice(0, vipPS + vipLD).map((p, idx) => {
                 const isPS = idx < vipPS;
                 return (
                   <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1503,15 +1623,26 @@ export function CreateBooking({
           <Card className="p-6">
             <div className="mb-5">
               <h2>Non-Flying Guest Details</h2>
+              {/* 2026-06-09 round 6.2.22 — same fix as the VIP
+                  badge (line 1492-1502): report the CONFIGURED
+                  count (nonFlyingPS + nonFlyingLD), not the raw
+                  array length. See the VIP badge comment for the
+                  full rationale (round 6.2.10 "only grow" +
+                  render cap). */}
               <p className="text-xs text-gray-400 mt-0.5">
-                {nonFlyingGuests.length} guest{nonFlyingGuests.length !== 1 ? 's' : ''} —
+                {nonFlyingPS + nonFlyingLD} guest{(nonFlyingPS + nonFlyingLD) !== 1 ? 's' : ''} —
                 {nonFlyingPS > 0 && ` ${nonFlyingPS} from Premiere Suite`}
                 {nonFlyingPS > 0 && nonFlyingLD > 0 && ','}
                 {nonFlyingLD > 0 && ` ${nonFlyingLD} from Lounge Deluxe`}
               </p>
             </div>
             <div className="space-y-4">
-              {nonFlyingGuests.map((g, idx) => {
+              {/* 2026-06-09 round 6.2.22 — same fix as the VIP
+                  render (line 1529): cap the rendered cards to
+                  the CONFIGURED count (nonFlyingPS + nonFlyingLD).
+                  See the VIP render comment for the full
+                  rationale. */}
+              {nonFlyingGuests.slice(0, nonFlyingPS + nonFlyingLD).map((g, idx) => {
                 const isPS = idx < nonFlyingPS;
                 return (
                   <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1598,32 +1729,39 @@ export function CreateBooking({
             //   catalog" UX (don't drop the placeholders) while
             //   fixing the misleading pricing.
             // ──────────────────────────────────────────────────────
-            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string; isPlaceholder?: boolean }[] = [
-              { key: 'Limousine Transfer',                    icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                price: '0',  badge: '+HK$—',        badgeClass: 'bg-purple-100 text-purple-700' },  // ← price/badge overridden at render time from bookableItemPrices prop
-              { key: 'In-lounge Personal Shopping Assistance (coming soon)', icon: <ShoppingBag className="w-4 h-4" />,  desc: 'Dedicated in-lounge shopping concierge',      price: '400',  badge: 'Contact us',  badgeClass: 'bg-green-100 text-green-700'  },
-              { key: 'Wheelchair Assistance (coming soon)',                 icon: <Accessibility className="w-4 h-4" />,desc: 'Mobility & accessibility support',             price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Security Escort Service (coming soon)',               icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',        price: '1200', badge: 'Contact us',  badgeClass: 'bg-amber-100 text-amber-700'  },
-              { key: 'Private Sales (coming soon)',                         icon: <Star className="w-4 h-4" />,         desc: 'Exclusive private sales access on request',   price: '0',    badge: 'On request',  badgeClass: 'bg-indigo-100 text-indigo-700'},
-              { key: 'Meet & Greet Service (coming soon)',                  icon: <User className="w-4 h-4" />,         desc: 'Dedicated greeter at arrival or departure',   price: '600',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'Fast Track Immigration (coming soon)',                icon: <Plane className="w-4 h-4" />,        desc: 'Priority immigration clearance',              price: '400',  badge: 'Contact us',  badgeClass: 'bg-sky-100 text-sky-700'      },
-              { key: 'Buggy Transfer Service (coming soon)',                icon: <Car className="w-4 h-4" />,          desc: 'Electric buggy within terminal',              price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Baggage Handling (coming soon)',                      icon: <Luggage className="w-4 h-4" />,      desc: 'Assisted luggage from check-in to lounge',   price: '150',  badge: 'Contact us',  badgeClass: 'bg-orange-100 text-orange-700'},
-              { key: 'Porter Service (coming soon)',                        icon: <Luggage className="w-4 h-4" />,      desc: 'On-demand porter assistance',                 price: '100',  badge: 'Contact us',  badgeClass: 'bg-orange-100 text-orange-700'},
-              { key: 'Shower Service (coming soon)',                        icon: <Building2 className="w-4 h-4" />,    desc: 'Private shower room with amenities',          price: '200',  badge: 'Contact us',  badgeClass: 'bg-teal-100 text-teal-700'    },
-              { key: 'Day Room (4 hrs) (coming soon)',                      icon: <Building2 className="w-4 h-4" />,    desc: 'Private suite day-use booking',               price: '1800', badge: 'Contact us',  badgeClass: 'bg-rose-100 text-rose-700'    },
-              { key: 'Day Room Extension (per hr) (coming soon)',           icon: <Clock className="w-4 h-4" />,        desc: 'Hourly extension of day room',                price: '450',  badge: 'Contact us',  badgeClass: 'bg-rose-100 text-rose-700'    },
-              { key: 'VIP Escort (Airside) (coming soon)',                  icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Escorted airside access with staff',          price: '1500', badge: 'Contact us',  badgeClass: 'bg-amber-100 text-amber-700'  },
-              { key: 'Printing Service (coming soon)',                      icon: <FileText className="w-4 h-4" />,     desc: 'Document printing (per page)',                price: '20',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Lounge Access – Extra Adult (coming soon)',           icon: <User className="w-4 h-4" />,         desc: 'Additional adult lounge entry',               price: '350',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'Lounge Access – Extra Child (coming soon)',           icon: <User className="w-4 h-4" />,         desc: 'Additional child entry (2–11 yrs)',           price: '180',  badge: 'Contact us',  badgeClass: 'bg-blue-100 text-blue-700'    },
-              { key: 'SIM Card Arrangement (coming soon)',                  icon: <Phone className="w-4 h-4" />,        desc: 'Local SIM card for guest',                    price: '80',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Currency Exchange Assistance (coming soon)',          icon: <DollarSign className="w-4 h-4" />,   desc: 'Guided to best exchange counter',             price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Special Meal Request (coming soon)',                  icon: <Tag className="w-4 h-4" />,          desc: 'Dietary or custom meal arrangement',          price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Flower / Gift Arrangement (coming soon)',             icon: <Tag className="w-4 h-4" />,          desc: 'In-lounge gift or floral setup',              price: '500',  badge: 'Contact us',  badgeClass: 'bg-pink-100 text-pink-700'    },
-              { key: 'Birthday / Celebration Setup (coming soon)',          icon: <Tag className="w-4 h-4" />,          desc: 'Cake, décor & personalised message',          price: '800',  badge: 'Contact us',  badgeClass: 'bg-pink-100 text-pink-700'    },
-              { key: 'Video Conference Room (coming soon)',                 icon: <MessageSquare className="w-4 h-4" />,desc: 'Private VC-equipped meeting room',            price: '1200', badge: 'Contact us',  badgeClass: 'bg-violet-100 text-violet-700'},
-              { key: 'Private Dining Room (coming soon)',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Exclusive dining space (up to 8 pax)',        price: '2500', badge: 'Contact us',  badgeClass: 'bg-red-100 text-red-700'      },
-              { key: 'Smoking Room Access (coming soon)',                   icon: <Building2 className="w-4 h-4" />,    desc: 'Designated smoking area access',              price: '0',    badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+            // 4-addon catalog (round 6.2.20, 2026-06-09).
+            // Per the user directive ("we just start with
+            // this four, clean others first"), the create
+            // form now shows ONLY the 4 real bookable addons:
+            //   1. Limousine Transfer       — id 12 (HK$800)
+            //   2. Wheelchair Assistance    — id 98 (HK$0)
+            //   3. Lounge Extension         — id 99 (HK$1500)
+            //   4. Security Escort Service  — id 100 (HK$1200)
+            //
+            // The 22 "(coming soon)" placeholder entries
+            // from round 6.2.8 are REMOVED. They were
+            // fabricated (didn't exist in the DB) and
+            // masked the real 31+ bookable_items. Future
+            // tickets can re-add them as `display_only: true`
+            // rows in the DB if needed.
+            //
+            // The icon is HARDCODED per addon (Car /
+            // Accessibility / Clock / ShieldCheck). Future
+            // ticket: add an `icon` field to the
+            // `bookable_items` table so this can be
+            // DB-sourced too.
+            // ──────────────────────────────────────────────────────
+            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string }[] = [
+              // The `price` field is unused for display (the
+              // badge is sourced from `bookableItemPrices` at
+              // render time via `resolveServiceDisplay`), but
+              // it's still part of the type for backward
+              // compatibility with the resolveServiceDisplay
+              // return type.
+              { key: 'Limousine Transfer',      icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                    price: '0',   badge: '+HK$—',        badgeClass: 'bg-purple-100 text-purple-700' },
+              { key: 'Wheelchair Assistance',   icon: <Accessibility className="w-4 h-4" />, desc: 'Mobility and accessibility support',              price: '0',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
+              { key: 'Lounge Extension',        icon: <Clock className="w-4 h-4" />,        desc: 'Extend VIP lounge access by an additional hour', price: '0',   badge: '+HK$—/hr',    badgeClass: 'bg-amber-100 text-amber-700'   },
+              { key: 'Security Escort Service', icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',            price: '0',   badge: '+HK$—',        badgeClass: 'bg-amber-100 text-amber-700'   },
             ];
 
             // 2026-06-08 round 6.2.8 — apply the DB price override for
@@ -1653,12 +1791,15 @@ export function CreateBooking({
               'Wheelchair Assistance': hasWheelchair,
               'Security Escort Service': hasSecurity,
               'Private Sales': hasPrivateSales,
+              // Round 6.2.20 (2026-06-09) — Lounge Extension toggle.
+              'Lounge Extension': hasLoungeExtension,
             };
             const toggleByKey = (key: string, val: boolean) => {
               if (key === 'Limousine Transfer')                     setHasLimousine(val);
               else if (key === 'In-lounge Personal Shopping Assistance') setHasShopping(val);
               else if (key === 'Wheelchair Assistance')             setHasWheelchair(val);
               else if (key === 'Security Escort Service')           setHasSecurity(val);
+              else if (key === 'Lounge Extension')                  setHasLoungeExtension(val);
               else if (key === 'Private Sales')                     setHasPrivateSales(val);
             };
 
@@ -1832,6 +1973,47 @@ export function CreateBooking({
                     <input type="text" value={wheelchairPassenger} onChange={e => setWheelchairPassenger(e.target.value)}
                       placeholder="Name of passenger requiring assistance"
                       className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  </div>
+                )}
+
+                {/* Round 6.2.20 (2026-06-09) — Lounge Extension qty
+                    stepper (per user directive "for Lounge Extension,
+                    it should have qty"). Shown when Lounge Extension
+                    is selected. */}
+                {hasLoungeExtension && (
+                  <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/40">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-4 h-4 text-amber-600" />
+                      <p className="text-sm text-amber-800 font-medium">Lounge Extension — Additional Hours</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm text-gray-600">Hours</label>
+                      <button type="button" onClick={() => setLoungeExtensionQty(q => Math.max(1, q - 1))}
+                        disabled={loungeExtensionQty <= 1}
+                        className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <input type="number" min={1} max={6} value={loungeExtensionQty}
+                        onChange={e => {
+                          const n = parseInt(e.target.value, 10);
+                          if (Number.isFinite(n)) setLoungeExtensionQty(Math.max(1, Math.min(6, n)));
+                        }}
+                        className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-300" />
+                      <button type="button" onClick={() => setLoungeExtensionQty(q => Math.min(6, q + 1))}
+                        disabled={loungeExtensionQty >= 6}
+                        className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="text-xs text-gray-500">(max 6 hours per booking)</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      HK${(bookableItemPrices?.['Lounge Extension'] ?? 0).toLocaleString()} per hour
+                      {' × '}{loungeExtensionQty} hour{loungeExtensionQty !== 1 ? 's' : ''}
+                      {' = '}
+                      <span className="font-medium text-amber-700">
+                        HK${((bookableItemPrices?.['Lounge Extension'] ?? 0) * loungeExtensionQty).toLocaleString()}
+                      </span>
+                    </p>
                   </div>
                 )}
 

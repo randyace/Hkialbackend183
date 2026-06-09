@@ -46,6 +46,17 @@ export interface Booking {
     flightClass?: 'Economy Class' | 'Business Class' | 'First Class';
     flightOrigin?: string;
     flightDestination?: string;
+    // 2026-06-08 round 6.2.8 — Customer follow-up. Customer
+    // NewBooking api.ts (round 6.2.8) emits `legs[1].departureDate`
+    // (semantic: leg 2 is the OUTBOUND flight from HKG, so the
+    // timestamp is the departure time, not arrival) and
+    // `legs[1].destination` (a single field representing leg 2's
+    // outbound destination, e.g. "London Heathrow (LHR)").
+    // Matches the parent-repo ViewBooking.addons[] type
+    // (bookingService.ts:62-65 round 6.2.8) and the
+    // mapper pass-through at bookingService.ts:344-360.
+    departureDate?: string;
+    destination?: string;
   }>;
   // 2026-06-08 round 6.2.7 — INV-11 (next) + the Limo destination
   // bug. The Limo display at line 2473-2541 reads
@@ -114,6 +125,22 @@ export interface Booking {
   paymentMode?: 'Upfront' | 'On-Credit';
   rejectionReason?: string;
   bookingType: 'Online' | 'Email/Call to HKIAL';
+  // 2026-06-08 round 6.2.8 — bookings/684 spouse fix. Local
+  // mirror of the parent-repo ViewBooking.accountProfileSpouse
+  // (bookingService.ts:151-167). The view's
+  // `getPassengerRole` / `getNFGRole` helpers use this as
+  // the source-of-truth for the Spouse badge — see
+  // BookingDetail.tsx:529-608. Matches the parent-repo shape.
+  accountProfileSpouse?: {
+    title?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    nationality?: string;
+    passportFirst4?: string;
+    linkedAccountNo?: string;
+  };
   agencyName?: string;
   agencyCode?: string;
   agencyDiscountRate?: number;

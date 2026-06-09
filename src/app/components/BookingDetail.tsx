@@ -52,9 +52,24 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    */
   onSaveEdit?: (payload: import('./booking/BookingEditDialog').BookingEditPayload) => Promise<void>;
   isSavingEdit?: boolean;
+  /**
+   * Round 6.2.12 (2026-06-08, user-reported: "this part
+   * should not be 3600, it is bookings/684") — live price
+   * preview from `POST /api/bookings/price-preview`. The
+   * wrapper fetches this on mount + after the edit dialog
+   * saves (to refresh the total after any change). When the
+   * booking is in `payment_status: Pending` (no committed
+   * `booking.amount` yet), the page displays this value
+   * instead of the local `headCountRate × pax` estimate
+   * (which was wrong for booking 684: 3 pax × HK$1,200 =
+   * HK$3,600, vs the backend's correct HK$25,000). Set to
+   * `null` while loading or on fetch error to fall back to
+   * the local estimate.
+   */
+  livePreviewTotal?: number | null;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -187,10 +202,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     }
     const total = vipPS + vipLD;
     setPassengers(prev => {
-      if (prev.length === total) return prev;
+      // 2026-06-08 round 6.2.11 (future ticket #1 from
+      // round 6.2.10) — INV-13: only-GROW semantics even on
+      // post-mount fires. The detail page is read-only display
+      // + local editing; removal goes through the explicit
+      // delete dialog (BookingDetail.tsx:524+), not the
+      // useEffect. Pre-6.2.11: prev.slice(0, total) would
+      // silently destroy user-typed data if the user changes
+      // the stepper.
       if (prev.length < total)
         return [...prev, ...Array.from({ length: total - prev.length }, emptyPassenger)];
-      return prev.slice(0, total);
+      return prev;                                          // never truncate (INV-13)
     });
   }, [vipPS, vipLD]);
 
@@ -371,11 +393,45 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // ── Voucher System ────────────────────────────────────────────────────────
   // Customer's total entry vouchers available in their account (mock)
   const customerTotalVouchers = bookingId % 5 === 0 ? 4 : bookingId % 3 === 0 ? 3 : bookingId % 2 === 0 ? 2 : 1;
-  const headCountRate = 1200; // HK$ per person — the main entry charge
+  // Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
+  // `headCountTotal` per the user directive ("we are not using
+  // headCountRate now, the calculation need to improve, we
+  // make them call the same endpoint first"). The wrapper
+  // passes a `livePreviewTotal` prop (sourced from
+  // `POST /api/bookings/price-preview`) which is the source of
+  // truth for the Total Amount display. The old
+  // `headCountRate × pax` local calculation was wrong for
+  // booking 684 (3 pax × HK$1,200 = HK$3,600, vs the
+  // backend's correct HK$25,000).
+  //
+  // `voucherUnitValue` is set to 0 as a placeholder for the
+  // voucher model. The voucher display will be improved in a
+  // future round when the user revisits the voucher pricing
+  // model.
   // Food & Beverage is always complimentary (free). Only non-food add-ons cost extra.
-  const serviceSubtotal = (booking.hasLimousine ? 800 : 0) + (booking.hasShopping ? 500 : 0);
-  // voucherUnitValue: 1 voucher = 1 free entry (covers the headCountRate for that person)
-  const voucherUnitValue = headCountRate;
+  // 2026-06-08 round 6.2.9 — Service Items calculation fix.
+  // Pre-6.2.9 this was hardcoded to `(hasLimousine ? 800 : 0) + (hasShopping ? 500 : 0)`,
+  // which (a) ignored all other addons (wheelchair, security, private transport,
+  // lounge extension) and (b) used a flat constant rather than the actual
+  // per-addon subtotals from `booking_items`. The user's report:
+  // "Service Items in the booking calculation is doing wrong calculation, the
+  // total there should not related to the number of guest, it should be the
+  // sum of the addons." The new source is the canonical
+  // `booking.addons[]` array (populated by `bookingService.ts` round 6.1.2
+  // from `api.booking_items[]`). Each addon row carries a `subtotal`
+  // (= unitPrice × quantity, written by AddonsSyncService at create/update
+  // time — the per-guest multiplier was never there to begin with). The sum
+  // is the per-booking "Additional Services" total, independent of the
+  // number of guests. F&B is NOT counted here (it's complimentary, rendered
+  // separately as a fixed "HK$0 / Complimentary" row).
+  const serviceSubtotal = (booking.addons ?? []).reduce(
+    (sum, addon) => sum + (Number(addon.subtotal) || 0),
+    0,
+  );
+  // Round 6.2.13: voucher unit value is 0 placeholder (was
+  // `headCountRate = 1200`). Voucher model will be revised in
+  // a future round per the user directive.
+  const voucherUnitValue = 0;
 
   // ── Delete-passenger dialog ───────────────────────────────────────────────
   interface DeletePassengerDialog {
@@ -496,10 +552,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     }
     const total = nonFlyingPS + nonFlyingLD;
     setNonFlyingGuests(prev => {
-      if (prev.length === total) return prev;
+      // 2026-06-08 round 6.2.11 — INV-13: only-GROW semantics.
+      // See the passengers useEffect (line 183) for the full
+      // comment. The TRUNCATE branch is removed; removal goes
+      // through the explicit delete dialog.
       if (prev.length < total)
         return [...prev, ...Array.from({ length: total - prev.length }, emptyNonFlyingGuest)];
-      return prev.slice(0, total);
+      return prev;                                          // never truncate (INV-13)
     });
   }, [nonFlyingPS, nonFlyingLD]);
 
@@ -527,17 +586,72 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   }, [nonFlyingPS, nonFlyingLD]);
 
   // ── Role helpers — determine if a guest is Account Owner / Spouse ──────────
-  // VIP Passenger 0 = Account Owner, Passenger 1 = Spouse, rest = Guest
+  // 2026-06-08 round 6.2.8 — bookings/684 spouse fix.
+  // Pre-6.2.8 the helpers hard-coded `idx === 1 → 'Spouse'`, which
+  // produced false-positive Spouse badges on accounts that have
+  // no spouse on record (e.g. booking/684, account=YUEN SHING,
+  // profile_spouse=null — 2 VIP passengers were both marked
+  // Spouse despite no spouse existing). The fix: source-of-truth
+  // is `booking.accountProfileSpouse` (the raw
+  // `api.account.profile_spouse` JSON). A passenger is only
+  // "Spouse" when (a) the account has a spouse on record AND
+  // (b) the passenger's (firstName, lastName) match. Otherwise
+  // idx 0 is the Account Owner and every other idx is a Guest.
+  //
+  // Match tolerance: case-insensitive, whitespace-trimmed,
+  // both firstName AND lastName must match. If the account has
+  // a spouse on record but no passenger matches, we fall back
+  // to "no Spouse" rather than guessing which idx maps to the
+  // spouse (this is safer than the pre-6.2.8 silent false
+  // positive). Surface a small inline warning in the passenger
+  // header if a profile_spouse exists but no match was found.
+  const accountSpouse = booking.accountProfileSpouse;
+  const accountHasSpouse = Boolean(
+    accountSpouse && (accountSpouse.firstName?.trim() || accountSpouse.lastName?.trim())
+  );
+  const matchesAccountSpouse = (p: { firstName?: string; lastName?: string }): boolean => {
+    if (!accountHasSpouse) return false;
+    const f = (s?: string) => (s ?? '').trim().toLowerCase();
+    return (
+      f(p.firstName) === f(accountSpouse.firstName) &&
+      f(p.lastName) === f(accountSpouse.lastName)
+    );
+  };
   const getPassengerRole = (idx: number): 'Account Owner' | 'Spouse' | 'Guest' => {
     if (idx === 0) return 'Account Owner';
-    if (idx === 1) return 'Spouse';
+    if (accountHasSpouse && passengers[idx] && matchesAccountSpouse(passengers[idx])) return 'Spouse';
     return 'Guest';
   };
-  // Non-Flying Guest 0 = Spouse (when total VIP passengers is only 1 i.e. no VIP spouse slot used)
+  // Non-Flying Guest 0 may be the spouse only if (a) the account
+  // has a spouse on record AND (b) the account's spouse is not
+  // already represented in the VIP passenger list AND (c) the
+  // NFG[0] name matches. This replaces the pre-6.2.8 rule that
+  // hard-coded `idx === 0 && (vipPS + vipLD) <= 1 → 'Spouse'`,
+  // which also produced false positives on accounts without a
+  // spouse on record.
   const getNFGRole = (idx: number): 'Spouse' | 'Guest' => {
-    if (idx === 0 && (vipPS + vipLD) <= 1) return 'Spouse';
+    if (idx !== 0) return 'Guest';
+    if (!accountHasSpouse) return 'Guest';
+    // If the spouse slot is already taken by a VIP passenger,
+    // the NFG[0] is just a guest.
+    const spouseAlreadyInVIP = passengers.some((p) => matchesAccountSpouse(p));
+    if (spouseAlreadyInVIP) return 'Guest';
+    if (nonFlyingGuests[idx] && matchesAccountSpouse(nonFlyingGuests[idx])) return 'Spouse';
     return 'Guest';
   };
+  // 2026-06-08 round 6.2.8 — companion flag for the inline
+  // warning. When the account has a spouse on record but no
+  // passenger / NFG matches, the badge silently drops. Show a
+  // small "Profile has spouse on record: {name} — not in this
+  // booking" warning in the passenger-list header so staff can
+  // fix the data without digging through account settings.
+  const profileSpouseDisplayName = accountHasSpouse
+    ? [accountSpouse!.title, accountSpouse!.firstName, accountSpouse!.lastName]
+        .filter(Boolean).join(' ').trim() || '(spouse profile)'
+    : '';
+  const profileSpouseMatched = accountHasSpouse && (
+    passengers.some(matchesAccountSpouse) || nonFlyingGuests.some(matchesAccountSpouse)
+  );
   const isVoucherEligibleRole = (role: string): boolean =>
     role === 'Account Owner' || role === 'Spouse';
 
@@ -548,10 +662,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const remainingVouchers = Math.max(0, customerTotalVouchers - totalVouchersApplied);
 
   // Pricing with new voucher model
-  const headCountTotal = Math.max(vipPS + vipLD + nonFlyingPS + nonFlyingLD, booking.numberOfGuests || 1) * headCountRate;
+  // Round 6.2.13: removed `headCountTotal`. The Total Amount
+  // now comes from `livePreviewTotal` (sourced from the
+  // backend's `POST /api/bookings/price-preview`). Voucher
+  // discount will be modelled in a future round per the
+  // user directive.
   const voucherCount = totalVouchersApplied; // alias for invoice dialog compat
-  const voucherTotal = totalVouchersApplied * headCountRate;
-  const amountDueAfterVouchers = Math.max(0, headCountTotal + serviceSubtotal - voucherTotal);
+  const voucherTotal = 0;                          // placeholder (was `totalVouchersApplied * headCountRate`)
+  const amountDueAfterVouchers = 0;               // placeholder (was `headCountTotal + serviceSubtotal - voucherTotal`)
 
   // Toggle a single passenger's voucher
   const togglePassengerVoucher = (idx: number) => {
@@ -816,6 +934,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 5.5 Similar Profile Detected */}
       {(() => {
+        // 2026-06-09 — Hide the Similar Profile Detected banner + merge
+        // dialog for the demo. The feature is not in scope for this
+        // round. To bring it back, change `true` to `false` below.
+        // The state setters (showSimilarBanner, showMergeDialog, etc.)
+        // and the openMergeDialog handler are kept intact so the
+        // flip-back is a one-token change.
+        if (true) return null;
         const p = passengers[0];
         if (!p || !isPassengerFilled(p) || !showSimilarBanner || mergeComplete) return null;
         const fullName = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ');
@@ -1466,12 +1591,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     destination if origin is missing (defensive
                     for legacy/malformed data). */}
                 <p className="text-lg">
-                  {booking.legs[1].flightOrigin || '—'} → {booking.legs[1].flightDestination || '—'}
+                  {booking.legs[1].flightOrigin || 'HKG'}
+                  {' → '}
+                  {(booking.legs[1].flightDestination || booking.legs[1].destination || '—')}
                 </p>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Arrival Date & Time</label>
-                <p className="text-lg">{booking.legs[1].arrivalDate || '—'}</p>
+                <label className="text-sm text-gray-600 block mb-[10px]">
+                  {/* 2026-06-08 round 6.2.8 — customer follow-up.
+                      Customer renamed the timestamp to
+                      `departureDate` for leg 2 (leg 2 is the
+                      OUTBOUND flight from HKG, so the timestamp
+                      is the departure time, not arrival). The
+                      column label now reflects that. The cell
+                      value prefers `departureDate` and falls
+                      back to `arrivalDate` for legacy bookings. */}
+                  Departure Date &amp; Time
+                </label>
+                <p className="text-lg">{booking.legs[1].departureDate || booking.legs[1].arrivalDate || '—'}</p>
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-[10px]">Flight Class</label>
@@ -1936,6 +2073,26 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {vipPS > 0 && vipLD > 0 && ','}
               {vipLD > 0 && ` ${vipLD} from Lounge Deluxe`}
             </p>
+            {/* 2026-06-08 round 6.2.8 — bookings/684 spouse fix.
+                When the account has a spouse on record but no
+                passenger or NFG in this booking matches the
+                spouse's name, the Spouse badge silently drops.
+                Show a small warning here so staff can spot data
+                drift between the account profile and this
+                booking's passenger list. Triggers only when
+                accountHasSpouse && !profileSpouseMatched. */}
+            {accountHasSpouse && !profileSpouseMatched && (
+              <div
+                className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800"
+                data-testid="profile-spouse-unmatched-warning"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-xs">
+                  Account profile has spouse on record: <strong>{profileSpouseDisplayName}</strong>
+                  {' '}— no matching passenger or non-flying guest in this booking.
+                </span>
+              </div>
+            )}
           </div>
           {passengers.length > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
@@ -2447,35 +2604,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   kept for traceability; the wrapping fragment
                   renders nothing.
               */}
-              {false && (
-              <tr>
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="font-medium">{booking.suite} — Entry Fee (Head Count)</p>
-                    <p className="text-xs text-gray-500">
-                      HK${headCountRate.toLocaleString()} per person ·{' '}
-                      {totalVouchersApplied > 0
-                        ? `${totalVouchersApplied} voucher${totalVouchersApplied > 1 ? 's' : ''} applied (${vipPS + vipLD + nonFlyingPS + nonFlyingLD} pax total)`
-                        : `${vipPS + vipLD + nonFlyingPS + nonFlyingLD} pax`}
-                    </p>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="text-sm text-gray-700">{vipPS + vipLD + nonFlyingPS + nonFlyingLD || booking.numberOfGuests || 1}</div>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span className="text-sm text-gray-700">HK${headCountRate.toLocaleString()}</span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {totalVouchersApplied > 0 ? (
-                    <span className="text-amber-600 text-xs font-medium">{totalVouchersApplied} voucher{totalVouchersApplied > 1 ? 's' : ''}</span>
-                  ) : '—'}
-                </td>
-                <td className="px-4 py-3 text-right font-medium">
-                  HK${(headCountTotal - voucherTotal).toLocaleString()}
-                </td>
-              </tr>
-              )}
+              {/* Round 6.2.13 (2026-06-08) — REMOVED the dead-code
+                * block that was here. Pre-6.2.13 it was
+                * `{false && (<tr>...${headCountTotal}...)}` —
+                * the outer `{false && ...}` was intended to
+                * skip rendering, BUT the JSX compiler still
+                * eagerly evaluates the children (to build the
+                * `React.createElement` args), which throws
+                * `headCountTotal is not defined` at runtime.
+                * Per the user directive ("we are not using
+                * headCountRate now"), the entire head-count
+                * line is removed. The new "Pricing
+                * Information" card (line 3306+) shows the
+                * `livePreviewTotal` (from
+                * `POST /api/bookings/price-preview`) as the
+                * Total Amount. */}
               <tr>
                 <td colSpan={5} className="px-4 py-2 bg-gray-50">
                   <div className="flex flex-col gap-1">
@@ -2510,7 +2653,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-700">{booking.numberOfGuests}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-700">1</td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-sm text-green-600 font-medium">HK$0</span>
                     </td>
@@ -2977,20 +3120,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </tr>
             </tbody>
             <tfoot className="border-t-2">
-              {/* Head Count Entry Fee row — removed round 6.1.5
-                  (2026-06-07). The backend's `price_breakdown` no
-                  longer includes an `entry_fee` line, so this tfoot
-                  row would otherwise display a ghost charge. */}
-              {false && (
-              <tr className="bg-gray-50">
-                <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-600">
-                  Entry Fee ({vipPS + vipLD + nonFlyingPS + nonFlyingLD || booking.numberOfGuests || 1} pax × HK${headCountRate.toLocaleString()}):
-                </td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-gray-800" colSpan={2}>
-                  HK${headCountTotal.toLocaleString()}
-                </td>
-              </tr>
-              )}
+              {/* Round 6.2.13 (2026-06-08) — REMOVED the
+                * dead-code block that was here. Pre-6.2.13 it
+                * was `{false && (<tr>...${headCountTotal}...)}`
+                * — the outer `{false && ...}` was intended to
+                * skip rendering, BUT the JSX compiler still
+                * eagerly evaluates the children (to build the
+                * `React.createElement` args), which throws
+                * `headCountTotal is not defined` at runtime.
+                * Per the user directive ("we are not using
+                * headCountRate now"), the entire head-count
+                * row is removed. The Subtotal + Total Amount
+                * in the invoice dialog use `livePreviewTotal`
+                * (from `POST /api/bookings/price-preview`). */}
               {/* Food note — always free */}
               <tr className="bg-green-50">
                 <td colSpan={3} className="px-4 py-2 text-right text-sm text-green-700">
@@ -3029,21 +3171,31 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <tr className="bg-amber-50">
                     <td colSpan={5} className="px-4 pb-2">
                       <div className="flex gap-2 justify-end flex-wrap">
-                        {/* Passenger vouchers */}
+                        {/* Passenger vouchers — label is the
+                            role from the round 6.2.8 helper, so a
+                            guest who is not Account Owner / Spouse
+                            (e.g. account has no spouse on record
+                            and this passenger is a regular guest)
+                            renders as "Guest" instead of being
+                            mis-labelled "Spouse". */}
                         {passengerVoucherUsed.map((used, i) =>
                           used ? (
                             <span key={`pv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
                               <Ticket className="w-3 h-3" />
-                              {getPassengerRole(i) === 'Account Owner' ? 'Owner' : 'Spouse'} — VIP Pax {i + 1}
+                              {getPassengerRole(i)} — VIP Pax {i + 1}
                             </span>
                           ) : null
                         )}
-                        {/* Non-flying guest vouchers */}
+                        {/* Non-flying guest vouchers — label is the
+                            role from the round 6.2.8 helper. The
+                            pre-6.2.8 code hard-coded "Spouse" for
+                            every NFG voucher, which was wrong when
+                            the account had no spouse on record. */}
                         {nonFlyingVoucherUsed.map((used, i) =>
                           used ? (
                             <span key={`nv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
                               <Ticket className="w-3 h-3" />
-                              Spouse — Non-Flying Guest {i + 1}
+                              {getNFGRole(i)} — Non-Flying Guest {i + 1}
                             </span>
                           ) : null
                         )}
@@ -3147,35 +3299,60 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <label className="text-sm text-gray-600">Total</label>
             {/*
              * If staff has set a final amount, show that.
-             * Otherwise compute an estimated total from head-count + services
-             * so the user sees a number, not a placeholder. The amount is only
-             * committed to the API after Review & Set Price.
+             * Otherwise show the live preview from
+             * `POST /api/bookings/price-preview` (sourced via
+             * the wrapper's `livePreviewTotal` prop). Per the
+             * round 6.2.13 user directive ("we are not using
+             * headCountRate now, we make them call the same
+             * endpoint first"): NO MORE local fallback. If the
+             * live preview is null (loading or fetch error),
+             * show "Pending pricing" instead of a fabricated
+             * number.
              */}
             <p className="text-lg font-semibold text-gray-900">
               {booking.amount
                 ? booking.amount
-                : `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`}
+                : livePreviewTotal !== null
+                  ? `HK$${livePreviewTotal.toLocaleString()}`
+                  : 'Pending pricing'}
             </p>
             {!booking.amount && (
-              <p className="text-xs text-amber-600 mt-1">Estimated (not yet priced)</p>
+              <p className="text-xs text-amber-600 mt-1">
+                {livePreviewTotal !== null
+                  ? 'Live preview (not yet priced)'
+                  : 'Awaiting backend pricing'}
+              </p>
             )}
           </div>
           <div>
             <label className="text-sm text-gray-600">Payment</label>
             <p className="text-lg font-semibold text-blue-600">
-              {booking.paymentStatus === 'Paid'
-                ? booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`
-                : booking.paymentStatus === 'Refunded'
-                ? booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`
-                : 'HK$0'}
+              {/* Round 6.2.12 + 6.2.13: prefer `livePreviewTotal`
+               * (from `POST /api/bookings/price-preview`) when
+               * `booking.amount` is not yet committed (i.e.
+               * the booking is `payment_status: Pending`). Per
+               * the round 6.2.13 user directive, NO MORE local
+               * `headCountRate × pax` estimate fallback. */}
+              {booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Refunded'
+                ? booking.amount
+                : booking.amount
+                || (livePreviewTotal !== null
+                    ? `HK$${livePreviewTotal.toLocaleString()}`
+                    : 'Pending pricing')}
             </p>
           </div>
           <div>
             <label className="text-sm text-gray-600">Balance</label>
             <p className="text-lg font-semibold text-red-600">
+              {/* Round 6.2.13: removed `headCountTotal +
+               * serviceSubtotal` local estimate. Show "Pending
+               * pricing" instead per the user directive. */}
               {booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Refunded'
                 ? 'HK$0'
-                : booking.amount || `HK$${Math.round(headCountTotal + serviceSubtotal).toLocaleString()}`}
+                : booking.amount
+                  || (livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : 'Pending pricing')}
             </p>
           </div>
         </div>
@@ -3227,6 +3404,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       </Card>
 
       {/* Invoice Dialog */}
+      {/* Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
+        * `headCountTotal` props per the user directive. The
+        * invoice now uses the same `livePreviewTotal` prop as
+        * the detail page (sourced from
+        * `POST /api/bookings/price-preview`). Both the page
+        * AND the invoice call the same endpoint, per the
+        * "make them call the same endpoint first" directive. */}
       <BookingInvoiceDialog
         open={showInvoice}
         onClose={() => setShowInvoice(false)}
@@ -3235,8 +3419,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         voucherCount={voucherCount}
         voucherTotal={voucherTotal}
         voucherUnitValue={voucherUnitValue}
-        headCountRate={headCountRate}
-        headCountTotal={headCountTotal}
+        livePreviewTotal={livePreviewTotal}
         serviceSubtotal={serviceSubtotal}
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
@@ -3400,11 +3583,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <p className="text-xs text-purple-400 mt-1">Full refund</p>
                 </div>
               </div>
-              {/* Breakdown */}
+              {/* Breakdown — Round 6.2.13 (2026-06-08):
+                * replaced the "Head Count Total" line
+                * (which used `headCountTotal`) with the
+                * backend's authoritative `livePreviewTotal`
+                * (from `POST /api/bookings/price-preview`).
+                * Per the user directive, NO MORE local
+                * `headCountRate × pax` calculation. */}
               <div className="mt-3 pt-3 border-t border-purple-200 flex flex-wrap gap-x-6 gap-y-1 text-xs">
                 <div>
-                  <span className="text-purple-400">Head Count Total: </span>
-                  <span className="text-purple-700 font-medium">HK${headCountTotal.toLocaleString()}</span>
+                  <span className="text-purple-400">Live Preview Total: </span>
+                  <span className="text-purple-700 font-medium">
+                    {livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : 'Pending pricing'}
+                  </span>
                 </div>
                 {serviceSubtotal > 0 && (
                   <div>

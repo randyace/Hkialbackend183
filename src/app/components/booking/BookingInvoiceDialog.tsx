@@ -31,9 +31,18 @@ interface BookingInvoiceDialogProps {
   voucherCount: number;
   voucherTotal: number;
   voucherUnitValue: number;
-  headCountRate: number;
-  headCountTotal: number;
+  // Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
+  // `headCountTotal` from the props per the user directive
+  // ("we are not using headCountRate now, we make them call
+  // the same endpoint first"). The wrapper now passes the
+  // backend's authoritative `livePreviewTotal` (sourced from
+  // `POST /api/bookings/price-preview`).
+  livePreviewTotal: number | null;
   serviceSubtotal: number;
+  // `amountDueAfterVouchers` is now a placeholder (0); voucher
+  // pricing model will be revised in a future round per the
+  // user directive. The invoice displays `livePreviewTotal` as
+  // the authoritative Subtotal + Total Amount.
   amountDueAfterVouchers: number;
   getStatusColor: (s: string) => string;
   getPaymentStatusColor: (s: string) => string;
@@ -42,7 +51,7 @@ interface BookingInvoiceDialogProps {
 export function BookingInvoiceDialog({
   open, onClose, booking, bookingId,
   voucherCount, voucherTotal, voucherUnitValue,
-  headCountRate, headCountTotal, serviceSubtotal,
+  livePreviewTotal, serviceSubtotal,
   amountDueAfterVouchers,
   getStatusColor, getPaymentStatusColor,
 }: BookingInvoiceDialogProps) {
@@ -117,14 +126,26 @@ export function BookingInvoiceDialog({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
+                {/* Round 6.2.13: replaced the `headCountRate` line
+                  (HK$X per person × N pax = headCountTotal) with
+                  the `livePreviewTotal` from the backend's
+                  `POST /api/bookings/price-preview`. The line
+                  "Lounge Access" still renders (for traceability)
+                  but shows "— / —" for Unit Price / Amount when
+                  the live preview is not yet available, and the
+                  backend's authoritative total when it is. */}
                 <tr>
                   <td className="px-6 py-4">
                     <p className="font-medium">{booking.suite} - Lounge Access</p>
                     <p className="text-sm text-gray-600">Date: {booking.dateTime}</p>
                   </td>
                   <td className="px-6 py-4 text-center">{booking.numberOfGuests}</td>
-                  <td className="px-6 py-4 text-right">HK${headCountRate.toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right font-medium">HK${headCountTotal.toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right text-gray-500">—</td>
+                  <td className="px-6 py-4 text-right font-medium">
+                    {livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : '—'}
+                  </td>
                 </tr>
                 {/* Food & Beverage — always complimentary */}
                 <tr>
@@ -171,13 +192,23 @@ export function BookingInvoiceDialog({
                 )}
               </tbody>
               <tfoot className="border-t-2">
-                {/* Head Count Row */}
+                {/* Round 6.2.13: replaced the "Head Count" row
+                  (which used `headCountRate` + `headCountTotal`)
+                  with a "Live Preview" row that displays
+                  `livePreviewTotal` (or "Pending pricing" if the
+                  fetch is still in flight). Per the user
+                  directive, NO MORE local `headCountRate × pax`
+                  calculation. */}
                 <tr className="bg-gray-50">
                   <td colSpan={2} className="px-6 py-3 text-right text-sm text-gray-600">
-                    Head Count ({booking.numberOfGuests || 1} pax × HK${headCountRate.toLocaleString()}):
+                    Live Preview (POST /api/bookings/price-preview):
                   </td>
-                  <td className="px-6 py-3 text-right text-sm text-gray-600">{booking.numberOfGuests || 1} pax</td>
-                  <td className="px-6 py-3 text-right font-medium text-gray-800">HK${headCountTotal.toLocaleString()}</td>
+                  <td className="px-6 py-3 text-right text-sm text-gray-600">{booking.numberOfGuests} pax</td>
+                  <td className="px-6 py-3 text-right font-medium text-gray-800">
+                    {livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : 'Pending pricing'}
+                  </td>
                 </tr>
                 {/* Food note */}
                 <tr className="bg-green-50">
@@ -198,7 +229,19 @@ export function BookingInvoiceDialog({
                 <tr className="bg-gray-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600 font-medium">Subtotal:</td>
                   <td className="px-6 py-2 text-right font-medium text-gray-800">
-                    HK${(headCountTotal + Math.round(serviceSubtotal)).toLocaleString()}
+                    {/* Round 6.2.13: use `livePreviewTotal` (the
+                     * backend's authoritative total) instead of
+                     * `headCountTotal + serviceSubtotal`. The
+                     * `livePreviewTotal` is the price the user
+                     * will actually pay (it includes the suite
+                     * base + free-block allocations + addons +
+                     * per-guest charges, all per the backend's
+                     * `PricingService::computeMultiKind`).
+                     * `serviceSubtotal` is still displayed as a
+                     * line item above for traceability. */}
+                    {livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : 'Pending pricing'}
                   </td>
                 </tr>
                 <tr className="bg-gray-50">
@@ -233,7 +276,16 @@ export function BookingInvoiceDialog({
                     {voucherCount > 0 ? 'Total Amount Payable (after entry vouchers):' : 'Total Amount:'}
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-green-600">
-                    HK${amountDueAfterVouchers.toLocaleString()}
+                    {/* Round 6.2.13: use `livePreviewTotal` instead
+                     * of `amountDueAfterVouchers` (which is now
+                     * a placeholder 0). Voucher pricing model
+                     * will be revised in a future round per the
+                     * user directive. For now, the invoice
+                     * displays the backend's authoritative
+                     * `livePreviewTotal` here. */}
+                    {livePreviewTotal !== null
+                      ? `HK$${livePreviewTotal.toLocaleString()}`
+                      : 'Pending pricing'}
                   </td>
                 </tr>
               </tfoot>
