@@ -25,7 +25,12 @@ import {
   DialogDescription,
 } from './ui/dialog';
 import { toast } from 'sonner@2.0.3';
-import { Shuffle } from 'lucide-react';
+// Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
+// It was only used by the Quick Fill Demo button, which
+// was removed in the same commit (both here in the
+// figma-ui submodule and the wrapper's `handleQuickFill`
+// function). If a local dev demo button is ever re-added,
+// restore the import.
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -61,7 +66,7 @@ const BOOKING_SEQ = String(Math.floor(Math.random() * 999999) + 1).padStart(6, '
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PassengerTitle = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
-type AgeGroup = 'Adult (13+ years)' | 'Child (2-12 years)' | 'Infant (0-2 years)' | '';
+type AgeGroup = 'Adults (aged 12 and above)' | 'Children (aged 2 to 11)' | 'Infants (under 2 years old)' | '';
 type MembershipTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 type PaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 type FlightClass = 'Economy Class' | 'Business Class' | 'First Class';
@@ -137,6 +142,20 @@ export interface BookingFormData {
   leg2FlightTime?: string;
   leg2FlightClass?: 'Economy Class' | 'Business Class' | 'First Class' | '';
   /**
+   * 2026-06-10 — explicit Premiere Suite / Lounge Deluxe quantities
+   * + per-section VIP / Non-Flying Guest counts. The wrapper reads
+   * these for the POST `/bookings` payload
+   * (`advanced_details.{premiere_suites, vip_ps, vip_ld, ...}`).
+   * Mirror of the same fields the figma-ui view pushes through
+   * `onAddonStateChange` for the live `usePricePreview`.
+   */
+  numPremiereSuites: number;
+  numLoungeDeluxe: number;
+  vipPS: number;
+  nonFlyingPS: number;
+  vipLD: number;
+  nonFlyingLD: number;
+  /**
    * 2026-06-08 — pre-validated 6h gap error string. When the form
    * detects legs[1].arrivalDate - legs[0].arrivalDate < 6h, the
    * submit button is disabled and this message is rendered inline.
@@ -144,6 +163,12 @@ export interface BookingFormData {
    * TransitLegsRule is the source of truth.
    */
   transitGapError?: string | null;
+  /**
+   * 2026-06-09 — staff-editable Account Discount override. `undefined`
+   * = no override (use the tier/agency default); a number = percent.
+   * The wrapper reads it for `advanced_details.account.accountDiscountPct`.
+   */
+  accountDiscountPct?: number;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -188,7 +213,15 @@ export interface CreateBookingProps {
   } | null;
   onApplyPromo?: (code: string) => void;
   selectedAddonKeys?: string[];
-  handleQuickFill?: () => void;
+  // Round 6.2.30 (2026-06-10) — server-fetched booking no
+  // preview. The wrapper fetches this on mount and on
+  // `flightType` change (`GET /api/bookings/next-no`). The
+  // figma-ui view's "Booking No." header chip reads this
+  // prop instead of the legacy client-side `Math.random()`
+  // sequence. The figma-ui working tree is the source of
+  // truth for this header per the project rule on the
+  // submodule sync workflow.
+  bookingNo?: string;
   /** Physical resources fetched by the wrapper from /api/suites. */
   physicalSuites?: Array<{ id: number; suite_name: string; capacity: number; kind: 'suite' | 'lounge' }>;
   physicalLounges?: Array<{ id: number; suite_name: string; capacity: number; kind: 'suite' | 'lounge' }>;
@@ -255,6 +288,14 @@ export interface CreateBookingProps {
     nonFlyingLD: number;
     nonFlyingPS: number;
     numPremiereSuites: number;
+    // 2026-06-10 — explicit Lounge Deluxe quantity (mirror of
+    // `numPremiereSuites` for LD). Defaults to 0 in the form so
+    // the user opts in; the wrapper reads this flat key
+    // (`loungeSuites`) into `usePricePreview` to drive the live
+    // price preview (round 6.2.14 contract — backend accepts
+    // `assigned_suite_count` / `assigned_lounge_count` without
+    // ids).
+    numLoungeDeluxe: number;
     // Round 5.9 (2026-06-06): pricing-relevant passenger counts
     // and additional-hours. The wrapper passes these straight
     // through to `usePricePreview` (which already accepts them
@@ -263,6 +304,17 @@ export interface CreateBookingProps {
     childrenUnder2: number;
     childrenAge2To11: number;
     additionalHours: number;
+    // Round 6.2.28 (2026-06-09) — staff-editable account discount
+    // override. `undefined` = no override; number 0-100 = percent
+    // off the FINAL totalPrice (the last step in the backend
+    // PricingService). The wrapper reads this and forwards it to
+    // `usePricePreview` → backend live preview, so the "Price
+    // Breakdown" card updates as the staff types. The submit path
+    // is independent: `BookingFormData.accountDiscountPct` is
+    // emitted in the formData and the wrapper persists it in
+    // `advanced_details.account.accountDiscountPct` (see the
+    // `handleSubmit` wrapper for the 2 emit sites).
+    accountDiscountPct: number | undefined;
   }) => void;
   /**
    * 2026-06-08 round 6.2.8 — bookable items price map sourced from
@@ -305,7 +357,12 @@ export function CreateBooking({
   selectedAccount = null,
   onApplyPromo,
   selectedAddonKeys = [],
-  handleQuickFill,
+  // Round 6.2.30 (2026-06-10) — server-fetched booking no
+  // preview. Default `''` so the chip renders an em-dash
+  // placeholder while the wrapper's mount-effect is in
+  // flight; the chip re-renders with the real value once
+  // `GET /api/bookings/next-no` resolves.
+  bookingNo = '',
   physicalSuites = [],
   physicalLounges = [],
   assignedSuiteIds = [],
@@ -354,6 +411,42 @@ export function CreateBooking({
   const [promoError, setPromoError] = useState('');
   const [accountRemark, setAccountRemark] = useState('');
   const [isAdHoc, setIsAdHoc] = useState(false);
+  // 2026-06-09 — Account Discount is staff-editable, defaulting to the
+  // tier/agency rate but always overridable (e.g. ad-hoc promotion).
+  // `''` = no override; a number = percent (0-100).
+  const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
+
+  // 2026-06-09 round 6.2.28 — when an account is selected, auto-load
+  // the Account Discount input with the tier/agency default rate.
+  // The staff can still type a different value to override (e.g.
+  // ad-hoc promotion), and clearing the account resets the input
+  // back to `''` (= fall back to tier/agency default, no override).
+  //
+  //   Gold      →  5%
+  //   Platinum  →  8%
+  //   Diamond   → 12%
+  //   Sapphire  → 15%
+  //
+  // Agency type already has its own rate from `selectedAgency`
+  // (set when the agency is picked). The Membership Tier
+  // Select is also disabled when an account is present so
+  // staff can't ad-hoc change it; the Account Discount input
+  // stays editable for the override case.
+  useEffect(() => {
+    if (selectedAccount?.membership_type) {
+      setMembershipTier(selectedAccount.membership_type as MembershipTier);
+      // 2026-06-09 round 6.2.28 — auto-load the discount
+      // input with the tier's rate. `MEMBERSHIP_DISCOUNT`
+      // returns 0 for any tier not in the map (e.g. legacy
+      // "None" or empty string), so we only set the input
+      // when there's a positive rate to surface.
+      const tierRate = MEMBERSHIP_DISCOUNT[selectedAccount.membership_type as MembershipTier] ?? 0;
+      setAccountDiscountPct(tierRate > 0 ? tierRate : '');
+    } else {
+      setMembershipTier('');
+      setAccountDiscountPct('');
+    }
+  }, [selectedAccount]);
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
@@ -385,6 +478,12 @@ export function CreateBooking({
 
   // ── Premiere Suite ──────────────────────────────────────────────────────────
   const [numPremiereSuites, setNumPremiereSuites] = useState(0);
+  // 2026-06-10 — explicit Lounge Deluxe quantity (mirror of
+  // `numPremiereSuites` for LD). Defaults to 0 so the form is
+  // opt-in (the user adds 1+ when the guest picks a LD seat
+  // on the day). Pushed through `onAddonStateChange` →
+  // wrapper → `usePricePreview.loungeSuites` flat key.
+  const [numLoungeDeluxe, setNumLoungeDeluxe] = useState(0);
   const [vipPS, setVipPS] = useState(0);
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
 
@@ -441,16 +540,16 @@ export function CreateBooking({
   // Round 5.9 (2026-06-06): extended to also sync 3 child/extra
   // pricing fields. The `passengers` and `nonFlyingGuests` arrays
   // each carry an `ageGroup` enum; the counts of "Infant (0-2
-  // years)" and "Child (2-12 years)" rows map to
+  // years)" and "Children (aged 2 to 11)" rows map to
   // `childrenUnder2` and `childrenAge2To11` in the backend's
   // `PriceContext`. The figma-ui form does NOT expose an
   // "additional hours" input yet (future ticket), so
   // `additionalHours` is hardcoded to 0.
   useEffect(() => {
-    const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infant (0-2 years)').length
-      + nonFlyingGuests.filter((g) => g.ageGroup === 'Infant (0-2 years)').length;
-    const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Child (2-12 years)').length
-      + nonFlyingGuests.filter((g) => g.ageGroup === 'Child (2-12 years)').length;
+    const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infants (under 2 years old)').length
+      + nonFlyingGuests.filter((g) => g.ageGroup === 'Infants (under 2 years old)').length;
+    const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Children (aged 2 to 11)').length
+      + nonFlyingGuests.filter((g) => g.ageGroup === 'Children (aged 2 to 11)').length;
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
@@ -469,10 +568,24 @@ export function CreateBooking({
       nonFlyingLD,
       nonFlyingPS,
       numPremiereSuites,
+      // 2026-06-10 — explicit LD quantity (mirror of
+      // `numPremiereSuites` for LD). The wrapper maps this
+      // to `usePricePreview({ loungeSuites })` → backend
+      // `assigned_lounge_count` flat key, which drives the
+      // live price preview even when the user has not
+      // checked any Lobby checkbox.
+      numLoungeDeluxe,
       // Round 5.9 additions — pricing-relevant passenger counts.
       childrenUnder2: childUnder2,
       childrenAge2To11: childAge2To11,
       additionalHours: 0,
+      // Round 6.2.28 (2026-06-09) — staff override. Push the
+      // current value through the same channel so the wrapper
+      // can forward it to `usePricePreview` → backend live
+      // preview. `''` (untouched) → `undefined` (omitted on the
+      // wire = "no override"); a number 0-100 → preserved
+      // verbatim (the wrapper passes it through).
+      accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
     });
   }, [
     hasLimousine,
@@ -491,10 +604,18 @@ export function CreateBooking({
     nonFlyingLD,
     nonFlyingPS,
     numPremiereSuites,
+    // 2026-06-10 — re-fire the effect when LD quantity
+    // changes so the wrapper's `usePricePreview` re-runs.
+    numLoungeDeluxe,
     // Round 5.9 additions.
     passengers,
     nonFlyingGuests,
     onAddonStateChange,
+    // Round 6.2.28 (2026-06-09) — staff override. Re-fire
+    // the effect so the live preview reflects the new value
+    // (the wrapper's `usePricePreview` depends on
+    // `input.accountDiscountPct`).
+    accountDiscountPct,
   ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
@@ -648,6 +769,19 @@ export function CreateBooking({
   };
 
   // ─── Validation ──────────────────────────────────────────────────────────────
+  // Round 6.2.31 (2026-06-10) — capacity chip now matches the
+  // backend's Note 5 cap sum (PricingService L294). Both sides
+  // use `vipPS + nonFlyingPS` only. Pre-6.2.31 the backend
+  // added `childrenUnder2` and `childrenAge2To11` to the
+  // capacity sum, double-counting every child / infant NFG
+  // (once in `nonFlyingGuests`, again in `childrenUnder2` /
+  // `childrenAge2To11`). Sky's directive 2026-06-10: "3 個
+  // NFG 全部係嬰兒，應該 count 1 VIP + 3 capacity from 3
+  // infants = 4 / 6" — i.e. each infant IS one capacity
+  // (because the NFG form slot represents one person), the
+  // 3 slots are 3 people, capacity = 4, no cap warning. The
+  // frontend chip must display the same number the backend
+  // enforces.
   const psMaxGuests       = numPremiereSuites * 6;
   const psTotalGuests     = vipPS + nonFlyingPS;
   const psOverCapacity    = numPremiereSuites > 0 && psTotalGuests > psMaxGuests;
@@ -717,6 +851,10 @@ export function CreateBooking({
       numberOfLuggage,
       flightClass,
       numPremiereSuites,
+      // 2026-06-10 — explicit LD quantity (mirror of
+      // `numPremiereSuites` for LD). The wrapper reads this for
+      // the POST `/bookings` payload (advanced_details block).
+      numLoungeDeluxe,
       vipPS,
       nonFlyingPS,
       vipLD,
@@ -741,6 +879,9 @@ export function CreateBooking({
       leg2FlightTime:  flightType === 'Transit' ? leg2FlightTime : undefined,
       leg2FlightClass: flightType === 'Transit' ? leg2FlightClass : undefined,
       transitGapError: transitGapError,
+      // 2026-06-09 — staff override of the auto-derived account discount.
+      // `''` (untouched) = no override → wrapper falls back to tier/agency default.
+      accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
     };
     onSubmit?.(formData);
   };
@@ -765,19 +906,30 @@ export function CreateBooking({
           <p className="text-gray-600">Create a lounge booking for a customer</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleQuickFill}
-            className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-          >
-            <Shuffle className="w-3 h-3" />
-            Quick Fill Demo
-          </Button>
+          {/* Round 6.2.30 (2026-06-10) — Quick Fill Demo button
+              removed (both here in the figma-ui submodule and
+              the wrapper's `handleQuickFill` function — see
+              round 6.2.30 commit). The wrapper's
+              `VITE_ENABLE_BOOKING_QUICK_FILL` env-var guard
+              already protected production, but the button
+              was still rendered in admin and clashed with
+              the new server-fetched Booking No. chip. The
+              original button JSX is preserved in commit
+              `0b02235` for reference if a local dev demo is
+              ever needed. */}
           <div className="text-right">
-            <p className="text-xs text-gray-400">Booking No. (preview)</p>
+            {/* Round 6.2.30 (2026-06-10) — label changed from
+                "Booking No. (preview)" to "Booking No.". The
+                value is now fetched from
+                `GET /api/bookings/next-no` and matches what
+                `POST /bookings` will mint on submit, so the
+                preview qualifier is no longer needed. The
+                em-dash placeholder renders while the
+                mount-effect is in flight or if the network
+                call fails (soft-fail in the wrapper). */}
+            <p className="text-xs text-gray-400">Booking No.</p>
             <p className="font-mono text-sm text-[#0f2942]">
-              {flightType === 'Arrival' ? 'A' : flightType === 'Departure' ? 'D' : 'T'}-{yyyymmdd}-{BOOKING_SEQ}
+              {bookingNo || '—'}
             </p>
           </div>
         </div>
@@ -948,7 +1100,7 @@ export function CreateBooking({
             {accountType === 'Individual' && (
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
-                <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)}>
+                <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)} disabled={!!selectedAccount}>
                   <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
                   <SelectContent>
                     {(['Gold', 'Platinum', 'Diamond', 'Sapphire'] as MembershipTier[]).map(t => (
@@ -986,9 +1138,25 @@ export function CreateBooking({
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Discount</label>
-              <input type="text"
-                value={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '—'}
-                readOnly className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50 text-green-700" />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min={0} max={100} step={1}
+                  value={accountDiscountPct}
+                  onChange={e => {
+                    const raw = e.target.value;
+                    if (raw === '') { setAccountDiscountPct(''); return; }
+                    const n = Number(raw);
+                    if (Number.isFinite(n)) setAccountDiscountPct(Math.max(0, Math.min(100, n)));
+                  }}
+                  placeholder={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '0'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <span className="text-sm text-gray-500">%</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Default {selectedAgency ? `${selectedAgency.discountRate}% (Agency)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '—'}
+                {accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}
+              </p>
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Remark</label>
@@ -1362,6 +1530,15 @@ export function CreateBooking({
             </div>
             <div className="grid grid-cols-3 gap-6">
               <div>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>
+                  Quantity of Lounge Deluxe
+                  <span className="text-gray-400 font-normal text-xs ml-1">(opt-in)</span>
+                </label>
+                <input type="number" min={0} value={numLoungeDeluxe}
+                  onChange={e => setNumLoungeDeluxe(Math.max(0, parseInt(e.target.value) || 0))}
+                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${numLoungeDeluxe === 0 ? 'border-gray-200' : ''}`} />
+              </div>
+              <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipLD}
                   onChange={e => openDeleteDialog('LD', Math.max(0, parseInt(e.target.value) || 0))}
@@ -1584,9 +1761,9 @@ export function CreateBooking({
                           <select value={p.ageGroup} onChange={e => updatePassenger(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">Select age group</option>
-                            <option>Adult (13+ years)</option>
-                            <option>Child (2-12 years)</option>
-                            <option>Infant (0-2 years)</option>
+                            <option>Adults (aged 12 and above)</option>
+                            <option>Children (aged 2 to 11)</option>
+                            <option>Infants (under 2 years old)</option>
                           </select>
                         </div>
                         <div className="col-span-3">
@@ -1681,9 +1858,9 @@ export function CreateBooking({
                           <select value={g.ageGroup} onChange={e => updateNonFlying(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">Select age group</option>
-                            <option>Adult (13+ years)</option>
-                            <option>Child (2-12 years)</option>
-                            <option>Infant (0-2 years)</option>
+                            <option>Adults (aged 12 and above)</option>
+                            <option>Children (aged 2 to 11)</option>
+                            <option>Infants (under 2 years old)</option>
                           </select>
                         </div>
                       </div>

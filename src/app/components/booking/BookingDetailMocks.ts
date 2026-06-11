@@ -169,7 +169,7 @@ export interface Booking {
 // ── Passenger form types ──────────────────────────────────────────────────────
 
 export type PassengerTitle = 'Mr' | 'Mrs' | 'Miss' | '';
-export type AgeGroup = 'Adult (13+ years)' | 'Child (2-12 years)' | 'Infant (0-2 years)' | '';
+export type AgeGroup = 'Adults (aged 12 and above)' | 'Children (aged 2 to 11)' | 'Infants (under 2 years old)' | '';
 
 export interface PassengerDetail {
   title: PassengerTitle;
@@ -224,31 +224,31 @@ export interface HistoricalGuest {
 }
 
 export const HISTORICAL_GUESTS: HistoricalGuest[] = [
-  { id: 1,  name: 'Mr John Smith',       type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-14', bookingNo: 'A-202602-000023', totalVisits: 18, foodAllergies: 'Shellfish, Peanuts' },
-  { id: 2,  name: 'Mrs Mary Johnson',    type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-30', bookingNo: 'A-202601-000078', totalVisits: 12, foodAllergies: '' },
-  { id: 3,  name: 'Miss Sarah Chen',     type: 'Non-Flying Guest', ageGroup: 'Child (2-12 years)', lastVisit: '2026-02-05', bookingNo: 'A-202602-000011', totalVisits: 4,  foodAllergies: 'Dairy, Eggs' },
-  { id: 4,  name: 'Mr David Lee',        type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-12-20', bookingNo: 'A-202512-000199', totalVisits: 7,  foodAllergies: 'Tree Nuts' },
-  { id: 5,  name: 'Mrs Linda Brown',     type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-20', bookingNo: 'A-202602-000041', totalVisits: 9,  foodAllergies: 'Sesame' },
-  { id: 6,  name: 'Mr Robert Wang',      type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-10', bookingNo: 'A-202601-000033', totalVisits: 31, foodAllergies: '' },
-  { id: 7,  name: 'Mrs Emma Wilson',     type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-11-28', bookingNo: 'A-202511-000154', totalVisits: 5,  foodAllergies: 'Gluten' },
-  { id: 8,  name: 'Miss Sophie Martin',  type: 'Non-Flying Guest', ageGroup: 'Child (2-12 years)', lastVisit: '2026-02-03', bookingNo: 'A-202602-000007', totalVisits: 3,  foodAllergies: 'Peanuts, Tree Nuts' },
-  { id: 9,  name: 'Mr James Taylor',     type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-22', bookingNo: 'A-202601-000091', totalVisits: 6,  foodAllergies: '' },
-  { id: 10, name: 'Mr Kevin Zhang',      type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-18', bookingNo: 'A-202602-000055', totalVisits: 14, foodAllergies: '' },
-  { id: 11, name: 'Mrs Olivia Harris',   type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2025-12-05', bookingNo: 'A-202512-000088', totalVisits: 2,  foodAllergies: 'Shellfish' },
-  { id: 12, name: 'Miss Chloe Nguyen',   type: 'Non-Flying Guest', ageGroup: 'Infant (0-2 years)', lastVisit: '2026-01-15', bookingNo: 'A-202601-000044', totalVisits: 1,  foodAllergies: 'Dairy' },
-  { id: 13, name: 'Mr Michael Brown',    type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-25', bookingNo: 'A-202602-000070', totalVisits: 22, foodAllergies: 'Soy, Wheat' },
-  { id: 14, name: 'Mrs Lisa Taylor',     type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-10-30', bookingNo: 'A-202510-000210', totalVisits: 8,  foodAllergies: '' },
-  { id: 15, name: 'Mr James Anderson',   type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-10', bookingNo: 'A-202602-000029', totalVisits: 16, foodAllergies: 'Peanuts' },
-  { id: 16, name: 'Mrs Sophia Martinez', type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-08', bookingNo: 'A-202601-000012', totalVisits: 3,  foodAllergies: 'Mustard, Celery' },
-  { id: 17, name: 'Mr Thomas Hughes',    type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-22', bookingNo: 'A-202602-000061', totalVisits: 40, foodAllergies: '' },
-  { id: 18, name: 'Miss Grace Liu',      type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-12-12', bookingNo: 'A-202512-000133', totalVisits: 11, foodAllergies: 'Fish, Shellfish' },
-  { id: 19, name: 'Mr William Park',     type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-27', bookingNo: 'A-202601-000067', totalVisits: 5,  foodAllergies: '' },
-  { id: 20, name: 'Mrs Helen Yuen',      type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-01', bookingNo: 'A-202602-000003', totalVisits: 28, foodAllergies: 'Lactose' },
-  { id: 21, name: 'Mr Aaron Chow',       type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-11-14', bookingNo: 'A-202511-000099', totalVisits: 9,  foodAllergies: '' },
-  { id: 22, name: 'Miss Rachel Lam',     type: 'Non-Flying Guest', ageGroup: 'Child (2-12 years)', lastVisit: '2026-02-17', bookingNo: 'A-202602-000048', totalVisits: 2,  foodAllergies: 'Egg, Peanuts' },
-  { id: 23, name: 'Mr Daniel Ho',        type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2026-02-28', bookingNo: 'A-202602-000082', totalVisits: 7,  foodAllergies: 'Penicillin-related foods' },
-  { id: 24, name: 'Mrs Catherine Wong',  type: 'VIP Passenger',    ageGroup: 'Adult (13+ years)',  lastVisit: '2025-12-31', bookingNo: 'A-202512-000251', totalVisits: 19, foodAllergies: '' },
-  { id: 25, name: 'Mr Lucas Ferreira',   type: 'Non-Flying Guest', ageGroup: 'Adult (13+ years)',  lastVisit: '2026-01-19', bookingNo: 'A-202601-000055', totalVisits: 1,  foodAllergies: 'Tree Nuts, Sesame' },
+  { id: 1,  name: 'Mr John Smith',       type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-14', bookingNo: 'A-202602-000023', totalVisits: 18, foodAllergies: 'Shellfish, Peanuts' },
+  { id: 2,  name: 'Mrs Mary Johnson',    type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-30', bookingNo: 'A-202601-000078', totalVisits: 12, foodAllergies: '' },
+  { id: 3,  name: 'Miss Sarah Chen',     type: 'Non-Flying Guest', ageGroup: 'Children (aged 2 to 11)', lastVisit: '2026-02-05', bookingNo: 'A-202602-000011', totalVisits: 4,  foodAllergies: 'Dairy, Eggs' },
+  { id: 4,  name: 'Mr David Lee',        type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-12-20', bookingNo: 'A-202512-000199', totalVisits: 7,  foodAllergies: 'Tree Nuts' },
+  { id: 5,  name: 'Mrs Linda Brown',     type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-20', bookingNo: 'A-202602-000041', totalVisits: 9,  foodAllergies: 'Sesame' },
+  { id: 6,  name: 'Mr Robert Wang',      type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-10', bookingNo: 'A-202601-000033', totalVisits: 31, foodAllergies: '' },
+  { id: 7,  name: 'Mrs Emma Wilson',     type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-11-28', bookingNo: 'A-202511-000154', totalVisits: 5,  foodAllergies: 'Gluten' },
+  { id: 8,  name: 'Miss Sophie Martin',  type: 'Non-Flying Guest', ageGroup: 'Children (aged 2 to 11)', lastVisit: '2026-02-03', bookingNo: 'A-202602-000007', totalVisits: 3,  foodAllergies: 'Peanuts, Tree Nuts' },
+  { id: 9,  name: 'Mr James Taylor',     type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-22', bookingNo: 'A-202601-000091', totalVisits: 6,  foodAllergies: '' },
+  { id: 10, name: 'Mr Kevin Zhang',      type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-18', bookingNo: 'A-202602-000055', totalVisits: 14, foodAllergies: '' },
+  { id: 11, name: 'Mrs Olivia Harris',   type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-12-05', bookingNo: 'A-202512-000088', totalVisits: 2,  foodAllergies: 'Shellfish' },
+  { id: 12, name: 'Miss Chloe Nguyen',   type: 'Non-Flying Guest', ageGroup: 'Infants (under 2 years old)', lastVisit: '2026-01-15', bookingNo: 'A-202601-000044', totalVisits: 1,  foodAllergies: 'Dairy' },
+  { id: 13, name: 'Mr Michael Brown',    type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-25', bookingNo: 'A-202602-000070', totalVisits: 22, foodAllergies: 'Soy, Wheat' },
+  { id: 14, name: 'Mrs Lisa Taylor',     type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-10-30', bookingNo: 'A-202510-000210', totalVisits: 8,  foodAllergies: '' },
+  { id: 15, name: 'Mr James Anderson',   type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-10', bookingNo: 'A-202602-000029', totalVisits: 16, foodAllergies: 'Peanuts' },
+  { id: 16, name: 'Mrs Sophia Martinez', type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-08', bookingNo: 'A-202601-000012', totalVisits: 3,  foodAllergies: 'Mustard, Celery' },
+  { id: 17, name: 'Mr Thomas Hughes',    type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-22', bookingNo: 'A-202602-000061', totalVisits: 40, foodAllergies: '' },
+  { id: 18, name: 'Miss Grace Liu',      type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-12-12', bookingNo: 'A-202512-000133', totalVisits: 11, foodAllergies: 'Fish, Shellfish' },
+  { id: 19, name: 'Mr William Park',     type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-27', bookingNo: 'A-202601-000067', totalVisits: 5,  foodAllergies: '' },
+  { id: 20, name: 'Mrs Helen Yuen',      type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-01', bookingNo: 'A-202602-000003', totalVisits: 28, foodAllergies: 'Lactose' },
+  { id: 21, name: 'Mr Aaron Chow',       type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-11-14', bookingNo: 'A-202511-000099', totalVisits: 9,  foodAllergies: '' },
+  { id: 22, name: 'Miss Rachel Lam',     type: 'Non-Flying Guest', ageGroup: 'Children (aged 2 to 11)', lastVisit: '2026-02-17', bookingNo: 'A-202602-000048', totalVisits: 2,  foodAllergies: 'Egg, Peanuts' },
+  { id: 23, name: 'Mr Daniel Ho',        type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-02-28', bookingNo: 'A-202602-000082', totalVisits: 7,  foodAllergies: 'Penicillin-related foods' },
+  { id: 24, name: 'Mrs Catherine Wong',  type: 'VIP Passenger',    ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2025-12-31', bookingNo: 'A-202512-000251', totalVisits: 19, foodAllergies: '' },
+  { id: 25, name: 'Mr Lucas Ferreira',   type: 'Non-Flying Guest', ageGroup: 'Adults (aged 12 and above)',  lastVisit: '2026-01-19', bookingNo: 'A-202601-000055', totalVisits: 1,  foodAllergies: 'Tree Nuts, Sesame' },
 ];
 
 // ── Travel agency reference data ──────────────────────────────────────────────
@@ -348,12 +348,12 @@ export const MERGE_FIXED_FIELDS = new Set([
 // ── Passenger seed data ───────────────────────────────────────────────────────
 
 const mockPassengerSeeds = [
-  { title: 'Mr'   as PassengerTitle, firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adult (13+ years)'  as AgeGroup, day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021', allergies: 'Shellfish, Peanuts' },
-  { title: 'Mrs'  as PassengerTitle, firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adult (13+ years)'  as AgeGroup, day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '',         allergies: '' },
-  { title: 'Mr'   as PassengerTitle, firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adult (13+ years)'  as AgeGroup, day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087', allergies: 'Tree Nuts' },
-  { title: 'Miss' as PassengerTitle, firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Child (2-12 years)' as AgeGroup, day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '',         allergies: 'Dairy, Eggs' },
-  { title: 'Mr'   as PassengerTitle, firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adult (13+ years)'  as AgeGroup, day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145', allergies: '' },
-  { title: 'Mrs'  as PassengerTitle, firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adult (13+ years)'  as AgeGroup, day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '',         allergies: 'Gluten' },
+  { title: 'Mr'   as PassengerTitle, firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021', allergies: 'Shellfish, Peanuts' },
+  { title: 'Mrs'  as PassengerTitle, firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '',         allergies: '' },
+  { title: 'Mr'   as PassengerTitle, firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087', allergies: 'Tree Nuts' },
+  { title: 'Miss' as PassengerTitle, firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2 to 11)' as AgeGroup, day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '',         allergies: 'Dairy, Eggs' },
+  { title: 'Mr'   as PassengerTitle, firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145', allergies: '' },
+  { title: 'Mrs'  as PassengerTitle, firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '',         allergies: 'Gluten' },
 ];
 
 export const isPassengerFilled = (p: PassengerDetail): boolean =>
@@ -373,12 +373,12 @@ export const buildInitialPassengers = (total: number, bookingId: number): Passen
 // ── Non-flying guest seed data ────────────────────────────────────────────────
 
 const mockNonFlyingSeeds = [
-  { title: 'Mrs'  as PassengerTitle, firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adult (13+ years)'  as AgeGroup, allergies: 'Sesame' },
-  { title: 'Mr'   as PassengerTitle, firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adult (13+ years)'  as AgeGroup, allergies: '' },
-  { title: 'Miss' as PassengerTitle, firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Child (2-12 years)' as AgeGroup, allergies: 'Peanuts, Tree Nuts' },
-  { title: 'Mr'   as PassengerTitle, firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adult (13+ years)'  as AgeGroup, allergies: '' },
-  { title: 'Mrs'  as PassengerTitle, firstName: 'Olivia', lastName: 'Harris', ageGroup: 'Adult (13+ years)'  as AgeGroup, allergies: 'Shellfish' },
-  { title: 'Miss' as PassengerTitle, firstName: 'Chloe',  lastName: 'Nguyen', ageGroup: 'Infant (0-2 years)' as AgeGroup, allergies: 'Dairy' },
+  { title: 'Mrs'  as PassengerTitle, firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, allergies: 'Sesame' },
+  { title: 'Mr'   as PassengerTitle, firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, allergies: '' },
+  { title: 'Miss' as PassengerTitle, firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2 to 11)' as AgeGroup, allergies: 'Peanuts, Tree Nuts' },
+  { title: 'Mr'   as PassengerTitle, firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, allergies: '' },
+  { title: 'Mrs'  as PassengerTitle, firstName: 'Olivia', lastName: 'Harris', ageGroup: 'Adults (aged 12 and above)'  as AgeGroup, allergies: 'Shellfish' },
+  { title: 'Miss' as PassengerTitle, firstName: 'Chloe',  lastName: 'Nguyen', ageGroup: 'Infants (under 2 years old)' as AgeGroup,allergies: 'Dairy' },
 ];
 
 export const buildInitialNonFlyingGuests = (total: number, bookingId: number): NonFlyingGuest[] =>

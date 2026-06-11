@@ -524,7 +524,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         title: g.title ?? '',
         firstName: g.firstName ?? '',
         lastName: g.lastName ?? '',
-        ageGroup: g.ageGroup ?? 'Adult (13+ years)',
+        ageGroup: g.ageGroup ?? 'Adults (aged 12 and above)',
       }));
     }
     // Fallback for standalone-preview (no real booking) — generate
@@ -2253,9 +2253,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">Select age group</option>
-                          <option value="Adult (13+ years)">Adult (13+ years)</option>
-                          <option value="Child (2-12 years)">Child (2-12 years)</option>
-                          <option value="Infant (0-2 years)">Infant (0-2 years)</option>
+                          <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
+                          <option value="Children (aged 2 to 11)">Children (aged 2 to 11)</option>
+                          <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>
                       <div className="col-span-3">
@@ -2468,9 +2468,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">Select age group</option>
-                          <option value="Adult (13+ years)">Adult (13+ years)</option>
-                          <option value="Child (2-12 years)">Child (2-12 years)</option>
-                          <option value="Infant (0-2 years)">Infant (0-2 years)</option>
+                          <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
+                          <option value="Children (aged 2 to 11)">Children (aged 2 to 11)</option>
+                          <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>
                     </div>

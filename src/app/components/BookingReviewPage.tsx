@@ -37,6 +37,10 @@ interface PendingBooking {
   hasShopping: boolean;
   isAdHoc: boolean;
   paymentMode: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
+  // 2026-06-11 round 6.2.34: surfaced from the wrapper mapper so the
+  // Payment Method / Payment Mode label can relabel "On-Credit" →
+  // "Pending Payment" for individual accounts that haven't paid.
+  paymentStatus?: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   amount: string;
   originalAmountValue?: number;
   finalAmountValue?: number;
@@ -120,19 +124,19 @@ interface PendingBooking {
 // ── Supplementary Mock Data ───────────────────────────────────────────────────
 
 const PASSENGER_SEEDS = [
-  { title: 'Mr',   firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adult (13+ years)', day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021' },
-  { title: 'Mrs',  firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adult (13+ years)', day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '' },
-  { title: 'Mr',   firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adult (13+ years)', day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087' },
-  { title: 'Miss', firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Child (2-12 years)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
-  { title: 'Mr',   firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adult (13+ years)', day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145' },
-  { title: 'Mrs',  firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adult (13+ years)', day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '' },
+  { title: 'Mr',   firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adults (aged 12 and above)', day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021' },
+  { title: 'Mrs',  firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adults (aged 12 and above)', day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '' },
+  { title: 'Mr',   firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adults (aged 12 and above)', day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087' },
+  { title: 'Miss', firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2 to 11)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
+  { title: 'Mr',   firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adults (aged 12 and above)', day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145' },
+  { title: 'Mrs',  firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adults (aged 12 and above)', day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '' },
 ];
 
 const NON_FLYING_SEEDS = [
-  { title: 'Mrs',  firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adult (13+ years)'  },
-  { title: 'Mr',   firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adult (13+ years)'  },
-  { title: 'Miss', firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Child (2-12 years)' },
-  { title: 'Mr',   firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adult (13+ years)'  },
+  { title: 'Mrs',  firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adults (aged 12 and above)'  },
+  { title: 'Mr',   firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adults (aged 12 and above)'  },
+  { title: 'Miss', firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2 to 11)' },
+  { title: 'Mr',   firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adults (aged 12 and above)'  },
 ];
 
 const CONTACT_SEEDS = [
@@ -169,6 +173,26 @@ const paymentModeBadgeClass = (mode: PendingBooking['paymentMode']) => {
   if (mode === 'On-Credit')                     return 'bg-orange-100 text-orange-700';
   if (mode === 'Bulk Purchase/Monthly Invoice') return 'bg-violet-100 text-violet-700';
   return 'bg-gray-100 text-gray-700';
+};
+
+// 2026-06-11 round 6.2.34: Individual-account post-pay (On-Credit)
+// bookings that haven't been paid yet are surfaced to the staff reviewer
+// as "Pending Payment" instead of the generic "On-Credit" label, so
+// the review queue is unambiguous about which bookings still owe money.
+// Conditions: accountType=Individual AND paymentMode=On-Credit AND
+// (no paymentStatus recorded OR paymentStatus is anything but Paid).
+// Corporate / Agency On-Credit bookings keep the original "On-Credit"
+// label (their billing is handled by the agency's monthly invoice
+// process, not by the guest paying later).
+const formatPaymentLabel = (booking: PendingBooking): string => {
+  if (
+    booking.accountType === 'Individual' &&
+    booking.paymentMode === 'On-Credit' &&
+    booking.paymentStatus !== 'Paid'
+  ) {
+    return 'Pending Payment';
+  }
+  return booking.paymentMode;
 };
 
 const REJECTION_REASONS = [
@@ -381,11 +405,7 @@ export function BookingReviewPage({
             <span className="text-sm font-mono text-gray-500">{booking.bookingNo}</span>
           </div>
           <p className="text-gray-600 mt-1">
-            {reviewMode === 'view'
-              ? 'Review the full booking details and choose to approve or reject.'
-              : reviewMode === 'approve'
-              ? 'Confirm the booking approval.'
-              : 'Provide a rejection reason.'}
+            Review the full booking details and choose to approve or reject.
           </p>
         </div>
       </div>
@@ -555,7 +575,7 @@ export function BookingReviewPage({
                 <span>{booking.nonFlyingGuests || 0}</span>
               </Field>
               <Field label="Payment Method">
-                <span>Credit Card (Visa ***1234)</span>
+                <span>{formatPaymentLabel(booking)}</span>
               </Field>
               <Field label="Account Discount">
                 <span className={booking.agencyDiscountRate || id % 4 === 0 ? 'text-green-600' : ''}>
@@ -664,7 +684,7 @@ export function BookingReviewPage({
               </Field>
               <Field label="Visit Date &amp; Time"><span>{booking.dateTime}</span></Field>
               <Field label="Payment Mode">
-                <Badge className={`text-xs ${paymentModeBadgeClass(booking.paymentMode)}`}>{booking.paymentMode}</Badge>
+                <Badge className={`text-xs ${paymentModeBadgeClass(booking.paymentMode)}`}>{formatPaymentLabel(booking)}</Badge>
               </Field>
               <Field label="Booking Type"><span>{booking.bookingType}</span></Field>
               {booking.isAdHoc && (
@@ -912,7 +932,7 @@ export function BookingReviewPage({
               <div>
                 <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Payment Mode</p>
                 <Badge className={`text-sm ${paymentModeBadgeClass(booking.paymentMode)}`}>
-                  {booking.paymentMode}
+                  {formatPaymentLabel(booking)}
                 </Badge>
               </div>
               <div>
@@ -941,7 +961,7 @@ export function BookingReviewPage({
               <div className="space-y-3">
                 <Button
                   className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
-                  onClick={() => setReviewMode('approve')}
+                  onClick={handleApprove}
                 >
                   <CheckCircle className="w-5 h-5" />
                   {booking.requestType === 'Cancel'
@@ -955,36 +975,6 @@ export function BookingReviewPage({
                   <XCircle className="w-5 h-5" />
                   {booking.requestType === 'Cancel' ? 'Reject Cancellation' : 'Reject Booking'}
                 </Button>
-              </div>
-            )}
-
-            {reviewMode === 'approve' && (
-              <div className="space-y-4">
-                {reviewStage === 'staff' ? (
-                  <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-                    <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                    <span>This booking will be forwarded to a <strong>supervisor/manager</strong> for final approval. The guest will <strong>not</strong> be notified yet.</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
-                    <MailCheck className="w-4 h-4 flex-shrink-0" />
-                    <span>As supervisor/manager, your approval will <strong>confirm</strong> this booking and trigger a guest notification email.</span>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Button
-                    className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
-                    onClick={handleApprove}
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    {reviewStage === 'staff'
-                      ? (booking.requestType === 'Cancel' ? 'Forward Cancellation to Supervisor' : 'Forward to Supervisor Approval')
-                      : (booking.requestType === 'Cancel' ? 'Confirm Cancellation (Final)' : 'Confirm Final Approval')}
-                  </Button>
-                  <Button variant="outline" className="w-full h-10" onClick={() => setReviewMode('view')}>
-                    Cancel
-                  </Button>
-                </div>
               </div>
             )}
 

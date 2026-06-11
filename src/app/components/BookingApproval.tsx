@@ -1158,11 +1158,11 @@ export function BookingApproval({
                 ? <><ShieldCheck className="w-5 h-5 text-amber-600" /> Final Approve {selectedIds.size} Booking{selectedIds.size !== 1 ? 's' : ''}</>
                 : <><ThumbsUp className="w-5 h-5 text-green-600" /> Forward {selectedIds.size} Booking{selectedIds.size !== 1 ? 's' : ''} to Supervisor</>}
             </DialogTitle>
-            <DialogDescription>
-              {isSupervisorTab
-                ? 'The following bookings will be confirmed and guests notified by email.'
-                : 'The following bookings will be forwarded to a supervisor/manager for final approval. Guests will NOT be notified yet.'}
-            </DialogDescription>
+            {isSupervisorTab && (
+              <DialogDescription>
+                The following bookings will be confirmed and guests notified by email.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <div className="max-h-60 overflow-y-auto space-y-1">
             {Array.from(selectedIds).map(id => {
@@ -1177,15 +1177,10 @@ export function BookingApproval({
               );
             })}
           </div>
-          {isSupervisorTab ? (
+          {isSupervisorTab && (
             <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
               <MailCheck className="w-4 h-4 flex-shrink-0" />
               Final approval will confirm {selectedIds.size} booking{selectedIds.size !== 1 ? 's' : ''} and notify guests by email.
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-              <ShieldCheck className="w-4 h-4 flex-shrink-0" />
-              {selectedIds.size} booking{selectedIds.size !== 1 ? 's' : ''} will be queued for supervisor/manager final approval.
             </div>
           )}
           <div className="flex justify-end gap-3">
