@@ -708,7 +708,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
   // Rule 3: each booking must include at least 1 VIP passenger
   const psNoVip = numPremiereSuites > 0 && vipPS === 0;
-  const ldNoVip = vipLD === 0;
+  // 2026-06-11 — LD VIP=0 is valid when the booking is all-PS
+  // (no LD intent). LD intent signal: user has NFG assigned
+  // to LD, OR lounges were pre-assigned. Pre-this-fix the rule
+  // was "vipLD === 0" which falsely flagged all-PS-only
+  // bookings (1 PS + 0 LD) as missing the LD VIP — the user
+  // has no LD at all, so the "1 VIP per LD" rule shouldn't
+  // fire. Reverting the regression: round 6.2.34 UX.
+  const hasLdIntent = nonFlyingLD > 0 || (booking.assignedLoungeNames?.length ?? 0) > 0;
+  const ldNoVip = vipLD === 0 && hasLdIntent;
 
   // Rule 4: if any PS guests exist, at least 1 Premiere Suite must be booked
   const psGuestsWithoutSuite = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
@@ -1774,7 +1782,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <div className="flex items-center justify-between mb-3">
             <div>
               <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Max 3 Non-Flying Guests per booking · At least 1 VIP Passenger required</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Max 3 Non-Flying Guests per booking
+                {hasLdIntent && ' · At least 1 VIP Passenger required'}
+              </p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${ldNonFlyingExceeded ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
               {nonFlyingLD} / 3 non-flying used

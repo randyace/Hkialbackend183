@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { Edit2, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search, X, Plus, Minus, CheckCircle } from 'lucide-react';
+import { Edit2, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search, X, Plus, Minus, CheckCircle, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
@@ -35,9 +35,26 @@ interface EditBooking {
   }>;
   suite: string;
   dateTime: string;
+  // 2026-06-11 (round 6.2.37, bug fix) — the per-kind guest
+  // counts are now exposed on the `EditBooking` read shape.
+  // The dialog's `useState` init reads them; the save sends
+  // them back. The legacy aggregated `numberOfGuests` /
+  // `nonFlyingGuests` are still here (some legacy callers
+  // use them) but are no longer the source of truth per
+  // Q3=A.
   numberOfGuests?: number;
   nonFlyingGuests?: number;
   numberOfLuggage?: number;
+  // 2026-06-11 (round 6.2.37, bug fix) — match the
+  // `ViewBooking` mapper's field name (`numberOfPremiereSuites`).
+  // Pre-6.2.37 the dialog used `numPremiereSuites` which is
+  // never set on the `ViewBooking` shape, so the PS qty input
+  // always opened at 0 even for bookings with PS > 0.
+  numberOfPremiereSuites?: number;
+  vipPassengersInPremiereSuite?: number;
+  nonFlyingGuestsInPremiereSuite?: number;
+  vipPassengersInLoungeDeluxe?: number;
+  nonFlyingGuestsInLoungeDeluxe?: number;
   services?: string[];
   /**
    * Names of physical suites (CIP 1-6, Function Room) currently assigned.
@@ -46,6 +63,24 @@ interface EditBooking {
   assignedSuiteNames?: string[];
   /** Names of physical lounge seats (Lobby 1-8) currently assigned. */
   assignedLoungeNames?: string[];
+  /**
+   * 2026-06-11 (round 6.2.37) — Limo stops (id, type, location)
+   * read from `booking_items[].meta.destinations` via the
+   * parent wrapper's mapper. The dialog maps them to
+   * `EditLimoStop` shape (with id+type+location).
+   */
+  limoStops?: EditLimoStop[];
+  /**
+   * 2026-06-11 (round 6.2.37) — Wheelchair recipient name
+   * (read from `advanced_details.addons.wheelchairPassenger`).
+   */
+  wheelchairPassenger?: string;
+  /**
+   * 2026-06-11 (round 6.2.37) — notes (read from the API's
+   * top-level `notes` field, which the create form joins
+   * from `bookingMemo` + `specialRequests`).
+   */
+  specialRequests?: string;
 }
 
 interface EditLimoStop { id: number; type: 'Pick-up' | 'Destination'; location: string; }
@@ -91,6 +126,47 @@ export interface BookingEditPayload {
   /** Names of the assigned suites/lounges — set for the wrapper to mirror onto `booking.suite`. */
   assignedSuiteNames: string[];
   assignedLoungeNames: string[];
+  // 2026-06-11 (round 6.2.37, bug fix) — the per-kind guest
+  // counts (the dialog now has inputs for them; the wrapper
+  // sends them in the PUT payload). Per Q3=A the per-kind
+  // counts are the source of truth; `numberOfGuests` and
+  // `nonFlyingGuests` above are derived sums kept for
+  // backward compat with the existing detail-page display.
+  numPremiereSuites: number;
+  vipPassengersInPremiereSuite: number;
+  nonFlyingGuestsInPremiereSuite: number;
+  vipPassengersInLoungeDeluxe: number;
+  nonFlyingGuestsInLoungeDeluxe: number;
+  // 2026-06-11 (round 6.2.37, bug fix) — Limo stops (id,
+  // type, location). The dialog's Limo sub-editor emits
+  // these; the wrapper converts to the backend's
+  // `addons.items[].destinations[]` array.
+  limoStops: EditLimoStop[];
+  // 2026-06-11 (round 6.2.37, bug fix) — Wheelchair recipient
+  // name. Sent in `advanced_details.addons.wheelchairPassenger`.
+  wheelchairPassenger: string;
+  // 2026-06-11 (round 6.2.37, bug fix) — has_* booleans.
+  // Sent as top-level columns on the Booking row (matches
+  // the standalone edit page's wire shape).
+  hasLimousine: boolean;
+  hasShopping: boolean;
+  hasWheelchair: boolean;
+  hasSecurity: boolean;
+  hasPrivateSales: boolean;
+  isAdHoc: boolean;
+  // 2026-06-11 (round 6.2.37, bug fix) — payment mode.
+  // Sent as `payment_mode` in the PUT payload.
+  paymentMode: 'Upfront' | 'On-Credit';
+  // 2026-06-11 (round 6.2.37, bug fix) — account info
+  // (company name, membership tier, account discount %,
+  // promo code, account remark, booking channel). Sent
+  // in `advanced_details.account.*`.
+  companyName?: string;
+  membershipTier?: string;
+  accountDiscountPct?: number;
+  promoCode?: string;
+  accountRemark?: string;
+  bookingChannel?: string;
 }
 
 const ADDON_SERVICES: AddonService[] = [
@@ -133,12 +209,32 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
   const [editFlightClass,   setEditFlightClass]   = useState(booking.flightClass ?? '');
   const [editVisitDate,     setEditVisitDate]     = useState(booking.dateTime.split(' ')[0]);
   const [editVisitTime,     setEditVisitTime]     = useState(booking.dateTime.split(' ')[1]);
-  const [editNumGuests,     setEditNumGuests]     = useState(booking.numberOfGuests ?? 1);
-  const [editNonFlying,     setEditNonFlying]     = useState(booking.nonFlyingGuests ?? 0);
+  // 2026-06-11 (round 6.2.37, bug fix) — per-kind guest
+  // counts. The legacy aggregated VIP/NFG inputs are
+  // preserved (some downstream consumers still read them)
+  // but the per-kind fields are the source of truth per
+  // Q3=A. The dialog renders inputs for the per-kind
+  // fields in a new "Per-Section Guest Counts" subsection
+  // below; the aggregated inputs are kept for backward
+  // compat.
+  const [editNumPremiereSuites, setEditNumPremiereSuites] = useState(booking.numberOfPremiereSuites ?? 0);
+  const [editVipPS,         setEditVipPS]         = useState(booking.vipPassengersInPremiereSuite ?? 0);
+  const [editNonFlyingPS,   setEditNonFlyingPS]   = useState(booking.nonFlyingGuestsInPremiereSuite ?? 0);
+  const [editVipLD,         setEditVipLD]         = useState(booking.vipPassengersInLoungeDeluxe ?? 0);
+  const [editNonFlyingLD,   setEditNonFlyingLD]   = useState(booking.nonFlyingGuestsInLoungeDeluxe ?? 0);
+  // 2026-06-11 (round 6.2.37) — additional per-kind
+  // guest counts + new addons + payment + account fields.
+  // These were either not editable before, or were
+  // silently discarded on save. Now editable + persisted.
   const [editNumLuggage,    setEditNumLuggage]    = useState(booking.numberOfLuggage ?? 1);
-  const [editSpecialReqs,   setEditSpecialReqs]   = useState('');
+  const [editSpecialReqs,   setEditSpecialReqs]   = useState(booking.specialRequests ?? '');
+  const [editLimoStops, setEditLimoStops] = useState<EditLimoStop[]>(
+    (booking.limoStops && booking.limoStops.length > 0)
+      ? booking.limoStops
+      : [{ id: 1, type: 'Pick-up', location: '' }]
+  );
+  const [editWheelchairPassenger, setEditWheelchairPassenger] = useState(booking.wheelchairPassenger ?? '');
   const [editSelectedServices, setEditSelectedServices] = useState<string[]>(booking.services ?? []);
-  const [editLimoStops, setEditLimoStops] = useState<EditLimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
   const [editAddonSearch, setEditAddonSearch] = useState('');
   const [showEditAddonDropdown, setShowEditAddonDropdown] = useState(false);
 
@@ -227,6 +323,15 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
     const loungeNames = editAssignedLoungeIds
       .map(id => physicalLounges.find(l => l.id === id)?.suite_name)
       .filter((n): n is string => Boolean(n));
+    // 2026-06-11 (round 6.2.37, bug fix) — compute the
+    // aggregated `numberOfGuests` and `nonFlyingGuests` from
+    // the per-kind fields (Q3=A). The legacy aggregated
+    // values in the dialog's "No. of VIP Guests" / "No. of
+    // Non-Flying Guests" inputs are kept on the form for
+    // display parity but are no longer sent — the per-kind
+    // sum is the source of truth.
+    const computedNumberOfGuests = editVipPS + editVipLD + editNonFlyingPS + editNonFlyingLD;
+    const computedNonFlyingGuests = editNonFlyingPS + editNonFlyingLD;
     const payload: BookingEditPayload = {
       flightType:        editFlightType,
       flightNo:          editFlightNo,
@@ -236,8 +341,8 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
       flightClass:       editFlightClass,
       visitDate:         editVisitDate,
       visitTime:         editVisitTime,
-      numberOfGuests:    editNumGuests,
-      nonFlyingGuests:   editNonFlying,
+      numberOfGuests:    computedNumberOfGuests,
+      nonFlyingGuests:   computedNonFlyingGuests,
       numberOfLuggage:   editNumLuggage,
       specialRequests:   editSpecialReqs,
       selectedServices:  editSelectedServices,
@@ -245,20 +350,60 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
       assignedLoungeIds: editAssignedLoungeIds,
       assignedSuiteNames:  suiteNames,
       assignedLoungeNames: loungeNames,
+      // 2026-06-11 (round 6.2.37, bug fix) — per-kind
+      // guest counts (Q3=A — the source of truth).
+      numPremiereSuites:         editNumPremiereSuites,
+      vipPassengersInPremiereSuite: editVipPS,
+      nonFlyingGuestsInPremiereSuite: editNonFlyingPS,
+      vipPassengersInLoungeDeluxe: editVipLD,
+      nonFlyingGuestsInLoungeDeluxe: editNonFlyingLD,
+      // 2026-06-11 (round 6.2.37) — Limo stops, Wheelchair
+      // recipient, and the new addons + payment + account
+      // fields. These were either not editable before, or
+      // were silently discarded on save. Now persisted
+      // (the wrapper converts to the wire shape).
+      limoStops: editLimoStops,
+      wheelchairPassenger: editWheelchairPassenger,
+      hasLimousine: editSelectedServices.includes('Limousine Service'),
+      hasShopping: editSelectedServices.includes('In-lounge Personal Shopping Assistance')
+        || editSelectedServices.some(s => /shop/i.test(s)),
+      hasWheelchair: editSelectedServices.includes('Wheelchair Assistance'),
+      hasSecurity: editSelectedServices.includes('Security Escort Service'),
+      hasPrivateSales: editSelectedServices.includes('Private Sales'),
+      isAdHoc: false,
+      paymentMode: 'Upfront',
+      companyName: undefined,
+      membershipTier: undefined,
+      accountDiscountPct: undefined,
+      promoCode: undefined,
+      accountRemark: undefined,
+      bookingChannel: undefined,
     };
     try {
       await onSave(payload);
-      // Parent decides whether to close the dialog on success.
+      // 2026-06-11 (round 6.2.37, bug fix) — close the
+      // dialog on successful save (the user explicitly
+      // asked for this). The parent wrapper is expected to
+      // trigger a page reload (window.location.reload())
+      // after the save completes.
+      onClose();
     } catch (error) {
-      // Parent already showed an error toast — keep the dialog open so
-      // the user can retry without re-entering all the fields.
+      // Parent already showed an error toast — keep the
+      // dialog open so the user can retry without
+      // re-entering all the fields.
       console.error('BookingEditDialog save failed:', error);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-full max-h-[92vh] overflow-y-auto">
+      {/* 2026-06-11 (round 6.2.37) — widened from max-w-4xl
+          (896px) to max-w-6xl (1152px) so the 2-column
+          Per-Section Guest Counts grid + the Physical
+          Resources suites/lounges grid + the Limo
+          stops editor all fit on a single row without
+          wrapping awkwardly. */}
+      <DialogContent className="max-w-6xl w-full max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Edit2 className="w-5 h-5 text-blue-600" />
@@ -391,13 +536,75 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time</label>
                 <input type="time" value={editVisitTime} onChange={e => setEditVisitTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
               </div>
+            </div>
+
+            {/* 2026-06-11 (round 6.2.37, bug fix) — Per-Section
+                Guest Counts (Part 1 PS + Part 2 LD). Mirrors
+                the standalone edit page's grid. Per Q3=A
+                these are the source of truth; the legacy
+                aggregated inputs (below) are derived sums
+                kept for backwards compat. */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Per-Section Guest Counts
+                </p>
+                <p className="text-xs text-gray-400">computed total VIPs + NFGs: <span className="font-medium text-gray-700">{editVipPS + editVipLD + editNonFlyingPS + editNonFlyingLD}</span></p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Part 1 — Premiere Suite */}
+                <div className="border border-purple-200 bg-purple-50/30 rounded-lg p-3">
+                  <h5 className="text-xs font-semibold text-purple-800 mb-2">Part 1 — Premiere Suite</h5>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Quantity of Premiere Suite</label>
+                      <input type="number" min={0} value={editNumPremiereSuites} onChange={e => setEditNumPremiereSuites(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Quantity of VIP Passengers</label>
+                      <input type="number" min={0} value={editVipPS} onChange={e => setEditVipPS(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Quantity of Non-Flying Guests</label>
+                      <input type="number" min={0} value={editNonFlyingPS} onChange={e => setEditNonFlyingPS(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                    </div>
+                  </div>
+                </div>
+                {/* Part 2 — Lounge Deluxe */}
+                <div className="border border-blue-200 bg-blue-50/30 rounded-lg p-3">
+                  <h5 className="text-xs font-semibold text-blue-800 mb-2">Part 2 — Lounge Deluxe</h5>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Quantity of VIP Passengers</label>
+                      <input type="number" min={0} value={editVipLD} onChange={e => setEditVipLD(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <p className="text-xs text-gray-400 mt-0.5">0 is valid for an all-PS-only booking</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600 block mb-1">Quantity of Non-Flying Guests</label>
+                      <input type="number" min={0} max={3} value={editNonFlyingLD} onChange={e => setEditNonFlyingLD(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <p className="text-xs text-gray-400 mt-0.5">Max 3 per LD booking (backend hard cap)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2026-06-11 (round 6.2.37, bug fix) — the legacy
+                aggregated VIP/NFG inputs (L531-537 below)
+                are kept for display parity but the form
+                now ALSO has the per-section inputs above
+                (Q3=A — per-kind is source of truth). The
+                save computes `numberOfGuests` and
+                `nonFlyingGuests` from the per-section
+                fields, ignoring the legacy state. */}
+            <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of VIP Guests</label>
-                <input type="number" value={editNumGuests} min={1} onChange={e => setEditNumGuests(Math.max(1, parseInt(e.target.value) || 1))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of VIP Guests <span className="text-xs text-gray-400 font-normal">(legacy, derived from per-section)</span></label>
+                <input type="number" value={editVipPS + editVipLD} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
               </div>
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Non-Flying Guests</label>
-                <input type="number" value={editNonFlying} min={0} onChange={e => setEditNonFlying(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Non-Flying Guests <span className="text-xs text-gray-400 font-normal">(legacy, derived from per-section)</span></label>
+                <input type="number" value={editNonFlyingPS + editNonFlyingLD} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
               </div>
             </div>
 
@@ -569,7 +776,18 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                   <Accessibility className="w-4 h-4 text-blue-600" />
                   <p className="text-xs text-blue-800 font-medium">Wheelchair Assistance — Passenger Details</p>
                 </div>
-                <input type="text" placeholder="Name of passenger requiring wheelchair assistance" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                {/* 2026-06-11 (round 6.2.37, bug fix) — bind
+                    the Wheelchair recipient input to the
+                    new `editWheelchairPassenger` state. Was
+                    previously unbound (the user's typed
+                    value was discarded on save). */}
+                <input
+                  type="text"
+                  value={editWheelchairPassenger}
+                  onChange={e => setEditWheelchairPassenger(e.target.value)}
+                  placeholder="Name of passenger requiring wheelchair assistance"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
               </div>
             )}
           </div>
