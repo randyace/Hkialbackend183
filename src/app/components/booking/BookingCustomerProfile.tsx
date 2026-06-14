@@ -3,6 +3,115 @@ import { User, Heart, Eye, Star, AlertCircle, History, MessageSquare, Briefcase,
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
+// 2026-06-11 — round 6.2.34 UX. Sub-interfaces for the
+// customer-profile detail sections. Sourced from the Account's
+// `profile_*` JSON columns via the parent wrapper's
+// `mapAccountToCustomerProfile` (parent BookingDetail.tsx:34-78).
+// Mirrors the shape the staff-edit page
+// (`src/components/MemberDetail.tsx`) writes into each column.
+// All fields are optional — accounts may have none of these on
+// record. The dialog renders an empty state for any section
+// that is null / empty.
+
+export interface CustomerSpouse {
+  title?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  nationality?: string;
+  passportFirst4?: string;
+  linkedAccountNo?: string;
+}
+
+export interface CustomerVipAppearance {
+  ethnicity?: string;
+  age?: string;
+  height?: string;
+  hairColor?: string;
+  glasses?: string;
+}
+
+export interface CustomerVipWorkInfo {
+  industry?: string;
+  company?: string;
+  position?: string;
+  previousWork?: string;
+}
+
+export interface CustomerVipObservations {
+  handedness?: string;
+  preferredLanguage?: string;
+  interests?: string;
+}
+
+export interface CustomerVipProfile {
+  appearance?: CustomerVipAppearance;
+  workInfo?: CustomerVipWorkInfo;
+  observations?: CustomerVipObservations;
+}
+
+export interface CustomerPreference {
+  id?: number;
+  category?: string;
+  preference?: string;
+  recordedDate?: string;
+  recordedBy?: string;
+}
+
+export interface CustomerFoodAllergy {
+  id?: number;
+  allergen?: string;
+  severity?: string;
+  notes?: string;
+  recordedDate?: string;
+}
+
+export interface CustomerDietary {
+  id?: number;
+  requirement?: string;
+  notes?: string;
+  recordedDate?: string;
+}
+
+export interface CustomerMovement {
+  id?: number;
+  movementInCharge?: string;
+  cicSupport?: string;
+  driver?: string;
+  orderNo?: string;
+  arrDate?: string;
+  deptDate?: string;
+  flightNo?: string;
+  flightTime?: string;
+  destinationOrigin?: string;
+  lobbySuite?: string;
+  noOfPax?: number;
+  title?: string;
+  firstName?: string;
+  lastName?: string;
+  noOfCIBaggage?: number;
+  remarks?: string;
+  nationality?: string;
+  arrTimeNonFlyingGuests?: string;
+  timeMetVIPAtGate?: string;
+  timeBackToHKIAL?: string;
+  baggageRetrievalStart?: string;
+  baggageRetrievalEnd?: string;
+  baggageArrivalAtHKIAL?: string;
+  timeLeftHKIAL?: string;
+  totalProcessingTime?: string;
+  remarksAdminIssue?: string;
+}
+
+export interface CustomerRemark {
+  id?: number;
+  remark?: string;
+  category?: string;
+  createdDate?: string;
+  createdBy?: string;
+}
+
 export interface CustomerProfile {
   id: number;
   accountNo: string;
@@ -16,6 +125,23 @@ export interface CustomerProfile {
   totalBookings: number;
   createdDate: string;
   company?: string;
+  // Detail sections — sourced from the Account's profile_*
+  // JSON columns via the parent wrapper. All optional;
+  // accounts may have none of these on record. When the
+  // wrapper cannot fetch the account (`null`) or the booking
+  // has no accountId (`undefined`), the view's click handler
+  // falls back to a per-booking synthesised profile with
+  // only the 12 base fields populated; the dialog renders
+  // empty states for the detail sections in that case.
+  spouse?: CustomerSpouse | null;
+  vipProfile?: CustomerVipProfile | null;
+  preferences?: CustomerPreference[];
+  allergies?: CustomerFoodAllergy[];
+  dietary?: CustomerDietary[];
+  movements?: CustomerMovement[];
+  remarks?: CustomerRemark[];
+  spouseAllergies?: CustomerFoodAllergy[];
+  spouseDietary?: CustomerDietary[];
 }
 
 interface BookingCustomerProfileProps {
@@ -51,54 +177,28 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
   const isMember = customer.type === 'Individual' && !!customer.membershipExpiry && customer.membershipExpiry >= today;
   const isIndividual = customer.type === 'Individual';
 
-  const spouse = isIndividual ? {
-    title: 'Mrs.', firstName: 'Amanda', lastName: customer.name.split(' ').pop() ?? 'Smith',
-    email: `amanda.${customer.name.split(' ')[0]?.toLowerCase()}@email.com`,
-    phone: '+852 9876 2222', nationality: 'United Kingdom', passportFirst4: 'UK78', linkedAccountNo: '',
-  } : null;
-
-  const vipProfile = {
-    appearance: { ethnicity: 'Caucasian', age: '45-50', height: '178cm', hairColor: 'Brown', glasses: 'No' },
-    workInfo: { industry: 'Finance', company: customer.company ?? 'Global Investment Bank', position: 'Managing Director', previousWork: 'Senior VP, Tech Corp' },
-    observations: { handedness: 'Right-handed', preferredLanguage: 'English', interests: 'Golf, Wine Tasting, Classical Music' },
-  };
-
-  const preferences = [
-    { id: 1, category: 'Seating',    preference: 'Prefers window-side suite with natural lighting', recordedDate: '2024-10-15', recordedBy: 'Staff A' },
-    { id: 2, category: 'Service',    preference: 'Likes to be greeted by first name',               recordedDate: '2024-09-20', recordedBy: 'Staff B' },
-    { id: 3, category: 'Beverage',   preference: 'Prefers Dom Pérignon Champagne when available',   recordedDate: '2024-08-10', recordedBy: 'Staff C' },
-    { id: 4, category: 'Temperature',preference: 'Suite temperature at 22°C',                       recordedDate: '2024-07-05', recordedBy: 'Staff A' },
-  ];
-
-  const allergies = [
-    { id: 1, allergen: 'Shellfish', severity: 'Severe',   notes: 'Anaphylactic reaction. EpiPen required.', recordedDate: '2024-01-15' },
-    { id: 2, allergen: 'Peanuts',   severity: 'Moderate', notes: 'Avoid all peanut products.',             recordedDate: '2024-01-15' },
-  ];
-
-  const spouseAllergies = isIndividual
-    ? [{ id: 101, allergen: 'Tree Nuts', severity: 'Mild', notes: 'Mild sensitivity — avoid walnuts and cashews.', recordedDate: '2024-06-10' }]
-    : [];
-
-  const dietary = [
-    { id: 1, requirement: 'Low Sodium',             notes: 'Doctor-recommended due to hypertension', recordedDate: '2024-02-20' },
-    { id: 2, requirement: 'Prefers Organic Options', notes: 'When available',                         recordedDate: '2024-03-10' },
-  ];
-
-  const spouseDietary = isIndividual
-    ? [{ id: 101, requirement: 'Vegan', notes: 'Strictly no animal products including dairy & eggs.', recordedDate: '2024-06-10' }]
-    : [];
-
-  const movements = [
-    { id: 1, movementInCharge: 'Emily Chen', cicSupport: 'Tom Ng', driver: 'Peter Chan', orderNo: 'A-20241025-000012', arrDate: '2024-10-25', deptDate: undefined, flightNo: 'CX880', flightTime: '14:30', destinationOrigin: 'LHR', lobbySuite: 'VIP Suite A', noOfPax: 2, title: 'Mr.', firstName: 'John', lastName: 'Smith', noOfCIBaggage: 3, remarks: 'VIP escort provided', nationality: 'United Kingdom', timeMetVIPAtGate: '14:15', baggageRetrievalStart: '15:10', baggageRetrievalEnd: '15:25', baggageArrivalAtHKIAL: '15:30', timeLeftHKIAL: '16:00', totalProcessingTime: '1h 45m', arrTimeNonFlyingGuests: undefined, timeBackToHKIAL: undefined, remarksAdminIssue: undefined },
-    { id: 2, movementInCharge: 'David Wong', cicSupport: 'Amy Lau', driver: 'Henry Yip', orderNo: 'D-20241018-000008', deptDate: '2024-10-18', arrDate: undefined, flightNo: 'BA028', flightTime: '09:15', destinationOrigin: 'LHR', lobbySuite: 'Executive Suite', noOfPax: 1, title: 'Mr.', firstName: 'John', lastName: 'Smith', noOfCIBaggage: 2, nationality: 'United Kingdom', timeMetVIPAtGate: '08:30', timeLeftHKIAL: '09:00', totalProcessingTime: '30m', remarks: undefined, arrTimeNonFlyingGuests: undefined, timeBackToHKIAL: undefined, baggageRetrievalStart: undefined, baggageRetrievalEnd: undefined, baggageArrivalAtHKIAL: undefined, remarksAdminIssue: undefined },
-    { id: 3, movementInCharge: 'Sarah Lee', cicSupport: undefined, driver: undefined, orderNo: 'A-20241005-000005', arrDate: '2024-10-05', deptDate: undefined, flightNo: 'CX100', flightTime: '16:00', destinationOrigin: 'JFK', lobbySuite: 'VIP Suite B', noOfPax: 3, title: 'Mr.', firstName: 'John', lastName: 'Smith', nationality: 'United Kingdom', timeMetVIPAtGate: '15:45', baggageRetrievalStart: '16:30', baggageRetrievalEnd: '16:50', timeLeftHKIAL: '17:10', totalProcessingTime: '1h 25m', remarks: undefined, noOfCIBaggage: undefined, arrTimeNonFlyingGuests: undefined, timeBackToHKIAL: undefined, baggageArrivalAtHKIAL: undefined, remarksAdminIssue: 'Late departure due to flight delay' },
-  ];
-
-  const remarks = [
-    { id: 1, remark: 'High-value client. Provide exceptional service at all times.',        category: 'VIP Note',        createdDate: '2024-01-15', createdBy: 'Manager' },
-    { id: 2, remark: 'Frequently travels with family. Inquire about family suite.',         category: 'Service Note',    createdDate: '2024-02-10', createdBy: 'Staff A' },
-    { id: 3, remark: 'Requested limousine service for all future bookings.',                category: 'Special Request', createdDate: '2024-05-20', createdBy: 'Staff B' },
-  ];
+  // 2026-06-11 — round 6.2.34 UX. All detail sections are
+  // read from the prop. Defaults: `null` for objects, `[]`
+  // for arrays. The wrapper's `mapAccountToCustomerProfile`
+  // populates these from the Account's `profile_*` JSON
+  // columns; the dev-preview (mock-synthesised) fallback has
+  // them all undefined → empty states render correctly.
+  const spouse = (isIndividual ? customer.spouse : null) ?? null;
+  const vipProfile = customer.vipProfile ?? null;
+  const preferences = customer.preferences ?? [];
+  const allergies = customer.allergies ?? [];
+  const dietary = customer.dietary ?? [];
+  const spouseAllergies = isIndividual ? (customer.spouseAllergies ?? []) : [];
+  const spouseDietary = isIndividual ? (customer.spouseDietary ?? []) : [];
+  const movements = customer.movements ?? [];
+  const remarks = customer.remarks ?? [];
+  // Spouse tab / Allergies-tab spouse subsection: visible
+  // when there's a spouse object OR any spouse allergies /
+  // dietary. Pre-6.2.34 the tab was hidden for non-Individual
+  // types AND when the synthesised spouse was null; the
+  // new logic decouples them so a spouse-allergy row can
+  // still render when the spouse object is absent.
+  const hasSpouseSection = isIndividual && (!!spouse || spouseAllergies.length > 0 || spouseDietary.length > 0);
 
   const movCellCls = 'px-3 py-2.5 whitespace-nowrap align-middle text-xs';
   const dash = <span className="text-gray-300">—</span>;
@@ -138,7 +238,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
             <TabsList className="h-auto bg-transparent p-0 gap-0 flex flex-nowrap min-w-max">
               {[
                 { value: 'overview',  label: 'Overview',       icon: <User className="w-3.5 h-3.5" /> },
-                ...(isIndividual ? [{ value: 'spouse', label: 'Spouse', icon: <Heart className="w-3.5 h-3.5" /> }] : []),
+                ...(hasSpouseSection ? [{ value: 'spouse', label: 'Spouse', icon: <Heart className="w-3.5 h-3.5" /> }] : []),
                 { value: 'vip',       label: 'VIP Profile',    icon: <Eye className="w-3.5 h-3.5" /> },
                 { value: 'prefs',     label: 'Preferences',    icon: <Star className="w-3.5 h-3.5" /> },
                 { value: 'allergies', label: 'Food Allergies', icon: <AlertCircle className="w-3.5 h-3.5" /> },
@@ -203,7 +303,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
             </TabsContent>
 
             {/* Spouse */}
-            {isIndividual && (
+            {hasSpouseSection && (
               <TabsContent value="spouse" className="m-0 p-5">
                 {spouse ? (
                   <div className="space-y-4">
@@ -244,52 +344,68 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
 
             {/* VIP Profile */}
             <TabsContent value="vip" className="m-0 p-5 space-y-5">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Appearance</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(vipProfile.appearance).map(([k, v]) => (
-                    <div key={k} className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
-                      <p className="text-sm mt-0.5">{v}</p>
+              {vipProfile ? (
+                <>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Appearance</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {vipProfile.appearance && Object.entries(vipProfile.appearance).map(([k, v]) => (
+                        <div key={k} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
+                          <p className="text-sm mt-0.5">{v}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />Work Information</p>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(vipProfile.workInfo).map(([k, v]) => (
-                    <div key={k} className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
-                      <p className="text-sm mt-0.5">{v}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />Work Information</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {vipProfile.workInfo && Object.entries(vipProfile.workInfo).map(([k, v]) => (
+                        <div key={k} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
+                          <p className="text-sm mt-0.5">{v}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Observations</p>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(vipProfile.observations).map(([k, v]) => (
-                    <div key={k} className="bg-gray-50 p-3 rounded-lg">
-                      <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
-                      <p className="text-sm mt-0.5">{v}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Observations</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      {vipProfile.observations && Object.entries(vipProfile.observations).map(([k, v]) => (
+                        <div key={k} className="bg-gray-50 p-3 rounded-lg">
+                          <p className="text-xs text-gray-500 capitalize">{k.replace(/([A-Z])/g, ' $1')}</p>
+                          <p className="text-sm mt-0.5">{v}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <Eye className="w-10 h-10 text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400">No VIP profile on record.</p>
                 </div>
-              </div>
+              )}
             </TabsContent>
 
             {/* Preferences */}
             <TabsContent value="prefs" className="m-0 p-5 space-y-3">
-              {preferences.map(pref => (
-                <div key={pref.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${prefCategoryColor(pref.category)}`}>{pref.category}</span>
-                    <span className="text-xs text-gray-400">Recorded {pref.recordedDate} by {pref.recordedBy}</span>
-                  </div>
-                  <p className="text-sm text-gray-800">{pref.preference}</p>
+              {preferences.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <Star className="w-10 h-10 text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400">No preferences on record.</p>
                 </div>
-              ))}
+              ) : (
+                preferences.map(pref => (
+                  <div key={pref.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${prefCategoryColor(pref.category)}`}>{pref.category}</span>
+                      <span className="text-xs text-gray-400">Recorded {pref.recordedDate} by {pref.recordedBy}</span>
+                    </div>
+                    <p className="text-sm text-gray-800">{pref.preference}</p>
+                  </div>
+                ))
+              )}
             </TabsContent>
 
             {/* Food Allergies */}
@@ -302,18 +418,22 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                   <p className="text-sm text-gray-700">{customer.name}</p>
                   <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Customer</span>
                 </div>
-                <div className="space-y-2">
-                  {allergies.map(a => (
-                    <div key={a.id} className={`p-3 border rounded-lg ${a.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-sm">{a.allergen}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${severityColor(a.severity)}`}>{a.severity}</span>
+                {allergies.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">No allergies recorded.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {allergies.map(a => (
+                      <div key={a.id} className={`p-3 border rounded-lg ${a.severity === 'Severe' ? 'bg-red-50 border-red-300' : 'bg-yellow-50 border-yellow-200'}`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm">{a.allergen}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${severityColor(a.severity)}`}>{a.severity}</span>
+                        </div>
+                        <p className="text-xs text-gray-600">{a.notes}</p>
+                        <p className="text-xs text-gray-400 mt-1">Recorded {a.recordedDate}</p>
                       </div>
-                      <p className="text-xs text-gray-600">{a.notes}</p>
-                      <p className="text-xs text-gray-400 mt-1">Recorded {a.recordedDate}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
                 {dietary.length > 0 && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-2"><Utensils className="w-3 h-3" />Dietary Requirements</p>
@@ -327,17 +447,19 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                   </div>
                 )}
               </div>
-              {isIndividual && spouse && (
+              {hasSpouseSection && (
                 <>
                   <div className="border-t border-gray-200" />
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center">
-                        <Heart className="w-3.5 h-3.5 text-pink-500" />
+                    {spouse && (
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-7 h-7 rounded-full bg-pink-100 flex items-center justify-center">
+                          <Heart className="w-3.5 h-3.5 text-pink-500" />
+                        </div>
+                        <p className="text-sm text-gray-700">{spouse.title} {spouse.firstName} {spouse.lastName}</p>
+                        <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
                       </div>
-                      <p className="text-sm text-gray-700">{spouse.title} {spouse.firstName} {spouse.lastName}</p>
-                      <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
-                    </div>
+                    )}
                     {spouseAllergies.length === 0 ? (
                       <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">No allergies recorded for spouse.</p>
                     ) : (
@@ -373,6 +495,12 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
 
             {/* Movements */}
             <TabsContent value="movements" className="m-0 p-3">
+              {movements.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <History className="w-10 h-10 text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400">No movements on record.</p>
+                </div>
+              ) : (
               <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
                   <thead>
@@ -446,19 +574,27 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                   </tbody>
                 </table>
               </div>
+              )}
             </TabsContent>
 
             {/* Remarks */}
             <TabsContent value="remarks" className="m-0 p-5 space-y-3">
-              {remarks.map(r => (
-                <div key={r.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${remarkCategoryColor(r.category)}`}>{r.category}</span>
-                    <span className="text-xs text-gray-400">{r.createdDate} by {r.createdBy}</span>
-                  </div>
-                  <p className="text-sm text-gray-800">{r.remark}</p>
+              {remarks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-14 text-center">
+                  <MessageSquare className="w-10 h-10 text-gray-200 mb-3" />
+                  <p className="text-sm text-gray-400">No remarks on record.</p>
                 </div>
-              ))}
+              ) : (
+                remarks.map(r => (
+                  <div key={r.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${remarkCategoryColor(r.category)}`}>{r.category}</span>
+                      <span className="text-xs text-gray-400">{r.createdDate} by {r.createdBy}</span>
+                    </div>
+                    <p className="text-sm text-gray-800">{r.remark}</p>
+                  </div>
+                ))
+              )}
             </TabsContent>
           </div>
         </Tabs>

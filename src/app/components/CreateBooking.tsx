@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
+// 2026-06-12 (round 6.2.39, M11 fix) — import the shared
+// catalog of add-on services. The pre-6.2.39 hardcoded
+// CREATE_ADDON_SERVICES (4 items) is replaced by this import.
+import { CATALOG_ADDONS, CATALOG_ADDON_MAP } from './addons';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import {
@@ -210,6 +214,21 @@ export interface CreateBookingProps {
     phone: string;
     membership_type?: string;
     company_name?: string;
+    // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
+    // relation from `AccountController::show()`. Single-element
+    // array (HasMany) — usually `[{ agency_code, agency_name,
+    // discount_rate, payment_method }]` for TravelAgency-typed
+    // accounts, `[]` for Individual/Corporate, or `[]` if no
+    // agency row is linked. Used to drive the read-only agency
+    // label below (replaces the legacy Select dropdown that
+    // was sourced from the hardcoded `TRAVEL_AGENCY_LIST`).
+    travel_agency?: Array<{
+      id: number;
+      agency_code: string;
+      agency_name: string;
+      discount_rate?: number;
+      payment_method?: string;
+    }>;
   } | null;
   onApplyPromo?: (code: string) => void;
   selectedAddonKeys?: string[];
@@ -707,7 +726,28 @@ export function CreateBooking({
   // user-typed dat...[truncated]
 
   // ─── Derived ───────────────────────────────────────────────────────────────
-  const selectedAgency = TRAVEL_AGENCY_LIST.find(a => a.code === selectedAgencyCode) || null;
+  // 2026-06-14 — round 6.2.37. The agency of an account is
+  // intrinsic — staff should never pick it ad-hoc. Derive
+  // `selectedAgency` from the currently selected account's
+  // eager-loaded `travel_agency` relation (single-element
+  // array). Falls back to the legacy `TRAVEL_AGENCY_LIST` only
+  // for back-compat with any future caller that still sets
+  // `selectedAgencyCode` directly. The result is normalised to
+  // camelCase (`name`/`code`/`discountRate`/`paymentMethod`)
+  // so the existing call sites (discount placeholder, default
+  // label, green confirmation card) keep working.
+  const rawSelectedAgency =
+    selectedAccount?.travel_agency?.[0]
+    ?? TRAVEL_AGENCY_LIST.find(a => a.code === selectedAgencyCode)
+    ?? null;
+  const selectedAgency = rawSelectedAgency
+    ? {
+        name: (rawSelectedAgency as any).agency_name ?? (rawSelectedAgency as any).name,
+        code: (rawSelectedAgency as any).agency_code ?? (rawSelectedAgency as any).code,
+        discountRate: Number((rawSelectedAgency as any).discount_rate ?? (rawSelectedAgency as any).discountRate ?? 0),
+        paymentMethod: (rawSelectedAgency as any).payment_method ?? (rawSelectedAgency as any).paymentMethod,
+      }
+    : null;
 
   // Reset payment mode when agency selected
   useEffect(() => {
@@ -967,26 +1007,25 @@ export function CreateBooking({
             </div>
           </div>
 
-          {/* Travel Agency Selector */}
+          {/* Travel Agency (read-only — 2026-06-14 round 6.2.37) */}
           {accountType === 'Agency' && (
             <div className="mb-6 space-y-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Select Agency <span className="text-red-500">*</span></label>
-                <Select value={selectedAgencyCode} onValueChange={setSelectedAgencyCode}>
-                  <SelectTrigger><SelectValue placeholder="— Choose a travel agency —" /></SelectTrigger>
-                  <SelectContent>
-                    {TRAVEL_AGENCY_LIST.map(a => (
-                      <SelectItem key={a.code} value={a.code}>
-                        <span className="flex items-center gap-2">
-                          <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                          {a.name}
-                          <span className="ml-auto text-xs text-gray-400">{a.code}</span>
-                          <Badge className="ml-2 bg-green-100 text-green-800 text-xs px-1.5 py-0">{a.discountRate}% off</Badge>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Travel Agency</label>
+                {selectedAccount?.travel_agency?.[0] ? (
+                  <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50 flex items-center gap-2 text-gray-700">
+                    <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="font-medium">{selectedAccount.travel_agency[0].agency_name}</span>
+                    <span className="text-xs text-gray-500">({selectedAccount.travel_agency[0].agency_code})</span>
+                    {typeof selectedAccount.travel_agency[0].discount_rate === 'number' && (
+                      <Badge className="ml-2 bg-green-100 text-green-800 text-xs px-1.5 py-0">{Number(selectedAccount.travel_agency[0].discount_rate)}% off</Badge>
+                    )}
+                  </div>
+                ) : (
+                  <div className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-md text-sm bg-gray-50 text-gray-500 italic">
+                    Search and select an Agency-typed account below — the agency is linked to the account and cannot be chosen ad-hoc.
+                  </div>
+                )}
               </div>
               {selectedAgency && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
@@ -994,7 +1033,8 @@ export function CreateBooking({
                   <div>
                     <p className="text-sm font-semibold text-green-800">Default Discount Automatically Applied</p>
                     <p className="text-sm text-green-700 mt-0.5">
-                      <strong>{selectedAgency.name}</strong> ({selectedAgency.code}) — <strong>{selectedAgency.discountRate}%</strong> off · Payment: <strong>{selectedAgency.paymentMethod}</strong>
+                      <strong>{selectedAgency.name}</strong> ({selectedAgency.code}) — <strong>{selectedAgency.discountRate}%</strong> off
+                      {selectedAgency.paymentMethod ? <> · Payment: <strong>{selectedAgency.paymentMethod}</strong></> : null}
                     </p>
                   </div>
                 </div>
@@ -1928,18 +1968,22 @@ export function CreateBooking({
             // `bookable_items` table so this can be
             // DB-sourced too.
             // ──────────────────────────────────────────────────────
-            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string }[] = [
-              // The `price` field is unused for display (the
-              // badge is sourced from `bookableItemPrices` at
-              // render time via `resolveServiceDisplay`), but
-              // it's still part of the type for backward
-              // compatibility with the resolveServiceDisplay
-              // return type.
-              { key: 'Limousine Transfer',      icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                    price: '0',   badge: '+HK$—',        badgeClass: 'bg-purple-100 text-purple-700' },
-              { key: 'Wheelchair Assistance',   icon: <Accessibility className="w-4 h-4" />, desc: 'Mobility and accessibility support',              price: '0',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Lounge Extension',        icon: <Clock className="w-4 h-4" />,        desc: 'Extend VIP lounge access by an additional hour', price: '0',   badge: '+HK$—/hr',    badgeClass: 'bg-amber-100 text-amber-700'   },
-              { key: 'Security Escort Service', icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',            price: '0',   badge: '+HK$—',        badgeClass: 'bg-amber-100 text-amber-700'   },
-            ];
+            // 2026-06-12 (round 6.2.39, M11 fix) — replace the
+            // hardcoded CREATE_ADDON_SERVICES (4 items) with
+            // the shared CATALOG_ADDONS import. See
+            // `components/addons.ts` for the source of truth.
+            // The 4 names match the backend's `bookable_items`
+            // catalog exactly (verified against
+            // `BookableItemSeeder` + the migration
+            // `2026_06_09_120100_seed_3_bookable_items.php`).
+            const CREATE_ADDON_SERVICES = CATALOG_ADDONS.map((a) => ({
+              key: a.key,
+              icon: a.icon,
+              desc: a.desc,
+              price: String(a.defaultPrice),
+              badge: a.badge ?? (a.defaultPrice > 0 ? `+HK$${a.defaultPrice.toLocaleString()}` : '+HK$—'),
+              badgeClass: a.badgeClass,
+            }));
 
             // 2026-06-08 round 6.2.8 — apply the DB price override for
             // any addon whose key matches a `bookableItemPrices` entry.

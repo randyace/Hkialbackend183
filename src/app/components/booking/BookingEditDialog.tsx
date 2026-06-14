@@ -5,6 +5,12 @@ import { Checkbox } from '../ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
 import { suiteService, type Suite } from '@/services/suiteService';
+// 2026-06-12 (round 6.2.39, M11 fix) — import the shared
+// catalog of add-on services. The pre-6.2.39 hardcoded
+// 22-item ADDON_SERVICES list (with name-drifted placeholders)
+// is replaced by the 4 catalog add-ons only. Sky's directive
+// (2026-06-12): keep the 4 addons, remove the rest.
+import { CATALOG_ADDONS } from '../addons';
 
 interface EditBooking {
   bookingNo: string;
@@ -169,30 +175,23 @@ export interface BookingEditPayload {
   bookingChannel?: string;
 }
 
-const ADDON_SERVICES: AddonService[] = [
-  { key: 'Lounge Extension',              icon: null, desc: 'Extend lounge access time',              defaultPrice: '500.00'  },
-  { key: 'Limousine Service',             icon: null, desc: 'Private car transfer service',           defaultPrice: '800.00'  },
-  { key: 'Wheelchair Assistance',         icon: null, desc: 'Mobility & accessibility support',       defaultPrice: '0.00'    },
-  { key: 'Security Escort Service',       icon: null, desc: 'Dedicated security escort',              defaultPrice: '1200.00' },
-  { key: 'Meet & Greet Service',          icon: null, desc: 'Dedicated greeter at arrival gate',      defaultPrice: '600.00'  },
-  { key: 'Fast Track Immigration',        icon: null, desc: 'Priority immigration clearance',         defaultPrice: '400.00'  },
-  { key: 'Buggy Transfer Service',        icon: null, desc: 'Electric buggy within terminal',         defaultPrice: '0.00'    },
-  { key: 'Baggage Handling',              icon: null, desc: 'Assisted luggage service',               defaultPrice: '150.00'  },
-  { key: 'Porter Service',                icon: null, desc: 'On-demand porter assistance',            defaultPrice: '100.00'  },
-  { key: 'Shower Service',                icon: null, desc: 'Private shower with amenities',          defaultPrice: '200.00'  },
-  { key: 'Day Room (4 hrs)',              icon: null, desc: 'Private suite day-use booking',          defaultPrice: '1800.00' },
-  { key: 'Day Room Extension (per hr)',   icon: null, desc: 'Hourly extension of day room',           defaultPrice: '450.00'  },
-  { key: 'VIP Escort (Airside)',          icon: null, desc: 'Escorted airside access with staff',     defaultPrice: '1500.00' },
-  { key: 'Printing Service',              icon: null, desc: 'Document printing (per page)',           defaultPrice: '20.00'   },
-  { key: 'Flight Rebooking Assistance',   icon: null, desc: 'Staff-assisted flight rebooking',        defaultPrice: '0.00'    },
-  { key: 'Lounge Access – Extra Adult',   icon: null, desc: 'Additional adult lounge entry',          defaultPrice: '350.00'  },
-  { key: 'Lounge Access – Extra Child',   icon: null, desc: 'Additional child entry (2–11 yrs)',      defaultPrice: '180.00'  },
-  { key: 'Birthday / Celebration Setup',  icon: null, desc: 'Cake, décor & personalised message',    defaultPrice: '800.00'  },
-  { key: 'Video Conference Room',         icon: null, desc: 'Private VC-equipped meeting room',       defaultPrice: '1200.00' },
-  { key: 'Private Dining Room',           icon: null, desc: 'Exclusive dining space (up to 8 pax)',   defaultPrice: '2500.00' },
-  { key: 'Flower / Gift Arrangement',     icon: null, desc: 'In-lounge gift or floral setup',         defaultPrice: '500.00'  },
-  { key: 'Special Meal Request',          icon: null, desc: 'Dietary or custom meal arrangement',     defaultPrice: '0.00'    },
-];
+// 2026-06-12 (round 6.2.39, M11 fix) — REPLACE the pre-6.2.39
+// hardcoded 22-item list (with name-drifted placeholders
+// like 'Limousine Service' vs catalog 'Limousine Transfer',
+// 'VIP Escort (Airside)' vs catalog 'VIP Transfer', etc.)
+// with the 4 CATALOG_ADDONS only. The 18 placeholders are
+// REMOVED (per Sky's directive 2026-06-12: "we was decided
+// to keep the 4 current addon and remove other"). The
+// backend's AddonsSyncService would have silently dropped
+// the placeholders anyway (matched by name, dropped if not
+// found in `bookable_items`), so showing 4 only is more
+// honest UX — every toggle in the dialog now persists.
+const ADDON_SERVICES: AddonService[] = CATALOG_ADDONS.map((a) => ({
+  key: a.key,
+  icon: a.icon,
+  desc: a.desc,
+  defaultPrice: a.defaultPrice.toFixed(2),
+}));
 
 interface BookingEditDialogProps {
   open: boolean;
@@ -302,10 +301,40 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
   };
 
   const toggleEditSuite = (id: number) => {
-    setEditAssignedSuiteIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setEditAssignedSuiteIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= editNumPremiereSuites) return prev;
+      return [...prev, id];
+    });
   };
   const toggleEditLounge = (id: number) => {
-    setEditAssignedLoungeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setEditAssignedLoungeIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      const ldCap = editVipLD + editNonFlyingLD;
+      if (prev.length >= ldCap) return prev;
+      return [...prev, id];
+    });
+  };
+
+  // 2026-06-14 — cap physical assignments to the upper qty inputs.
+  // Trim checkboxes synchronously when the cap input changes so the
+  // save payload never exceeds the cap.
+  const handleEditNumPremiereSuitesChange = (raw: string) => {
+    const val = Math.max(0, parseInt(raw) || 0);
+    setEditNumPremiereSuites(val);
+    setEditAssignedSuiteIds(prev => prev.length > val ? prev.slice(0, val) : prev);
+  };
+  const handleEditVipLDChange = (raw: string) => {
+    const val = Math.max(0, parseInt(raw) || 0);
+    setEditVipLD(val);
+    const newCap = val + editNonFlyingLD;
+    setEditAssignedLoungeIds(prev => prev.length > newCap ? prev.slice(0, newCap) : prev);
+  };
+  const handleEditNonFlyingLDChange = (raw: string) => {
+    const val = Math.max(0, Math.min(3, parseInt(raw) || 0));
+    setEditNonFlyingLD(val);
+    const newCap = editVipLD + val;
+    setEditAssignedLoungeIds(prev => prev.length > newCap ? prev.slice(0, newCap) : prev);
   };
 
   const handleSave = async () => {
@@ -323,14 +352,27 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
     const loungeNames = editAssignedLoungeIds
       .map(id => physicalLounges.find(l => l.id === id)?.suite_name)
       .filter((n): n is string => Boolean(n));
-    // 2026-06-11 (round 6.2.37, bug fix) — compute the
+    // 2026-06-11 (round 6.2.38, bug fix) — compute the
     // aggregated `numberOfGuests` and `nonFlyingGuests` from
     // the per-kind fields (Q3=A). The legacy aggregated
     // values in the dialog's "No. of VIP Guests" / "No. of
     // Non-Flying Guests" inputs are kept on the form for
     // display parity but are no longer sent — the per-kind
     // sum is the source of truth.
-    const computedNumberOfGuests = editVipPS + editVipLD + editNonFlyingPS + editNonFlyingLD;
+    //
+    // INVARIANT: `numberOfGuests` = FLYING guests only (VIPs).
+    // The backend's PricingService reads `number_of_guests`
+    // as the flying-guest count and applies the 3-slot free
+    // block on PS (round 6.2.32). Summing ALL four per-kind
+    // fields (VIPs + NFGs) here makes the backend treat the
+    // NFGs as flying guests, which charges them at the
+    // $2,000 "additional flying guest" rate instead of the
+    // $1,000 NFG rate. For (1 PS, 3 VIPs, 1 NFG) this
+    // over-charges by $1,000 ($21,000 instead of $19,000).
+    // The preview path (wrapper `fetchLivePreview` at
+    // `BookingDetail.tsx:186`) already does this correctly;
+    // the save path was inconsistent.
+    const computedNumberOfGuests = editVipPS + editVipLD;
     const computedNonFlyingGuests = editNonFlyingPS + editNonFlyingLD;
     const payload: BookingEditPayload = {
       flightType:        editFlightType,
@@ -558,7 +600,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                   <div className="space-y-2">
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">Quantity of Premiere Suite</label>
-                      <input type="number" min={0} value={editNumPremiereSuites} onChange={e => setEditNumPremiereSuites(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <input type="number" min={0} value={editNumPremiereSuites} onChange={e => handleEditNumPremiereSuitesChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
                     </div>
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">Quantity of VIP Passengers</label>
@@ -576,12 +618,12 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                   <div className="space-y-2">
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">Quantity of VIP Passengers</label>
-                      <input type="number" min={0} value={editVipLD} onChange={e => setEditVipLD(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <input type="number" min={0} value={editVipLD} onChange={e => handleEditVipLDChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
                       <p className="text-xs text-gray-400 mt-0.5">0 is valid for an all-PS-only booking</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">Quantity of Non-Flying Guests</label>
-                      <input type="number" min={0} max={3} value={editNonFlyingLD} onChange={e => setEditNonFlyingLD(Math.max(0, Math.min(3, parseInt(e.target.value) || 0)))} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
+                      <input type="number" min={0} max={3} value={editNonFlyingLD} onChange={e => handleEditNonFlyingLDChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
                       <p className="text-xs text-gray-400 mt-0.5">Max 3 per LD booking (backend hard cap)</p>
                     </div>
                   </div>
@@ -611,28 +653,41 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
             {/* Premiere Suite — physical suite checkboxes */}
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-700">Premiere Suite Assignment <span className="text-gray-400 font-normal">(optional)</span></p>
-                {editAssignedSuiteIds.length > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
-                    {editAssignedSuiteIds.length} assigned
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Premiere Suite Assignment <span className="text-gray-400 font-normal">(optional)</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">Check up to {editNumPremiereSuites} suite{editNumPremiereSuites === 1 ? '' : 's'}.</p>
+                </div>
+                {editNumPremiereSuites > 0 && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    editAssignedSuiteIds.length > editNumPremiereSuites
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {editAssignedSuiteIds.length} / {editNumPremiereSuites} assigned
                   </span>
                 )}
               </div>
-              {physicalSuites.length === 0 ? (
+              {editNumPremiereSuites === 0 ? (
+                <p className="text-xs text-gray-400 italic">Set Quantity of Premiere Suite above to enable suite assignment.</p>
+              ) : physicalSuites.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">No physical suites available — ask an administrator to seed CIP 1-6 / Function Room.</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {physicalSuites.map(s => {
                     const checked = editAssignedSuiteIds.includes(s.id);
+                    const isAtCap = !checked && editAssignedSuiteIds.length >= editNumPremiereSuites;
                     return (
                       <label key={s.id}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${
                           checked
                             ? 'border-purple-300 bg-purple-50 text-purple-800'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            : isAtCap
+                              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}>
                         <Checkbox
                           checked={checked}
+                          disabled={isAtCap}
                           onCheckedChange={() => toggleEditSuite(s.id)}
                         />
                         <span className="font-medium">{s.suite_name}</span>
@@ -646,28 +701,42 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
             {/* Lounge Deluxe — physical lobby checkboxes */}
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium text-gray-700">Lounge Deluxe Assignment <span className="text-gray-400 font-normal">(optional, free choice)</span></p>
-                {editAssignedLoungeIds.length > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">
-                    {editAssignedLoungeIds.length} assigned
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Lounge Deluxe Assignment <span className="text-gray-400 font-normal">(optional, free choice)</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">Check up to {editVipLD + editNonFlyingLD} seat{editVipLD + editNonFlyingLD === 1 ? '' : 's'}.</p>
+                </div>
+                {editVipLD + editNonFlyingLD > 0 && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    editAssignedLoungeIds.length > editVipLD + editNonFlyingLD
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {editAssignedLoungeIds.length} / {editVipLD + editNonFlyingLD} assigned
                   </span>
                 )}
               </div>
-              {physicalLounges.length === 0 ? (
+              {editVipLD + editNonFlyingLD === 0 ? (
+                <p className="text-xs text-gray-400 italic">Add VIP Passengers or Non-Flying Guests in Lounge Deluxe above to enable lounge assignment.</p>
+              ) : physicalLounges.length === 0 ? (
                 <p className="text-xs text-gray-400 italic">No physical lounges available — ask an administrator to seed Lobby 1-8.</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {physicalLounges.map(l => {
                     const checked = editAssignedLoungeIds.includes(l.id);
+                    const ldCap = editVipLD + editNonFlyingLD;
+                    const isAtCap = !checked && editAssignedLoungeIds.length >= ldCap;
                     return (
                       <label key={l.id}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${
                           checked
                             ? 'border-blue-300 bg-blue-50 text-blue-800'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            : isAtCap
+                              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}>
                         <Checkbox
                           checked={checked}
+                          disabled={isAtCap}
                           onCheckedChange={() => toggleEditLounge(l.id)}
                         />
                         <span className="font-medium">{l.suite_name}</span>

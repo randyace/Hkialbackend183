@@ -14,6 +14,13 @@ export interface Booking {
   bookingNo: string;
   guestName: string;
   accountNo: string;
+  // 2026-06-11 — round 6.2.34 UX. The booking's account FK.
+  // The parent-repo wrapper pre-fetches
+  // `GET /api/accounts/{booking.accountId}` for the "View
+  // Customer Profile" dialog. Mirrors the parent-repo
+  // `ViewBooking.accountId` (bookingService.ts:30) so the
+  // internal type stays consistent.
+  accountId?: number;
   /**
    * Legacy field — the first assigned suite's name (e.g. "CIP 1"),
    * surfaced on review / approval list pages.
