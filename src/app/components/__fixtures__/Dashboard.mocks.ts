@@ -190,7 +190,7 @@ export const mockPendingApprovals: PendingApproval[] = [
     pax: 2,
     specialRequests: 'Changed time from 14:00 to 16:00',
     contactPhone: '+852 9567 8901',
-    accountType: 'Travel Agency',
+    accountType: 'Agency',
     original: {
       suite: 'Premier Suite',
       date: '2026-03-09',

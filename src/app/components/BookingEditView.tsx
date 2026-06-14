@@ -198,7 +198,7 @@ export function BookingEdit({
           )}
           {seed.agencyName && (
             <div>
-              <label className="block text-gray-500 mb-[10px]">Travel Agency</label>
+              <label className="block text-gray-500 mb-[10px]">Agency</label>
               <p className="text-gray-700 bg-gray-50 px-3 py-2 rounded border">{seed.agencyName}</p>
             </div>
           )}

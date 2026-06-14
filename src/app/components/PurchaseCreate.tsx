@@ -165,7 +165,7 @@ export function CategoryBadge({ cat }: { cat: PurchaseCategory }) {
     return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><User className="w-3 h-3" />Individual</span>;
   if (cat === 'Corporate')
     return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />Corporate</span>;
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Travel Agency</span>;
+  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Agency</span>;
 }
 
 export function StatusBadge({ status }: { status: PurchaseStatus }) {
@@ -656,7 +656,7 @@ export function PurchaseCreate({
             {selectedAccount && isTravelAgency && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Enter contract details for Travel Agency account.
+                  Enter contract details for Agency account.
                 </p>
                 <div className="space-y-4">
                   <div>

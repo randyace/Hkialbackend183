@@ -41,7 +41,7 @@ type AdjustmentReason =
   | 'Guest Count Reduction'
   | 'Add-on Service Removed'
   | 'Promo Code Applied'
-  | 'Travel Agency Discount Correction'
+  | 'Agency Discount Correction'
   | 'Manual Adjustment by Staff'
   | 'Booking Date Change'
   | 'Flight Class Change';
@@ -129,7 +129,7 @@ const MOCK_REFUND_RECORDS: RefundRecord[] = [
     revisedAmount: 11250,
     refundAmount: 3750,
     paymentMethod: 'Bulk Purchase/Monthly Invoice',
-    adjustmentReason: 'Travel Agency Discount Correction',
+    adjustmentReason: 'Agency Discount Correction',
     adjustmentDetail: 'Agency discount rate of 25% was incorrectly not applied at time of booking. Corrected to standard rate.',
     status: 'Pending Review',
     suite: 'Premier Suite',
@@ -275,7 +275,7 @@ const MOCK_REFUND_RECORDS: RefundRecord[] = [
     revisedAmount: 22950,
     refundAmount: 4050,
     paymentMethod: 'Bulk Purchase/Monthly Invoice',
-    adjustmentReason: 'Travel Agency Discount Correction',
+    adjustmentReason: 'Agency Discount Correction',
     adjustmentDetail: 'Monthly invoice reconciliation found over-billing. Standard 15% agency rate re-applied.',
     status: 'Pending Review',
     suite: 'VIP Suite A',
@@ -683,7 +683,7 @@ export function RefundReport({
     'Guest Count Reduction',
     'Add-on Service Removed',
     'Promo Code Applied',
-    'Travel Agency Discount Correction',
+    'Agency Discount Correction',
     'Manual Adjustment by Staff',
     'Booking Date Change',
     'Flight Class Change',

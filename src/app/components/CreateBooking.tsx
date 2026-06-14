@@ -8,6 +8,10 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
+// 2026-06-12 (round 6.2.39, M11 fix) — import the shared
+// catalog of add-on services. The pre-6.2.39 hardcoded
+// CREATE_ADDON_SERVICES (4 items) is replaced by this import.
+import { CATALOG_ADDONS, CATALOG_ADDON_MAP } from './addons';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import {
@@ -943,7 +947,7 @@ export function CreateBooking({
         <Card className="p-6">
           <h2 className="mb-1">Account &amp; Guest Information</h2>
           <p className="text-sm text-gray-500 mb-6">
-            Select account type and enter guest details. Travel Agency accounts auto-apply their default discount rate.
+            Select account type and enter guest details. Agency accounts auto-apply their default discount rate.
           </p>
 
           {/* Account Type */}
@@ -1928,18 +1932,22 @@ export function CreateBooking({
             // `bookable_items` table so this can be
             // DB-sourced too.
             // ──────────────────────────────────────────────────────
-            const CREATE_ADDON_SERVICES: { key: string; icon: React.ReactNode; desc: string; price: string; badge: string; badgeClass: string }[] = [
-              // The `price` field is unused for display (the
-              // badge is sourced from `bookableItemPrices` at
-              // render time via `resolveServiceDisplay`), but
-              // it's still part of the type for backward
-              // compatibility with the resolveServiceDisplay
-              // return type.
-              { key: 'Limousine Transfer',      icon: <Car className="w-4 h-4" />,          desc: 'Private car transfer service',                    price: '0',   badge: '+HK$—',        badgeClass: 'bg-purple-100 text-purple-700' },
-              { key: 'Wheelchair Assistance',   icon: <Accessibility className="w-4 h-4" />, desc: 'Mobility and accessibility support',              price: '0',   badge: 'Contact us',  badgeClass: 'bg-gray-100 text-gray-600'    },
-              { key: 'Lounge Extension',        icon: <Clock className="w-4 h-4" />,        desc: 'Extend VIP lounge access by an additional hour', price: '0',   badge: '+HK$—/hr',    badgeClass: 'bg-amber-100 text-amber-700'   },
-              { key: 'Security Escort Service', icon: <ShieldCheck className="w-4 h-4" />,  desc: 'Dedicated security escort throughout',            price: '0',   badge: '+HK$—',        badgeClass: 'bg-amber-100 text-amber-700'   },
-            ];
+            // 2026-06-12 (round 6.2.39, M11 fix) — replace the
+            // hardcoded CREATE_ADDON_SERVICES (4 items) with
+            // the shared CATALOG_ADDONS import. See
+            // `components/addons.ts` for the source of truth.
+            // The 4 names match the backend's `bookable_items`
+            // catalog exactly (verified against
+            // `BookableItemSeeder` + the migration
+            // `2026_06_09_120100_seed_3_bookable_items.php`).
+            const CREATE_ADDON_SERVICES = CATALOG_ADDONS.map((a) => ({
+              key: a.key,
+              icon: a.icon,
+              desc: a.desc,
+              price: String(a.defaultPrice),
+              badge: a.badge ?? (a.defaultPrice > 0 ? `+HK$${a.defaultPrice.toLocaleString()}` : '+HK$—'),
+              badgeClass: a.badgeClass,
+            }));
 
             // 2026-06-08 round 6.2.8 — apply the DB price override for
             // any addon whose key matches a `bookableItemPrices` entry.

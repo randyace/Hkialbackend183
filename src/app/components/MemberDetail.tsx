@@ -797,7 +797,7 @@ export function MemberDetail({
                     <option value="Henderson Land">Henderson Land</option>
                     <option value="Sun Hung Kai Properties">Sun Hung Kai Properties</option>
                   </optgroup>
-                  <optgroup label="Travel Agency Groups">
+                  <optgroup label="Agency Groups">
                     <option value="EGL Tours">EGL Tours</option>
                     <option value="Wing On Travel">Wing On Travel</option>
                     <option value="Hong Thai Travel">Hong Thai Travel</option>

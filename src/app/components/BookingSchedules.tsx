@@ -442,7 +442,7 @@ export function BookingSchedules({
           </Card>
           <Card className="p-4 bg-orange-50 border-orange-200">
             <p className="text-2xl text-orange-700">{travelAgencyCount}</p>
-            <p className="text-sm text-orange-600">Travel Agency Groups</p>
+            <p className="text-sm text-orange-600">Agency Groups</p>
           </Card>
           <Card className="p-4 bg-emerald-50 border-emerald-200">
             <p className="text-2xl text-emerald-700">{avgGroupSize}</p>

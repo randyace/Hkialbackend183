@@ -620,7 +620,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-purple-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Travel Agency</p>
+                <p className="text-xs text-gray-500 mb-1">Agency</p>
                 <p className="text-2xl text-purple-600">{agencyCount}</p>
               </div>
               <Building2 className="w-8 h-8 text-purple-200" />

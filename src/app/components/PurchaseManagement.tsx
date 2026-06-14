@@ -175,7 +175,7 @@ export function PurchaseManagement({
         <div>
           <h1 className="text-gray-900 mb-1">Purchase Management</h1>
           <p className="text-sm text-gray-500">
-            Manage grading package purchases for Individual members and session bundle purchases for Corporate & Travel Agency accounts.
+            Manage grading package purchases for Individual members and session bundle purchases for Corporate & Agency accounts.
           </p>
         </div>
         <Button
@@ -212,7 +212,7 @@ export function PurchaseManagement({
           <p className="text-xs text-gray-500 mt-1">Session bundles</p>
         </Card>
         <Card className="p-4 border-2 border-purple-200 bg-purple-50">
-          <div className="flex items-center gap-1 mb-2"><Plane className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-600">Travel Agency</span></div>
+          <div className="flex items-center gap-1 mb-2"><Plane className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-600">Agency</span></div>
           <p className="text-xl text-purple-700">{taCount}</p>
           <p className="text-xs text-gray-500 mt-1">Session bundles</p>
         </Card>
@@ -223,7 +223,7 @@ export function PurchaseManagement({
         {([
           { key: 'all',        label: 'All Purchases' },
           { key: 'individual', label: 'Individual (Grading Package)' },
-          { key: 'corporate',  label: 'Corporate & Travel Agency' },
+          { key: 'corporate',  label: 'Corporate & Agency' },
         ] as { key: TabView; label: string }[]).map(tab => (
           <button
             key={tab.key}

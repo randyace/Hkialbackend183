@@ -413,7 +413,7 @@ export function AccountCreation({
               <>
                 {/* Agency Search */}
                 <div className="mb-6">
-                  <Label style={{ marginBottom: 10 }}>Select Travel Agency *</Label>
+                  <Label style={{ marginBottom: 10 }}>Select Agency *</Label>
                   <div className="relative">
                     <Input
                       placeholder="Search agency by name or code..."

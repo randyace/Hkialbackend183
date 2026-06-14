@@ -446,11 +446,11 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
             <BadgePercent className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-green-800 mb-1 flex items-center gap-2">
-                Travel Agency Auto-Discount — Sample Demonstration
+                Agency Auto-Discount — Sample Demonstration
                 <span className="text-xs font-normal bg-green-200 text-green-800 px-2 py-0.5 rounded-full">For Client Review</span>
               </p>
               <p className="text-sm text-green-700 mb-3">
-                Bookings made under a Travel Agency account automatically apply the agency's pre-configured default discount rate.
+                Bookings made under an Agency account automatically apply the agency's pre-configured default discount rate.
                 The <strong>Amount column</strong> below shows the original price (struck through) and the discounted final amount with a badge.
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
@@ -474,7 +474,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
               </div>
               <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
                 <Info className="w-3 h-3" />
-                Filter by <strong>"Agent Booking"</strong> in the Booking Category dropdown to see only Travel Agency bookings with auto-discounts.
+                Filter by <strong>"Agent Booking"</strong> in the Booking Category dropdown to see only Agency bookings with auto-discounts.
               </p>
             </div>
             <button

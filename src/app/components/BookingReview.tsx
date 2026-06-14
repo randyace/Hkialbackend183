@@ -359,7 +359,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
             )}
             {booking.agencyName && (
               <div>
-                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Travel Agency</p>
+                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Agency</p>
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-purple-600" />
                   <span>{booking.agencyName}</span>

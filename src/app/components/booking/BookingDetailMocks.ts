@@ -14,6 +14,13 @@ export interface Booking {
   bookingNo: string;
   guestName: string;
   accountNo: string;
+  // 2026-06-11 — round 6.2.34 UX. The booking's account FK.
+  // The parent-repo wrapper pre-fetches
+  // `GET /api/accounts/{booking.accountId}` for the "View
+  // Customer Profile" dialog. Mirrors the parent-repo
+  // `ViewBooking.accountId` (bookingService.ts:30) so the
+  // internal type stays consistent.
+  accountId?: number;
   /**
    * Legacy field — the first assigned suite's name (e.g. "CIP 1"),
    * surfaced on review / approval list pages.
@@ -121,7 +128,7 @@ export interface Booking {
   hasLimousine?: boolean;
   hasShopping?: boolean;
   cutoffHours?: number;
-  accountType?: 'Individual' | 'Corporate' | 'Travel Agency';
+  accountType?: 'Individual' | 'Corporate' | 'Agency';
   paymentMode?: 'Upfront' | 'On-Credit';
   rejectionReason?: string;
   bookingType: 'Online' | 'Email/Call to HKIAL';
@@ -332,7 +339,7 @@ export const EXPLICIT_BOOKING_OVERRIDES: Record<number, Partial<Booking>> = {
     numberOfGuests: 3, nonFlyingGuests: 0, hasLimousine: true, hasShopping: false,
     numberOfPremiereSuites: 0, vipPassengersInPremiereSuite: 0, nonFlyingGuestsInPremiereSuite: 0,
     vipPassengersInLoungeDeluxe: 3, nonFlyingGuestsInLoungeDeluxe: 0,
-    isAdHoc: false, accountType: 'Travel Agency', bookingType: 'Email/Call to HKIAL',
+    isAdHoc: false, accountType: 'Agency', bookingType: 'Email/Call to HKIAL',
     rejectionReason: undefined, agencyName: 'EGL Tours', agencyCode: 'TA-EG-001',
     agencyDiscountRate: 20, originalAmountValue: 5738, finalAmountValue: 4590,
   },
@@ -396,7 +403,7 @@ export const generateMockBooking = (id: number): Booking => {
   const airlines = ['CX', 'BA', 'NH', 'SQ', 'QF', 'EK', 'LH'];
   const origins = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA'];
   const destinations = ['HKG', 'TPE', 'ICN', 'BKK', 'SIN', 'NRT', 'PVG'];
-  const accountTypes: Booking['accountType'][] = ['Individual', 'Corporate', 'Travel Agency'];
+  const accountTypes: Booking['accountType'][] = ['Individual', 'Corporate', 'Agency'];
   const paymentModes: Booking['paymentMode'][] = ['Upfront', 'On-Credit'];
 
   const i = id;
@@ -439,7 +446,7 @@ export const generateMockBooking = (id: number): Booking => {
   } else if (i % 19 === 0) {
     amount = 'Manual Adjustment';
   } else {
-    if (accountType === 'Travel Agency') {
+    if (accountType === 'Agency') {
       const agency = DETAIL_AGENCY_DATA[i % DETAIL_AGENCY_DATA.length];
       agencyName = agency.name;
       agencyCode = agency.code;
