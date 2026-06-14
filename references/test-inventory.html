@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HKIAL Test Inventory — All Subprojects</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+
+:root {
+  --bg: #0e1116;
+  --surface: #161b22;
+  --surface-2: #1c2128;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --yellow: #d29922;
+  --red: #f85149;
+  --orange: #db6d28;
+  --purple: #bc8cff;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+}
+header {
+  background: linear-gradient(180deg, #1c2128 0%, #161b22 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 32px 24px 24px;
+}
+h1 { margin: 0 0 4px; font-size: 28px; font-weight: 600; }
+h2 { margin: 32px 0 12px; font-size: 22px; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+h3 { margin: 24px 0 8px; font-size: 17px; font-weight: 600; color: var(--accent); }
+h4 { margin: 16px 0 6px; font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.container { max-width: 1280px; margin: 0 auto; padding: 0 24px 64px; }
+.subtitle { color: var(--text-muted); margin: 0; font-size: 14px; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.toc li a {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}
+.toc li a:hover { background: var(--surface); border-color: var(--accent); }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.stat .label { color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat .value { font-size: 28px; font-weight: 700; color: var(--text); }
+.stat .sub { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+thead { background: var(--surface-2); }
+th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface-2); }
+code {
+  font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  font-size: 12px;
+}
+.count {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.count-0 { color: var(--text-muted); }
+.count-1 { color: var(--yellow); }
+.count-2-5 { color: var(--green); }
+.count-6-15 { color: var(--green); }
+.count-16-30 { color: var(--purple); }
+.count-31-plus { color: var(--orange); font-weight: 700; }
+
+.bug-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 10px;
+  border-radius: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  margin-right: 4px;
+  margin-top: 2px;
+}
+.bug-tag.warn { color: var(--yellow); border-color: var(--yellow); }
+.bug-tag.fail { color: var(--red); border-color: var(--red); }
+.bug-tag.fix { color: var(--green); border-color: var(--green); }
+.bug-tag.inv { color: var(--purple); border-color: var(--purple); }
+
+.foot {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 48px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+details { margin: 8px 0; }
+details summary {
+  cursor: pointer;
+  padding: 4px 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+details[open] summary { color: var(--text); }
+
+</style>
+</head>
+<body>
+<header>
+<div class="container">
+<h1>HKIAL Test Inventory</h1>
+<p class="subtitle">All tests across 3 subprojects — backend Laravel, admin SPA, customer SPA, plus the 7-second no-browser smoke runner. Generated 2026-06-12 14:09 HKT.</p>
+<ul class="toc">
+<li><a href="#stats">Stats</a></li>
+<li><a href="#smoke">Smoke (7s)</a></li>
+<li><a href="#api-feature">API: Feature (PHPUnit)</a></li>
+<li><a href="#api-unit">API: Unit (PricingService)</a></li>
+<li><a href="#admin-e2e">Admin: Playwright E2E</a></li>
+<li><a href="#cust-e2e">Customer: Playwright E2E</a></li>
+<li><a href="#pre-existing">Pre-existing failures</a></li>
+<li><a href="#how-to-run">How to run</a></li>
+</ul>
+</div>
+</header>
+<div class="container">
+<h2 id="stats">Stats at a glance</h2>
+<div class="stats">
+<div class="stat"><div class="label">Total test invocations</div><div class="value">779</div><div class="sub">Across all suites</div></div>
+<div class="stat"><div class="label">Test files</div><div class="value">134</div><div class="sub">45 Feature + 2 Unit + 63 admin E2E + 23 customer E2E + 1 smoke</div></div>
+<div class="stat"><div class="label">API (Laravel PHPUnit)</div><div class="value">414</div><div class="sub">358 Feature + 56 Pricing Unit</div></div>
+<div class="stat"><div class="label">Admin Playwright</div><div class="value">301</div><div class="sub">30 specs with count / 33 aliases</div></div>
+<div class="stat"><div class="label">Customer Playwright</div><div class="value">51</div><div class="sub">23 specs</div></div>
+<div class="stat"><div class="label">Smoke (no browser)</div><div class="value">13</div><div class="sub">~7s end-to-end: API + DB + frontend HTTP</div></div>
+</div>
+<h2 id="smoke">Smoke Test (7s, no browser)</h2>
+<p>Path: <code>backend/hkial-api/tests/smoke_test_runner.py</code></p>
+<p>Runs the full stack without opening a browser — admin login → CRUD on every resource → frontend page returns 200. Auto-cleanup on created records. <strong>Run this FIRST</strong> on every code change.</p>
+<pre>cd /Users/sky/Desktop/Projects/backend/hkial-api && python3 tests/smoke_test_runner.py
+# Expected: 26 passed | 0 failed | 0 warnings | ~7s</pre>
+<table>
+<thead><tr><th style="width:42%">Test</th><th>What it covers</th></tr></thead>
+<tbody>
+<tr><td><code>auth_login</code></td><td>POST /api/auth/login (admin staff) → bearer token</td></tr>
+<tr><td><code>frontend_pages_dashboard</code></td><td>GET / → 200 (admin dashboard HTML)</td></tr>
+<tr><td><code>frontend_pages_bookable_items</code></td><td>GET /bookable-items → 200</td></tr>
+<tr><td><code>frontend_pages_promo_codes</code></td><td>GET /promo-codes → 200</td></tr>
+<tr><td><code>frontend_pages_create_promo</code></td><td>GET /promo-codes/create → 200</td></tr>
+<tr><td><code>frontend_pages_travel_agencies</code></td><td>GET /travel-agencies → 200</td></tr>
+<tr><td><code>frontend_pages_accounts</code></td><td>GET /accounts → 200</td></tr>
+<tr><td><code>frontend_pages_member_detail</code></td><td>GET /members/{id} → 200</td></tr>
+<tr><td><code>promo_code_batch_crud</code></td><td>Batch create 3 codes → list → delete (cleanup)</td></tr>
+<tr><td><code>bookable_items_crud</code></td><td>Create → read → update (cleanup)</td></tr>
+<tr><td><code>travel_agency_crud</code></td><td>Create → read → update (cleanup)</td></tr>
+<tr><td><code>account_crud</code></td><td>Create → read → update (cleanup)</td></tr>
+<tr><td><code>member_detail_profile_fields</code></td><td>PUT 4 profile fields (preferences, food_allergies, remarks, movements) → GET verifies round-trip</td></tr>
+</tbody>
+</table>
+<h2 id="api-feature">API: Feature tests (PHPUnit, Laravel)</h2>
+<p><strong>44 test files (excluding ExampleTest.php) / 358 test methods. Path: <code>backend/hkial-api/tests/Feature/</code>. All use <code>RefreshDatabase</code> trait (SQLite :memory:). Run: <code>cd backend/hkial-api &amp;&amp; php artisan test</code>.</strong></p>
+<table>
+<thead><tr><th style="width:30%">Test file</th><th style="width:60px">Methods</th><th>Target / what it covers</th><th style="width:22%">Rounds / bugs</th></tr></thead>
+<tbody>
+<tr><td><code>AccountApiTest</code></td><td><span class="count count-2-5">5</span></td><td><strong>GET/POST/PUT/DELETE /api/accounts</strong><br><span style="color:var(--text-muted);font-size:12px">CRUD on accounts (Individual / Corporate / TravelAgency), profile fields, role gates</span></td><td><span class="bug-tag fix">Round 6.2.6–11: profile fields persistence + RBAC</span></td></tr>
+<tr><td><code>AddonSeedingTest</code></td><td><span class="count count-2-5">4</span></td><td><strong>database/seeders/AddonSeeder</strong><br><span style="color:var(--text-muted);font-size:12px">BookableItem seeder idempotency + 4-addon catalog (Lounge Ext, Limousine, Wheelchair, Security Escort)</span></td><td><span class="bug-tag fix">Round 6.2.20 'move those mock to db' directive</span></td></tr>
+<tr><td><code>AdminBookingAddonsTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>POST /api/bookings (admin)</strong><br><span style="color:var(--text-muted);font-size:12px">Admin staff can attach addons when creating a booking on behalf of a member</span></td><td><span class="bug-tag fix">Round 6.2.20</span></td></tr>
+<tr><td><code>ApplicationApiTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>GET/POST /api/applications + verify-email + approve + reject</strong><br><span style="color:var(--text-muted);font-size:12px">Membership application lifecycle (apply, email verify, approve/reject)</span></td><td><span class="bug-tag fix">Standard member intake flow</span></td></tr>
+<tr><td><code>AuditLogE2eTest</code></td><td><span class="count count-6-15">10</span></td><td><strong>/api/audit-logs (write side across mutations)</strong><br><span style="color:var(--text-muted);font-size:12px">Every state-changing action writes a log row (who/when/what/old→new)</span></td><td><span class="bug-tag inv">INV-5 / 7-layer audit</span></td></tr>
+<tr><td><code>AuthApiTest</code></td><td><span class="count count-6-15">15</span></td><td><strong>POST /api/auth/{login,logout,register} + GET /api/auth/user + GET /api/auth/member/{login,logout,me} + verify-otp</strong><br><span style="color:var(--text-muted);font-size:12px">Staff (Sanctum) + Member (custom auth.api) login + OTP verify + rate limiting</span></td><td><span class="bug-tag inv">INV-X3 dual auth; OTP 888888 bypass</span></td></tr>
+<tr><td><code>AuthRateLimitAndAccountAuthTest</code></td><td><span class="count count-6-15">10</span></td><td><strong>POST /api/auth/login (rate limit) + GET /api/auth/member/me (bearer token resolution)</strong><br><span style="color:var(--text-muted);font-size:12px">5-failed-login lockout + member auth.api token SHA256→personal_access_tokens</span></td><td><span class="bug-tag inv">INV-X4 token read on every call</span></td></tr>
+<tr><td><code>BookableItemApiTest</code></td><td><span class="count count-6-15">12</span></td><td><strong>GET/POST/PUT/DELETE /api/bookable-items</strong><br><span style="color:var(--text-muted);font-size:12px">Bookable item CRUD + category enum (Suite/TransferServices/FoodBeverage/Shopping)</span></td><td><span class="bug-tag fix">Round 6.2.20 catalog</span></td></tr>
+<tr><td><code>BookingAddonsPricePreviewTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>GET /api/price/preview with addons</strong><br><span style="color:var(--text-muted);font-size:12px">Live price preview includes addon subtotal before submit</span></td><td><span class="bug-tag fix">Round 6.2.29 per-kind preview parity</span></td></tr>
+<tr><td><code>BookingAddonsPricingTotalTest</code></td><td><span class="count count-2-5">3</span></td><td><strong>POST /api/bookings + GET /api/bookings/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Final booking total = base + addons (no double-bill, no missing line items)</span></td><td><span class="bug-tag fix">Round 6.2.20 + 6.2.28 reverse-reapply</span></td></tr>
+<tr><td><code>BookingAddonsRoundTripTest</code></td><td><span class="count count-2-5">3</span></td><td><strong>POST /api/bookings → GET /api/bookings/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Addon array round-trips through DB (write side → read side symmetry)</span></td><td><span class="bug-tag inv">Anti-pattern #1 phantom-field READ mirror</span></td></tr>
+<tr><td><code>BookingApiTest</code></td><td><span class="count count-6-15">9</span></td><td><strong>GET/POST/PUT/PUT-status/DELETE /api/bookings</strong><br><span style="color:var(--text-muted);font-size:12px">Booking CRUD + status transitions + pagination + permission gates</span></td><td><span class="bug-tag fix">Baseline booking API</span></td></tr>
+<tr><td><code>BookingCreatedEmailTest</code></td><td><span class="count count-6-15">8</span></td><td><strong>POST /api/bookings (Mail::fake + BookingCreated mailable)</strong><br><span style="color:var(--text-muted);font-size:12px">Booking-created email is queued with right recipient + body + attachments</span></td><td><span class="bug-tag fix">Email pipeline regression</span></td></tr>
+<tr><td><code>BookingFlowMatrixTest</code></td><td><span class="count count-6-15">11</span></td><td><strong>POST /api/bookings with various suite/lounge/guest combos (K1..K8 + per-kind buckets)</strong><br><span style="color:var(--text-muted);font-size:12px">End-to-end booking flow against 8+ pricing matrix cases (single-kind, mixed-kind, PS/LD rules)</span></td><td><span class="bug-tag fix">Round 6.2.23 multi-kind + 6.2.31/32/33 PS Note 5 cap + infant counting</span></td></tr>
+<tr><td><code>BookingGuestCountFieldsTest</code></td><td><span class="count count-6-15">14</span></td><td><strong>POST /api/bookings with per-kind fields (premiere_vip_passengers, lounge_vip_passengers, etc.)</strong><br><span style="color:var(--text-muted);font-size:12px">Per-kind guest count fields (PS, LD, NFG) round-trip + compute per-kind total</span></td><td><span class="bug-tag fix">Round 6.2.23 + 6.2.26 K/NFG disjoint billing</span></td></tr>
+<tr><td><code>BookingLimoDoubleBillTest</code></td><td><span class="count count-2-5">3</span></td><td><strong>POST /api/bookings with Limousine addon (1 vs 2 vs 3 stops)</strong><br><span style="color:var(--text-muted);font-size:12px">Limousine addon charges correctly per stop (no double-bill on round trip)</span></td><td><span class="bug-tag fix">Round 6.2.20 limo line item</span></td></tr>
+<tr><td><code>BookingPricingIntegrationTest</code></td><td><span class="count count-16-30">21</span></td><td><strong>POST /api/bookings + GET /api/price + matrix (Q8 simple model, multi-kind, per-kind, capacity, capacity cap)</strong><br><span style="color:var(--text-muted);font-size:12px">Full pricing pipeline (validator → service → persist → read) across 9+ matrix cases</span></td><td><span class="bug-tag inv">Anti-pattern #12 shared-formula-cascade + 5-Q test-design-matrix</span></td></tr>
+<tr><td><code>BookingSettingsApiTest</code></td><td><span class="count count-2-5">3</span></td><td><strong>GET/PUT /api/bookings/settings</strong><br><span style="color:var(--text-muted);font-size:12px">Booking settings (admin-tunable caps/fees) CRUD</span></td><td><span class="bug-tag fix">Settings config regression</span></td></tr>
+<tr><td><code>BookingShowEagerLoadTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>GET /api/bookings/{id} (N+1 query check)</strong><br><span style="color:var(--text-muted);font-size:12px">Show endpoint eager-loads relations (no N+1)</span></td><td><span class="bug-tag fix">Performance regression</span></td></tr>
+<tr><td><code>BookingTransitFlightTypeTest</code></td><td><span class="count count-31-plus">35</span></td><td><strong>POST /api/bookings with flight_type ∈ {Arrival,Departure,Transit}</strong><br><span style="color:var(--text-muted);font-size:12px">Transit 2-leg validation (6h gap, leg 1/2 fields, advanced_details.flight.legs[])</span></td><td><span class="bug-tag inv">Round 6.2.3 Transit + I-C1 customer mirror</span></td></tr>
+<tr><td><code>BookingWorkflowE2eTest</code></td><td><span class="count count-6-15">6</span></td><td><strong>Full staff approval flow (create → pending → approve → confirm)</strong><br><span style="color:var(--text-muted);font-size:12px">Approval queue + status transitions + email triggers</span></td><td><span class="bug-tag fix">Admin workflow regression</span></td></tr>
+<tr><td><code>CompanyApiTest</code></td><td><span class="count count-1">1</span></td><td><strong>GET /api/companies</strong><br><span style="color:var(--text-muted);font-size:12px">Company listing + filtering</span></td><td><span class="bug-tag fix">Corporate accounts</span></td></tr>
+<tr><td><code>ContractManagementContractTest</code></td><td><span class="count count-2-5">5</span></td><td><strong>Travel-agency contract CRUD + member contract inheritance</strong><br><span style="color:var(--text-muted);font-size:12px">Contract mgmt for travel agencies (M2/M3/M4 sub-tabs)</span></td><td><span class="bug-tag warn">Known pre-existing fail (1 case); tracked separately</span></td></tr>
+<tr><td><code>CustomerEndToEndTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>Customer flow: register → login → create booking → cancel</strong><br><span style="color:var(--text-muted);font-size:12px">Happy-path customer lifecycle (smoke)</span></td><td><span class="bug-tag fix">Onboarding smoke</span></td></tr>
+<tr><td><code>ExampleTest</code></td><td><span class="count count-1">1</span></td><td><strong>GET /</strong><br><span style="color:var(--text-muted);font-size:12px">Application root returns 200 (Laravel template)</span></td><td><span class="bug-tag fix">Trivially passing — exclude from coverage count</span></td></tr>
+<tr><td><code>GradingPackageApiTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>GET /api/grading-packages</strong><br><span style="color:var(--text-muted);font-size:12px">Membership grading package catalog</span></td><td><span class="bug-tag fix">Membership tiers</span></td></tr>
+<tr><td><code>Inv15CamelCaseLeakageTest</code></td><td><span class="count count-2-5">4</span></td><td><strong>PricingService + loaders + display chain</strong><br><span style="color:var(--text-muted);font-size:12px">INV-15: camelCase labels never leak from DB-sourced records to display</span></td><td><span class="bug-tag inv">Anti-pattern #6 missing-source-label</span></td></tr>
+<tr><td><code>LogUserActionDebugTest</code></td><td><span class="count count-1">1</span></td><td><strong>POST /api/* (debug helper)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug log captures user actions for trace</span></td><td><span class="bug-tag fix">Debug utility</span></td></tr>
+<tr><td><code>MemberAuthApiTest</code></td><td><span class="count count-31-plus">40</span></td><td><strong>POST /api/auth/member/{login,logout} + verify-otp + GET /me</strong><br><span style="color:var(--text-muted);font-size:12px">Full member auth surface (login → OTP → bearer token → me), edge cases (wrong OTP, expired token, rate limit)</span></td><td><span class="bug-tag inv">INV-X3 + INV-X4</span></td></tr>
+<tr><td><code>MemberBookingLifecycleE2eTest</code></td><td><span class="count count-2-5">5</span></td><td><strong>POST/GET/PUT/DELETE /api/member/bookings</strong><br><span style="color:var(--text-muted);font-size:12px">Member-side booking lifecycle (create → list → edit → cancel)</span></td><td><span class="bug-tag fix">Customer booking flow</span></td></tr>
+<tr><td><code>MemberBookingUpdateTest</code></td><td><span class="count count-6-15">13</span></td><td><strong>PUT /api/member/bookings/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Member can update their own booking (account_id ownership check + 9 editable fields)</span></td><td><span class="bug-tag fix">Round 6.2.38 edit-booking coverage</span></td></tr>
+<tr><td><code>OpportunityApiTest</code></td><td><span class="count count-1">1</span></td><td><strong>GET /api/opportunities</strong><br><span style="color:var(--text-muted);font-size:12px">Sales opportunity tracking</span></td><td><span class="bug-tag fix">Sales pipeline</span></td></tr>
+<tr><td><code>PosOrderApiTest</code></td><td><span class="count count-6-15">10</span></td><td><strong>POST /api/pos/orders + /api/pos/orders/{id}/pay</strong><br><span style="color:var(--text-muted);font-size:12px">POS terminal order + payment</span></td><td><span class="bug-tag fix">POS / KDS integration</span></td></tr>
+<tr><td><code>PriceApiTest</code></td><td><span class="count count-16-30">16</span></td><td><strong>POST /api/price + /api/price/preview</strong><br><span style="color:var(--text-muted);font-size:12px">Price quote + preview endpoints (apply path + preview path)</span></td><td><span class="bug-tag fix">Round 6.2.30 server-side next-booking-no</span></td></tr>
+<tr><td><code>PricePreviewContractTest</code></td><td><span class="count count-16-30">24</span></td><td><strong>POST /api/price/preview (all multi-kind/per-kind/totals-only buckets)</strong><br><span style="color:var(--text-muted);font-size:12px">Preview endpoint contract vs apply endpoint contract (parity check)</span></td><td><span class="bug-tag inv">Anti-pattern #11 preview-path-lags-apply-path</span></td></tr>
+<tr><td><code>ProfileFieldsPersistenceTest</code></td><td><span class="count count-2-5">4</span></td><td><strong>PUT /api/member/profile + GET /api/accounts/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Member profile fields (food_allergies / movements / remarks / preferences) round-trip</span></td><td><span class="bug-tag fix">Round 6.2.6–11 + 6.2.13</span></td></tr>
+<tr><td><code>PromoCodeApiTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>GET/POST /api/promo-codes + /validate</strong><br><span style="color:var(--text-muted);font-size:12px">Promo code CRUD + validate against amount</span></td><td><span class="bug-tag fix">Promo engine</span></td></tr>
+<tr><td><code>PromoCodeBookingE2eTest</code></td><td><span class="count count-6-15">13</span></td><td><strong>POST /api/bookings with promo_code field</strong><br><span style="color:var(--text-muted);font-size:12px">Promo applied at booking create (validate, apply, persist)</span></td><td><span class="bug-tag fix">Promo in booking flow</span></td></tr>
+<tr><td><code>PurchaseMembershipApiTest</code></td><td><span class="count count-2-5">2</span></td><td><strong>POST /api/purchase-membership</strong><br><span style="color:var(--text-muted);font-size:12px">Membership purchase (upgrade tier)</span></td><td><span class="bug-tag fix">Member tier flow</span></td></tr>
+<tr><td><code>PurchaseRefundE2eTest</code></td><td><span class="count count-6-15">8</span></td><td><strong>POST /api/purchase + POST /api/refund</strong><br><span style="color:var(--text-muted);font-size:12px">Purchase → refund end-to-end (lifecycle + amount calculation)</span></td><td><span class="bug-tag fix">Refund pipeline</span></td></tr>
+<tr><td><code>RefundApiTest</code></td><td><span class="count count-1">1</span></td><td><strong>GET/POST /api/refund</strong><br><span style="color:var(--text-muted);font-size:12px">Refund list + create</span></td><td><span class="bug-tag fix">Refund admin view</span></td></tr>
+<tr><td><code>SuiteApiTest</code></td><td><span class="count count-6-15">8</span></td><td><strong>GET /api/suites + PUT /api/suites/{id}/status + /floor-plan</strong><br><span style="color:var(--text-muted);font-size:12px">Suite catalog + status toggle + floor plan</span></td><td><span class="bug-tag fix">Premiere Suite resource</span></td></tr>
+<tr><td><code>SystemUserPermissionE2eTest</code></td><td><span class="count count-6-15">12</span></td><td><strong>RBAC permission gates across /api/* (bookings.approve, accounts.create, etc.)</strong><br><span style="color:var(--text-muted);font-size:12px">12 distinct permission gates exercised end-to-end</span></td><td><span class="bug-tag inv">INV-X3 + RBAC matrix</span></td></tr>
+<tr><td><code>SystemUserRbacApiTest</code></td><td><span class="count count-2-5">3</span></td><td><strong>GET /api/system-users + /permissions</strong><br><span style="color:var(--text-muted);font-size:12px">System user management + RBAC listing</span></td><td><span class="bug-tag fix">Admin user mgmt</span></td></tr>
+<tr><td><code>TravelAgencyApiTest</code></td><td><span class="count count-1">1</span></td><td><strong>GET /api/travel-agencies</strong><br><span style="color:var(--text-muted);font-size:12px">Travel agency listing + filtering</span></td><td><span class="bug-tag fix">Agency directory</span></td></tr>
+</tbody>
+</table>
+<h2 id="api-unit">API: Unit tests (PricingService)</h2>
+<p><strong>2 test files / 56 test methods. Path: <code>backend/hkial-api/tests/Unit/Services/Pricing/</code>. Run: <code>cd backend/hkial-api &amp;&amp; php artisan test --testsuite=Unit</code>.</strong></p>
+<table>
+<thead><tr><th style="width:30%">Test file</th><th style="width:60px">Methods</th><th>Target / what it covers</th><th style="width:22%">Rounds / bugs</th></tr></thead>
+<tbody>
+<tr><td><code>PricingServiceMultiKindMatrixTest</code></td><td><span class="count count-6-15">15</span></td><td><strong>PricingService (multi-kind matrix K1..K15)</strong><br><span style="color:var(--text-muted);font-size:12px">Per-kind pricing arithmetic across 15 matrix cases</span></td><td><span class="bug-tag fix">Round 6.2.23 + 6.2.26 + 6.2.30–33</span></td></tr>
+<tr><td><code>PricingServiceTest</code></td><td><span class="count count-31-plus">41</span></td><td><strong>PricingService (single-kind, per-resource, per-guest, capacity, caps, NFG rules, infant rules)</strong><br><span style="color:var(--text-muted);font-size:12px">Single-kind pricing service unit tests across 41 cases</span></td><td><span class="bug-tag fix">Round 6.0–6.1.3 + 6.2.4 + 6.2.7–8 + 6.2.13–18</span></td></tr>
+</tbody>
+</table>
+<h2 id="admin-e2e">Admin: Playwright E2E (hkial-react)</h2>
+<p><strong>63 spec files / 301 test() invocations. Path: <code>backend/hkial-react/tests/e2e/</code>. Run: <code>cd backend/hkial-react &amp;&amp; npx playwright test</code>. For Azure: <code>--project=chromium-azure</code>.</strong></p>
+<table>
+<thead><tr><th style="width:30%">Test file</th><th style="width:60px">Tests</th><th>Target / what it covers</th><th style="width:22%">Rounds / bugs</th></tr></thead>
+<tbody>
+<tr><td><code>create-booking-full-coverage</code></td><td><span class="count count-31-plus">45</span></td><td><strong>admin /bookings/create (50-row audit matrix)</strong><br><span style="color:var(--text-muted);font-size:12px">6×account + 4×promo + 8×flight + 5×PS + 4×LD + 4×passenger + 6×addons + 4×contact + 1×Price Breakdown + 5×s...</span></td><td><span class="bug-tag warn">Round 6.2.22 + 6.2.28 + 6.2.29 + 6.2.30 — flag 8 dropdown focus-click flakes</span></td></tr>
+<tr><td><code>membership-reports</code></td><td><span class="count count-31-plus">36</span></td><td><strong>admin /purchase + /balance + /reports/corporate + /reports/refund + /bookings/reports</strong><br><span style="color:var(--text-muted);font-size:12px">5 reports pages — list + filter + export + tab navigation</span></td><td><span class="bug-tag fix">Membership mgmt regression</span></td></tr>
+<tr><td><code>missing-areas-full</code></td><td><span class="count count-31-plus">33</span></td><td><strong>admin gap-coverage sweep (post-6.2.22 audit)</strong><br><span style="color:var(--text-muted);font-size:12px">33 cases filling known coverage gaps identified in round 6.2.22</span></td><td><span class="bug-tag fix">Round 6.2.22 mid-fix audit</span></td></tr>
+<tr><td><code>member-detail-all-tabs</code></td><td><span class="count count-16-30">25</span></td><td><strong>admin /members/{id} (6 tabs)</strong><br><span style="color:var(--text-muted);font-size:12px">Profile / Preferences / Food Allergies / Remarks / Movement Log / Security tabs (render + edit + persistence)</span></td><td><span class="bug-tag fix">Round 6.2.34 + 6.2.35 customer-profile-real-data</span></td></tr>
+<tr><td><code>create-booking-pricing-full-e2e</code></td><td><span class="count count-16-30">16</span></td><td><strong>admin /bookings/create (price surface regression)</strong><br><span style="color:var(--text-muted);font-size:12px">10+ cases across lounge/suite/addons (regression pin for addons-pricing fix rounds 1-5 + 5.5 hot-fix)</span></td><td><span class="bug-tag fix">Round 6.2.20 + 6.2.28 reverse-reapply</span></td></tr>
+<tr><td><code>member-detail-crud</code></td><td><span class="count count-6-15">13</span></td><td><strong>admin /members/{id} CRUD</strong><br><span style="color:var(--text-muted);font-size:12px">Member detail create / read / update / delete with 6 sections</span></td><td><span class="bug-tag fix">Member mgmt</span></td></tr>
+<tr><td><code>customer-member-detail</code></td><td><span class="count count-6-15">11</span></td><td><strong>admin (staff view of customer member detail)</strong><br><span style="color:var(--text-muted);font-size:12px">Cross-side: staff sees the same MemberDetail as customer would (parity)</span></td><td><span class="bug-tag fix">Cross-frontend parity</span></td></tr>
+<tr><td><code>member-detail-smoke</code></td><td><span class="count count-6-15">8</span></td><td><strong>admin /members/{id} (smoke)</strong><br><span style="color:var(--text-muted);font-size:12px">Smoke: page loads + tabs render + no console errors</span></td><td><span class="bug-tag fix">Smoke regression</span></td></tr>
+<tr><td><code>customer-accounts-crud</code></td><td><span class="count count-6-15">7</span></td><td><strong>admin /accounts (CRUD)</strong><br><span style="color:var(--text-muted);font-size:12px">Staff-side account CRUD (7 cases)</span></td><td><span class="bug-tag fix">Account mgmt</span></td></tr>
+<tr><td><code>purchase-management</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /purchase + /purchase-management</strong><br><span style="color:var(--text-muted);font-size:12px">Membership purchase + management</span></td><td><span class="bug-tag fix">Member purchase flow</span></td></tr>
+<tr><td><code>promo-codes-crud</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /promo-codes (CRUD)</strong><br><span style="color:var(--text-muted);font-size:12px">Promo code create/read/update/delete + 6 cases</span></td><td><span class="bug-tag fix">Promo mgmt</span></td></tr>
+<tr><td><code>promo-code-usage</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /promo-codes/usage</strong><br><span style="color:var(--text-muted);font-size:12px">Promo code usage tracking + analytics</span></td><td><span class="bug-tag fix">Promo reporting</span></td></tr>
+<tr><td><code>customer-accounts-full</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /accounts (full coverage)</strong><br><span style="color:var(--text-muted);font-size:12px">Full account CRUD coverage (6 cases)</span></td><td><span class="bug-tag fix">Account mgmt deep</span></td></tr>
+<tr><td><code>booking-management-e2e</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /bookings (list + filters)</strong><br><span style="color:var(--text-muted);font-size:12px">Booking list + status filters + bulk actions</span></td><td><span class="bug-tag fix">Booking mgmt</span></td></tr>
+<tr><td><code>bookable-items-crud</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /bookable-items (CRUD)</strong><br><span style="color:var(--text-muted);font-size:12px">Bookable item CRUD UI flow</span></td><td><span class="bug-tag fix">Catalog mgmt</span></td></tr>
+<tr><td><code>bookable-items</code></td><td><span class="count count-6-15">6</span></td><td><strong>admin /bookable-items (smoke)</strong><br><span style="color:var(--text-muted);font-size:12px">Bookable items list + search + filter</span></td><td><span class="bug-tag fix">Catalog browse</span></td></tr>
+<tr><td><code>travel-agency-crud</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /travel-agencies (CRUD)</strong><br><span style="color:var(--text-muted);font-size:12px">Travel agency CRUD</span></td><td><span class="bug-tag fix">Agency mgmt</span></td></tr>
+<tr><td><code>refund-report</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /reports/refund</strong><br><span style="color:var(--text-muted);font-size:12px">Refund report rendering + filter</span></td><td><span class="bug-tag fix">Refund reporting</span></td></tr>
+<tr><td><code>opportunity-tracking</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /opportunities</strong><br><span style="color:var(--text-muted);font-size:12px">Opportunity pipeline list</span></td><td><span class="bug-tag fix">Sales pipeline</span></td></tr>
+<tr><td><code>create-booking-e2e</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /bookings/create (e2e)</strong><br><span style="color:var(--text-muted);font-size:12px">5 cases — page load + account search + guest search</span></td><td><span class="bug-tag fix">Round 6.2.7 baseline</span></td></tr>
+<tr><td><code>corporate-reports</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /reports/corporate</strong><br><span style="color:var(--text-muted);font-size:12px">Corporate reports rendering</span></td><td><span class="bug-tag fix">Corporate reporting</span></td></tr>
+<tr><td><code>corporate-profiles</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /corporate-profiles</strong><br><span style="color:var(--text-muted);font-size:12px">Corporate profile mgmt</span></td><td><span class="bug-tag fix">Corporate profile</span></td></tr>
+<tr><td><code>booking-schedules-e2e</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /bookings/schedules</strong><br><span style="color:var(--text-muted);font-size:12px">Booking schedules (suite/table)</span></td><td><span class="bug-tag fix">Schedules</span></td></tr>
+<tr><td><code>booking-detail-e2e</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /bookings/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Booking detail page rendering + tabs</span></td><td><span class="bug-tag fix">Booking detail</span></td></tr>
+<tr><td><code>booking-approval</code></td><td><span class="count count-2-5">5</span></td><td><strong>admin /bookings/approval</strong><br><span style="color:var(--text-muted);font-size:12px">Booking approval queue</span></td><td><span class="bug-tag fix">Approval workflow</span></td></tr>
+<tr><td><code>promo-codes-list</code></td><td><span class="count count-2-5">4</span></td><td><strong>admin /promo-codes (list)</strong><br><span style="color:var(--text-muted);font-size:12px">Promo code list rendering + filter</span></td><td><span class="bug-tag fix">Promo list</span></td></tr>
+<tr><td><code>password-reset</code></td><td><span class="count count-2-5">4</span></td><td><strong>admin /password-reset</strong><br><span style="color:var(--text-muted);font-size:12px">Password reset flow</span></td><td><span class="bug-tag fix">Auth recovery</span></td></tr>
+<tr><td><code>lounge-layout</code></td><td><span class="count count-2-5">4</span></td><td><strong>admin /pos/floor-plan</strong><br><span style="color:var(--text-muted);font-size:12px">Lounge floor plan + suite status</span></td><td><span class="bug-tag fix">POS / lounge view</span></td></tr>
+<tr><td><code>booking-review-page-e2e</code></td><td><span class="count count-2-5">4</span></td><td><strong>admin /bookings/review/{id}</strong><br><span style="color:var(--text-muted);font-size:12px">Booking review page (v2 — the new one)</span></td><td><span class="bug-tag fix">Round 6.2.34 review page</span></td></tr>
+<tr><td><code>booking-approval-queue-e2e</code></td><td><span class="count count-2-5">4</span></td><td><strong>admin /bookings/approval/queue</strong><br><span style="color:var(--text-muted);font-size:12px">Approval queue with multi-booking selection</span></td><td><span class="bug-tag fix">Approval queue</span></td></tr>
+<tr><td><code>booking-full-journey</code></td><td><span class="count count-0">—</span></td><td><strong>admin — full multi-page booking journey</strong><br><span style="color:var(--text-muted);font-size:12px">Full journey: create → review → approve → publish</span></td><td><span class="bug-tag fix">Full booking E2E</span></td></tr>
+<tr><td><code>booking-flow-full-e2e</code></td><td><span class="count count-0">—</span></td><td><strong>admin — booking flow (3-step user flow + addon-aware total)</strong><br><span style="color:var(--text-muted);font-size:12px">3-step user flow with addon-aware total + list verification</span></td><td><span class="bug-tag fix">Round 6.2.4 / 6.2.5 wire layer</span></td></tr>
+<tr><td><code>booking-full-flow-company-agency</code></td><td><span class="count count-0">—</span></td><td><strong>admin — booking flow for company + travel agency account types</strong><br><span style="color:var(--text-muted);font-size:12px">End-to-end booking flow as different account types (Company, Agency)</span></td><td><span class="bug-tag fix">Account-type conditional flow</span></td></tr>
+<tr><td><code>booking-management</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings (list mgmt)</strong><br><span style="color:var(--text-muted);font-size:12px">Booking management list + filters</span></td><td><span class="bug-tag fix">Booking mgmt baseline</span></td></tr>
+<tr><td><code>booking-reports</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings/reports</strong><br><span style="color:var(--text-muted);font-size:12px">Booking reports dashboard</span></td><td><span class="bug-tag fix">Booking reporting</span></td></tr>
+<tr><td><code>booking-schedules</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings/schedules (suite/table)</strong><br><span style="color:var(--text-muted);font-size:12px">Suite/table schedule views</span></td><td><span class="bug-tag fix">Schedule views</span></td></tr>
+<tr><td><code>booking-settings</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings/settings (config)</strong><br><span style="color:var(--text-muted);font-size:12px">Booking settings config UI</span></td><td><span class="bug-tag fix">Config UI</span></td></tr>
+<tr><td><code>booking-settings-e2e</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings/settings (e2e)</strong><br><span style="color:var(--text-muted);font-size:12px">Settings e2e</span></td><td><span class="bug-tag fix">Config e2e</span></td></tr>
+<tr><td><code>booking-supervising-approval</code></td><td><span class="count count-0">—</span></td><td><strong>admin /bookings/supervising-approval</strong><br><span style="color:var(--text-muted);font-size:12px">Supervising approval queue (delegated approve)</span></td><td><span class="bug-tag fix">Supervising workflow</span></td></tr>
+<tr><td><code>customer-flow</code></td><td><span class="count count-0">—</span></td><td><strong>admin customer-flow (staff impersonation)</strong><br><span style="color:var(--text-muted);font-size:12px">Staff-side customer flow</span></td><td><span class="bug-tag fix">Cross-frontend smoke</span></td></tr>
+<tr><td><code>customer-accounts</code></td><td><span class="count count-0">—</span></td><td><strong>admin /accounts (customer-account view)</strong><br><span style="color:var(--text-muted);font-size:12px">Customer account listing</span></td><td><span class="bug-tag fix">Account listing</span></td></tr>
+<tr><td><code>customer-applications</code></td><td><span class="count count-0">—</span></td><td><strong>admin /applications (membership app queue)</strong><br><span style="color:var(--text-muted);font-size:12px">Application queue</span></td><td><span class="bug-tag fix">Application mgmt</span></td></tr>
+<tr><td><code>customer-balance-tracker</code></td><td><span class="count count-0">—</span></td><td><strong>admin /balance (member balance tracker)</strong><br><span style="color:var(--text-muted);font-size:12px">Member balance tracker</span></td><td><span class="bug-tag fix">Balance UI</span></td></tr>
+<tr><td><code>customer-companies</code></td><td><span class="count count-0">—</span></td><td><strong>admin /companies (company listing)</strong><br><span style="color:var(--text-muted);font-size:12px">Company listing</span></td><td><span class="bug-tag fix">Companies</span></td></tr>
+<tr><td><code>customer-create-booking-transit-form-fill</code></td><td><span class="count count-0">—</span></td><td><strong>admin — Transit booking (UI form-fill, no API token)</strong><br><span style="color:var(--text-muted);font-size:12px">Transit booking with real UI form-fill (Strategy B auth)</span></td><td><span class="bug-tag fix">Transit E2E</span></td></tr>
+<tr><td><code>customer-create-booking-transit</code></td><td><span class="count count-0">—</span></td><td><strong>admin — Transit booking (alias)</strong><br><span style="color:var(--text-muted);font-size:12px">Transit booking spec</span></td><td><span class="bug-tag fix">Transit</span></td></tr>
+<tr><td><code>customer-grading-packages</code></td><td><span class="count count-0">—</span></td><td><strong>admin /grading-packages</strong><br><span style="color:var(--text-muted);font-size:12px">Grading package mgmt</span></td><td><span class="bug-tag fix">Grading</span></td></tr>
+<tr><td><code>customer-member-company</code></td><td><span class="count count-0">—</span></td><td><strong>admin /members/{id}/company</strong><br><span style="color:var(--text-muted);font-size:12px">Member-company relation</span></td><td><span class="bug-tag fix">Member company</span></td></tr>
+<tr><td><code>customer-member-profile</code></td><td><span class="count count-0">—</span></td><td><strong>admin /members/{id}/profile</strong><br><span style="color:var(--text-muted);font-size:12px">Member profile</span></td><td><span class="bug-tag fix">Member profile</span></td></tr>
+<tr><td><code>customer-purchase-balance</code></td><td><span class="count count-0">—</span></td><td><strong>admin /purchase-balance</strong><br><span style="color:var(--text-muted);font-size:12px">Purchase balance view</span></td><td><span class="bug-tag fix">Purchase balance</span></td></tr>
+<tr><td><code>customer-reports</code></td><td><span class="count count-0">—</span></td><td><strong>admin /reports (customer-side)</strong><br><span style="color:var(--text-muted);font-size:12px">Customer reports</span></td><td><span class="bug-tag fix">Customer reports</span></td></tr>
+<tr><td><code>customer-travel-agency</code></td><td><span class="count count-0">—</span></td><td><strong>admin /travel-agencies (customer-side)</strong><br><span style="color:var(--text-muted);font-size:12px">Customer-side travel agency</span></td><td><span class="bug-tag fix">Agency</span></td></tr>
+<tr><td><code>debug-member-detail</code></td><td><span class="count count-0">—</span></td><td><strong>admin — MemberDetail debug (pageerror probe)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug: pageerror listener on MemberDetail page</span></td><td><span class="bug-tag fix">Debug probe</span></td></tr>
+<tr><td><code>debug-login</code></td><td><span class="count count-0">—</span></td><td><strong>admin — login debug (pageerror + console)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug: login flow with pageerror + console listeners</span></td><td><span class="bug-tag fix">Debug probe</span></td></tr>
+<tr><td><code>kitchen-display</code></td><td><span class="count count-0">—</span></td><td><strong>admin /kds (kitchen display)</strong><br><span style="color:var(--text-muted);font-size:12px">Kitchen display system</span></td><td><span class="bug-tag fix">KDS view</span></td></tr>
+<tr><td><code>pos-floor-plan</code></td><td><span class="count count-0">—</span></td><td><strong>admin /pos/floor-plan</strong><br><span style="color:var(--text-muted);font-size:12px">POS floor plan + suite status</span></td><td><span class="bug-tag fix">POS floor plan</span></td></tr>
+<tr><td><code>pos-transactions</code></td><td><span class="count count-0">—</span></td><td><strong>admin /pos/transactions</strong><br><span style="color:var(--text-muted);font-size:12px">POS transaction log</span></td><td><span class="bug-tag fix">POS transactions</span></td></tr>
+<tr><td><code>system-users-audit</code></td><td><span class="count count-0">—</span></td><td><strong>admin /system-users/audit</strong><br><span style="color:var(--text-muted);font-size:12px">System user audit log</span></td><td><span class="bug-tag fix">Audit view</span></td></tr>
+<tr><td><code>trace-save</code></td><td><span class="count count-0">—</span></td><td><strong>admin — save-flow trace (instrumentation)</strong><br><span style="color:var(--text-muted);font-size:12px">Trace: save-flow instrumentation</span></td><td><span class="bug-tag fix">Trace probe</span></td></tr>
+<tr><td><code>trace2-save</code></td><td><span class="count count-0">—</span></td><td><strong>admin — save-flow trace v2</strong><br><span style="color:var(--text-muted);font-size:12px">Trace v2</span></td><td><span class="bug-tag fix">Trace probe</span></td></tr>
+<tr><td><code>trace3-save</code></td><td><span class="count count-0">—</span></td><td><strong>admin — save-flow trace v3</strong><br><span style="color:var(--text-muted);font-size:12px">Trace v3</span></td><td><span class="bug-tag fix">Trace probe</span></td></tr>
+<tr><td><code>verify-save-flow</code></td><td><span class="count count-0">—</span></td><td><strong>admin — save-flow verify (contract test)</strong><br><span style="color:var(--text-muted);font-size:12px">Verify: save-flow contract</span></td><td><span class="bug-tag fix">Contract test</span></td></tr>
+<tr><td><code>round-6.2.10-keith-case</code></td><td><span class="count count-0">—</span></td><td><strong>admin — round 6.2.10 keith-case regression</strong><br><span style="color:var(--text-muted);font-size:12px">Keith case (specific user-reported bug)</span></td><td><span class="bug-tag fix">Round 6.2.10 regression</span></td></tr>
+</tbody>
+</table>
+<h2 id="cust-e2e">Customer: Playwright E2E (frontend_react)</h2>
+<p><strong>23 spec files / 51 test() invocations. Path: <code>frontend_react/frontend/tests/</code>. Run: <code>cd frontend_react/frontend &amp;&amp; npm test</code>.</strong></p>
+<table>
+<thead><tr><th style="width:30%">Test file</th><th style="width:60px">Tests</th><th>Target / what it covers</th><th style="width:22%">Rounds / bugs</th></tr></thead>
+<tbody>
+<tr><td><code>booking-flow</code></td><td><span class="count count-16-30">16</span></td><td><strong>customer /newbooking → /mybooking (5-step flow)</strong><br><span style="color:var(--text-muted);font-size:12px">5-step new booking flow + mybooking list + step navigation</span></td><td><span class="bug-tag fix">Customer booking baseline</span></td></tr>
+<tr><td><code>transit-2-legs-customer</code></td><td><span class="count count-2-5">3</span></td><td><strong>customer /newbooking (Transit 2-leg)</strong><br><span style="color:var(--text-muted);font-size:12px">Transit 2-leg happy path + 4h gap 422 + DB round-trip</span></td><td><span class="bug-tag inv">I-C1 + I-C2 + round 6.2.8 customer mirror</span></td></tr>
+<tr><td><code>transit-2-leg-display</code></td><td><span class="count count-2-5">3</span></td><td><strong>customer /mybooking/details/{id} (Transit 2-leg display)</strong><br><span style="color:var(--text-muted);font-size:12px">Transit 2-leg fields rendered on detail page (regression for leg 2 display)</span></td><td><span class="bug-tag fix">Round 6.2.8/9</span></td></tr>
+<tr><td><code>edit-booking-save-flow</code></td><td><span class="count count-2-5">3</span></td><td><strong>customer /mybooking/details/{id} (edit save)</strong><br><span style="color:var(--text-muted);font-size:12px">Render every input + send right wire shape (number_of_guests = vipPS + vipLD) + re-read</span></td><td><span class="bug-tag fix">Round 6.2.38 edit-booking invariant</span></td></tr>
+<tr><td><code>dashboard-contract</code></td><td><span class="count count-2-5">3</span></td><td><strong>customer /dashboard (API contract)</strong><br><span style="color:var(--text-muted);font-size:12px">Dashboard data contract (real API vs MOCK_* fallback)</span></td><td><span class="bug-tag fix">Class #6 mock data + #8 forward layer downsize</span></td></tr>
+<tr><td><code>bookings-list-contract</code></td><td><span class="count count-2-5">3</span></td><td><strong>customer /mybooking (list contract)</strong><br><span style="color:var(--text-muted);font-size:12px">List rendering + filter + status badge</span></td><td><span class="bug-tag fix">List contract</span></td></tr>
+<tr><td><code>addons-3surfaces-e2e</code></td><td><span class="count count-1">1</span></td><td><strong>customer — addons (3 surfaces)</strong><br><span style="color:var(--text-muted);font-size:12px">Addons appear on Form + Review + Detail (3 surfaces)</span></td><td><span class="bug-tag fix">Round 6.2.20 addons 3-surfacing</span></td></tr>
+<tr><td><code>addons-roundtrip-e2e</code></td><td><span class="count count-1">1</span></td><td><strong>customer — addons round-trip (DB ↔ UI)</strong><br><span style="color:var(--text-muted);font-size:12px">Addons round-trip through customer create + detail read</span></td><td><span class="bug-tag fix">Round 6.2.20</span></td></tr>
+<tr><td><code>booking-detail-contract</code></td><td><span class="count count-2-5">2</span></td><td><strong>customer /mybooking/details/{id} (contract)</strong><br><span style="color:var(--text-muted);font-size:12px">Booking detail API contract + display</span></td><td><span class="bug-tag fix">Detail contract</span></td></tr>
+<tr><td><code>booking-detail-smoke</code></td><td><span class="count count-1">1</span></td><td><strong>customer /mybooking/details/{id} (smoke)</strong><br><span style="color:var(--text-muted);font-size:12px">Detail page smoke (load + render)</span></td><td><span class="bug-tag fix">Detail smoke</span></td></tr>
+<tr><td><code>dashboard-smoke</code></td><td><span class="count count-1">1</span></td><td><strong>customer /dashboard (smoke)</strong><br><span style="color:var(--text-muted);font-size:12px">Dashboard smoke (load + render)</span></td><td><span class="bug-tag fix">Dashboard smoke</span></td></tr>
+<tr><td><code>click-edit-button</code></td><td><span class="count count-1">1</span></td><td><strong>customer — click Edit button on /mybooking</strong><br><span style="color:var(--text-muted);font-size:12px">Edit button navigation flow</span></td><td><span class="bug-tag fix">Edit button click</span></td></tr>
+<tr><td><code>click-flow-verify</code></td><td><span class="count count-2-5">2</span></td><td><strong>customer — full flow verify (click-only)</strong><br><span style="color:var(--text-muted);font-size:12px">Click-only flow verify (no API token)</span></td><td><span class="bug-tag fix">Click flow</span></td></tr>
+<tr><td><code>debug-booking-547</code></td><td><span class="count count-1">1</span></td><td><strong>customer — debug booking 547 (pageerror probe)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug: pageerror listener on booking 547</span></td><td><span class="bug-tag fix">Debug probe</span></td></tr>
+<tr><td><code>debug-dashboard</code></td><td><span class="count count-1">1</span></td><td><strong>customer — debug dashboard (pageerror probe)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug: pageerror listener on dashboard</span></td><td><span class="bug-tag fix">Debug probe</span></td></tr>
+<tr><td><code>diagnose-localhost-622</code></td><td><span class="count count-1">1</span></td><td><strong>customer — diagnose localhost:622</strong><br><span style="color:var(--text-muted);font-size:12px">Diagnose local dev server</span></td><td><span class="bug-tag fix">Local dev</span></td></tr>
+<tr><td><code>edit-booking-706-audit</code></td><td><span class="count count-1">1</span></td><td><strong>customer — audit edit-booking on booking 706</strong><br><span style="color:var(--text-muted);font-size:12px">Audit booking 706 edit</span></td><td><span class="bug-tag fix">Audit probe</span></td></tr>
+<tr><td><code>inspect-state</code></td><td><span class="count count-1">1</span></td><td><strong>customer — inspect React state (debug)</strong><br><span style="color:var(--text-muted);font-size:12px">Debug: inspect state</span></td><td><span class="bug-tag fix">Debug</span></td></tr>
+<tr><td><code>manual-azure-verify-622</code></td><td><span class="count count-2-5">2</span></td><td><strong>customer — manual Azure verify round 6.2.2</strong><br><span style="color:var(--text-muted);font-size:12px">Manual verify against Azure bundle</span></td><td><span class="bug-tag fix">Azure verify</span></td></tr>
+<tr><td><code>newbooking-5step-flow</code></td><td><span class="count count-1">1</span></td><td><strong>customer — newbooking 5-step flow</strong><br><span style="color:var(--text-muted);font-size:12px">5-step wizard (Step 1: Flight → Step 5: Review)</span></td><td><span class="bug-tag fix">Newbooking baseline</span></td></tr>
+<tr><td><code>root-url-verify</code></td><td><span class="count count-1">1</span></td><td><strong>customer — root URL verify (/)</strong><br><span style="color:var(--text-muted);font-size:12px">Root URL renders</span></td><td><span class="bug-tag fix">Root verify</span></td></tr>
+<tr><td><code>screenshot-azure-622</code></td><td><span class="count count-1">1</span></td><td><strong>customer — screenshot Azure round 6.2.2</strong><br><span style="color:var(--text-muted);font-size:12px">Capture screenshots for visual regression</span></td><td><span class="bug-tag fix">Visual regression</span></td></tr>
+<tr><td><code>vip-box-count</code></td><td><span class="count count-1">1</span></td><td><strong>customer — VIP box count (UI count vs sum)</strong><br><span style="color:var(--text-muted);font-size:12px">VIP box count consistency (form data vs render)</span></td><td><span class="bug-tag fix">Class #7 ghost-cards-on-decrement</span></td></tr>
+</tbody>
+</table>
+<h2 id="pre-existing">Pre-existing failure notes (HKIAL-specific)</h2>
+<p>Do not chase these as part of your fix. Note in handoff doc instead.</p>
+<table>
+<thead><tr><th>Location</th><th>What</th><th>Why not yours</th></tr></thead>
+<tbody>
+<tr><td><code>backend/hkial-api ContractManagementContractTest</code></td><td>1 case pre-existing fail</td><td>Tracked separately, not yours unless touched</td></tr>
+<tr><td><code>backend/hkial-api BookingFlowMatrixTest (5 cases)</code></td><td>Pre-existing fails from round 6.2.31 cascade</td><td>Defer to round 6.2.35+, don't bundle into your commit</td></tr>
+<tr><td><code>backend/hkial-react tsc --noEmit</code></td><td>~76 pre-existing TypeScript errors</td><td>Do not add to count</td></tr>
+<tr><td><code>frontend_react/frontend tsc --noEmit</code></td><td>Some pre-existing errors</td><td>Do not add to count</td></tr>
+</tbody>
+</table>
+<h2 id="how-to-run">How to run</h2>
+<h3>Quick: 7s smoke (recommended first check)</h3>
+<pre>cd /Users/sky/Desktop/Projects/backend/hkial-api
+python3 tests/smoke_test_runner.py</pre>
+<h3>Full backend (PHPUnit)</h3>
+<pre>cd /Users/sky/Desktop/Projects/backend/hkial-api
+php artisan test                    # all (Feature + Unit)
+php artisan test --filter BookingFlowMatrixTest   # one class
+php artisan test --testsuite=Unit   # only PricingService unit tests
+composer test                       # alias for php artisan test</pre>
+<h3>Full admin (Playwright + Vitest)</h3>
+<pre>cd /Users/sky/Desktop/Projects/backend/hkial-react
+npx playwright test                # all 72 specs
+npx playwright test tests/e2e/create-booking-full-coverage.spec.ts   # one spec
+npx playwright test --project=chromium-azure  # against deployed bundle
+npx vitest run                      # unit tests (if any)
+npx tsc --noEmit                    # type check (76 pre-existing errors expected)</pre>
+<h3>Full customer (Playwright)</h3>
+<pre>cd /Users/sky/Desktop/Projects/frontend_react/frontend
+npm test                            # all 23 specs
+npx playwright test tests/booking-flow.spec.ts  # one spec
+npx tsc --noEmit                    # type check (some pre-existing errors expected)</pre>
+<h3>Per-subproject pre-commit gate</h3>
+<p>See <code>HKIAL/skills/hkial-pre-commit-gate/SKILL.md</code> for the 4-phase gate (stash-then-rerun, lint, sample, full).</p>
+<div class="foot">
+Generated by Hermes agent. Path: <code>HKIAL/references/test-inventory.html</code>. For invariants / cross-project rules see <code>HKIAL/AGENTS.md</code>. For 12 bug classes (frontend) and 12 contract-test anti-patterns (backend) see <code>HKIAL/references/pointer-index.md</code>.
+</div>
+</div>
+</body>
+</html>

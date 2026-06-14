@@ -1,0 +1,59 @@
+# Hermes config for HKIAL project-local workspace
+# Auto-loaded by opencode when ~/Desktop/Projects/HKIAL/ is the workspace root.
+# Subproject sessions (frontend_react/, backend/) do NOT auto-load this — they have their own.
+
+version: 1
+project: hkial
+scope: cross-project
+
+# Skills to auto-load (from project-local HKIAL/skills/)
+auto_load_skills:
+  - hkial-setup-onboarding
+  - hkial-container-view-pattern
+  - hkial-pre-commit-gate
+  - hkial-frontend-disambiguation
+  - hkial-azure-deploy
+  - hkial-handoff-discipline
+
+# Skills to auto-load (from global ~/.hermes/skills/software-development/)
+auto_load_global_skills:
+  - hkial                 # umbrella, v1.9.0
+  - hkial-e2e-login-auth
+  - hkial-frontend-bug-debug-checklist
+  - hkial-frontend-e2e-selector-pattern
+  - hkial-customer-frontend-figma-codebase-sync
+  - hkial-debugging-stuck-loop
+  - hkial-label-rename-audit-cookbook
+  - contract-test-first-workflow
+  - test-design-matrix
+
+# Auto-load AGENTS.md from these locations (in addition to the workspace's own AGENTS.md)
+auto_load_instructions:
+  - AGENTS.md                                  # this workspace
+  - ../frontend_react/AGENTS.md                # customer umbrella
+  - ../frontend_react/frontend/AGENTS.md       # customer project-specific
+  - ../backend/AGENTS.md                       # monorepo umbrella
+  - ../backend/.opencode/agent/hermes.md       # backend primary agent
+
+# Memory
+memory_files:
+  - MEMORY.md   # this workspace's project-local memory
+
+# Permission policy (matches backend/opencode.json for consistency)
+permission:
+  edit:
+    "*": allow
+    "**/figma-ui/**": ask
+    "**/hkial-react/src/components/figma-ui/**": deny
+    "**/frontend_react/frontend/src/components/figma-ui/**": deny
+  bash:
+    "*": allow
+    "rm -rf*": ask
+    "git push*": ask
+    "docker push*": ask
+    "migrate:fresh*": ask   # INV-X2: prevent accidental fresh --seed
+
+# Channel routing (optional — Sky to add)
+# channels:
+#   telegram: ...
+#   whatsapp: ...

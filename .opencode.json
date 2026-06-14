@@ -1,0 +1,6 @@
+opencode.json
+{
+  "permission": {
+    "*": "pass"
+  }
+}
