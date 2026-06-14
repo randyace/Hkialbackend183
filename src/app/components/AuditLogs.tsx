@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Search, Filter, Calendar } from 'lucide-react';
+import { Search, Calendar, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,7 +11,7 @@ import {
 } from './ui/select';
 
 export interface AuditLog {
-  id: string;
+  id: string | number;
   timestamp: string;
   user: string;
   action: string;
@@ -22,17 +22,57 @@ export interface AuditLog {
 }
 
 const MOCK_AUDIT_LOGS: AuditLog[] = [
-  { id: '1',  timestamp: '2024-10-22 14:30:25', user: 'HKIAL Staff',    action: 'Updated booking status',            module: 'Bookings',      details: 'Changed status from Pending to Approved for A-202602-000001',          ipAddress: '192.168.1.100', status: 'success' },
-  { id: '2',  timestamp: '2024-10-22 14:15:12', user: 'Wong Chi Ming',  action: 'Approved customer application',      module: 'Customers',     details: 'Approved application APP-2024-015 and assigned account ACC-2024-0234', ipAddress: '192.168.1.105', status: 'success' },
-  { id: '3',  timestamp: '2024-10-22 13:45:33', user: 'Chan Siu Lan',   action: 'Failed login attempt',               module: 'Authentication', details: 'Invalid password entered',                                              ipAddress: '192.168.1.120', status: 'failed'  },
-  { id: '4',  timestamp: '2024-10-22 13:30:18', user: 'Lee Ka Wai',     action: 'Created new booking',               module: 'Bookings',      details: 'Created booking A-202602-000045 for guest John Smith',                  ipAddress: '192.168.1.108', status: 'success' },
-  { id: '5',  timestamp: '2024-10-22 12:20:44', user: 'Lam Mei Ling',   action: 'Updated bookable item',             module: 'Items',         details: 'Changed price of VIP Suite A from HK$4,200 to HK$4,500',               ipAddress: '192.168.1.115', status: 'success' },
-  { id: '6',  timestamp: '2024-10-22 11:55:09', user: 'HKIAL Staff',    action: 'Created system user',               module: 'System Users',  details: 'Created new staff account for Tang Wai Hong',                           ipAddress: '192.168.1.100', status: 'success' },
-  { id: '7',  timestamp: '2024-10-22 11:30:22', user: 'Wong Chi Ming',  action: 'Exported report',                   module: 'Reports',       details: 'Generated and exported Daily Booking Report for 2024-10-22',            ipAddress: '192.168.1.105', status: 'success' },
-  { id: '8',  timestamp: '2024-10-22 10:45:15', user: 'Lee Ka Wai',     action: 'Attempted unauthorized access',     module: 'System Users',  details: 'Tried to access System Users Management without permission',             ipAddress: '192.168.1.108', status: 'warning' },
-  { id: '9',  timestamp: '2024-10-22 10:15:38', user: 'Chan Siu Lan',   action: 'Rejected booking',                  module: 'Bookings',      details: 'Rejected booking A-202602-000044 - Reason: Suite not available',        ipAddress: '192.168.1.120', status: 'success' },
-  { id: '10', timestamp: '2024-10-22 09:30:51', user: 'HKIAL Staff',    action: 'Updated system settings',           module: 'Settings',      details: 'Changed email notification settings for booking confirmations',          ipAddress: '192.168.1.100', status: 'success' },
+  { id: '1',  timestamp: '2024-10-22 14:30:25', user: 'HKIAL Staff',    action: 'UPDATE', module: 'Booking',      details: 'Changed status from Pending to Approved for A-202602-000001',          ipAddress: '192.168.1.100', status: 'warning' },
+  { id: '2',  timestamp: '2024-10-22 14:15:12', user: 'Wong Chi Ming',  action: 'CREATE', module: 'Application',  details: 'Approved application APP-2024-015 and assigned account ACC-2024-0234', ipAddress: '192.168.1.105', status: 'success' },
+  { id: '3',  timestamp: '2024-10-22 13:45:33', user: 'Chan Siu Lan',   action: 'LOGIN',  module: 'auth',         details: 'Invalid password entered',                                              ipAddress: '192.168.1.120', status: 'failed'  },
+  { id: '4',  timestamp: '2024-10-22 13:30:18', user: 'Lee Ka Wai',     action: 'CREATE', module: 'Booking',      details: 'Created booking A-202602-000045 for guest John Smith',                  ipAddress: '192.168.1.108', status: 'success' },
+  { id: '5',  timestamp: '2024-10-22 12:20:44', user: 'Lam Mei Ling',   action: 'UPDATE', module: 'BookableItem', details: 'Changed price of VIP Suite A from HK$4,200 to HK$4,500',               ipAddress: '192.168.1.115', status: 'warning' },
+  { id: '6',  timestamp: '2024-10-22 11:55:09', user: 'HKIAL Staff',    action: 'CREATE', module: 'SystemUser',   details: 'Created new staff account for Tang Wai Hong',                           ipAddress: '192.168.1.100', status: 'success' },
+  { id: '7',  timestamp: '2024-10-22 11:30:22', user: 'Wong Chi Ming',  action: 'VIEW',   module: 'Report',       details: 'Generated and exported Daily Booking Report for 2024-10-22',            ipAddress: '192.168.1.105', status: 'success' },
+  { id: '8',  timestamp: '2024-10-22 10:45:15', user: 'Lee Ka Wai',     action: 'OTHER',  module: 'SystemUser',   details: 'Tried to access System Users Management without permission',            ipAddress: '192.168.1.108', status: 'warning' },
+  { id: '9',  timestamp: '2024-10-22 10:15:38', user: 'Chan Siu Lan',   action: 'UPDATE', module: 'Booking',      details: 'Rejected booking A-202602-000044 - Reason: Suite not available',        ipAddress: '192.168.1.120', status: 'warning' },
+  { id: '10', timestamp: '2024-10-22 09:30:51', user: 'HKIAL Staff',    action: 'UPDATE', module: 'system',       details: 'Changed email notification settings for booking confirmations',         ipAddress: '192.168.1.100', status: 'warning' },
 ];
+
+const MODULE_LABELS: Record<string, string> = {
+  Booking: 'Bookings',
+  Account: 'Customers',
+  Company: 'Companies',
+  PromoCode: 'Promo Codes',
+  Purchase: 'Purchases',
+  TravelAgency: 'Travel Agencies',
+  SystemUser: 'System Users',
+  AuditLog: 'Audit Logs',
+  Application: 'Applications',
+  Suite: 'Suites',
+  BookableItem: 'Bookable Items',
+  Refund: 'Refunds',
+  Opportunity: 'Opportunities',
+  GradingPackage: 'Grading Packages',
+  Member: 'Members',
+  Contract: 'Contracts',
+  system: 'System',
+  auth: 'Authentication',
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  CREATE: 'Create',
+  UPDATE: 'Update',
+  DELETE: 'Delete',
+  LOGIN: 'Login',
+  LOGOUT: 'Logout',
+  VIEW: 'View',
+  OTHER: 'Other',
+};
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'success': return 'bg-green-100 text-green-700';
+    case 'failed':  return 'bg-red-100 text-red-700';
+    case 'warning': return 'bg-yellow-100 text-yellow-700';
+    default:        return 'bg-gray-100 text-gray-700';
+  }
+}
 
 export interface AuditLogsProps {
   audits?: AuditLog[];
@@ -45,29 +85,57 @@ export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}
 
   const [searchTerm, setSearchTerm] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
+  const [actionFilter, setActionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'success':
-        return 'bg-green-100 text-green-700';
-      case 'failed':
-        return 'bg-red-100 text-red-700';
-      case 'warning':
-        return 'bg-yellow-100 text-yellow-700';
-      default:
-        return 'bg-gray-100 text-gray-700';
-    }
+  const moduleOptions = useMemo(() => {
+    const modules = new Set(logs.map((log) => log.module).filter(Boolean));
+    return ['all', ...Array.from(modules).sort()];
+  }, [logs]);
+
+  const actionOptions = useMemo(() => {
+    const actions = new Set(logs.map((log) => log.action).filter(Boolean));
+    return ['all', ...Array.from(actions).sort()];
+  }, [logs]);
+
+  const filteredLogs = useMemo(() => {
+    const list = logs.filter((log) => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch =
+        log.user.toLowerCase().includes(q) ||
+        log.action.toLowerCase().includes(q) ||
+        log.module.toLowerCase().includes(q) ||
+        log.details.toLowerCase().includes(q);
+      const matchesModule = moduleFilter === 'all' || log.module === moduleFilter;
+      const matchesAction = actionFilter === 'all' || log.action === actionFilter;
+      const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
+      const matchesStart = !startDate || new Date(log.timestamp) >= new Date(startDate + 'T00:00:00');
+      const matchesEnd = !endDate || new Date(log.timestamp) <= new Date(endDate + 'T23:59:59');
+      return matchesSearch && matchesModule && matchesAction && matchesStatus && matchesStart && matchesEnd;
+    });
+
+    const totalPages = Math.ceil(list.length / itemsPerPage) || 1;
+    const safePage = Math.min(currentPage, totalPages);
+    const startIndex = (safePage - 1) * itemsPerPage;
+    return { list, paginated: list.slice(startIndex, startIndex + itemsPerPage), totalPages, safePage };
+  }, [logs, searchTerm, moduleFilter, actionFilter, statusFilter, startDate, endDate, currentPage]);
+
+  const { list: filteredList, paginated, totalPages, safePage } = filteredLogs;
+  const startIndex = (safePage - 1) * itemsPerPage;
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setModuleFilter('all');
+    setActionFilter('all');
+    setStatusFilter('all');
+    setStartDate('');
+    setEndDate('');
+    setCurrentPage(1);
   };
-
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.details.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesModule = moduleFilter === 'all' || log.module === moduleFilter;
-    const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
-    return matchesSearch && matchesModule && matchesStatus;
-  });
 
   return (
     <div className="p-6 space-y-6">
@@ -78,43 +146,90 @@ export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1 relative">
-            <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by user, action, or details..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        <div className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by user, action, module, or details..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+            <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by module" />
+              </SelectTrigger>
+              <SelectContent>
+                {moduleOptions.map((module) => (
+                  <SelectItem key={module} value={module}>
+                    {module === 'all' ? 'All Modules' : (MODULE_LABELS[module] ?? module)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by action" />
+              </SelectTrigger>
+              <SelectContent>
+                {actionOptions.map((action) => (
+                  <SelectItem key={action} value={action}>
+                    {action === 'all' ? 'All Actions' : (ACTION_LABELS[action] ?? action)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="success">Success</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={moduleFilter} onValueChange={setModuleFilter}>
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Filter by module" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Modules</SelectItem>
-              <SelectItem value="Bookings">Bookings</SelectItem>
-              <SelectItem value="Customers">Customers</SelectItem>
-              <SelectItem value="Items">Bookable Items</SelectItem>
-              <SelectItem value="System Users">System Users</SelectItem>
-              <SelectItem value="Reports">Reports</SelectItem>
-              <SelectItem value="Authentication">Authentication</SelectItem>
-              <SelectItem value="Settings">Settings</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-              <SelectItem value="warning">Warning</SelectItem>
-            </SelectContent>
-          </Select>
+
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <label className="mb-[10px] block text-sm text-gray-700">End Date</label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -126,77 +241,90 @@ export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}
         </Card>
         <Card className="p-4">
           <p className="text-sm text-gray-600">Successful Actions</p>
-          <h2 className="mt-1 text-green-600">{logs.filter(l => l.status === 'success').length}</h2>
+          <h2 className="mt-1 text-green-600">{logs.filter((l) => l.status === 'success').length}</h2>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-gray-600">Failed Actions</p>
-          <h2 className="mt-1 text-red-600">{logs.filter(l => l.status === 'failed').length}</h2>
+          <h2 className="mt-1 text-red-600">{logs.filter((l) => l.status === 'failed').length}</h2>
         </Card>
         <Card className="p-4">
           <p className="text-sm text-gray-600">Warnings</p>
-          <h2 className="mt-1 text-yellow-600">{logs.filter(l => l.status === 'warning').length}</h2>
+          <h2 className="mt-1 text-yellow-600">{logs.filter((l) => l.status === 'warning').length}</h2>
         </Card>
       </div>
 
       {/* Logs Table */}
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Timestamp</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Module</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Details</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">IP Address</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{log.timestamp}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{log.user}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant="outline">{log.module}</Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{log.action}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">
-                    {log.details}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{log.ipAddress}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusColor(log.status)}>
-                      {log.status}
-                    </Badge>
-                  </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-500">Loading audit logs…</span>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Timestamp</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Module</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Action</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Details</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">IP Address</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginated.map((log) => (
+                  <tr key={log.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{log.timestamp}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{log.user}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant="outline">{MODULE_LABELS[log.module] ?? log.module}</Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{ACTION_LABELS[log.action] ?? log.action}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate" title={log.details}>
+                      {log.details}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{log.ipAddress}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getStatusColor(log.status)}>
+                        {log.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </Card>
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-600">
-          Showing {filteredLogs.length} of {logs.length} entries
+          {isLoading
+            ? 'Loading…'
+            : `Showing ${filteredList.length ? startIndex + 1 : 0}–${Math.min(startIndex + itemsPerPage, filteredList.length)} of ${filteredList.length} entries`}
         </p>
         <div className="flex gap-2">
-          <button className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
+          >
             Previous
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
-            1
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
-            2
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
-            3
-          </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm">
+          <span className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm">
+            {safePage} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
+          >
             Next
           </button>
         </div>

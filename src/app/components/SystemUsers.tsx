@@ -6,13 +6,14 @@
  *  - Filter / pagination / dialog form state are pure UI state — allowed
  *  - All CRUD mutations reported via typed callbacks
  *  - Default props fall back to mockSystemUsersData (fixture pattern)
+ *  - Backend contract aligned: roles/status/permissions match the Laravel API
  */
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Shuffle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Shuffle, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -40,8 +41,8 @@ import { mockSystemUsersData } from './__fixtures__/SystemUsers.mocks';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-export type SystemUserRole   = 'System Admin' | 'Lounge Manager' | 'Supervisor' | 'Staff';
-export type SystemUserStatus = 'active' | 'inactive';
+export type SystemUserRole   = 'Administrator' | 'Supervisor' | 'Staff' | 'Viewer';
+export type SystemUserStatus = 'Active' | 'Inactive';
 
 export interface SystemUser {
   id:          number;
@@ -62,11 +63,29 @@ export interface SystemUserFormData {
   department:  string;
   permissions: string[];
   status:      SystemUserStatus;
+  password?:   string;
+}
+
+export interface PermissionOption {
+  value: string;
+  label: string;
 }
 
 export interface SystemUsersProps {
   /** Full list of system users to display */
   users?: SystemUser[];
+  /** Permission checkboxes shown in the user form (defaults to a sensible fallback list) */
+  availablePermissions?: PermissionOption[];
+  /** Map from backend role value to display label */
+  roleLabels?: Record<SystemUserRole, string>;
+  /** Roles that may be selected in the create/edit form. Defaults to Staff/Supervisor. */
+  editableRoles?: SystemUserRole[];
+  /** Whether data is being fetched */
+  isLoading?: boolean;
+  /** Permission flags controlling which actions are surfaced */
+  canCreate?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   /** Called when the Create User form is submitted */
   onCreateUser?: (data: SystemUserFormData) => void;
   /** Called when the Edit User form is submitted */
@@ -77,39 +96,44 @@ export interface SystemUsersProps {
   onManagePermissions?: (id: number) => void;
 }
 
-// ─── Permission options (static display config — not business data) ───────────
+// ─── Static display config (mirrors the backend RBAC permission slugs) ─────────
 
-const ALL_PERMISSIONS = [
-  'Approve Members',
-  'Create Members',
-  'Edit Members',
-  'Approve Booking Request',
-  'Create Bookings',
-  'Edit Bookings',
-  'Approve Invoices',
-  'Process Payments',
-  'View Reports',
-  'Export Data',
-  'Manage Staff',
-  'Manage System Settings',
-  'View Audit Logs',
-  'Manage Bookable Items',
-  'Daily Movement Log',
-] as const;
+const ALL_PERMISSIONS: PermissionOption[] = [
+  { value: 'bookings.view', label: 'View Bookings' },
+  { value: 'bookings.create', label: 'Create Bookings' },
+  { value: 'bookings.update', label: 'Update Bookings' },
+  { value: 'bookings.delete', label: 'Delete Bookings' },
+  { value: 'bookings.approve', label: 'Approve Bookings' },
+  { value: 'bookings.schedules.view', label: 'View Booking Schedules' },
+  { value: 'bookings.settings.view', label: 'View Booking Settings' },
+  { value: 'bookings.settings.update', label: 'Update Booking Settings' },
+  { value: 'system_users.view', label: 'View System Users' },
+  { value: 'system_users.create', label: 'Create System Users' },
+  { value: 'system_users.update', label: 'Update System Users' },
+  { value: 'system_users.delete', label: 'Delete System Users' },
+  { value: 'audit_logs.view', label: 'View Audit Logs' },
+];
+
+const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
+  Administrator: 'System Admin',
+  Supervisor: 'Supervisor',
+  Staff: 'Staff',
+  Viewer: 'Viewer',
+};
 
 // ─── Role / status colour helpers (pure functions — no state) ─────────────────
 
-function getRoleColor(role: string): string {
+function getRoleColor(role: SystemUserRole): string {
   switch (role) {
-    case 'System Admin':   return 'bg-purple-100 text-purple-700';
-    case 'Lounge Manager': return 'bg-blue-100 text-blue-700';
-    case 'Supervisor':     return 'bg-green-100 text-green-700';
-    default:               return 'bg-gray-100 text-gray-700';
+    case 'Administrator': return 'bg-purple-100 text-purple-700';
+    case 'Supervisor':    return 'bg-green-100 text-green-700';
+    case 'Staff':         return 'bg-gray-100 text-gray-700';
+    case 'Viewer':        return 'bg-blue-100 text-blue-700';
   }
 }
 
-function getStatusColor(status: string): string {
-  return status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+function getStatusColor(status: SystemUserStatus): string {
+  return status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 }
 
 // ─── Pagination helper (pure function) ────────────────────────────────────────
@@ -127,6 +151,13 @@ function buildPageList(currentPage: number, totalPages: number): number[] {
 
 export function SystemUsers({
   users               = mockSystemUsersData.users ?? [],
+  availablePermissions = ALL_PERMISSIONS,
+  roleLabels          = DEFAULT_ROLE_LABELS,
+  editableRoles       = ['Staff', 'Supervisor'],
+  isLoading           = false,
+  canCreate           = true,
+  canUpdate           = true,
+  canDelete           = true,
   onCreateUser        = () => {},
   onUpdateUser        = () => {},
   onDeleteUser        = () => {},
@@ -136,6 +167,7 @@ export function SystemUsers({
   // ── Pure UI state ──────────────────────────────────────────────────────────
   const [searchTerm,  setSearchTerm]  = useState('');
   const [roleFilter,  setRoleFilter]  = useState('all');
+  const [statusFilter,setStatusFilter]= useState('all');
   const [startDate,   setStartDate]   = useState('');
   const [endDate,     setEndDate]     = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -149,24 +181,28 @@ export function SystemUsers({
   const [formRole,       setFormRole]       = useState<SystemUserRole>('Staff');
   const [formDepartment, setFormDepartment] = useState('IT Department');
   const [formPermissions,setFormPermissions]= useState<string[]>([]);
-  const [formStatus,     setFormStatus]     = useState<SystemUserStatus>('active');
+  const [formStatus,     setFormStatus]     = useState<SystemUserStatus>('Active');
+  const [formPassword,   setFormPassword]   = useState('');
 
   // ── Derived display data (pure computation, no side-effects) ──────────────
+
+  const allRoleEntries = Object.entries(roleLabels) as [SystemUserRole, string][];
 
   const filteredUsers = users
     .filter(u => {
       const q = searchTerm.toLowerCase();
       const matchSearch = u.name.toLowerCase().includes(q) ||
                           u.email.toLowerCase().includes(q) ||
-                          u.role.toLowerCase().includes(q);
-      const matchRole  = roleFilter === 'all' || u.role === roleFilter;
-      const matchStart = !startDate || new Date(u.createdDate) >= new Date(startDate);
-      const matchEnd   = !endDate   || new Date(u.createdDate) <= new Date(endDate);
-      return matchSearch && matchRole && matchStart && matchEnd;
+                          roleLabels[u.role].toLowerCase().includes(q);
+      const matchRole   = roleFilter === 'all' || u.role === roleFilter;
+      const matchStatus = statusFilter === 'all' || u.status === statusFilter;
+      const matchStart  = !startDate || new Date(u.createdDate) >= new Date(startDate);
+      const matchEnd    = !endDate   || new Date(u.createdDate) <= new Date(endDate);
+      return matchSearch && matchRole && matchStatus && matchStart && matchEnd;
     })
     .sort((a, b) => b.id - a.id);
 
-  const totalPages     = Math.ceil(filteredUsers.length / itemsPerPage);
+  const totalPages     = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
   const startIndex     = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
@@ -179,7 +215,8 @@ export function SystemUsers({
     setFormRole('Staff');
     setFormDepartment('IT Department');
     setFormPermissions([]);
-    setFormStatus('active');
+    setFormStatus('Active');
+    setFormPassword('');
     setIsDialogOpen(true);
   };
 
@@ -191,6 +228,7 @@ export function SystemUsers({
     setFormDepartment(user.department);
     setFormPermissions(user.permissions);
     setFormStatus(user.status);
+    setFormPassword('');
     setIsDialogOpen(true);
   };
 
@@ -199,8 +237,9 @@ export function SystemUsers({
     setFormEmail('karen.leung@hkial.com');
     setFormRole('Supervisor');
     setFormDepartment('Lounge Operations');
-    setFormPermissions(['approve_bookings', 'manage_bookings', 'view_reports']);
-    setFormStatus('active');
+    setFormPermissions(['bookings.view', 'bookings.approve', 'bookings.update']);
+    setFormStatus('Active');
+    setFormPassword('password123');
   };
 
   const togglePermission = (perm: string) => {
@@ -209,7 +248,7 @@ export function SystemUsers({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData: SystemUserFormData = {
       name:        formName,
@@ -218,6 +257,7 @@ export function SystemUsers({
       department:  formDepartment,
       permissions: formPermissions,
       status:      formStatus,
+      password:    formPassword || undefined,
     };
     if (editingUser) {
       onUpdateUser(editingUser.id, formData);
@@ -231,9 +271,15 @@ export function SystemUsers({
     setStartDate('');
     setEndDate('');
     setRoleFilter('all');
+    setStatusFilter('all');
     setSearchTerm('');
     setCurrentPage(1);
   };
+
+  // Roles shown in the form: editable defaults plus the user's current role when editing
+  const formRoleOptions: SystemUserRole[] = editingUser && !editableRoles.includes(editingUser.role)
+    ? [...editableRoles, editingUser.role]
+    : editableRoles;
 
   // ── Pagination renderer ────────────────────────────────────────────────────
 
@@ -286,10 +332,12 @@ export function SystemUsers({
           <h1>System Users Management</h1>
           <p className="text-gray-600">Manage staff accounts, roles, and permissions</p>
         </div>
-        <Button onClick={openCreateDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add New User
-        </Button>
+        {canCreate && (
+          <Button onClick={openCreateDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add New User
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -312,10 +360,19 @@ export function SystemUsers({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="System Admin">System Admin</SelectItem>
-                <SelectItem value="Lounge Manager">Lounge Manager</SelectItem>
-                <SelectItem value="Supervisor">Supervisor</SelectItem>
-                <SelectItem value="Staff">Staff</SelectItem>
+                {allRoleEntries.map(([value, label]) => (
+                  <SelectItem key={value} value={value}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -357,87 +414,101 @@ export function SystemUsers({
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
           <div className="text-sm text-gray-500">
-            Showing {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+            Showing {isLoading ? '…' : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, filteredUsers.length)} of ${filteredUsers.length} users`}
           </div>
           <div>{renderPagination()}</div>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Department</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Last Login</th>
-                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{user.id}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-gray-400" />
-                      <button
-                        className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                        onClick={() => openEditDialog(user)}
-                      >
-                        {user.name}
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getRoleColor(user.role)}>{user.role}</Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{user.department}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.lastLogin}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(user)}
-                        className="h-8 w-8 p-0"
-                        title="Edit User"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onManagePermissions(user.id)}
-                        className="h-8 w-8 p-0 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
-                        title="Manage Permissions"
-                      >
-                        <Key className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteUser(user.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                        title="Delete User"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-gray-500">Loading users…</span>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Department</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Last Login</th>
+                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {paginatedUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{user.id}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-gray-400" />
+                        <button
+                          type="button"
+                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          onClick={() => canUpdate && openEditDialog(user)}
+                        >
+                          {user.name}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getRoleColor(user.role)}>{roleLabels[user.role]}</Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{user.department}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.lastLogin}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center justify-end gap-2">
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
+                            className="h-8 w-8 p-0"
+                            title="Edit User"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canUpdate && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onManagePermissions(user.id)}
+                            className="h-8 w-8 p-0 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                            title="Manage Permissions"
+                          >
+                            <Key className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onDeleteUser(user.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            title="Delete User"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        {filteredUsers.length > 0 && (
+        {filteredUsers.length > 0 && !isLoading && (
           <div className="p-4 border-t flex justify-end">
             {renderPagination()}
           </div>
@@ -472,8 +543,9 @@ export function SystemUsers({
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="mb-[10px] block text-sm text-gray-700">Full Name</label>
+                <label htmlFor="su-full-name" className="mb-[10px] block text-sm text-gray-700">Full Name</label>
                 <input
+                  id="su-full-name"
                   type="text"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
@@ -483,8 +555,9 @@ export function SystemUsers({
                 />
               </div>
               <div>
-                <label className="mb-[10px] block text-sm text-gray-700">Email Address</label>
+                <label htmlFor="su-email" className="mb-[10px] block text-sm text-gray-700">Email Address</label>
                 <input
+                  id="su-email"
                   type="email"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
@@ -503,10 +576,9 @@ export function SystemUsers({
                   onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="System Admin">System Admin</option>
-                  <option value="Lounge Manager">Lounge Manager</option>
-                  <option value="Supervisor">Supervisor</option>
-                  <option value="Staff">Staff</option>
+                  {formRoleOptions.map((role) => (
+                    <option key={role} value={role}>{roleLabels[role]}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -531,30 +603,47 @@ export function SystemUsers({
             <div>
               <label className="mb-[10px] block text-sm text-gray-700">Permissions</label>
               <div className="grid grid-cols-2 gap-3 p-4 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
-                {ALL_PERMISSIONS.map((permission) => (
-                  <label key={permission} className="flex items-center gap-2 cursor-pointer mb-[10px]">
+                {availablePermissions.map((permission) => (
+                  <label key={permission.value} className="flex items-center gap-2 cursor-pointer mb-[10px]">
                     <input
                       type="checkbox"
                       className="rounded"
-                      checked={formPermissions.includes(permission)}
-                      onChange={() => togglePermission(permission)}
+                      checked={formPermissions.includes(permission.value)}
+                      onChange={() => togglePermission(permission.value)}
                     />
-                    <span className="text-sm">{permission}</span>
+                    <span className="text-sm">{permission.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="mb-[10px] block text-sm text-gray-700">Status</label>
-              <select
-                value={formStatus}
-                onChange={(e) => setFormStatus(e.target.value as SystemUserStatus)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-[10px] block text-sm text-gray-700">Status</label>
+                <select
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as SystemUserStatus)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="su-password" className="mb-[10px] block text-sm text-gray-700">
+                  Password {editingUser && '(leave blank to keep current)'}
+                </label>
+                <input
+                  id="su-password"
+                  type="password"
+                  value={formPassword}
+                  onChange={(e) => setFormPassword(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  placeholder={editingUser ? '••••••••' : 'Minimum 8 characters'}
+                  required={!editingUser}
+                  minLength={editingUser ? undefined : 8}
+                />
+              </div>
             </div>
 
             <div className="flex gap-3 justify-end pt-4">

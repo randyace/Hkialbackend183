@@ -19,9 +19,9 @@ import type { SystemUser, SystemUserFormData, SystemUsersProps } from '../System
 
 const FIRST_NAMES  = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
 const LAST_NAMES   = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
-const ROLES: SystemUser['role'][]       = ['System Admin', 'Lounge Manager', 'Supervisor', 'Staff', 'Staff', 'Staff'];
+const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Staff', 'Staff', 'Staff', 'Viewer'];
 const DEPARTMENTS  = ['IT Department', 'Lounge Operations', 'Guest Services', 'Finance', 'Management', 'Security', 'Housekeeping', 'F&B Services'];
-const STATUSES: SystemUser['status'][]  = ['active', 'active', 'active', 'active', 'inactive'];
+const STATUSES: SystemUser['status'][]  = ['Active', 'Active', 'Active', 'Active', 'Inactive'];
 
 function generateMockUsers(): SystemUser[] {
   const users: SystemUser[] = [];
@@ -38,14 +38,14 @@ function generateMockUsers(): SystemUser[] {
     const lastLoginMin  = (i * 15) % 60;
 
     let permissions: string[];
-    if (role === 'System Admin') {
-      permissions = ['all'];
-    } else if (role === 'Lounge Manager') {
-      permissions = ['approve_invoices', 'manage_staff', 'view_reports', 'approve_bookings'];
+    if (role === 'Administrator') {
+      permissions = ['bookings.view'];
     } else if (role === 'Supervisor') {
-      permissions = ['approve_bookings', 'manage_bookings', 'view_reports', 'create_bookings'];
+      permissions = ['bookings.view', 'bookings.approve', 'bookings.update', 'audit_logs.view'];
+    } else if (role === 'Viewer') {
+      permissions = ['bookings.view'];
     } else {
-      permissions = ['create_bookings', 'edit_bookings', 'view_guests'];
+      permissions = ['bookings.view', 'bookings.create', 'bookings.update'];
     }
 
     users.push({
