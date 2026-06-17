@@ -270,28 +270,130 @@ const generateMockBookings = (): Booking[] => {
 const MOCK_BOOKINGS: Booking[] = generateMockBookings();
 
 export interface BookingManagementProps {
+  // Data
   bookings?: Booking[];
   isLoading?: boolean;
+  loading?: boolean;
+  error?: string | null;
+  // Filter state
+  searchTerm?: string;
+  statusFilter?: string;
+  paymentStatusFilter?: string;
+  bookingCategoryFilter?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  // Pagination
+  currentPage?: number;
+  totalPages?: number;
+  totalCount?: number;
+  itemsPerPage?: number;
+  startIndex?: number;
+  endIndex?: number;
+  paginationModel?: number[];
+  // UI state
+  deletingBookingId?: number | null;
+  showDemoInfo?: boolean;
+  // Callbacks
   onViewDetail?: (bookingId: number) => void;
   onEditBooking?: (bookingId: number) => void;
   onDeleteBooking?: (bookingId: number, bookingNo: string) => void;
   onExportReport?: () => void;
+  onSearchTermChange?: (value: string) => void;
+  onStatusFilterChange?: (value: string) => void;
+  onPaymentStatusFilterChange?: (value: string) => void;
+  onBookingCategoryFilterChange?: (value: string) => void;
+  onDateFromChange?: (value: string) => void;
+  onDateToChange?: (value: string) => void;
+  onPageChange?: (page: number) => void;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
+  onDismissDemoInfo?: () => void;
+  // Color helper overrides (parent can supply; falls back to defaults below)
+  getStatusColor?: (status: string) => string;
+  getPaymentStatusColor?: (status: string) => string;
+  getBookingCategoryColor?: (category: string) => string;
+  getFlightTypeColor?: (type: string) => string;
 }
 
-export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEditBooking, onDeleteBooking, onExportReport }: BookingManagementProps = {}) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
-  const [bookingCategoryFilter, setBookingCategoryFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showDemoInfo, setShowDemoInfo] = useState(true);
-  const itemsPerPage = 10;
+export function BookingManagement({
+  bookings: bookingsProp,
+  isLoading,
+  loading: loadingProp,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  error,
+  searchTerm: searchTermProp,
+  statusFilter: statusFilterProp,
+  paymentStatusFilter: paymentStatusFilterProp,
+  bookingCategoryFilter: bookingCategoryFilterProp,
+  dateFrom: dateFromProp,
+  dateTo: dateToProp,
+  currentPage: currentPageProp,
+  totalPages: totalPagesProp,
+  totalCount: totalCountProp,
+  itemsPerPage: itemsPerPageProp,
+  startIndex: startIndexProp,
+  endIndex: endIndexProp,
+  paginationModel: paginationModelProp,
+  deletingBookingId: deletingBookingIdProp,
+  showDemoInfo: showDemoInfoProp,
+  onViewDetail,
+  onEditBooking,
+  onDeleteBooking,
+  onExportReport,
+  onSearchTermChange,
+  onStatusFilterChange,
+  onPaymentStatusFilterChange,
+  onBookingCategoryFilterChange,
+  onDateFromChange,
+  onDateToChange,
+  onPageChange,
+  onPrevPage,
+  onNextPage,
+  onDismissDemoInfo,
+  getStatusColor: getStatusColorProp,
+  getPaymentStatusColor: getPaymentStatusColorProp,
+  getBookingCategoryColor: getBookingCategoryColorProp,
+  getFlightTypeColor: getFlightTypeColorProp,
+}: BookingManagementProps = {}) {
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
+  const [internalStatusFilter, setInternalStatusFilter] = useState('all');
+  const [internalPaymentStatusFilter, setInternalPaymentStatusFilter] = useState('all');
+  const [internalBookingCategoryFilter, setInternalBookingCategoryFilter] = useState('all');
+  const [internalDateFrom, setInternalDateFrom] = useState('');
+  const [internalDateTo, setInternalDateTo] = useState('');
+  const [internalCurrentPage, setInternalCurrentPage] = useState(1);
+  const [internalShowDemoInfo, setInternalShowDemoInfo] = useState(false);
 
-  const bookings: Booking[] = bookingsProp?.length ? bookingsProp : MOCK_BOOKINGS;
+  const searchTerm = searchTermProp ?? internalSearchTerm;
+  const statusFilter = statusFilterProp ?? internalStatusFilter;
+  const paymentStatusFilter = paymentStatusFilterProp ?? internalPaymentStatusFilter;
+  const bookingCategoryFilter = bookingCategoryFilterProp ?? internalBookingCategoryFilter;
+  const dateFrom = dateFromProp ?? internalDateFrom;
+  const dateTo = dateToProp ?? internalDateTo;
+  const currentPage = currentPageProp ?? internalCurrentPage;
+  const showDemoInfo = showDemoInfoProp ?? internalShowDemoInfo;
+  const loading = loadingProp ?? isLoading ?? false;
+  const deletingBookingId = deletingBookingIdProp ?? null;
+
+  const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
+  const setStatusFilter = onStatusFilterChange ?? setInternalStatusFilter;
+  const setPaymentStatusFilter = onPaymentStatusFilterChange ?? setInternalPaymentStatusFilter;
+  const setBookingCategoryFilter = onBookingCategoryFilterChange ?? setInternalBookingCategoryFilter;
+  const setDateFrom = onDateFromChange ?? setInternalDateFrom;
+  const setDateTo = onDateToChange ?? setInternalDateTo;
+  const setCurrentPage = onPageChange ?? setInternalCurrentPage;
+  const dismissDemoInfo = () => {
+    if (onDismissDemoInfo) onDismissDemoInfo();
+    else setInternalShowDemoInfo(false);
+  };
+
+  const itemsPerPage = itemsPerPageProp ?? 10;
+  const isServerPaginated = currentPageProp !== undefined;
+
+  const bookings: Booking[] = bookingsProp !== undefined ? bookingsProp : MOCK_BOOKINGS;
 
   const getStatusColor = (status: string) => {
+    if (getStatusColorProp) return getStatusColorProp(status);
     const colors: Record<string, string> = {
       'Pending for Review': 'bg-yellow-100 text-yellow-800 border border-yellow-200',
       'Pending for Approval': 'bg-blue-100 text-blue-800 border border-blue-200',
@@ -305,6 +407,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
   };
 
   const getPaymentStatusColor = (status: string) => {
+    if (getPaymentStatusColorProp) return getPaymentStatusColorProp(status);
     const colors: Record<string, string> = {
       'Not Required': 'bg-gray-100 text-gray-600',
       'Pending': 'bg-yellow-100 text-yellow-700',
@@ -317,6 +420,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
   };
 
   const getBookingCategoryColor = (category: string) => {
+    if (getBookingCategoryColorProp) return getBookingCategoryColorProp(category);
     const colors: Record<string, string> = {
       'Agent Booking':      'bg-purple-100 text-purple-700',
       'Corporate Booking':  'bg-blue-100 text-blue-700',
@@ -328,6 +432,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
   };
 
   const getFlightTypeColor = (type: string) => {
+    if (getFlightTypeColorProp) return getFlightTypeColorProp(type);
     const colors: Record<string, string> = {
       'Arrival':   'bg-emerald-100 text-emerald-700',
       'Departure': 'bg-rose-100 text-rose-700',
@@ -361,16 +466,24 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
     return matchesSearch && matchesStatus && matchesPaymentStatus && matchesBookingCategory && matchesDateRange;
   }).sort((a, b) => b.id - a.id);
 
-  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedBookings = filteredBookings.slice(startIndex, endIndex);
+  const localTotalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const localStartIndex = (currentPage - 1) * itemsPerPage;
+  const localEndIndex = localStartIndex + itemsPerPage;
+  const totalPages = totalPagesProp ?? localTotalPages;
+  const totalCount = totalCountProp ?? filteredBookings.length;
+  const startIndex = startIndexProp ?? localStartIndex;
+  const endIndex = endIndexProp ?? localEndIndex;
+  const paginatedBookings = isServerPaginated
+    ? filteredBookings
+    : filteredBookings.slice(localStartIndex, localEndIndex);
 
   const renderPagination = () => {
-    const pages = [];
+    const pages: number[] = [];
     const maxVisiblePages = 5;
-    
-    if (totalPages <= maxVisiblePages) {
+
+    if (paginationModelProp) {
+      pages.push(...paginationModelProp);
+    } else if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
       }
@@ -388,8 +501,11 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
       <Pagination>
         <PaginationContent>
           <PaginationItem>
-            <PaginationPrevious 
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            <PaginationPrevious
+              onClick={() => {
+                if (onPrevPage) onPrevPage();
+                else setCurrentPage(Math.max(1, currentPage - 1));
+              }}
               className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
             />
           </PaginationItem>
@@ -414,8 +530,11 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
             );
           })}
           <PaginationItem>
-            <PaginationNext 
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            <PaginationNext
+              onClick={() => {
+                if (onNextPage) onNextPage();
+                else setCurrentPage(Math.min(totalPages, currentPage + 1));
+              }}
               className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
             />
           </PaginationItem>
@@ -431,12 +550,15 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
           <h1>Booking Management</h1>
           <p className="text-gray-600">Manage and review all lounge bookings</p>
         </div>
-        <Button
-          onClick={onExportReport}
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export Report
-        </Button>
+        <div className="flex items-center gap-2">
+          {loading && <span className="text-xs text-gray-500">Refreshing…</span>}
+          <Button
+            onClick={onExportReport}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
       </div>
 
       {/* ── Client Demo Info Banner ─────────────────────────────────────────── */}
@@ -478,7 +600,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
               </p>
             </div>
             <button
-              onClick={() => setShowDemoInfo(false)}
+              onClick={dismissDemoInfo}
               className="text-green-600 hover:text-green-800 flex-shrink-0 ml-2"
               title="Dismiss"
             >
@@ -574,7 +696,7 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
           <div className="text-sm text-gray-500">
-            Showing {startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length} bookings
+            Showing {startIndex + 1}-{Math.min(endIndex, totalCount)} of {totalCount} bookings
           </div>
           <div>
             {renderPagination()}
@@ -718,7 +840,8 @@ export function BookingManagement({ bookings: bookingsProp, onViewDetail, onEdit
                           variant="ghost"
                           size="sm"
                           onClick={() => onDeleteBooking?.(booking.id, booking.bookingNo)}
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          disabled={deletingBookingId === booking.id}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50"
                           title="Delete Booking"
                         >
                           <Trash2 className="h-4 w-4" />

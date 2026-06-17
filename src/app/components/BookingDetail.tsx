@@ -21,6 +21,45 @@ import type {
   Booking, HistoricalGuest, PassengerTitle, AgeGroup,
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
+
+// ── Save-flow payload types (2026-06-15) ───────────────────────────────────────
+// 6 new save buttons were previously wired to `toast.success(...)` only (no
+// API call). They now accept these payloads from a parent callback. The
+// parent (the wrapper in `../BookingDetail.tsx`) handles the actual PATCH
+// and the `rawAdvancedDetails` merge — see the existing `onSaveEdit` pattern.
+
+export interface GuestDetailsCounts {
+  numPremiereSuites: number;
+  vipPassengersInPremiereSuite: number;
+  nonFlyingGuestsInPremiereSuite: number;
+  vipPassengersInLoungeDeluxe: number;
+  nonFlyingGuestsInLoungeDeluxe: number;
+}
+
+export interface SuiteAssignmentPayload {
+  /** Suite / lounge NAME (the view's `<select>` holds names, not ids). The wrapper resolves the id via `suiteService.getSuites()`. */
+  assignedSuite: string;
+  assignedDate: string;
+  assignedStartTime: string;
+  assignedEndTime: string;
+}
+
+export interface StaffAssignmentPayload {
+  /** List of staff ids selected in the In-Charge Staff checkboxes. */
+  selectedStaffIds: number[];
+}
+
+export type BookingStatusValue =
+  | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
+  | 'Rejected' | 'Cancelled' | 'No-show';
+export type PaymentStatusValue =
+  | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+
+export interface UpdateStatusPayload {
+  status: BookingStatusValue;
+  paymentStatus: PaymentStatusValue;
+  rejectionReason?: string;
+}
 import {
   HISTORICAL_GUESTS, DETAIL_AGENCY_DATA, EXPLICIT_BOOKING_OVERRIDES,
   MERGE_FIXED_FIELDS, emptyPassenger, MONTHS,
@@ -84,9 +123,39 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   //                  same fallback as `undefined`
   //   - `value`     → real data, dialog renders it
   customerProfile?: CustomerProfile | null;
+  // ── 2026-06-15 — round 6.2.41, save buttons fix ─────────────────────────────
+  // Six save buttons on this page were previously wired to `toast.success(...)`
+  // only — no API call, no persistence. The user reported:
+  //   "in the admin panel booking detail page, Save Passenger Details is
+  //    not working at all, please check and fix. other save button on that
+  //    page may be broken too"
+  // Each callback below receives the relevant payload and is expected to
+  // PUT to the backend (or call `bookingService.updateBookingStatus` for
+  // status), then re-fetch the booking so the page reflects the change.
+  // The view handles "no callback provided" by showing a friendly
+  // "Save not yet wired" toast so legacy / standalone preview render
+  // paths (BookingDetailMocks) don't crash.
+  /** Save Premiere Suite / Lounge Deluxe guest counts. */
+  onSaveGuestDetails?: (counts: GuestDetailsCounts) => Promise<void>;
+  isSavingGuestDetails?: boolean;
+  /** Save suite / lounge table + date + time slot (Confirmed+Paid only). */
+  onSaveAssignment?: (payload: SuiteAssignmentPayload) => Promise<void>;
+  isSavingAssignment?: boolean;
+  /** Save in-charge staff checkboxes (Confirmed+Paid only). */
+  onSaveStaffAssignment?: (payload: StaffAssignmentPayload) => Promise<void>;
+  isSavingStaffAssignment?: boolean;
+  /** Save VIP passenger name / doc / birthday / allergies cards. */
+  onSavePassengerDetails?: (passengers: PassengerDetail[]) => Promise<void>;
+  isSavingPassengerDetails?: boolean;
+  /** Save non-flying guest name / ageGroup / allergies cards. */
+  onSaveNonFlyingGuestDetails?: (nfgs: NonFlyingGuest[]) => Promise<void>;
+  isSavingNonFlyingGuestDetails?: boolean;
+  /** Save booking status + payment status + rejection reason. */
+  onUpdateStatus?: (payload: UpdateStatusPayload) => Promise<void>;
+  isUpdatingStatus?: boolean;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -234,7 +303,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   type AddonService = string;
   const addonServices: { key: AddonService; icon: ReactNode; desc: string; defaultPrice: string }[] = [
     { key: 'Lounge Extension',              icon: <Clock className="w-5 h-5" />,         desc: 'Extend lounge access time',              defaultPrice: '500.00'  },
-    { key: 'Limousine Service',             icon: <Car className="w-5 h-5" />,           desc: 'Private car transfer service',           defaultPrice: '800.00'  },
+    // 2026-06-16 (round 6.2.43 follow-up): catalog key
+    // renamed 'Limousine Service' -> 'Limousine Transfer' to
+    // match the wire-shape name used by the BookingEditDialog
+    // catalog (BookingEditDialog.tsx:189 CATALOG_ADDONS) and
+    // buildAddonsItems. The detail page's own catalog had
+    // drifted from the rest of the system; this aligns it.
+    // Display label (the {key} shown in dropdowns) becomes
+    // 'Limousine Transfer'; the `desc` field stays as the
+    // human-readable description.
+    { key: 'Limousine Transfer',            icon: <Car className="w-5 h-5" />,           desc: 'Private car transfer service',           defaultPrice: '800.00'  },
     { key: 'Wheelchair Assistance',         icon: <Accessibility className="w-5 h-5" />, desc: 'Mobility & accessibility support',       defaultPrice: '0.00'    },
     { key: 'Security Escort Service',       icon: <ShieldCheck className="w-5 h-5" />,   desc: 'Dedicated security escort',              defaultPrice: '1200.00' },
     { key: 'Meet & Greet Service',          icon: <User className="w-5 h-5" />,          desc: 'Dedicated greeter at arrival gate',      defaultPrice: '600.00'  },
@@ -291,7 +369,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
   const handleAddItem = () => {
     if (!selectedAddon) { toast.error('Please select an add-on service first.'); return; }
-    if (selectedAddon === 'Limousine Service' && limoStops.every(s => !s.location.trim())) {
+    if (selectedAddon === 'Limousine Transfer' && limoStops.every(s => !s.location.trim())) {
       toast.error('Please enter at least one destination or pick-up point.');
       return;
     }
@@ -511,6 +589,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // ─────────────────────────────────────────────────────────────────────────
 
   const [nonFlyingLD, setNonFlyingLD] = useState(booking.nonFlyingGuestsInLoungeDeluxe ?? 0);
+
+  // ── Status Management state (2026-06-15, round 6.2.41) ─────────────────────
+  // Pre-fix the Status Management card used `defaultValue={booking.status}`
+  // (uncontrolled selects + textarea) — Save just toasted without ever
+  // reading the user's selection. Now they are controlled; the new
+  // `onUpdateStatus` callback (line above) reads these values on click.
+  const [statusValue,         setStatusValue]         = useState<BookingStatusValue>(booking.status);
+  const [paymentStatusValue,  setPaymentStatusValue]  = useState<PaymentStatusValue>(booking.paymentStatus);
+  const [rejectionReasonText, setRejectionReasonText] = useState(booking.rejectionReason ?? '');
 
   // ── Per-guest voucher toggles (true = this guest's entry is covered by a voucher) ──
   // Only Account Owner and Spouse are eligible; toggling consumes one voucher from account.
@@ -1870,11 +1957,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
           <Button
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-            disabled={hasGuestErrors}
-            onClick={() => { if (!hasGuestErrors) toast.success('Guest details saved successfully!'); }}
+            disabled={hasGuestErrors || isSavingGuestDetails}
+            onClick={() => {
+              if (hasGuestErrors) return;
+              if (!onSaveGuestDetails) {
+                toast.info('Guest details save not yet wired — please use the Edit Booking dialog for now.');
+                return;
+              }
+              onSaveGuestDetails({
+                numPremiereSuites,
+                vipPassengersInPremiereSuite: vipPS,
+                nonFlyingGuestsInPremiereSuite: nonFlyingPS,
+                vipPassengersInLoungeDeluxe: vipLD,
+                nonFlyingGuestsInLoungeDeluxe: nonFlyingLD,
+              }).catch(() => { /* wrapper toasts */ });
+            }}
           >
             <CheckCircle className="w-4 h-4 mr-2" />
-            Save Guest Details
+            {isSavingGuestDetails ? 'Saving…' : 'Save Guest Details'}
           </Button>
           {hasGuestErrors && (
             <p className="text-sm text-red-600 flex items-center gap-1">
@@ -1957,13 +2057,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
           <div className="flex gap-3 mt-5">
             <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => toast.success('Suite & time assignment saved!', {
-                description: `${assignedSuite} · ${assignedDate} · ${assignedStartTime}–${assignedEndTime}`,
-              })}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              disabled={isSavingAssignment}
+              onClick={() => {
+                if (!onSaveAssignment) {
+                  toast.info('Assignment save not yet wired — please use the Edit Booking dialog for now.');
+                  return;
+                }
+                onSaveAssignment({
+                  assignedSuite,
+                  assignedDate,
+                  assignedStartTime,
+                  assignedEndTime,
+                }).catch(() => { /* wrapper toasts */ });
+              }}
             >
               <CheckCircle className="w-4 h-4 mr-2" />
-              Save Assignment
+              {isSavingAssignment ? 'Saving…' : 'Save Assignment'}
             </Button>
           </div>
         </Card>
@@ -2028,16 +2138,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
           <div className="mt-4">
             <Button
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+              disabled={isSavingStaffAssignment}
               onClick={() => {
                 if (selectedStaffIds.length === 0) { toast.error('Please select at least one staff member.'); return; }
-                toast.success('In-charge staff saved!', {
-                  description: ALL_STAFF.filter(s => selectedStaffIds.includes(s.id)).map(s => s.name).join(', '),
-                });
+                if (!onSaveStaffAssignment) {
+                  toast.info('Staff assignment save not yet wired — backend has no staff endpoint yet.');
+                  return;
+                }
+                onSaveStaffAssignment({ selectedStaffIds }).catch(() => { /* wrapper toasts */ });
               }}
             >
               <CheckCircle className="w-4 h-4 mr-2" />
-              Save Staff Assignment
+              {isSavingStaffAssignment ? 'Saving…' : 'Save Staff Assignment'}
             </Button>
           </div>
         </Card>
@@ -2361,11 +2474,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {/* Save button */}
             <div className="pt-2">
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => toast.success('Passenger details saved successfully!')}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                disabled={isSavingPassengerDetails}
+                onClick={() => {
+                  if (!onSavePassengerDetails) {
+                    toast.info('Passenger details save not yet wired.');
+                    return;
+                  }
+                  onSavePassengerDetails(passengers).catch(() => { /* wrapper toasts */ });
+                }}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Save Passenger Details
+                {isSavingPassengerDetails ? 'Saving…' : 'Save Passenger Details'}
               </Button>
             </div>
           </div>
@@ -2541,11 +2661,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {/* Save button */}
             <div className="pt-2">
               <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={() => toast.success('Non-flying guest details saved successfully!')}
+                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                disabled={isSavingNonFlyingGuestDetails}
+                onClick={() => {
+                  if (!onSaveNonFlyingGuestDetails) {
+                    toast.info('Non-flying guest save not yet wired.');
+                    return;
+                  }
+                  onSaveNonFlyingGuestDetails(nonFlyingGuests).catch(() => { /* wrapper toasts */ });
+                }}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
-                Save Guest Details
+                {isSavingNonFlyingGuestDetails ? 'Saving…' : 'Save Guest Details'}
               </Button>
             </div>
           </div>
@@ -3071,7 +3198,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               )}
 
               {/* Step 2.5 — Service-specific extra fields */}
-              {selectedAddon === 'Limousine Service' && (
+              {selectedAddon === 'Limousine Transfer' && (
                 <tr className="bg-blue-50/40 border-t border-blue-100">
                   <td colSpan={5} className="px-4 py-3">
                     <div className="flex items-center gap-2 mb-2">
@@ -3404,7 +3531,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="grid grid-cols-2 gap-6">
           <div>
             <label className="text-sm text-gray-600 mb-2 block">Booking Status</label>
-            <select className="w-full px-3 py-2 border rounded" defaultValue={booking.status}>
+            <select
+              className="w-full px-3 py-2 border rounded"
+              value={statusValue}
+              onChange={e => setStatusValue(e.target.value as BookingStatusValue)}
+            >
               <option value="Pending for Review">Pending for Review</option>
               <option value="Pending for Approval">Pending for Approval</option>
               <option value="Approved">Approved</option>
@@ -3416,7 +3547,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
           <div>
             <label className="text-sm text-gray-600 mb-2 block">Payment Status</label>
-            <select className="w-full px-3 py-2 border rounded" defaultValue={booking.paymentStatus}>
+            <select
+              className="w-full px-3 py-2 border rounded"
+              value={paymentStatusValue}
+              onChange={e => setPaymentStatusValue(e.target.value as PaymentStatusValue)}
+            >
               <option value="Not Required">Not Required</option>
               <option value="Pending">Pending</option>
               <option value="Payment Link Sent">Payment Link Sent</option>
@@ -3427,17 +3562,32 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
           <div className="col-span-2">
             <label className="text-sm text-gray-600 mb-2 block">Status Update Reason / Notes</label>
-            <textarea 
-              className="w-full px-3 py-2 border rounded resize-none" 
+            <textarea
+              className="w-full px-3 py-2 border rounded resize-none"
               rows={3}
               placeholder="Enter reason for status change or additional notes..."
-              defaultValue={booking.rejectionReason || ''}
+              value={rejectionReasonText}
+              onChange={e => setRejectionReasonText(e.target.value)}
             />
           </div>
           <div className="col-span-2">
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.success('Booking status updated successfully!')}>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              disabled={isUpdatingStatus}
+              onClick={() => {
+                if (!onUpdateStatus) {
+                  toast.info('Status save not yet wired — please use the Edit Booking dialog for now.');
+                  return;
+                }
+                onUpdateStatus({
+                  status: statusValue,
+                  paymentStatus: paymentStatusValue,
+                  rejectionReason: rejectionReasonText.trim() || undefined,
+                }).catch(() => { /* wrapper toasts; swallow here so unhandled-rejection doesn't break the click handler */ });
+              }}
+            >
               <CheckCircle className="w-4 h-4 mr-2" />
-              Update Status
+              {isUpdatingStatus ? 'Updating…' : 'Update Status'}
             </Button>
           </div>
         </div>
@@ -3936,7 +4086,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </p>
 
               {/* Limousine stops */}
-              {editSelectedServices.includes('Limousine Service') && (
+              {editSelectedServices.includes('Limousine Transfer') && (
                 <div className="mt-3 p-3 rounded-lg border border-purple-200 bg-purple-50/40">
                   <div className="flex items-center gap-2 mb-2">
                     <Car className="w-4 h-4 text-purple-600" />

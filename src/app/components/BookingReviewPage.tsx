@@ -57,6 +57,25 @@ interface PendingBooking {
   // Optional so standalone-preview mode (no prop passed) still
   // works and the MOCK_PENDING_BOOKING fallback (which doesn't
   // have these fields) compiles.
+  //
+  // 2026-06-15 — round 6.2.42 (bug "review page shows wrong
+  // per-suite breakdown for booking 132"). The 5 per-suite
+  // fields below (numberOfPremiereSuites / vipPS / nonFlyingPS /
+  // vipLD / nonFlyingLD) used to be derived in this view from
+  // mock `id % N` formulas (see `numPremiereSuites` /
+  // `vipPS` / etc. computed below). For real bookings the
+  // wrapper passes the canonical values via `mapBookingFromApi`
+  // → `mapApiBookingToPending`; the view's mock derivation
+  // overwrote them. Adding the fields here (all optional so
+  // standalone-preview mode still compiles) and switching the
+  // view's derivation to "real data wins, mock fallback only
+  // when no prop passed" makes the per-suite display match
+  // the booking detail page.
+  numberOfPremiereSuites?: number;
+  vipPassengersInPremiereSuite?: number;
+  nonFlyingGuestsInPremiereSuite?: number;
+  vipPassengersInLoungeDeluxe?: number;
+  nonFlyingGuestsInLoungeDeluxe?: number;
   passengers?: Array<{
     title?: string;
     firstName?: string;
@@ -268,13 +287,40 @@ export function BookingReviewPage({
     ? booking.dateTime.split(' ')[0]
     : (() => { const d = new Date(booking.dateTime.split(' ')[0]); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
 
-  // Premiere Suite breakdown
-  const numPremiereSuites = flyingGuests > 0 ? (id % 2 === 0 ? 1 : 0) : 0;
-  const vipPS = numPremiereSuites > 0 ? Math.min(flyingGuests, 1 + (id % 2)) : 0;
-  const nonFlyingPS = numPremiereSuites > 0 && booking.nonFlyingGuests > 0 ? Math.min(booking.nonFlyingGuests, 1) : 0;
+  // Premiere Suite + Lounge Deluxe breakdown
+  // 2026-06-15 — round 6.2.42 (bug "review page shows wrong per-suite
+  // breakdown for booking 132"). Pre-6.2.42 this block ALWAYS used
+  // mock `id % N` formulas, which overwrote the canonical per-suite
+  // counts the wrapper mapper forwarded from `mapBookingFromApi`.
+  // Post-6.2.42: if any of the 5 fields are present on `booking`,
+  // use the real values (the wrapper always passes them for
+  // wrapper-mode bookings). Only fall back to the mock formulas
+  // for standalone-preview mode (`bookingProp` undefined → this
+  // view is rendered without a real booking, e.g. figma make
+  // preview). The fallback keeps the historical behaviour for
+  // the figma make import (per INV-X1: don't break the figma
+  // Make import).
+  const hasRealSuiteBreakdown = booking.numberOfPremiereSuites !== undefined
+    || booking.vipPassengersInPremiereSuite !== undefined
+    || booking.nonFlyingGuestsInPremiereSuite !== undefined
+    || booking.vipPassengersInLoungeDeluxe !== undefined
+    || booking.nonFlyingGuestsInLoungeDeluxe !== undefined;
+  const numPremiereSuites = hasRealSuiteBreakdown
+    ? (booking.numberOfPremiereSuites ?? 0)
+    : (flyingGuests > 0 ? (id % 2 === 0 ? 1 : 0) : 0);
+  const vipPS = hasRealSuiteBreakdown
+    ? (booking.vipPassengersInPremiereSuite ?? 0)
+    : (numPremiereSuites > 0 ? Math.min(flyingGuests, 1 + (id % 2)) : 0);
+  const nonFlyingPS = hasRealSuiteBreakdown
+    ? (booking.nonFlyingGuestsInPremiereSuite ?? 0)
+    : (numPremiereSuites > 0 && booking.nonFlyingGuests > 0 ? Math.min(booking.nonFlyingGuests, 1) : 0);
   // Lounge Deluxe breakdown
-  const vipLD = Math.max(0, flyingGuests - vipPS);
-  const nonFlyingLD = Math.max(0, booking.nonFlyingGuests - nonFlyingPS);
+  const vipLD = hasRealSuiteBreakdown
+    ? (booking.vipPassengersInLoungeDeluxe ?? 0)
+    : Math.max(0, flyingGuests - vipPS);
+  const nonFlyingLD = hasRealSuiteBreakdown
+    ? (booking.nonFlyingGuestsInLoungeDeluxe ?? 0)
+    : Math.max(0, booking.nonFlyingGuests - nonFlyingPS);
 
   // 2026-06-08 round 6.2.1 (review page data fix): the `passengers`
   // and `nonFlyingGuestList` and `contact` arrays used to be derived

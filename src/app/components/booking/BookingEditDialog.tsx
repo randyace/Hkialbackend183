@@ -406,7 +406,15 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
       // (the wrapper converts to the wire shape).
       limoStops: editLimoStops,
       wheelchairPassenger: editWheelchairPassenger,
-      hasLimousine: editSelectedServices.includes('Limousine Service'),
+      // 2026-06-16 (round 6.2.43 follow-up, Bug 1 fix) —
+      // the catalog key for Limo is 'Limousine Transfer' (the
+      // wire-shape name, what gets serialized into
+      // addons.items[].name). The boolean check must use the
+      // same string so hasLimousine actually reflects the
+      // catalog toggle — otherwise the Limo destinations UI
+      // (gated on this flag at line ~815) doesn't show when
+      // staff selects Limo via the catalog. Match the wire.
+      hasLimousine: editSelectedServices.includes('Limousine Transfer'),
       hasShopping: editSelectedServices.includes('In-lounge Personal Shopping Assistance')
         || editSelectedServices.some(s => /shop/i.test(s)),
       hasWheelchair: editSelectedServices.includes('Wheelchair Assistance'),
@@ -812,7 +820,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
               )}
             </div>
 
-            {editSelectedServices.includes('Limousine Service') && (
+            {editSelectedServices.includes('Limousine Transfer') && (
               <div className="mt-3 p-3 rounded-lg border border-purple-200 bg-purple-50/40">
                 <div className="flex items-center gap-2 mb-2">
                   <Car className="w-4 h-4 text-purple-600" />
