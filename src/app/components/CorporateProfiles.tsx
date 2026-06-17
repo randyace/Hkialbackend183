@@ -10,7 +10,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from './ui/dialog';
 import { Search, Plus, Eye, Edit, Building2, Plane, Phone, Mail, FileText, Calendar, Users, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 
 type AccountType = 'Corporate' | 'Agency';
 

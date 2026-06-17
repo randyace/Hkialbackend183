@@ -3,7 +3,7 @@ import { Edit2, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { suiteService, type Suite } from '@/services/suiteService';
 // 2026-06-12 (round 6.2.39, M11 fix) — import the shared
 // catalog of add-on services. The pre-6.2.39 hardcoded
@@ -87,6 +87,18 @@ interface EditBooking {
    * from `bookingMemo` + `specialRequests`).
    */
   specialRequests?: string;
+  /**
+   * 2026-06-17 (Phase 1) — account-level fields surfaced by
+   * the ViewBooking mapper. The dialog shows them read-only
+   * except for accountRemark, which is editable.
+   */
+  companyName?: string;
+  membershipTier?: string;
+  accountDiscountPct?: number;
+  promoApplied?: { code: string; discountPct: number } | null;
+  accountRemark?: string;
+  bookingChannel?: string;
+  agencyName?: string;
 }
 
 interface EditLimoStop { id: number; type: 'Pick-up' | 'Destination'; location: string; }
@@ -193,12 +205,6 @@ const ADDON_SERVICES: AddonService[] = CATALOG_ADDONS.map((a) => ({
   defaultPrice: a.defaultPrice.toFixed(2),
 }));
 
-interface BookingEditDialogProps {
-  open: boolean;
-  onClose: () => void;
-  booking: EditBooking;
-}
-
 export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = false }: BookingEditDialogProps) {
   const [editFlightType,    setEditFlightType]    = useState<'Arrival' | 'Departure' | 'Transit'>(booking.flightType ?? 'Departure');
   const [editFlightNo,      setEditFlightNo]      = useState(booking.flightNo);
@@ -236,6 +242,8 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
   const [editSelectedServices, setEditSelectedServices] = useState<string[]>(booking.services ?? []);
   const [editAddonSearch, setEditAddonSearch] = useState('');
   const [showEditAddonDropdown, setShowEditAddonDropdown] = useState(false);
+  // 2026-06-17 (Phase 1) — account-level editable state.
+  const [editAccountRemark, setEditAccountRemark] = useState(booking.accountRemark ?? '');
 
   // ── Physical resource state ────────────────────────────────────────────
   // Fetched once when the dialog opens. Sorted by name (numeric-aware) so
@@ -414,12 +422,12 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
       hasPrivateSales: editSelectedServices.includes('Private Sales'),
       isAdHoc: false,
       paymentMode: 'Upfront',
-      companyName: undefined,
-      membershipTier: undefined,
-      accountDiscountPct: undefined,
-      promoCode: undefined,
-      accountRemark: undefined,
-      bookingChannel: undefined,
+      companyName: booking.companyName,
+      membershipTier: booking.membershipTier,
+      accountDiscountPct: booking.accountDiscountPct,
+      promoCode: booking.promoApplied?.code,
+      accountRemark: editAccountRemark,
+      bookingChannel: booking.bookingChannel,
     };
     try {
       await onSave(payload);
@@ -748,7 +756,50 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
             </div>
           </div>
 
-          {/* Section 3: Add-on Services */}
+          {/* Section 3: Account Info (Phase 1) */}
+          <div>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5" /> Account Info
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Company Name</label>
+                <input type="text" value={booking.companyName ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
+                <input type="text" value={booking.membershipTier ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Discount %</label>
+                <input type="text" value={booking.accountDiscountPct != null ? `${booking.accountDiscountPct}%` : ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Promo Code</label>
+                <input type="text" value={booking.promoApplied?.code ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking Channel</label>
+                <input type="text" value={booking.bookingChannel ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Agency</label>
+                <input type="text" value={booking.agencyName ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Remark</label>
+                <textarea
+                  rows={2}
+                  value={editAccountRemark}
+                  onChange={e => setEditAccountRemark(e.target.value)}
+                  placeholder="Internal account remark..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Add-on Services */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
               <Tag className="w-3.5 h-3.5" /> Add-on Services
