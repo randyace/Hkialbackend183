@@ -153,9 +153,11 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Save booking status + payment status + rejection reason. */
   onUpdateStatus?: (payload: UpdateStatusPayload) => Promise<void>;
   isUpdatingStatus?: boolean;
+  /** Send Adyen payment link to customer. */
+  onSendPaymentLink?: () => Promise<void>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -3614,6 +3616,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
         getPaymentStatusColor={getPaymentStatusColor}
+        onSendPaymentLink={onSendPaymentLink}
       />
 
       {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}

@@ -46,6 +46,7 @@ interface BookingInvoiceDialogProps {
   amountDueAfterVouchers: number;
   getStatusColor: (s: string) => string;
   getPaymentStatusColor: (s: string) => string;
+  onSendPaymentLink?: () => void;
 }
 
 export function BookingInvoiceDialog({
@@ -54,6 +55,7 @@ export function BookingInvoiceDialog({
   livePreviewTotal, serviceSubtotal,
   amountDueAfterVouchers,
   getStatusColor, getPaymentStatusColor,
+  onSendPaymentLink,
 }: BookingInvoiceDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -321,7 +323,7 @@ export function BookingInvoiceDialog({
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
             {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.success('Payment link generated successfully!')}>
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onSendPaymentLink}>
                 <CreditCard className="w-4 h-4 mr-2" />Generate Payment Link
               </Button>
             )}
