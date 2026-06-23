@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, ReactNode } from 'react';
 import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, CalendarClock, Gem, Trophy, Star, Heart, Briefcase, Info } from 'lucide-react';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 import { BookingEditDialog } from './booking/BookingEditDialog';
-import { BookingMovementLog } from './booking/BookingMovementLog';
+import { BookingMovementLog, type MovementEntry, type MovementForm } from './booking/BookingMovementLog';
 import { BookingGuestsSearcher } from './booking/BookingGuestsSearcher';
 import { BookingCustomerProfile, type CustomerProfile } from './booking/BookingCustomerProfile';
 import { Card } from './ui/card';
@@ -106,6 +106,14 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    * the local estimate.
    */
   livePreviewTotal?: number | null;
+  // 2026-06-17 (round 6.2.47) — the price-preview's
+  // `breakdown[]` array. Forwarded to `BookingInvoiceDialog`
+  // so the dialog renders one row per line item instead of
+  // the round 6.2.13 single-line "Lounge Access" black box.
+  // Wrapper populates this from the same
+  // `POST /api/bookings/price-preview` response that supplies
+  // `livePreviewTotal`.
+  livePreviewBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number; product?: string }>;
   // 2026-06-11 — round 6.2.34 UX. Wrapper pre-fetches the
   // booking's account (for the "View Customer Profile"
   // dialog) on mount + on account change, then maps the
@@ -153,11 +161,51 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Save booking status + payment status + rejection reason. */
   onUpdateStatus?: (payload: UpdateStatusPayload) => Promise<void>;
   isUpdatingStatus?: boolean;
-  /** Send Adyen payment link to customer. */
+  // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
+  // Adyen payment link callback. Forwarded from the parent
+  // wrapper (which owns the `paymentApi` import) to the
+  // `BookingInvoiceDialog` (figma-ui) so the "Generate Payment
+  // Link" button in the invoice dialog hits the real
+  // `POST /api/bookings/{id}/send-payment-link` endpoint
+  // instead of being a toast-stub.
   onSendPaymentLink?: () => Promise<void>;
+  // 2026-06-17 (round 6.2.47) — fired after a successful
+  // `send-invoice` POST. The parent wrapper uses this to
+  // refresh the booking's payment_status on the page.
+  onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
+  // 2026-06-17 (round 6.2.47 follow-up) — pass-through for
+  // the invoice dialog's API base URL. The dialog defaults
+  // to `window.location.origin` (the Vite dev server, NOT the
+  // Laravel API), which causes the fetch / blob download to
+  // hit `http://localhost:5173/api/bookings/{id}/invoice.pdf`
+  // — Vite has no `/api` proxy, so the request 404s or returns
+  // the SPA's index.html (depending on history fallback).
+  // The parent wrapper reads the same `VITE_API_BASE_URL` /
+  // default `http://localhost:8000/api` constant used by
+  // `bookingService.ts` and forwards it here.
+  apiBaseUrl?: string;
+  // 2026-06-17 (round 6.2.47 follow-up) — Sanctum bearer token
+  // for the staff user. The dialog already falls back to
+  // `localStorage.auth_token` if omitted, but passing it
+  // explicitly avoids a race where the dialog mounts before
+  // the token is persisted (the wrapper has just done a
+  // login round-trip on its own path).
+  authToken?: string;
+  // 2026-06-18 (round 6.2.48) — Movement Log (round-trip
+  // through `GET/POST/DELETE /api/bookings/{id}/movements`).
+  // Wrapper fetches `movements` on mount + after each add/
+  // delete. The view passes the data + callbacks through to
+  // `BookingMovementLog` (the dialog). Without these props,
+  // the dialog renders its built-in empty state and the Add
+  // button is disabled.
+  movements?: MovementEntry[];
+  onAddMovement?: (form: MovementForm) => Promise<void>;
+  onDeleteMovement?: (id: number) => Promise<void>;
+  isAddingMovement?: boolean;
+  isDeletingMovement?: boolean;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -930,24 +978,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Actions</h3>
         <div className="flex flex-wrap gap-2">
           {/* Review Actions */}
-          {booking.status === 'Pending for Review' && (
-            <>
-              <Button className="bg-green-600 hover:bg-green-700">
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Review & Set Price
-              </Button>
-              <Button variant="destructive">
-                <XCircle className="w-4 h-4 mr-2" />
-                Reject Booking
-              </Button>
-            </>
-          )}
 
           {/* Approval Actions — removed, use /bookings/review/:id for approval */}
 
           {/* Payment Actions */}
           {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-            <Button variant="outline">
+            <Button variant="outline" disabled>
               <CreditCard className="w-4 h-4 mr-2" />
               Generate Payment Link
             </Button>
@@ -975,7 +1011,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </Button>
           )}
 
-          <Button variant="outline">
+          <Button variant="outline" disabled>
             <Mail className="w-4 h-4 mr-2" />
             Share with Partners
           </Button>
@@ -985,17 +1021,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             Movement Log
           </Button>
 
-          <Button variant="outline" onClick={() => { setCustomerSearchQuery(''); setIsCustomerSearchOpen(true); }}>
+          <Button variant="outline" disabled onClick={() => { setCustomerSearchQuery(''); setIsCustomerSearchOpen(true); }}>
             <Users className="w-4 h-4 mr-2" />
             Guests Searcher
           </Button>
-
-          {booking.status !== 'Cancelled' && booking.status !== 'Rejected' && (
-            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Cancel Booking
-            </Button>
-          )}
 
           {/* Refund Action for Cancelled bookings with Paid status */}
           {booking.status === 'Cancelled' && 
@@ -1016,6 +1045,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               Refund
+            </Button>
+          )}
+
+          {/* Cancel Booking — last in the actions list (2026-06-18) */}
+          {booking.status !== 'Cancelled' && booking.status !== 'Rejected' && (
+            <Button
+              variant="outline"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => {
+                onUpdateStatus?.({
+                  status: 'Cancelled',
+                  paymentStatus: booking.paymentStatus,
+                });
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Cancel Booking
             </Button>
           )}
         </div>
@@ -3612,11 +3658,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         voucherTotal={voucherTotal}
         voucherUnitValue={voucherUnitValue}
         livePreviewTotal={livePreviewTotal}
+        breakdown={livePreviewBreakdown}
         serviceSubtotal={serviceSubtotal}
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
         getPaymentStatusColor={getPaymentStatusColor}
         onSendPaymentLink={onSendPaymentLink}
+        onInvoiceSent={onInvoiceSent}
+        apiBaseUrl={apiBaseUrl}
+        authToken={authToken}
       />
 
       {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}
@@ -4150,6 +4200,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         open={isMovementLogOpen}
         onClose={() => setIsMovementLogOpen(false)}
         booking={booking}
+        movements={movements}
+        onAddMovement={onAddMovement}
+        onDeleteMovement={onDeleteMovement}
+        isAddingMovement={isAddingMovement}
+        isDeletingMovement={isDeletingMovement}
       />
       {false && <Dialog open={false} onOpenChange={setIsMovementLogOpen}>
         <DialogContent className="max-w-[96vw] w-[96vw] min-w-[1000px] max-h-[90vh] overflow-y-auto">

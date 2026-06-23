@@ -507,7 +507,7 @@ export function CreateBooking({
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
 
   // ── Lounge Deluxe ───────────────────────────────��───────────────────────────
-  const [vipLD, setVipLD] = useState(1);
+  const [vipLD, setVipLD] = useState(0);
   const [nonFlyingLD, setNonFlyingLD] = useState(0);
 
   // ── Passengers ──────────────────────────────────────────────────────────────

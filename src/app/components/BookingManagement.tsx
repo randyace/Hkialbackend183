@@ -826,15 +826,17 @@ export function BookingManagement({
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEditBooking?.(booking.id)}
-                        className="h-8 w-8 p-0"
-                        title="Edit Booking"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      {onEditBooking && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditBooking?.(booking.id)}
+                          className="h-8 w-8 p-0"
+                          title="Edit Booking"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
                       {onDeleteBooking && (
                         <Button
                           variant="ghost"
