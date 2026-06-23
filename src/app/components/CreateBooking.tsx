@@ -71,7 +71,7 @@ const BOOKING_SEQ = String(Math.floor(Math.random() * 999999) + 1).padStart(6, '
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PassengerTitle = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
-type AgeGroup = 'Adults (aged 12 and above)' | 'Children (aged 2 to 11)' | 'Infants (under 2 years old)' | '';
+type AgeGroup = 'Adults (aged 12 and above)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | '';
 type MembershipTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 type PaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 type FlightClass = 'Economy Class' | 'Business Class' | 'First Class';
@@ -731,18 +731,17 @@ export function CreateBooking({
   // accommodation + guest counts.
   //
   // Round 5.9 (2026-06-06): extended to also sync 3 child/extra
-  // pricing fields. The `passengers` and `nonFlyingGuests` arrays
-  // each carry an `ageGroup` enum; the counts of "Infant (0-2
-  // years)" and "Children (aged 2 to 11)" rows map to
-  // `childrenUnder2` and `childrenAge2To11` in the backend's
-  // `PriceContext`. The figma-ui form does NOT expose an
-  // "additional hours" input yet (future ticket), so
-  // `additionalHours` is hardcoded to 0.
+  // pricing fields. The `passengers` array carries an `ageGroup`
+  // enum; the counts of "Infant (0-2 years)" and "Children (aged
+  // 2 to 11)" rows map to `childrenUnder2` and `childrenAge2To11`
+  // in the backend's `PriceContext`.
+  //
+  // 2026-06-23 (round 6.2.53): child/infant rates apply to FLYING
+  // VIP children/infants only. NFGs are billed as NFGs regardless
+  // of age, so `nonFlyingGuests` is no longer counted here.
   useEffect(() => {
-    const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infants (under 2 years old)').length
-      + nonFlyingGuests.filter((g) => g.ageGroup === 'Infants (under 2 years old)').length;
-    const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Children (aged 2 to 11)').length
-      + nonFlyingGuests.filter((g) => g.ageGroup === 'Children (aged 2 to 11)').length;
+    const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infants (under 2 years old)').length;
+    const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Children (aged 2-11)').length;
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
@@ -799,7 +798,6 @@ export function CreateBooking({
     numPremiereSuites,
     // Round 5.9 additions.
     passengers,
-    nonFlyingGuests,
     onAddonStateChange,
     // Round 6.2.28 (2026-06-09) — staff override. Re-fire
     // the effect so the live preview reflects the new value
@@ -1981,9 +1979,9 @@ export function CreateBooking({
                           <select value={p.ageGroup} onChange={e => updatePassenger(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">Select age group</option>
-                            <option>Adults (aged 12 and above)</option>
-                            <option>Children (aged 2 to 11)</option>
-                            <option>Infants (under 2 years old)</option>
+                            <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
+                            <option value="Children (aged 2-11)">Children (aged 2-11)</option>
+                            <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                           </select>
                         </div>
                         <div className="col-span-3">
@@ -2078,9 +2076,9 @@ export function CreateBooking({
                           <select value={g.ageGroup} onChange={e => updateNonFlying(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">Select age group</option>
-                            <option>Adults (aged 12 and above)</option>
-                            <option>Children (aged 2 to 11)</option>
-                            <option>Infants (under 2 years old)</option>
+                            <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
+                            <option value="Children (aged 2-11)">Children (aged 2-11)</option>
+                            <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                           </select>
                         </div>
                       </div>

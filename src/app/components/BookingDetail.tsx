@@ -2463,7 +2463,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         >
                           <option value="">Select age group</option>
                           <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                          <option value="Children (aged 2 to 11)">Children (aged 2 to 11)</option>
+                          <option value="Children (aged 2-11)">Children (aged 2-11)</option>
                           <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>
@@ -2685,7 +2685,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         >
                           <option value="">Select age group</option>
                           <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                          <option value="Children (aged 2 to 11)">Children (aged 2 to 11)</option>
+                          <option value="Children (aged 2-11)">Children (aged 2-11)</option>
                           <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>

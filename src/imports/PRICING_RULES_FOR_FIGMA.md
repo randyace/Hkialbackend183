@@ -2,6 +2,7 @@
 
 **Source of truth:** EN_Price_List.pdf (client-provided, 2026-06-04)
 **Last updated:** 2026-06-04
+**Status:** **PARTIALLY SUPERSEDED by round 6.2.53 (2026-06-23)** — child/infant rates now apply to flying VIP children/infants only. Non-flying guests are billed as NFGs regardless of age. See `HKIAL/spec.md` §8.2 for the current rule.
 
 This document describes the two products, their add-on rates, the
 free-allowance rules, and the boundary conditions. All amounts are

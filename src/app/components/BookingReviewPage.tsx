@@ -4,7 +4,7 @@ import {
   Car, ShoppingBag, Clock, Building2, CreditCard, BadgePercent,
   MailCheck, Info, FileEdit, User, ChevronRight, ShieldCheck,
   ClipboardCheck, Luggage, Tag, Phone, Mail, MessageSquare,
-  Accessibility, MapPin, Star
+  Accessibility, MapPin, Star, Undo2
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -100,6 +100,14 @@ interface PendingBooking {
     phone?: string;
     memo?: string;
   };
+  // 2026-06-24: real applied promo code, populated by the
+  // wrapper (parent repo) from `mapBookingFromApi`'s
+  // `promoApplied.code` (which reads
+  // `api.advanced_details.account.promoApplied.code`). When
+  // present, the view renders this exact code; only when absent
+  // does it fall back to the PROMO_CODES array (for
+  // standalone-preview mode / figma Make import).
+  promoCode?: string;
   /**
    * 2026-06-08 round 6.2.x (future ticket): addon items list,
    * populated by `mapBookingFromApi` from `api.booking_items`.
@@ -146,7 +154,7 @@ const PASSENGER_SEEDS = [
   { title: 'Mr',   firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adults (aged 12 and above)', day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021' },
   { title: 'Mrs',  firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adults (aged 12 and above)', day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '' },
   { title: 'Mr',   firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adults (aged 12 and above)', day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087' },
-  { title: 'Miss', firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2 to 11)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
+  { title: 'Miss', firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2-11)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
   { title: 'Mr',   firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adults (aged 12 and above)', day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145' },
   { title: 'Mrs',  firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adults (aged 12 and above)', day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '' },
 ];
@@ -154,7 +162,7 @@ const PASSENGER_SEEDS = [
 const NON_FLYING_SEEDS = [
   { title: 'Mrs',  firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adults (aged 12 and above)'  },
   { title: 'Mr',   firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adults (aged 12 and above)'  },
-  { title: 'Miss', firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2 to 11)' },
+  { title: 'Miss', firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2-11)' },
   { title: 'Mr',   firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adults (aged 12 and above)'  },
 ];
 
@@ -166,7 +174,15 @@ const CONTACT_SEEDS = [
   { name: 'Eva Cheung',   email: 'eva.cheung@example.com',   phone: '+852 9567 8901', memo: 'Corporate account — priority seating required.' },
 ];
 
-const PROMO_CODES = ['SUMMER2024', 'VIP20', 'WELCOME', '', 'TRAVEL10', '', 'DIAMOND15', '', '', ''];
+// 2026-06-24: DIAMOND15 removed (was a hard-coded mock showing on
+// supervisor-review page even when no promo code was actually applied
+// — booking 306 had no real promo code but rendered DIAMOND15 here).
+// The view now reads the real `booking.promoCode` (forwarded by the
+// wrapper from `mapBookingFromApi` → `promoApplied.code`); this array
+// is only a fallback for standalone-preview mode (no `booking` prop
+// passed, e.g. figma Make import) to keep the preview rendering
+// meaningful. Per INV-X1: don't break the figma Make import.
+const PROMO_CODES = ['SUMMER2024', 'VIP20', 'WELCOME', '', 'TRAVEL10', '', '', '', '', ''];
 const FLIGHT_CLASSES = ['Economy Class', 'Business Class', 'First Class'] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -235,6 +251,13 @@ export interface BookingReviewPageProps {
   onBack?: () => void;
   onApprove?: (bookingId: number) => void;
   onReject?: (bookingId: number, reason: string) => void;
+  // 2026-06-24: supervisor-only — send a Step-2 booking back to
+  // Step 1 (staff review). Backend requires a non-empty
+  // `rejection_reason` for the PendingForApproval → PendingForReview
+  // transition (see BookingController.php:516-527), so a reason
+  // is always required. The wrapper calls
+  // `updateBookingStatus(id, 'PendingForReview', reason)`.
+  onPushBack?: (bookingId: number, reason: string) => void;
 }
 
 // ── Default mock booking for standalone preview ───────────────────────────────
@@ -271,12 +294,18 @@ export function BookingReviewPage({
   onBack = () => {},
   onApprove,
   onReject,
+  onPushBack,
 }: BookingReviewPageProps = {}) {
   const booking: PendingBooking = bookingProp ?? MOCK_PENDING_BOOKING;
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  // 2026-06-24: push-back state (supervisor only). Backend requires
+  // a non-empty rejection_reason for the PendingForApproval →
+  // PendingForReview transition; we collect it via a dialog.
+  const [showPushBackDialog, setShowPushBackDialog] = useState(false);
+  const [pushBackReason, setPushBackReason] = useState('');
 
   // ── Supplementary derived data (deterministic from booking.id) ────────────
   const id = booking.id;
@@ -380,7 +409,16 @@ export function BookingReviewPage({
         memo: booking.contactPerson?.memo ?? '',
       }
     : CONTACT_SEEDS[id % CONTACT_SEEDS.length];
-  const promoCode = PROMO_CODES[id % PROMO_CODES.length];
+  // 2026-06-24: real booking.promoCode wins (sourced from the
+  // wrapper's `mapApiBookingToPending` from `api.advanced_details
+  // .account.promoApplied.code` via `mapBookingFromApi`); the
+  // PROMO_CODES array is mock fallback ONLY for standalone-preview
+  // mode (no `booking` prop passed). This matches the same pattern
+  // as `hasRealSuiteBreakdown` / `hasRealPassengerData` above.
+  const hasRealPromoCode = !!booking.promoCode;
+  const promoCode = hasRealPromoCode
+    ? booking.promoCode
+    : PROMO_CODES[id % PROMO_CODES.length];
   const accountDiscount = booking.agencyDiscountRate
     ? `${booking.agencyDiscountRate}% (Agency Default)`
     : id % 4 === 0 ? '10%' : '—';
@@ -418,7 +456,23 @@ export function BookingReviewPage({
     onBack();
   };
 
+  // 2026-06-24: supervisor push-back (Step 2 → Step 1). Reason is
+  // required by the backend (BookingController.php:516-527) so we
+  // disable the confirm button until the textarea has content.
+  const handlePushBack = () => {
+    const reason = pushBackReason.trim();
+    if (!reason) return;
+    onPushBack?.(booking.id, reason);
+    setShowPushBackDialog(false);
+    setPushBackReason('');
+    toast.info(`Booking ${booking.bookingNo} sent back to staff review`, {
+      description: 'The booking has been moved back to Step 1: Staff Review for revision.',
+    });
+    onBack();
+  };
+
   const rejectReasonValid = selectedReason !== '';
+  const pushBackReasonValid = pushBackReason.trim() !== '';
 
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -1014,6 +1068,20 @@ export function BookingReviewPage({
                     ? (reviewStage === 'staff' ? 'Approve Cancellation' : 'Confirm Cancellation (Final)')
                     : (reviewStage === 'staff' ? 'Approve & Forward to Supervisor' : 'Approve Booking (Final)')}
                 </Button>
+                {/* 2026-06-24: supervisor-only push-back to Step 1
+                    (Staff Review). Yellow per Sky's spec, sits
+                    between the green Approve and red Reject
+                    buttons. Disabled if the wrapper didn't provide
+                    `onPushBack` (e.g. legacy callers). */}
+                {reviewStage === 'supervisor' && onPushBack && (
+                  <Button
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white gap-2 h-12"
+                    onClick={() => setShowPushBackDialog(true)}
+                  >
+                    <Undo2 className="w-5 h-5" />
+                    Push Back to Staff Review
+                  </Button>
+                )}
                 <Button
                   className="w-full bg-red-600 hover:bg-red-700 text-white gap-2 h-12"
                   onClick={() => setShowRejectDialog(true)}
@@ -1132,6 +1200,63 @@ export function BookingReviewPage({
             >
               <XCircle className="w-4 h-4" />
               Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2026-06-24: Push-Back Dialog (supervisor only). Collects
+          the reason the supervisor is sending the booking back to
+          staff; backend requires a non-empty `rejection_reason`
+          for the PendingForApproval → PendingForReview transition
+          (see BookingController.php:516-527). */}
+      <Dialog open={showPushBackDialog} onOpenChange={(open) => {
+        setShowPushBackDialog(open);
+        if (!open) setPushBackReason('');
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Undo2 className="w-5 h-5 text-yellow-600" />
+              Push Back to Staff Review
+            </DialogTitle>
+            <DialogDescription>
+              Send this booking back to Step 1: Staff Review for revision.
+              Please describe what the staff member should change.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block" style={{ marginBottom: '10px' }}>
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                className="w-full border border-gray-300 rounded-md p-2 text-sm"
+                rows={4}
+                placeholder="e.g. Please verify guest's flight class and re-submit."
+                value={pushBackReason}
+                onChange={e => setPushBackReason(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+              <Info className="w-4 h-4 flex-shrink-0" />
+              <span>The staff member will see this reason and revise the booking before re-submitting.</span>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => {
+              setShowPushBackDialog(false);
+              setPushBackReason('');
+            }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-yellow-500 hover:bg-yellow-600 text-white gap-2"
+              disabled={!pushBackReasonValid}
+              onClick={handlePushBack}
+            >
+              <Undo2 className="w-4 h-4" />
+              Push Back to Staff
             </Button>
           </DialogFooter>
         </DialogContent>
