@@ -161,6 +161,14 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Save booking status + payment status + rejection reason. */
   onUpdateStatus?: (payload: UpdateStatusPayload) => Promise<void>;
   isUpdatingStatus?: boolean;
+  // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
+  // Adyen payment link callback. Forwarded from the parent
+  // wrapper (which owns the `paymentApi` import) to the
+  // `BookingInvoiceDialog` (figma-ui) so the "Generate Payment
+  // Link" button in the invoice dialog hits the real
+  // `POST /api/bookings/{id}/send-payment-link` endpoint
+  // instead of being a toast-stub.
+  onSendPaymentLink?: () => Promise<void>;
   // 2026-06-17 (round 6.2.47) — fired after a successful
   // `send-invoice` POST. The parent wrapper uses this to
   // refresh the booking's payment_status on the page.
@@ -183,6 +191,14 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // the token is persisted (the wrapper has just done a
   // login round-trip on its own path).
   authToken?: string;
+  // 2026-06-23 (round 6.2.49 follow-up #3) — parent-delegated
+  // invoice handlers. The current figma-ui dialog is still
+  // self-contained (it uses `apiBaseUrl`/`authToken`/`onInvoiceSent`),
+  // but the parent wrapper also passes these for the delegated
+  // variant. Keep them optional so the wrapper type-checks; they
+  // are intentionally ignored until the next figma-ui refactor.
+  onSendInvoice?: () => Promise<unknown>;
+  onDownloadPdf?: () => Promise<void>;
   // 2026-06-18 (round 6.2.48) — Movement Log (round-trip
   // through `GET/POST/DELETE /api/bookings/{id}/movements`).
   // Wrapper fetches `movements` on mount + after each add/
@@ -197,7 +213,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   isDeletingMovement?: boolean;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -3655,6 +3671,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
         getPaymentStatusColor={getPaymentStatusColor}
+        onSendPaymentLink={onSendPaymentLink}
         onInvoiceSent={onInvoiceSent}
         apiBaseUrl={apiBaseUrl}
         authToken={authToken}

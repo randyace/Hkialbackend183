@@ -80,12 +80,19 @@ const STAFF_NOTES_POOL = [
   '',
 ];
 
-const SUITE_RATE      = 1800;  // per flying guest
-const NON_FLYING_RATE = 2500;  // per non-flying guest
-const LIMO_RATE       = 1500;
-const SHOPPING_RATE   = 400;
-const ADHOC_RATE      = 0.15;
-const SERVICE_CHARGE_RATE = 0.10;
+// Round 6.2.52 (2026-06-22): removed `buildInvoice()` and the 6
+// `SUITE_RATE / NON_FLYING_RATE / LIMO_RATE / SHOPPING_RATE /
+// ADHOC_RATE / SERVICE_CHARGE_RATE` rate constants. The previous
+// mock invoice builder used WRONG rates (NON_FLYING_RATE=2500 vs
+// canonical 1000; per-flying-guest head-count vs canonical
+// per-suite base) and a +10% ghost service charge. The real
+// invoice is computed by `App\Services\Pricing\PricingService`
+// on the backend and the wrapper `SupervisingApproval.tsx`
+// already passes the server-computed `subtotal / totalAmount /
+// lineItems` via props. The figma-ui mock data below uses zero
+// placeholders so the UI still renders in standalone mode
+// (developers viewing the figma-ui in isolation) without
+// claiming to compute real prices.
 
 // ── Mock Staff Decision Pool ──────────────────────────────────────────────────
 const STAFF_DECISION_POOL: Array<{
@@ -112,79 +119,6 @@ const membershipDiscountRate = (tier?: SupervisingBooking['membershipTier']) => 
   if (tier === 'Platinum') return 0.08;
   if (tier === 'Gold')     return 0.05;
   return 0;
-};
-
-const buildInvoice = (
-  suite: string,
-  numberOfGuests: number,
-  nonFlyingGuests: number,
-  hasLimousine: boolean,
-  hasShopping: boolean,
-  isAdHoc: boolean,
-  agencyDiscountRate: number | undefined,
-  membershipTier: SupervisingBooking['membershipTier'] | undefined,
-) => {
-  const lineItems: InvoiceLineItem[] = [];
-
-  const flyingGuests = numberOfGuests - nonFlyingGuests;
-  const suiteCharge  = flyingGuests * SUITE_RATE;
-  lineItems.push({
-    description: `Suite: ${suite} — Flying Guest (${flyingGuests} pax × HK$${SUITE_RATE.toLocaleString()})`,
-    quantity: flyingGuests,
-    unitPrice: SUITE_RATE,
-    amount: suiteCharge,
-  });
-
-  if (nonFlyingGuests > 0) {
-    const nfCharge = nonFlyingGuests * NON_FLYING_RATE;
-    lineItems.push({
-      description: `Non-flying Guest Admission (${nonFlyingGuests} pax × HK$${NON_FLYING_RATE.toLocaleString()})`,
-      quantity: nonFlyingGuests,
-      unitPrice: NON_FLYING_RATE,
-      amount: nfCharge,
-    });
-  }
-
-  if (hasLimousine) {
-    lineItems.push({
-      description: 'Limousine Transfer Service',
-      quantity: 1,
-      unitPrice: LIMO_RATE,
-      amount: LIMO_RATE,
-    });
-  }
-
-  if (hasShopping) {
-    lineItems.push({
-      description: 'In-lounge Personal Shopping Assistance',
-      quantity: 1,
-      unitPrice: SHOPPING_RATE,
-      amount: SHOPPING_RATE,
-    });
-  }
-
-  const baseSubtotal = lineItems.reduce((s, i) => s + i.amount, 0);
-
-  let adHocSurcharge = 0;
-  if (isAdHoc) {
-    adHocSurcharge = Math.round(baseSubtotal * ADHOC_RATE);
-    lineItems.push({
-      description: 'Ad-hoc / Late Booking Surcharge (15%)',
-      quantity: 1,
-      unitPrice: adHocSurcharge,
-      amount: adHocSurcharge,
-    });
-  }
-
-  const subtotal = baseSubtotal + adHocSurcharge;
-  const agencyDiscount     = agencyDiscountRate ? Math.round(subtotal * agencyDiscountRate / 100) : 0;
-  const memberDiscount     = Math.round(subtotal * membershipDiscountRate(membershipTier));
-  const totalDiscounts     = agencyDiscount + memberDiscount;
-  const afterDiscounts     = subtotal - totalDiscounts;
-  const serviceCharge      = Math.round(afterDiscounts * SERVICE_CHARGE_RATE);
-  const totalAmount        = afterDiscounts + serviceCharge;
-
-  return { lineItems, subtotal, agencyDiscount, membershipDiscount: memberDiscount, serviceCharge, totalAmount };
 };
 
 const generateBookings = (): SupervisingBooking[] => {
@@ -247,7 +181,6 @@ const generateBookings = (): SupervisingBooking[] => {
     const nonFlyingGuests = i % 6 === 0 ? 1 : 0;
     const suite         = suites[idx % suites.length];
 
-    const invoice = buildInvoice(suite, numberOfGuests, nonFlyingGuests, hasLimousine, hasShopping, isAdHoc, agencyDiscountRate, membershipTier);
     const staffDecisionBase = STAFF_DECISION_POOL[idx % STAFF_DECISION_POOL.length];
 
     return {
@@ -287,7 +220,16 @@ const generateBookings = (): SupervisingBooking[] => {
         at: submittedDates[idx],
         reason: staffDecisionBase.reason,
       },
-      ...invoice,
+      // Round 6.2.52 (2026-06-22): zero placeholders for the
+      // server-computed price fields. The real values come from
+      // `PricingService::compute()` via the wrapper's `bookings`
+      // prop. See the round-6.2.52 note above.
+      lineItems: [],
+      subtotal: 0,
+      agencyDiscount: 0,
+      membershipDiscount: 0,
+      serviceCharge: 0,
+      totalAmount: 0,
     };
   });
 };

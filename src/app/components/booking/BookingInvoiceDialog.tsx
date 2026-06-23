@@ -1,4 +1,5 @@
-import { Car, ShoppingBag, Mail, FileText, Download, CreditCard, Ticket, Utensils } from 'lucide-react';
+import { Car, ShoppingBag, Mail, FileText, Download, CreditCard, Ticket, Utensils, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -69,6 +70,14 @@ interface BookingInvoiceDialogProps {
   amountDueAfterVouchers: number;
   getStatusColor: (s: string) => string;
   getPaymentStatusColor: (s: string) => string;
+  // 2026-06-19 (round 6.2.49, payment_getway merge) — the
+  // payment link button delegates to this callback. The parent
+  // wrapper hits `POST /api/bookings/{id}/send-payment-link`
+  // (Laravel + Adyen) and re-fetches the booking so the badge
+  // flips to "PaymentLinkSent". The dialog itself stays free
+  // of the `paymentApi` import — keeps the figma-ui surface
+  // thin (per INV-X1 surgical patch policy).
+  onSendPaymentLink?: () => void | Promise<void>;
   // 2026-06-17 (round 6.2.47) — base URL for the invoice
   // API endpoints. The dialog uses this to construct the
   // send-invoice + PDF download URLs. Default to the
@@ -93,6 +102,7 @@ export function BookingInvoiceDialog({
   serviceSubtotal,
   amountDueAfterVouchers,
   getStatusColor, getPaymentStatusColor,
+  onSendPaymentLink,
   apiBaseUrl,
   authToken,
   onInvoiceSent,
@@ -104,11 +114,23 @@ export function BookingInvoiceDialog({
   const baseUrl = apiBaseUrl ?? (typeof window !== 'undefined' ? window.location.origin : '');
   const token = authToken ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
 
+  // 2026-06-19 (round 6.2.49, payment_getway merge) — local
+  // loading flags for the two async buttons. Both wrap a
+  // network call + a re-fetch in the parent wrapper, so a
+  // few seconds is normal. The flag drives a `disabled +
+  // Loader2` UX so the user doesn't double-click and so they
+  // see the action is in flight (otherwise the dialog just
+  // looks frozen until the parent refetch updates the badge).
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
+  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
+
   const handleSendInvoice = async () => {
+    if (isSendingInvoice) return;
     if (!token) {
       toast.error('Not signed in. Please log in to send an invoice.');
       return;
     }
+    setIsSendingInvoice(true);
     try {
       const response = await fetch(`${baseUrl}/bookings/${bookingId}/send-invoice`, {
         method: 'POST',
@@ -123,14 +145,41 @@ export function BookingInvoiceDialog({
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      toast.success('Invoice sent!', {
-        description: `Invoice ${body.data?.invoice_no ?? ''} has been saved. The customer's payment status is now "Invoice Sent".`,
+      toast.success('Invoice emailed to customer!', {
+        description: `Invoice ${body.data?.invoice_no ?? ''} has been sent to ${booking.guestName || 'the customer'} (PDF attached). Payment status is now "Invoice Sent".`,
       });
       onInvoiceSent?.({ invoice_no: body.data?.invoice_no ?? '', data: body.data ?? {} });
     } catch (err) {
       toast.error('Failed to send invoice', {
         description: err instanceof Error ? err.message : 'Unknown error',
       });
+    } finally {
+      setIsSendingInvoice(false);
+    }
+  };
+
+  // 2026-06-19 (round 6.2.49, payment_getway merge) — the
+  // "Generate Payment Link" button now delegates to the
+  // parent's `handleSendPaymentLink` callback (which hits
+  // `POST /api/bookings/{id}/send-payment-link` via
+  // `paymentApi.sendPaymentLink`, then re-fetches the
+  // booking so `payment_status` flips to `PaymentLinkSent`).
+  // The dialog stays free of the `paymentApi` import to keep
+  // the figma-ui surface thin (per INV-X1 surgical patch
+  // policy). Errors and toasts surface here so the user
+  // sees feedback in the same place as the invoice flow.
+  const handleSendPaymentLink = async () => {
+    if (isSendingPaymentLink || !onSendPaymentLink) return;
+    setIsSendingPaymentLink(true);
+    try {
+      await onSendPaymentLink();
+    } catch (err) {
+      // Parent already toasts on failure; we only guard
+      // against an uncaught throw so the dialog's loading
+      // flag always resets.
+      console.error('[BookingInvoiceDialog] send payment link failed:', err);
+    } finally {
+      setIsSendingPaymentLink(false);
     }
   };
 
@@ -193,7 +242,28 @@ export function BookingInvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="min-w-[650px] max-w-[95vw] w-[1400px] max-h-[95vh] overflow-y-auto">
+      {/* 2026-06-19 (round 6.2.49, user-reported "dialog too narrow")
+        — widened from `w-[1400px]` to `w-[1700px]`. The dialog's
+        items table + voucher + payment blocks were getting
+        horizontally cramped on a typical 1920px viewport — the
+        right-hand "Booking Information" card was wrapping and
+        the line items were squeezing the unit-price column.
+        Bumping to 1700px keeps the dialog comfortably within
+        95vw on most laptop screens while giving the table room
+        to breathe.
+
+        Round 6.2.49 follow-up (user-reported: "still thin even
+        after w-[1700px]"): the base `DialogContent` UI primitive
+        has hardcoded defaults — `max-w-[calc(100%-2rem)]` and
+        `sm:max-w-lg` (512px) — that the `cn()` merge applies
+        alongside our `w-[1700px]`. CSS rules then cap our width
+        at the smaller of the two max-widths, so the dialog
+        rendered at ~512px on a >640px viewport regardless of
+        our width override. The fix is `!max-w-none sm:!max-w-none`
+        to defeat those defaults (and re-assert `w-[1700px]` as
+        `!w-[1700px]` for good measure). The `95vw` cap is still
+        honored via the second `max-w-[95vw]` declaration. */}
+      <DialogContent className="!max-w-none sm:!max-w-none !w-[1700px] max-w-[95vw] min-w-[650px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invoice - {booking.bookingNo}</DialogTitle>
           <DialogDescription>Review and send invoice for this booking</DialogDescription>
@@ -466,17 +536,33 @@ export function BookingInvoiceDialog({
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
             {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => toast.success('Payment link generated successfully!')}>
-                <CreditCard className="w-4 h-4 mr-2" />Generate Payment Link
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleSendPaymentLink}
+                disabled={isSendingPaymentLink || !onSendPaymentLink}
+                data-testid="invoice-payment-link-button"
+              >
+                {isSendingPaymentLink ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4 mr-2" />
+                )}
+                {isSendingPaymentLink ? 'Sending payment link…' : 'Generate Payment Link'}
               </Button>
             )}
             {(booking.paymentStatus === 'Pending' || booking.paymentStatus === 'Payment Link Sent' || booking.paymentStatus === 'Invoice Sent' || booking.paymentStatus === 'InvoiceSent') && (
               <Button
                 className="bg-green-600 hover:bg-green-700"
                 onClick={handleEmailInvoice}
+                disabled={isSendingInvoice}
                 data-testid="invoice-email-button"
               >
-                <Mail className="w-4 h-4 mr-2" />Email Invoice to Customer
+                {isSendingInvoice ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4 mr-2" />
+                )}
+                Email Invoice to Customer
               </Button>
             )}
             <Button
@@ -496,9 +582,15 @@ export function BookingInvoiceDialog({
             <Button
               className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
               onClick={handleSendInvoice}
+              disabled={isSendingInvoice}
               data-testid="invoice-send-button"
             >
-              <Mail className="w-5 h-5 mr-2" />Send Invoice to Client
+              {isSendingInvoice ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Mail className="w-5 h-5 mr-2" />
+              )}
+              {isSendingInvoice ? 'Sending invoice…' : 'Send Invoice to Client'}
             </Button>
           </div>
         </div>
