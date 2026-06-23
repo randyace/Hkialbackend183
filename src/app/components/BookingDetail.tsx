@@ -106,6 +106,15 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    * the local estimate.
    */
   livePreviewTotal?: number | null;
+  // 2026-06-17 (round 6.2.47) — the price-preview's
+  // `breakdown[]` array. The wrapper captures this from the
+  // same response that supplies `livePreviewTotal` and
+  // forwards it here so `BookingInvoiceDialog` can render
+  // one row per line item (replacing the single "Lounge
+  // Access" black box + hardcoded Limo/Shopping rows).
+  // Optional for back-compat with the wrapper's pre-6.2.47
+  // signature; default `[]` falls back to the legacy layout.
+  livePreviewBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number; product?: string }>;
   // 2026-06-11 — round 6.2.34 UX. Wrapper pre-fetches the
   // booking's account (for the "View Customer Profile"
   // dialog) on mount + on account change, then maps the
@@ -155,9 +164,21 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   isUpdatingStatus?: boolean;
   /** Send Adyen payment link to customer. */
   onSendPaymentLink?: () => Promise<void>;
+  // 2026-06-23 (round 6.2.49 follow-up #3, user-reported
+  // "sending invoice with payment link keeps failed") —
+  // Two new handlers for the BookingInvoiceDialog:
+  //   `onSendInvoice` POSTs `/api/bookings/{id}/send-invoice`
+  //     (persists Invoice row + dispatches SendInvoiceEmail
+  //     queued job + flips payment_status to 'InvoiceSent').
+  //   `onDownloadPdf` does fetch+blob+<a download> for the
+  //     PDF endpoint so the Authorization header is sent
+  //     (the previous `window.open('?token=...')` got 401'd
+  //     by `auth:sanctum`).
+  onSendInvoice?: () => Promise<unknown>;
+  onDownloadPdf?: () => Promise<void>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onSendInvoice, onDownloadPdf }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -3617,6 +3638,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         getStatusColor={getStatusColor}
         getPaymentStatusColor={getPaymentStatusColor}
         onSendPaymentLink={onSendPaymentLink}
+        onSendInvoice={onSendInvoice}
+        onDownloadPdf={onDownloadPdf}
+        breakdown={livePreviewBreakdown}
       />
 
       {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}

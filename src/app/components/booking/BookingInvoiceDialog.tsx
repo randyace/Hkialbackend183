@@ -1,4 +1,5 @@
-import { Car, ShoppingBag, Mail, FileText, Download, CreditCard, Ticket, Utensils } from 'lucide-react';
+import { useState } from 'react';
+import { Car, ShoppingBag, Mail, FileText, Download, CreditCard, Loader2, Ticket, Utensils } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -21,6 +22,15 @@ interface InvoiceBooking {
   paymentMode?: string;
   paymentStatus: string;
   bookingType: string;
+}
+
+interface BreakdownLineItem {
+  key: string;
+  label: string;
+  qty: number;
+  unit_price: number;
+  subtotal: number;
+  product?: string;
 }
 
 interface BookingInvoiceDialogProps {
@@ -46,7 +56,21 @@ interface BookingInvoiceDialogProps {
   amountDueAfterVouchers: number;
   getStatusColor: (s: string) => string;
   getPaymentStatusColor: (s: string) => string;
-  onSendPaymentLink?: () => void;
+  onSendPaymentLink?: () => void | Promise<void>;
+  // 2026-06-23 (round 6.2.49 follow-up #3, user-reported
+  // "sending invoice with payment link keeps failed") — the
+  // parent wrapper now passes real handlers. We accept both
+  // shapes (`Promise<unknown>` from the wrapper, the dialog
+  // doesn't read the return value).
+  onSendInvoice?: () => Promise<unknown>;
+  onDownloadPdf?: () => Promise<void>;
+  // 2026-06-17 (round 6.2.47) — render `breakdown[]` from
+  // the price-preview response as real line items, replacing
+  // the single "Lounge Access" black box (round 6.2.13
+  // behavior) and the hardcoded Limo/Shopping rows. Optional
+  // for back-compat; default `[]` renders just the
+  // authoritative live-preview total.
+  breakdown?: BreakdownLineItem[];
 }
 
 export function BookingInvoiceDialog({
@@ -56,10 +80,83 @@ export function BookingInvoiceDialog({
   amountDueAfterVouchers,
   getStatusColor, getPaymentStatusColor,
   onSendPaymentLink,
+  onSendInvoice,
+  onDownloadPdf,
+  breakdown = [],
 }: BookingInvoiceDialogProps) {
+  // 2026-06-23 (round 6.2.49 follow-up #3) — local loading
+  // state for the action buttons. Each button owns its own
+  // flag so the user can see WHICH action is in flight
+  // (pre-6.2.49 the dialog looked frozen because the spinner
+  // was missing entirely).
+  const [isSendingInvoice, setIsSendingInvoice] = useState(false);
+  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+
+  // Wrapper for the parent's `onSendPaymentLink`. The dialog
+  // owns the loading flag locally so the spinner stays
+  // consistent across re-renders (the parent doesn't know
+  // about `isSendingPaymentLink`).
+  const handleSendPaymentLink = async () => {
+    if (isSendingPaymentLink || !onSendPaymentLink) return;
+    setIsSendingPaymentLink(true);
+    try {
+      await onSendPaymentLink();
+    } catch (err) {
+      // Parent already toasts on failure; this is the
+      // safety net so the loading flag always resets.
+      console.error('[BookingInvoiceDialog] send payment link failed:', err);
+    } finally {
+      setIsSendingPaymentLink(false);
+    }
+  };
+
+  // Wrapper for the parent's `onSendInvoice` (POST
+  // `/api/bookings/{id}/send-invoice`). Toast text now
+  // matches what actually happens server-side: a queued
+  // `SendInvoiceEmail` job is dispatched with the PDF
+  // attached (see `App\Jobs\SendInvoiceEmail`).
+  const handleSendInvoice = async () => {
+    if (isSendingInvoice || !onSendInvoice) return;
+    setIsSendingInvoice(true);
+    try {
+      await onSendInvoice();
+    } catch (err) {
+      console.error('[BookingInvoiceDialog] send invoice failed:', err);
+    } finally {
+      setIsSendingInvoice(false);
+    }
+  };
+
+  // Wrapper for the parent's `onDownloadPdf` (fetch + blob +
+  // <a download>). Same loading-flag pattern.
+  const handleDownloadPdf = async () => {
+    if (isDownloadingPdf || !onDownloadPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      await onDownloadPdf();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to download invoice PDF.';
+      toast.error(message);
+      console.error('[BookingInvoiceDialog] download pdf failed:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
+
+  // 2026-06-23 (round 6.2.49 follow-up #3) — When the parent
+  // passes `breakdown[]`, render one row per line item. The
+  // backend's `PricingPreviewService::preview` returns these
+  // (PS base, LD base, NFG, children, hours, limo, addons,
+  // account_discount). When `breakdown[]` is empty (legacy /
+  // pre-6.2.47 path), fall back to the single "Lounge Access"
+  // line + the hardcoded Limo/Shopping toggles, so the dialog
+  // still renders something useful instead of an empty table.
+  const hasBreakdown = breakdown.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="min-w-[650px] max-w-[95vw] w-[1400px] max-h-[95vh] overflow-y-auto">
+      <DialogContent className="min-w-[650px] max-w-[95vw] w-[1700px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invoice - {booking.bookingNo}</DialogTitle>
           <DialogDescription>Review and send invoice for this booking</DialogDescription>
@@ -128,79 +225,93 @@ export function BookingInvoiceDialog({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {/* Round 6.2.13: replaced the `headCountRate` line
-                  (HK$X per person × N pax = headCountTotal) with
-                  the `livePreviewTotal` from the backend's
-                  `POST /api/bookings/price-preview`. The line
-                  "Lounge Access" still renders (for traceability)
-                  but shows "— / —" for Unit Price / Amount when
-                  the live preview is not yet available, and the
-                  backend's authoritative total when it is. */}
-                <tr>
-                  <td className="px-6 py-4">
-                    <p className="font-medium">{booking.suite} - Lounge Access</p>
-                    <p className="text-sm text-gray-600">Date: {booking.dateTime}</p>
-                  </td>
-                  <td className="px-6 py-4 text-center">{booking.numberOfGuests}</td>
-                  <td className="px-6 py-4 text-right text-gray-500">—</td>
-                  <td className="px-6 py-4 text-right font-medium">
-                    {livePreviewTotal !== null
-                      ? `HK$${livePreviewTotal.toLocaleString()}`
-                      : '—'}
-                  </td>
-                </tr>
-                {/* Food & Beverage — always complimentary */}
-                <tr>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Utensils className="w-4 h-4 text-green-600" />
-                      <div>
-                        <p className="font-medium">Food &amp; Beverage (incl. Pre-order)</p>
-                        <p className="text-sm text-gray-500">Premium selection — all food &amp; drinks included</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center text-sm text-gray-500">—</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="text-sm text-green-600 font-medium">Complimentary</span>
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-green-600">HK$0</td>
-                </tr>
-                {booking.hasLimousine && (
-                  <tr>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Car className="w-4 h-4 text-purple-600" />
-                        <span>Limousine Transfer Service</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">1</td>
-                    <td className="px-6 py-4 text-right">HK$800</td>
-                    <td className="px-6 py-4 text-right font-medium">HK$800</td>
-                  </tr>
-                )}
-                {booking.hasShopping && (
-                  <tr>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <ShoppingBag className="w-4 h-4 text-green-600" />
-                        <span>In-lounge Shopping Service</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">1</td>
-                    <td className="px-6 py-4 text-right">HK$500</td>
-                    <td className="px-6 py-4 text-right font-medium">HK$500</td>
-                  </tr>
+                {hasBreakdown ? (
+                  // 2026-06-23 — render `breakdown[]` as real
+                  // line items (round 6.2.47's "follow the
+                  // price preview" directive). One <tr> per
+                  // line; key is `product::key::idx` so PS +
+                  // LD both base-keyed lines render
+                  // side-by-side without React key collision.
+                  breakdown.map((line, idx) => (
+                    <tr key={`${line.product ?? 'line'}::${line.key}::${idx}`}>
+                      <td className="px-6 py-4">
+                        <p className="font-medium">{line.label}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">{line.qty}</td>
+                      <td className="px-6 py-4 text-right text-gray-600">
+                        HK${Math.round(line.unit_price).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium">
+                        HK${Math.round(line.subtotal).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <>
+                    {/* Round 6.2.13 fallback (no breakdown[]
+                      yet — pre-6.2.47 path). Renders the
+                      single "Lounge Access" black box + the
+                      hardcoded Limo/Shopping toggles. */}
+                    <tr>
+                      <td className="px-6 py-4">
+                        <p className="font-medium">{booking.suite} - Lounge Access</p>
+                        <p className="text-sm text-gray-600">Date: {booking.dateTime}</p>
+                      </td>
+                      <td className="px-6 py-4 text-center">{booking.numberOfGuests}</td>
+                      <td className="px-6 py-4 text-right text-gray-500">—</td>
+                      <td className="px-6 py-4 text-right font-medium">
+                        {livePreviewTotal !== null
+                          ? `HK$${livePreviewTotal.toLocaleString()}`
+                          : '—'}
+                      </td>
+                    </tr>
+                    {/* Food & Beverage — always complimentary */}
+                    <tr>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Utensils className="w-4 h-4 text-green-600" />
+                          <div>
+                            <p className="font-medium">Food &amp; Beverage (incl. Pre-order)</p>
+                            <p className="text-sm text-gray-500">Premium selection — all food &amp; drinks included</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm text-gray-500">—</td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm text-green-600 font-medium">Complimentary</span>
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-green-600">HK$0</td>
+                    </tr>
+                    {booking.hasLimousine && (
+                      <tr>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Car className="w-4 h-4 text-purple-600" />
+                            <span>Limousine Transfer Service</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">1</td>
+                        <td className="px-6 py-4 text-right">HK$800</td>
+                        <td className="px-6 py-4 text-right font-medium">HK$800</td>
+                      </tr>
+                    )}
+                    {booking.hasShopping && (
+                      <tr>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <ShoppingBag className="w-4 h-4 text-green-600" />
+                            <span>In-lounge Shopping Service</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">1</td>
+                        <td className="px-6 py-4 text-right">HK$500</td>
+                        <td className="px-6 py-4 text-right font-medium">HK$500</td>
+                      </tr>
+                    )}
+                  </>
                 )}
               </tbody>
               <tfoot className="border-t-2">
-                {/* Round 6.2.13: replaced the "Head Count" row
-                  (which used `headCountRate` + `headCountTotal`)
-                  with a "Live Preview" row that displays
-                  `livePreviewTotal` (or "Pending pricing" if the
-                  fetch is still in flight). Per the user
-                  directive, NO MORE local `headCountRate × pax`
-                  calculation. */}
                 <tr className="bg-gray-50">
                   <td colSpan={2} className="px-6 py-3 text-right text-sm text-gray-600">
                     Live Preview (POST /api/bookings/price-preview):
@@ -212,7 +323,6 @@ export function BookingInvoiceDialog({
                       : 'Pending pricing'}
                   </td>
                 </tr>
-                {/* Food note */}
                 <tr className="bg-green-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-green-700">
                     <span className="inline-flex items-center gap-1.5">
@@ -231,16 +341,6 @@ export function BookingInvoiceDialog({
                 <tr className="bg-gray-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600 font-medium">Subtotal:</td>
                   <td className="px-6 py-2 text-right font-medium text-gray-800">
-                    {/* Round 6.2.13: use `livePreviewTotal` (the
-                     * backend's authoritative total) instead of
-                     * `headCountTotal + serviceSubtotal`. The
-                     * `livePreviewTotal` is the price the user
-                     * will actually pay (it includes the suite
-                     * base + free-block allocations + addons +
-                     * per-guest charges, all per the backend's
-                     * `PricingService::computeMultiKind`).
-                     * `serviceSubtotal` is still displayed as a
-                     * line item above for traceability. */}
                     {livePreviewTotal !== null
                       ? `HK$${livePreviewTotal.toLocaleString()}`
                       : 'Pending pricing'}
@@ -278,13 +378,6 @@ export function BookingInvoiceDialog({
                     {voucherCount > 0 ? 'Total Amount Payable (after entry vouchers):' : 'Total Amount:'}
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-green-600">
-                    {/* Round 6.2.13: use `livePreviewTotal` instead
-                     * of `amountDueAfterVouchers` (which is now
-                     * a placeholder 0). Voucher pricing model
-                     * will be revised in a future round per the
-                     * user directive. For now, the invoice
-                     * displays the backend's authoritative
-                     * `livePreviewTotal` here. */}
                     {livePreviewTotal !== null
                       ? `HK$${livePreviewTotal.toLocaleString()}`
                       : 'Pending pricing'}
@@ -323,17 +416,50 @@ export function BookingInvoiceDialog({
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
             {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-              <Button className="bg-blue-600 hover:bg-blue-700" onClick={onSendPaymentLink}>
-                <CreditCard className="w-4 h-4 mr-2" />Generate Payment Link
+              <Button
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleSendPaymentLink}
+                disabled={isSendingPaymentLink || !onSendPaymentLink}
+                data-testid="invoice-payment-link-button"
+              >
+                {isSendingPaymentLink ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <CreditCard className="w-4 h-4 mr-2" />
+                )}
+                {isSendingPaymentLink ? 'Sending payment link…' : 'Generate Payment Link'}
               </Button>
             )}
-            {(booking.paymentStatus === 'Pending' || booking.paymentStatus === 'Payment Link Sent') && (
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => toast.success('Invoice emailed to customer!')}>
-                <Mail className="w-4 h-4 mr-2" />Email Invoice to Customer
+            {(booking.paymentStatus === 'Pending'
+              || booking.paymentStatus === 'Payment Link Sent'
+              || booking.paymentStatus === 'PaymentLinkSent'
+              || booking.paymentStatus === 'InvoiceSent') && (
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                onClick={handleSendInvoice}
+                disabled={isSendingInvoice || !onSendInvoice}
+                data-testid="invoice-send-button"
+              >
+                {isSendingInvoice ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4 mr-2" />
+                )}
+                {isSendingInvoice ? 'Sending invoice…' : 'Email Invoice to Customer'}
               </Button>
             )}
-            <Button variant="outline" onClick={() => toast.success('Invoice downloaded successfully!')}>
-              <Download className="w-4 h-4 mr-2" />Download PDF
+            <Button
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf || !onDownloadPdf}
+              data-testid="invoice-download-pdf-button"
+            >
+              {isDownloadingPdf ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 mr-2" />
+              )}
+              {isDownloadingPdf ? 'Preparing PDF…' : 'Download PDF'}
             </Button>
             <Button variant="outline" onClick={() => window.print()}>
               <FileText className="w-4 h-4 mr-2" />Print Invoice
@@ -341,9 +467,26 @@ export function BookingInvoiceDialog({
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
 
+          {/* 2026-06-23 — the legacy full-width "Send Email to
+            Client" button was a toast-stub. Now wired to the
+            same `onSendInvoice` as the action-bar button so the
+            big primary CTA does the same thing as the smaller
+            "Email Invoice to Customer" button (UX consistency).
+            The toast text now reflects what actually happens
+            (queued SendInvoiceEmail job + PDF attached). */}
           <div className="pt-4 border-t">
-            <Button className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg" onClick={() => toast.success('Email sent to client successfully!')}>
-              <Mail className="w-5 h-5 mr-2" />Send Email to Client
+            <Button
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
+              onClick={handleSendInvoice}
+              disabled={isSendingInvoice || !onSendInvoice}
+              data-testid="invoice-send-to-client-button"
+            >
+              {isSendingInvoice ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Mail className="w-5 h-5 mr-2" />
+              )}
+              {isSendingInvoice ? 'Sending invoice…' : 'Send Invoice to Client'}
             </Button>
           </div>
         </div>
