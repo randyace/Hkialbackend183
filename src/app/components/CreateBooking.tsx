@@ -13,6 +13,7 @@ import { Badge } from './ui/badge';
 // CREATE_ADDON_SERVICES (4 items) is replaced by this import.
 import { CATALOG_ADDONS, CATALOG_ADDON_MAP } from './addons';
 import { Button } from './ui/button';
+import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import {
   Select,
@@ -160,6 +161,18 @@ export interface BookingFormData {
   vipLD: number;
   nonFlyingLD: number;
   /**
+   * 2026-06-23 — Region code (e.g. '852') for the contact person
+   * phone number. The form renders this as a typeahead
+   * `<RegionCodeCombobox>` (sourced from
+   * `GET /api/lookups/region-codes` via the wrapper's
+   * `regionCodes` prop). The number part is filtered to digits +
+   * '-' only via `filterContactNumber`. The wrapper combines the
+   * two with a single space for `guest_phone` on submit
+   * (e.g. `852 91234567`), matching the existing AccountCreation
+   * phone format.
+   */
+  regionCode: string;
+  /**
    * 2026-06-08 — pre-validated 6h gap error string. When the form
    * detects legs[1].arrivalDate - legs[0].arrivalDate < 6h, the
    * submit button is disabled and this message is rendered inline.
@@ -253,6 +266,15 @@ export interface CreateBookingProps {
   liveTotal?: number | null;
   liveRulesApplied?: string[];
   liveWarnings?: string[];
+  /**
+   * 2026-06-23 — Region codes for the Contact Person phone region
+   * dropdown. Sourced from `GET /api/lookups/region-codes` by the
+   * wrapper (same data path as AccountCreation). When the prop is
+   * empty/undefined, the form falls back to a small hardcoded
+   * list (HK/CN/US/UK) so the form is still usable in offline
+   * mocks. Each entry is `{ code, name }`.
+   */
+  regionCodes?: { code: string; name: string }[];
   /**
    * HKIAL addons pricing fix round 5.3 (2026-06-05): the figma-ui
    * sub-module owns the addons state in its local useState (hasLimousine,
@@ -354,6 +376,143 @@ export interface CreateBookingProps {
   bookableItemPrices?: Record<string, number>;
 }
 
+// 2026-06-23 — phone-region code typeahead + number filter, shared
+// with figma-ui AccountCreation.tsx. Copied here (rather than
+// extracting to a shared module) to keep the figma-ui surface
+// self-contained per the figma Make copy-paste constraint (INV-X1):
+// figma Make cannot supply cross-file imports outside the tree it
+// generates, so inline is the only safe option. Keep the two
+// copies in sync if behaviour changes.
+
+// Phone number input filter — digits and '-' only. Mirrors
+// AccountCreation.tsx::filterContactNumber.
+const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
+
+// Typeahead combobox for the phone region code. Reads from the
+// `regionCodes` prop (sourced from `GET /api/lookups/region-codes`
+// by the wrapper). Falls back to a 4-region hardcoded list when
+// the prop is empty (offline mock / pre-fetch state) so the form
+// is still usable.
+const FALLBACK_REGION_CODES: { code: string; name: string }[] = [
+  { code: '852', name: 'Hong Kong' },
+  { code: '86',  name: 'China' },
+  { code: '1',   name: 'United States' },
+  { code: '44',  name: 'United Kingdom' },
+];
+function RegionCodeCombobox({
+  id,
+  value,
+  options,
+  onChange,
+  placeholder = 'Select region code',
+}: {
+  id?: string;
+  value: string;
+  options: { code: string; name: string }[];
+  onChange: (code: string) => void;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const matched = options.find(o => o.code === value);
+  // While focused, treat the input as a typeahead search box (query
+  // is the source of truth, the field is empty by default). When
+  // blurred, show the formatted "code - name" so the selected value
+  // stays visible. Showing the formatted text while focused previously
+  // caused typed characters to be appended to "852 - Hong Kong",
+  // making the typeahead appear stuck.
+  const displayValue = hasFocus
+    ? query
+    : (matched ? `${matched.code} - ${matched.name}` : value);
+
+  const filtered = query.length === 0
+    ? options
+    : options.filter(o =>
+        o.code.toLowerCase().includes(query.toLowerCase()) ||
+        o.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+        setHasFocus(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, []);
+
+  const handleSelect = (code: string) => {
+    onChange(code);
+    setQuery('');
+    setHasFocus(false);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <Input
+        id={id}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${id || 'rc'}-listbox`}
+        aria-autocomplete="list"
+        autoComplete="off"
+        value={displayValue}
+        placeholder={placeholder}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => { setHasFocus(true); setOpen(true); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && filtered.length > 0) {
+            e.preventDefault();
+            handleSelect(filtered[0].code);
+          } else if (e.key === 'Escape') {
+            setOpen(false);
+            setQuery('');
+            setHasFocus(false);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        required
+      />
+      {open && (
+        <ul
+          id={`${id || 'rc'}-listbox`}
+          role="listbox"
+          className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto"
+        >
+          {filtered.length === 0 ? (
+            <li className="p-3 text-gray-500 text-sm">
+              {options.length === 0 ? 'Loading region codes…' : 'No matching region codes'}
+            </li>
+          ) : (
+            filtered.map(rc => (
+              <li
+                key={rc.code}
+                role="option"
+                aria-selected={value === rc.code}
+                className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                  value === rc.code ? 'bg-blue-50' : ''
+                }`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleSelect(rc.code)}
+              >
+                <span className="font-medium">{rc.code}</span>
+                <span className="text-gray-500 text-sm ml-2">{rc.name}</span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CreateBooking({
@@ -414,6 +573,11 @@ export function CreateBooking({
   // and if `bookableItemPrices` itself is undeclared the
   // JS engine throws ReferenceError at parse time).
   bookableItemPrices = {},
+  // 2026-06-23 — region codes for the Contact Person phone region
+  // dropdown. When empty/undefined, the form falls back to a small
+  // hardcoded list of common region codes so the form is still
+  // usable in offline mocks (see `displayRegionCodes`).
+  regionCodes = [],
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -495,20 +659,24 @@ export function CreateBooking({
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
 
-  // ── Premiere Suite ──────────────────────────────────────────────────────────
+// ── Premiere Suite ──────────────────────────────────────────────────────────
   const [numPremiereSuites, setNumPremiereSuites] = useState(0);
-  // 2026-06-10 — explicit Lounge Deluxe quantity (mirror of
-  // `numPremiereSuites` for LD). Defaults to 0 so the form is
-  // opt-in (the user adds 1+ when the guest picks a LD seat
-  // on the day). Pushed through `onAddonStateChange` →
-  // wrapper → `usePricePreview.loungeSuites` flat key.
-  const [numLoungeDeluxe, setNumLoungeDeluxe] = useState(0);
   const [vipPS, setVipPS] = useState(0);
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
 
-  // ── Lounge Deluxe ───────────────────────────────��───────────────────────────
+  // ── Lounge Deluxe ───────────────────────────────────────────────────────────
   const [vipLD, setVipLD] = useState(0);
   const [nonFlyingLD, setNonFlyingLD] = useState(0);
+  // 2026-06-23 — numLoungeDeluxe is DERIVED from vipLD, not a
+  // separate useState. Per the booking-pricing rule "1 LD = 1
+  // LDVIP" the Lounge Deluxe quantity equals the VIP passenger
+  // count in the LD section, so the explicit Quantity input is
+  // removed from the form. The wrapper still reads this flat
+  // key (`loungeSuites` / `numLoungeDeluxe`) for the live
+  // `usePricePreview` and the POST payload, so we keep the
+  // identifier and just derive it. (Replaces the 2026-06-10
+  // `useState(0)` for `numLoungeDeluxe` — see round 6.2.55.)
+  const numLoungeDeluxe = vipLD;
 
   // ── Passengers ──────────────────────────────────────────────────────────────
   const [passengers, setPassengers] = useState<PassengerDetail[]>([emptyPassenger()]);
@@ -517,6 +685,12 @@ export function CreateBooking({
   // ── Contact Person ──────────────────────────────────────────────────────────
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  // 2026-06-23 — regionCode is the phone region code (e.g. '852'),
+  // typed via `<RegionCodeCombobox>` (see component below).
+  // contactNo is the local number part, filtered to digits + '-'
+  // only via `filterContactNumber`. The wrapper combines them with
+  // a single space for `guest_phone` on submit.
+  const [regionCode, setRegionCode] = useState('');
   const [contactNo, setContactNo] = useState('');
   const [bookingMemo, setBookingMemo] = useState('');
 
@@ -623,9 +797,6 @@ export function CreateBooking({
     nonFlyingLD,
     nonFlyingPS,
     numPremiereSuites,
-    // 2026-06-10 — re-fire the effect when LD quantity
-    // changes so the wrapper's `usePricePreview` re-runs.
-    numLoungeDeluxe,
     // Round 5.9 additions.
     passengers,
     nonFlyingGuests,
@@ -891,9 +1062,9 @@ export function CreateBooking({
       numberOfLuggage,
       flightClass,
       numPremiereSuites,
-      // 2026-06-10 — explicit LD quantity (mirror of
-      // `numPremiereSuites` for LD). The wrapper reads this for
-      // the POST `/bookings` payload (advanced_details block).
+      // 2026-06-23 — LD quantity is derived from vipLD (1 LD = 1
+      // LDVIP). Wrapper still reads this flat key for the
+      // advanced_details.loungeSuites block + live price preview.
       numLoungeDeluxe,
       vipPS,
       nonFlyingPS,
@@ -903,6 +1074,11 @@ export function CreateBooking({
       nonFlyingGuests,
       contactName,
       contactEmail,
+      // 2026-06-23 — region code for the contact phone (e.g. '852').
+      // The number part `contactNo` is filtered to digits + '-'
+      // only via `filterContactNumber` on input. Wrapper combines
+      // `regionCode + ' ' + contactNo` for `guest_phone` on submit.
+      regionCode,
       contactNo,
       promoCode: promoApplied?.code ?? '',
       specialRequests,
@@ -1568,16 +1744,7 @@ export function CreateBooking({
                 {nonFlyingLD} / 3 non-flying used
               </span>
             </div>
-            <div className="grid grid-cols-3 gap-6">
-              <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>
-                  Quantity of Lounge Deluxe
-                  <span className="text-gray-400 font-normal text-xs ml-1">(opt-in)</span>
-                </label>
-                <input type="number" min={0} value={numLoungeDeluxe}
-                  onChange={e => setNumLoungeDeluxe(Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${numLoungeDeluxe === 0 ? 'border-gray-200' : ''}`} />
-              </div>
+            <div className="grid grid-cols-2 gap-6">
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipLD}
@@ -1593,6 +1760,7 @@ export function CreateBooking({
                 {ldNonFlyingOver && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Max 3 allowed</p>}
               </div>
             </div>
+            <p className="text-xs text-gray-500 mt-2">Lounge Deluxe quantity = number of VIP Passengers (1 LD = 1 LDVIP).</p>
 
             {/* Lounge Deluxe — physical lobby checkboxes */}
             <div className="mt-4 pt-4 border-t border-gray-200">
@@ -1679,11 +1847,23 @@ export function CreateBooking({
                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />Contact No.</span>
               </label>
               <div className="flex gap-2">
-                <select className="px-2 py-2 border border-gray-300 rounded-md text-sm w-20 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                  <option>+852</option><option>+86</option><option>+1</option><option>+44</option>
-                </select>
-                <input type="tel" value={contactNo} onChange={e => setContactNo(e.target.value)}
-                  placeholder="9123 4567"
+                {/* 2026-06-23 — replaced the hardcoded 4-region <select>
+                    with the typeahead <RegionCodeCombobox> sourced from
+                    GET /api/lookups/region-codes via the wrapper's
+                    `regionCodes` prop. Width w-32 leaves room for the
+                    formatted "852 - Hong Kong" display. */}
+                <div className="w-32">
+                  <RegionCodeCombobox
+                    id="contactRegionCode"
+                    value={regionCode}
+                    options={(regionCodes && regionCodes.length > 0) ? regionCodes : FALLBACK_REGION_CODES}
+                    onChange={setRegionCode}
+                    placeholder="Region code"
+                  />
+                </div>
+                <input type="tel" value={contactNo}
+                  onChange={e => setContactNo(filterContactNumber(e.target.value))}
+                  placeholder="9123-4567"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -8,6 +8,120 @@ import { Textarea } from './ui/textarea';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
 import { Building2, Plane, Shuffle, X, UserPlus } from 'lucide-react';
+
+const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
+
+function RegionCodeCombobox({
+  id,
+  value,
+  options,
+  onChange,
+  placeholder = 'Select region code',
+}: {
+  id?: string;
+  value: string;
+  options: { code: string; name: string }[];
+  onChange: (code: string) => void;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [hasFocus, setHasFocus] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const matched = options.find(o => o.code === value);
+  // While focused, treat the input as a type-ahead search box (query is the source of truth
+  // and the field is empty by default). When blurred, show the formatted "code - name" so the
+  // selected value stays visible. Showing the formatted text while focused previously caused
+  // typed characters to be appended to "852 - Hong Kong", making the type-ahead appear stuck.
+  const displayValue = hasFocus
+    ? query
+    : (matched ? `${matched.code} - ${matched.name}` : value);
+
+  const filtered = query.length === 0
+    ? options
+    : options.filter(o =>
+        o.code.toLowerCase().includes(query.toLowerCase()) ||
+        o.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+  useEffect(() => {
+    const onDocDown = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+        setHasFocus(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocDown);
+    return () => document.removeEventListener('mousedown', onDocDown);
+  }, []);
+
+  const handleSelect = (code: string) => {
+    onChange(code);
+    setQuery('');
+    setHasFocus(false);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <Input
+        id={id}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${id || 'rc'}-listbox`}
+        aria-autocomplete="list"
+        autoComplete="off"
+        value={displayValue}
+        placeholder={placeholder}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => { setHasFocus(true); setOpen(true); }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && filtered.length > 0) {
+            e.preventDefault();
+            handleSelect(filtered[0].code);
+          } else if (e.key === 'Escape') {
+            setOpen(false);
+            setQuery('');
+            setHasFocus(false);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        required
+      />
+      {open && (
+        <ul
+          id={`${id || 'rc'}-listbox`}
+          role="listbox"
+          className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto"
+        >
+          {filtered.length === 0 ? (
+            <li className="p-3 text-gray-500 text-sm">
+              {options.length === 0 ? 'Loading region codes…' : 'No matching region codes'}
+            </li>
+          ) : (
+            filtered.map(rc => (
+              <li
+                key={rc.code}
+                role="option"
+                aria-selected={value === rc.code}
+                className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                  value === rc.code ? 'bg-blue-50' : ''
+                }`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => handleSelect(rc.code)}
+              >
+                <span className="font-medium">{rc.code}</span>
+                <span className="text-gray-500 text-sm ml-2">{rc.name}</span>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 interface CorporateSubForm {
   id: number;
@@ -27,7 +141,7 @@ const emptySubForm = (id: number): CorporateSubForm => ({
   firstName: '',
   lastName: '',
   email: '',
-  regionCode: '852',
+  regionCode: '',
   contactNumber: '',
   paymentMethod: 'upfront',
   remarks: '',
@@ -94,7 +208,7 @@ export function AccountCreation({
     title: '',
     firstName: '',
     lastName: '',
-    regionCode: '852',
+    regionCode: '',
     contactNumber: '',
     email: '',
     nationality: '',
@@ -354,25 +468,17 @@ export function AccountCreation({
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor={`rc-${subForm.id}`} style={{ marginBottom: 10 }}>Region Code *</Label>
-                        {displayRegionCodes ? (
-                          <Select value={subForm.regionCode} onValueChange={v => updateCorporateForm(subForm.id, 'regionCode', v)}>
-                            <SelectTrigger id={`rc-${subForm.id}`}><SelectValue placeholder="Select region code" /></SelectTrigger>
-                            <SelectContent>
-                              {displayRegionCodes.map(rc => (
-                                <SelectItem key={rc.code} value={rc.code}>{rc.code} - {rc.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input id={`rc-${subForm.id}`} value={subForm.regionCode}
-                            onChange={e => updateCorporateForm(subForm.id, 'regionCode', e.target.value)}
-                            placeholder="852" required />
-                        )}
+                        <RegionCodeCombobox
+                          id={`rc-${subForm.id}`}
+                          value={subForm.regionCode}
+                          options={displayRegionCodes ?? []}
+                          onChange={v => updateCorporateForm(subForm.id, 'regionCode', v)}
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <Label htmlFor={`cn-${subForm.id}`} style={{ marginBottom: 10 }}>Contact Number *</Label>
                         <Input id={`cn-${subForm.id}`} value={subForm.contactNumber}
-                          onChange={e => updateCorporateForm(subForm.id, 'contactNumber', e.target.value)}
+                          onChange={e => updateCorporateForm(subForm.id, 'contactNumber', filterContactNumber(e.target.value))}
                           placeholder="Enter contact number" required />
                       </div>
                     </div>
@@ -503,22 +609,16 @@ export function AccountCreation({
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
-                        {displayRegionCodes ? (
-                          <Select value={formData.regionCode} onValueChange={v => setFormData({...formData, regionCode: v})}>
-                            <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
-                            <SelectContent>
-                              {displayRegionCodes.map(rc => (
-                                <SelectItem key={rc.code} value={rc.code}>{rc.code} - {rc.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
-                        )}
+                        <RegionCodeCombobox
+                          id="regionCode"
+                          value={formData.regionCode}
+                          options={displayRegionCodes ?? []}
+                          onChange={v => setFormData({...formData, regionCode: v})}
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
-                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="Enter contact number" required />
+                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder="Enter contact number" required />
                       </div>
                     </div>
                     <div>
@@ -601,22 +701,16 @@ export function AccountCreation({
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
-                        {displayRegionCodes ? (
-                          <Select value={formData.regionCode} onValueChange={v => setFormData({...formData, regionCode: v})}>
-                            <SelectTrigger id="regionCode"><SelectValue placeholder="Select region code" /></SelectTrigger>
-                            <SelectContent>
-                              {displayRegionCodes.map(rc => (
-                                <SelectItem key={rc.code} value={rc.code}>{rc.code} - {rc.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input id="regionCode" value={formData.regionCode} onChange={e => setFormData({...formData, regionCode: e.target.value})} placeholder="852" required />
-                        )}
+                        <RegionCodeCombobox
+                          id="regionCode"
+                          value={formData.regionCode}
+                          options={displayRegionCodes ?? []}
+                          onChange={v => setFormData({...formData, regionCode: v})}
+                        />
                       </div>
                       <div className="sm:col-span-2">
                         <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
-                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: e.target.value})} placeholder="Enter contact number" required />
+                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder="Enter contact number" required />
                       </div>
                     </div>
                     <div>

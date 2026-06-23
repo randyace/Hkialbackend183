@@ -250,8 +250,20 @@ export function BookingInvoiceDialog({
         the line items were squeezing the unit-price column.
         Bumping to 1700px keeps the dialog comfortably within
         95vw on most laptop screens while giving the table room
-        to breathe. */}
-      <DialogContent className="min-w-[650px] max-w-[95vw] w-[1700px] max-h-[95vh] overflow-y-auto">
+        to breathe.
+
+        Round 6.2.49 follow-up (user-reported: "still thin even
+        after w-[1700px]"): the base `DialogContent` UI primitive
+        has hardcoded defaults — `max-w-[calc(100%-2rem)]` and
+        `sm:max-w-lg` (512px) — that the `cn()` merge applies
+        alongside our `w-[1700px]`. CSS rules then cap our width
+        at the smaller of the two max-widths, so the dialog
+        rendered at ~512px on a >640px viewport regardless of
+        our width override. The fix is `!max-w-none sm:!max-w-none`
+        to defeat those defaults (and re-assert `w-[1700px]` as
+        `!w-[1700px]` for good measure). The `95vw` cap is still
+        honored via the second `max-w-[95vw]` declaration. */}
+      <DialogContent className="!max-w-none sm:!max-w-none !w-[1700px] max-w-[95vw] min-w-[650px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invoice - {booking.bookingNo}</DialogTitle>
           <DialogDescription>Review and send invoice for this booking</DialogDescription>
