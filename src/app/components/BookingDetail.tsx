@@ -191,6 +191,14 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // the token is persisted (the wrapper has just done a
   // login round-trip on its own path).
   authToken?: string;
+  // 2026-06-23 (round 6.2.49 follow-up #3) — parent-delegated
+  // invoice handlers. The current figma-ui dialog is still
+  // self-contained (it uses `apiBaseUrl`/`authToken`/`onInvoiceSent`),
+  // but the parent wrapper also passes these for the delegated
+  // variant. Keep them optional so the wrapper type-checks; they
+  // are intentionally ignored until the next figma-ui refactor.
+  onSendInvoice?: () => Promise<unknown>;
+  onDownloadPdf?: () => Promise<void>;
   // 2026-06-18 (round 6.2.48) — Movement Log (round-trip
   // through `GET/POST/DELETE /api/bookings/{id}/movements`).
   // Wrapper fetches `movements` on mount + after each add/
