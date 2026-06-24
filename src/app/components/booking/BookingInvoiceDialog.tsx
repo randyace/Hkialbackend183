@@ -535,7 +535,23 @@ export function BookingInvoiceDialog({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
-            {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
+            {/* 2026-06-24 (round 6.2.54, user-reported
+              * "payment link button is missing") — expand the
+              * visibility to all Upfront non-Paid states. Pre-fix
+              * the button only rendered for the strict
+              * `Pending + Upfront` combo, so once an invoice was
+              * sent and `payment_status` flipped to `InvoiceSent`
+              * the button vanished — staff couldn't re-send a
+              * payment link from the dialog after sending the
+              * invoice first. Now visible for any Upfront booking
+              * that's not yet Paid (Pending / InvoiceSent /
+              * PaymentLinkSent). `OnCredit` bookings still hide
+              * the button (payment-link doesn't apply to credit
+              * accounts), and Paid bookings hide it (the link
+              * would be a no-op). */}
+            {booking.paymentMode === 'Upfront' &&
+             booking.paymentStatus !== 'Paid' &&
+             booking.paymentStatus !== 'PaymentLinkPaid' && (
               <Button
                 className="bg-blue-600 hover:bg-blue-700"
                 onClick={handleSendPaymentLink}

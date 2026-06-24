@@ -390,14 +390,230 @@ const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
 // Typeahead combobox for the phone region code. Reads from the
 // `regionCodes` prop (sourced from `GET /api/lookups/region-codes`
-// by the wrapper). Falls back to a 4-region hardcoded list when
-// the prop is empty (offline mock / pre-fetch state) so the form
-// is still usable.
+// by the wrapper). Falls back to the full canonical list when the
+// prop is empty (offline mock / pre-fetch state) so the form is
+// still usable.
+//
+// 2026-06-24 (Sky) — synced to the backend LookupController::regionCodes
+// payload (and the customer-frontend `utils/regionCodes` mirror) so the
+// `+` prefix matches the API and `o.code === value` match logic works
+// when the API is down. Codes carry the leading `+` (the pre-2026-06-24
+// fallback used `852`/`86`/`1`/`44` without the prefix, which silently
+// broke match for users whose `regionCode` came from the live API).
 const FALLBACK_REGION_CODES: { code: string; name: string }[] = [
-  { code: '852', name: 'Hong Kong' },
-  { code: '86',  name: 'China' },
-  { code: '1',   name: 'United States' },
-  { code: '44',  name: 'United Kingdom' },
+  { code: '+1', name: 'United States/Canada' },
+  { code: '+1-345', name: 'Cayman Islands' },
+  { code: '+1-264', name: 'Anguilla' },
+  { code: '+1-268', name: 'Antigua and Barbuda' },
+  { code: '+1-284', name: 'British Virgin Islands' },
+  { code: '+1-340', name: 'US Virgin Islands' },
+  { code: '+1-671', name: 'Guam' },
+  { code: '+1-758', name: 'St. Lucia' },
+  { code: '+1-784', name: 'St. Vincent and the Grenadines' },
+  { code: '+1-809', name: 'Dominican Republic' },
+  { code: '+20', name: 'Egypt' },
+  { code: '+27', name: 'South Africa' },
+  { code: '+30', name: 'Greece' },
+  { code: '+31', name: 'Netherlands' },
+  { code: '+32', name: 'Belgium' },
+  { code: '+33', name: 'France' },
+  { code: '+34', name: 'Spain' },
+  { code: '+36', name: 'Hungary' },
+  { code: '+39', name: 'Italy' },
+  { code: '+40', name: 'Romania' },
+  { code: '+41', name: 'Switzerland' },
+  { code: '+44', name: 'United Kingdom' },
+  { code: '+45', name: 'Denmark' },
+  { code: '+46', name: 'Sweden' },
+  { code: '+47', name: 'Norway' },
+  { code: '+48', name: 'Poland' },
+  { code: '+49', name: 'Germany' },
+  { code: '+51', name: 'Peru' },
+  { code: '+52', name: 'Mexico' },
+  { code: '+53', name: 'Cuba' },
+  { code: '+54', name: 'Argentina' },
+  { code: '+55', name: 'Brazil' },
+  { code: '+56', name: 'Chile' },
+  { code: '+57', name: 'Colombia' },
+  { code: '+58', name: 'Venezuela' },
+  { code: '+60', name: 'Malaysia' },
+  { code: '+61', name: 'Australia' },
+  { code: '+62', name: 'Indonesia' },
+  { code: '+63', name: 'Philippines' },
+  { code: '+64', name: 'New Zealand' },
+  { code: '+65', name: 'Singapore' },
+  { code: '+66', name: 'Thailand' },
+  { code: '+7', name: 'Russia/Kazakhstan' },
+  { code: '+81', name: 'Japan' },
+  { code: '+82', name: 'South Korea' },
+  { code: '+84', name: 'Vietnam' },
+  { code: '+90', name: 'Turkey' },
+  { code: '+91', name: 'India' },
+  { code: '+92', name: 'Pakistan' },
+  { code: '+93', name: 'Afghanistan' },
+  { code: '+94', name: 'Sri Lanka' },
+  { code: '+95', name: 'Myanmar' },
+  { code: '+98', name: 'Iran' },
+  { code: '+212', name: 'Morocco' },
+  { code: '+213', name: 'Algeria' },
+  { code: '+216', name: 'Tunisia' },
+  { code: '+218', name: 'Libya' },
+  { code: '+220', name: 'Gambia' },
+  { code: '+221', name: 'Senegal' },
+  { code: '+222', name: 'Mauritania' },
+  { code: '+223', name: 'Mali' },
+  { code: '+224', name: 'Guinea' },
+  { code: '+225', name: 'Ivory Coast' },
+  { code: '+226', name: 'Burkina Faso' },
+  { code: '+227', name: 'Niger' },
+  { code: '+228', name: 'Togo' },
+  { code: '+229', name: 'Benin' },
+  { code: '+230', name: 'Mauritius' },
+  { code: '+231', name: 'Liberia' },
+  { code: '+232', name: 'Sierra Leone' },
+  { code: '+233', name: 'Ghana' },
+  { code: '+234', name: 'Nigeria' },
+  { code: '+235', name: 'Chad' },
+  { code: '+236', name: 'Central African Republic' },
+  { code: '+237', name: 'Cameroon' },
+  { code: '+238', name: 'Cape Verde' },
+  { code: '+239', name: 'São Tomé and Príncipe' },
+  { code: '+240', name: 'Equatorial Guinea' },
+  { code: '+241', name: 'Gabon' },
+  { code: '+242', name: 'Republic of the Congo' },
+  { code: '+243', name: 'Democratic Republic of the Congo' },
+  { code: '+244', name: 'Angola' },
+  { code: '+245', name: 'Guinea-Bissau' },
+  { code: '+246', name: 'Diego Garcia' },
+  { code: '+247', name: 'Saint Helena' },
+  { code: '+248', name: 'Seychelles' },
+  { code: '+249', name: 'Sudan' },
+  { code: '+250', name: 'Rwanda' },
+  { code: '+251', name: 'Ethiopia' },
+  { code: '+252', name: 'Somalia' },
+  { code: '+253', name: 'Djibouti' },
+  { code: '+254', name: 'Kenya' },
+  { code: '+255', name: 'Tanzania' },
+  { code: '+256', name: 'Uganda' },
+  { code: '+257', name: 'Burundi' },
+  { code: '+258', name: 'Mozambique' },
+  { code: '+260', name: 'Zambia' },
+  { code: '+261', name: 'Madagascar' },
+  { code: '+262', name: 'Réunion/Mayotte' },
+  { code: '+263', name: 'Zimbabwe' },
+  { code: '+264', name: 'Namibia' },
+  { code: '+265', name: 'Malawi' },
+  { code: '+266', name: 'Lesotho' },
+  { code: '+267', name: 'Botswana' },
+  { code: '+268', name: 'Eswatini' },
+  { code: '+269', name: 'Comoros' },
+  { code: '+290', name: 'St. Helena' },
+  { code: '+291', name: 'Eritrea' },
+  { code: '+297', name: 'Aruba' },
+  { code: '+298', name: 'Faroe Islands' },
+  { code: '+299', name: 'Greenland' },
+  { code: '+350', name: 'Gibraltar' },
+  { code: '+351', name: 'Portugal' },
+  { code: '+352', name: 'Luxembourg' },
+  { code: '+353', name: 'Ireland' },
+  { code: '+354', name: 'Iceland' },
+  { code: '+355', name: 'Albania' },
+  { code: '+356', name: 'Malta' },
+  { code: '+357', name: 'Cyprus' },
+  { code: '+358', name: 'Finland' },
+  { code: '+359', name: 'Bulgaria' },
+  { code: '+370', name: 'Lithuania' },
+  { code: '+371', name: 'Latvia' },
+  { code: '+372', name: 'Estonia' },
+  { code: '+373', name: 'Moldova' },
+  { code: '+374', name: 'Armenia' },
+  { code: '+375', name: 'Belarus' },
+  { code: '+376', name: 'Andorra' },
+  { code: '+377', name: 'Monaco' },
+  { code: '+378', name: 'San Marino' },
+  { code: '+380', name: 'Ukraine' },
+  { code: '+381', name: 'Serbia' },
+  { code: '+382', name: 'Montenegro' },
+  { code: '+383', name: 'Kosovo' },
+  { code: '+385', name: 'Croatia' },
+  { code: '+386', name: 'Slovenia' },
+  { code: '+387', name: 'Bosnia and Herzegovina' },
+  { code: '+389', name: 'North Macedonia' },
+  { code: '+420', name: 'Czech Republic' },
+  { code: '+421', name: 'Slovakia' },
+  { code: '+423', name: 'Liechtenstein' },
+  { code: '+424', name: 'Wallis and Futuna' },
+  { code: '+500', name: 'Falkland Islands' },
+  { code: '+501', name: 'Belize' },
+  { code: '+502', name: 'Guatemala' },
+  { code: '+503', name: 'El Salvador' },
+  { code: '+504', name: 'Honduras' },
+  { code: '+505', name: 'Nicaragua' },
+  { code: '+506', name: 'Costa Rica' },
+  { code: '+507', name: 'Panama' },
+  { code: '+508', name: 'St. Pierre and Miquelon' },
+  { code: '+509', name: 'Haiti' },
+  { code: '+590', name: 'Guadeloupe' },
+  { code: '+591', name: 'Bolivia' },
+  { code: '+592', name: 'Guyana' },
+  { code: '+593', name: 'Ecuador' },
+  { code: '+594', name: 'French Guiana' },
+  { code: '+595', name: 'Paraguay' },
+  { code: '+596', name: 'Martinique' },
+  { code: '+597', name: 'Suriname' },
+  { code: '+598', name: 'Uruguay' },
+  { code: '+599', name: 'Netherlands Antilles' },
+  { code: '+670', name: 'Timor-Leste' },
+  { code: '+672', name: 'Norfolk Island' },
+  { code: '+673', name: 'Brunei' },
+  { code: '+674', name: 'Nauru' },
+  { code: '+675', name: 'Papua New Guinea' },
+  { code: '+676', name: 'Tonga' },
+  { code: '+677', name: 'Solomon Islands' },
+  { code: '+678', name: 'Vanuatu' },
+  { code: '+679', name: 'Fiji' },
+  { code: '+680', name: 'Palau' },
+  { code: '+681', name: 'Wallis and Futuna' },
+  { code: '+682', name: 'Cook Islands' },
+  { code: '+683', name: 'Niue' },
+  { code: '+685', name: 'Kiribati' },
+  { code: '+686', name: 'Tuvalu' },
+  { code: '+687', name: 'New Caledonia' },
+  { code: '+688', name: 'Tokelau' },
+  { code: '+689', name: 'French Polynesia' },
+  { code: '+690', name: 'Tokelau' },
+  { code: '+691', name: 'Micronesia' },
+  { code: '+692', name: 'Marshall Islands' },
+  { code: '+850', name: 'North Korea' },
+  { code: '+852', name: 'Hong Kong' },
+  { code: '+853', name: 'Macau' },
+  { code: '+855', name: 'Cambodia' },
+  { code: '+856', name: 'Laos' },
+  { code: '+880', name: 'Bangladesh' },
+  { code: '+886', name: 'Taiwan' },
+  { code: '+960', name: 'Maldives' },
+  { code: '+961', name: 'Lebanon' },
+  { code: '+962', name: 'Jordan' },
+  { code: '+963', name: 'Syria' },
+  { code: '+964', name: 'Iraq' },
+  { code: '+965', name: 'Kuwait' },
+  { code: '+966', name: 'Saudi Arabia' },
+  { code: '+967', name: 'Yemen' },
+  { code: '+968', name: 'Oman' },
+  { code: '+970', name: 'Palestine' },
+  { code: '+971', name: 'United Arab Emirates' },
+  { code: '+972', name: 'Israel' },
+  { code: '+973', name: 'Bahrain' },
+  { code: '+974', name: 'Qatar' },
+  { code: '+975', name: 'Bhutan' },
+  { code: '+976', name: 'Mongolia' },
+  { code: '+977', name: 'Nepal' },
+  { code: '+992', name: 'Tajikistan' },
+  { code: '+993', name: 'Turkmenistan' },
+  { code: '+994', name: 'Azerbaijan' },
+  { code: '+995', name: 'Georgia' },
+  { code: '+996', name: 'Kyrgyzstan' },
+  { code: '+998', name: 'Uzbekistan' },
 ];
 function RegionCodeCombobox({
   id,
@@ -739,9 +955,45 @@ export function CreateBooking({
   // 2026-06-23 (round 6.2.53): child/infant rates apply to FLYING
   // VIP children/infants only. NFGs are billed as NFGs regardless
   // of age, so `nonFlyingGuests` is no longer counted here.
+  //
+  // 2026-06-24 (round 6.2.56) — per-kind children age-band
+  // counts. The form's `passengers[]` array is ordered as
+  // `[PS VIPs..., LD VIPs...]` (mirroring the customer form's
+  // `buildSegmentedGuestsForAdvancedDetails` partitioning; the
+  // figma-ui grid at line 1927 also slices `passengers` this way
+  // for display). Slice by `vipPS` + `vipLD` to derive 4 per-kind
+  // counts so the live "Price Breakdown" card doesn't leak a
+  // LD child into the PS_VIP_Child line (pre-6.2.56 the live
+  // preview only sent the GLOBAL `children_age_2_to_11`, and the
+  // backend's `??`-chain in `PricingService::compute()` put the
+  // same global count into BOTH sub-contexts — a 1-LD-child
+  // booking showed "PS_VIP_Child: 1" AND "LD_VIP_Child: 1").
+  // Counts FLYING VIP children/infants only (round 6.2.53 rule).
+  // Mirror the slice boundaries used by the admin submit path
+  // (`CreateBooking.tsx:768-769`) for symmetry: PS = indices
+  // [0, vipPS), LD = indices [vipPS, vipPS + vipLD).
   useEffect(() => {
     const childUnder2 = passengers.filter((p) => p.ageGroup === 'Infants (under 2 years old)').length;
     const childAge2To11 = passengers.filter((p) => p.ageGroup === 'Children (aged 2-11)').length;
+    // Round 6.2.56 — per-kind slice. Accept both Q-B long
+    // strings (`'Children (aged 2-11)'` / `'Infants (under 2
+    // years old)'`) and the legacy figma-ui short strings
+    // (`'Children (aged 2 to 11)'` / `'Infant'`) for
+    // back-compat with the form's local age-group enum (see
+    // `CreateBooking.tsx:73`).
+    const isChildAge = (p) =>
+      p?.ageGroup === 'Children (aged 2-11)'
+      || p?.ageGroup === 'Children (aged 2 to 11)'
+      || p?.ageGroup === 'Child';
+    const isInfantAge = (p) =>
+      p?.ageGroup === 'Infants (under 2 years old)'
+      || p?.ageGroup === 'Infant';
+    const psPax = passengers.slice(0, vipPS);
+    const ldPax = passengers.slice(vipPS, vipPS + vipLD);
+    const premiereChildrenAge2To11 = psPax.filter(isChildAge).length;
+    const premiereChildrenUnder2  = psPax.filter(isInfantAge).length;
+    const loungeChildrenAge2To11   = ldPax.filter(isChildAge).length;
+    const loungeChildrenUnder2    = ldPax.filter(isInfantAge).length;
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
@@ -770,6 +1022,17 @@ export function CreateBooking({
       // Round 5.9 additions — pricing-relevant passenger counts.
       childrenUnder2: childUnder2,
       childrenAge2To11: childAge2To11,
+      // Round 6.2.56 (2026-06-24) — per-kind children
+      // age-band counts (mirror the admin submit path's
+      // slice in `CreateBooking.tsx:768-786`). Each sent as
+      // a top-level field on `PricePreviewInput`; the
+      // helper's "omit undefined" contract preserves them
+      // on the wire so the backend's `??`-chain picks the
+      // per-kind field matching the sub-context's product.
+      premiereChildrenAge2To11,
+      premiereChildrenUnder2,
+      loungeChildrenAge2To11,
+      loungeChildrenUnder2,
       additionalHours: 0,
       // Round 6.2.28 (2026-06-09) — staff override. Push the
       // current value through the same channel so the wrapper
