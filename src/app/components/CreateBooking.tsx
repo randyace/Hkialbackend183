@@ -589,6 +589,7 @@ const FALLBACK_REGION_CODES: { code: string; name: string }[] = [
   { code: '+853', name: 'Macau' },
   { code: '+855', name: 'Cambodia' },
   { code: '+856', name: 'Laos' },
+  { code: '+86', name: 'China' },
   { code: '+880', name: 'Bangladesh' },
   { code: '+886', name: 'Taiwan' },
   { code: '+960', name: 'Maldives' },
@@ -1254,21 +1255,53 @@ export function CreateBooking({
   // 3 slots are 3 people, capacity = 4, no cap warning. The
   // frontend chip must display the same number the backend
   // enforces.
+  // 2026-06-24 (round 6.2.60) — "at least 1 adult" rule
+  // (per Sky 2026-06-24 directive: "we need to ensure at
+  // least 1 adult per PS / LD"). Pre-this-fix the form
+  // checked `vipPS === 0` / `vipLD === 0` (any flying VIP —
+  // adult, child, or infant). A booking with 0 adults + 2
+  // children in PS was accepted. The new check counts adults
+  // = vipPS - childrenAge2To11PS - childrenUnder2PS and
+  // rejects when adult count = 0. Children/infants ride
+  // along on an adult's location; an adult is the anchor
+  // for the free block + cap + note 5. The 4 per-kind
+  // children counts (computed at L994-997 in the live-
+  // preview useEffect) are derived here independently for
+  // the validation pass — both reads slice `passengers[]`
+  // the same way (PS = indices 0..vipPS-1, LD = indices
+  // vipPS..vipPS+vipLD-1), so the two numbers stay in
+  // lockstep. The duplicate computation is intentional
+  // (the L994-997 values are scoped to the useEffect).
+  const validationIsChildAge = (g: { ageGroup?: string }) =>
+    g?.ageGroup === 'Children (aged 2-11)'
+    || g?.ageGroup === 'Children (aged 2 to 11)'
+    || g?.ageGroup === 'Child';
+  const validationIsInfantAge = (g: { ageGroup?: string }) =>
+    g?.ageGroup === 'Infants (under 2 years old)'
+    || g?.ageGroup === 'Infant';
+  const psPaxForValidation = passengers.slice(0, vipPS);
+  const ldPaxForValidation = passengers.slice(vipPS, vipPS + vipLD);
+  const premiereKidsForValidation = psPaxForValidation.filter(validationIsChildAge).length;
+  const premiereInfantsForValidation = psPaxForValidation.filter(validationIsInfantAge).length;
+  const loungeKidsForValidation = ldPaxForValidation.filter(validationIsChildAge).length;
+  const loungeInfantsForValidation = ldPaxForValidation.filter(validationIsInfantAge).length;
   const psMaxGuests       = numPremiereSuites * 6;
   const psTotalGuests     = vipPS + nonFlyingPS;
   const psOverCapacity    = numPremiereSuites > 0 && psTotalGuests > psMaxGuests;
-  const psNoVip           = numPremiereSuites > 0 && vipPS === 0;
+  const psAdults          = vipPS - premiereKidsForValidation - premiereInfantsForValidation;
+  const ldAdults          = vipLD - loungeKidsForValidation - loungeInfantsForValidation;
+  const psNoAdult         = numPremiereSuites > 0 && psAdults < 1;
   const psGuestsNoSuite   = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
   const ldNonFlyingOver   = nonFlyingLD > 3;
-  const ldNoVip           = (assignedLoungeIds.length > 0 || vipLD > 0 || nonFlyingLD > 0) && vipLD === 0;
+  const ldNoAdult         = (assignedLoungeIds.length > 0 || vipLD > 0 || nonFlyingLD > 0) && ldAdults < 1;
 
   const psErrors: string[] = [];
   if (psGuestsNoSuite) psErrors.push('Quantity of Premiere Suite must be at least 1 when guests are assigned to it.');
-  if (psNoVip)         psErrors.push('At least 1 VIP Passenger is required per Premiere Suite booking.');
+  if (psNoAdult)       psErrors.push('At least 1 Adult passenger is required per Premiere Suite booking.');
   if (psOverCapacity)  psErrors.push(`Total guests (${psTotalGuests}) exceeds the maximum of ${psMaxGuests} (6 per suite × ${numPremiereSuites}).`);
 
   const ldErrors: string[] = [];
-  if (ldNoVip)         ldErrors.push('At least 1 VIP Passenger is required for a Lounge Deluxe booking.');
+  if (ldNoAdult)       ldErrors.push('At least 1 Adult passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingOver) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
 
   const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
