@@ -87,6 +87,19 @@ interface PassengerDetail {
   birthdayDay: string;
   birthdayMonth: string;
   birthdayYear: string;
+  // 2026-06-25 — round 6.2.63 (bug 3): add per-passenger food
+  // allergies so the create-booking form can capture them at
+  // submission time (the detail/edit view at BookingDetail.tsx
+  // already has the field; the create form was the missing
+  // surface). The backend's `passengers` JSON column accepts
+  // arbitrary keys — `foodAllergies` was already wired on the
+  // read path in `bookingService.ts:883` (which maps
+  // `passenger.foodAllergies ?? ''` from the AD blob). The
+  // pre-6.2.63 create form was the only surface that didn't
+  // collect it, so admin-created bookings were missing the
+  // allergy even when the customer provided it on the
+  // customer-side newbooking flow.
+  foodAllergies: string;
 }
 
 interface NonFlyingGuest {
@@ -94,6 +107,8 @@ interface NonFlyingGuest {
   firstName: string;
   lastName: string;
   ageGroup: AgeGroup;
+  // 2026-06-25 — round 6.2.63 (bug 3): same as PassengerDetail.
+  foodAllergies: string;
 }
 
 interface LimoStop {
@@ -105,10 +120,12 @@ interface LimoStop {
 const emptyPassenger = (): PassengerDetail => ({
   title: '', firstName: '', lastName: '', travelDocNo: '',
   membershipNo: '', ageGroup: '', birthdayDay: '', birthdayMonth: '', birthdayYear: '',
+  foodAllergies: '',
 });
 
 const emptyNonFlying = (): NonFlyingGuest => ({
   title: '', firstName: '', lastName: '', ageGroup: '',
+  foodAllergies: '',
 });
 
 const isPassengerFilled = (p: PassengerDetail) =>
@@ -2299,6 +2316,31 @@ export function CreateBooking({
                           </div>
                         </div>
                       </div>
+                      {/* Row 3: Food Allergies — full width */}
+                      {/* 2026-06-25 — round 6.2.63 (bug 3): surface
+                        the food-allergies input on the CREATE
+                        form (the edit form at BookingDetail.tsx
+                        already has it). Mirrors the edit-form
+                        field exactly so the read+write
+                        symmetry is preserved. */}
+                      <div>
+                        <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                          Food Allergies
+                        </label>
+                        <input
+                          type="text"
+                          value={p.foodAllergies}
+                          onChange={e => updatePassenger(idx, 'foodAllergies', e.target.value)}
+                          placeholder="e.g. Shellfish, Peanuts, Dairy — leave blank if none"
+                          className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${p.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
+                        />
+                        {p.foodAllergies && (
+                          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -2377,6 +2419,35 @@ export function CreateBooking({
                             <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                           </select>
                         </div>
+                      </div>
+                      {/* 2026-06-25 — round 6.2.63 (bug 3):
+                        food-allergies input on the NFG card,
+                        mirroring the VIP passenger row. Same
+                        field semantics (free-text, comma- or
+                        semicolon-separated, blank = no known
+                        allergies). The `foodAllergies` key is
+                        emitted on the `nonFlyingGuests[]` row
+                        of the booking's AD blob; the
+                        BookingDetail view's NFG card already
+                        reads `g.foodAllergies ?? ''` (line
+                        2701) so the round-trip is symmetric. */}
+                      <div className="mt-4">
+                        <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                          Food Allergies
+                        </label>
+                        <input
+                          type="text"
+                          value={g.foodAllergies}
+                          onChange={e => updateNonFlying(idx, 'foodAllergies', e.target.value)}
+                          placeholder="e.g. Peanuts, Shellfish — leave blank if none"
+                          className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${g.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
+                        />
+                        {g.foodAllergies && (
+                          <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>

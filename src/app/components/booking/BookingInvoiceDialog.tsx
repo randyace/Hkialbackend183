@@ -407,24 +407,17 @@ export function BookingInvoiceDialog({
                 </tr>
               </tbody>
               <tfoot className="border-t-2">
-                {/* Round 6.2.13: replaced the "Head Count" row
-                  (which used `headCountRate` + `headCountTotal`)
-                  with a "Live Preview" row that displays
-                  `livePreviewTotal` (or "Pending pricing" if the
-                  fetch is still in flight). Per the user
-                  directive, NO MORE local `headCountRate × pax`
-                  calculation. */}
-                <tr className="bg-gray-50">
-                  <td colSpan={2} className="px-6 py-3 text-right text-sm text-gray-600">
-                    Live Preview (POST /api/bookings/price-preview):
-                  </td>
-                  <td className="px-6 py-3 text-right text-sm text-gray-600">{booking.numberOfGuests} pax</td>
-                  <td className="px-6 py-3 text-right font-medium text-gray-800">
-                    {livePreviewTotal !== null
-                      ? `HK$${livePreviewTotal.toLocaleString()}`
-                      : 'Pending pricing'}
-                  </td>
-                </tr>
+                {/* 2026-06-25 — round 6.2.63 (bug 5): removed
+                  the "Live Preview (POST /api/bookings/
+                  price-preview)" row. Per Sky's directive, the
+                  invoice should not expose the live-preview
+                  endpoint URL or duplicate the subtotal as a
+                  separate debug line. The authoritative total
+                  already renders in the Subtotal row below
+                  (and the grand total after vouchers /
+                  discount), so removing this row is purely
+                  surface-area cleanup. The `livePreviewTotal`
+                  prop is still used by the Subtotal row. */}
                 {/* Food note */}
                 <tr className="bg-green-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-green-700">

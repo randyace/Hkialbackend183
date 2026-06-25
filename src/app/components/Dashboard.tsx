@@ -435,26 +435,27 @@ export function Dashboard({
                   </div>
                 </div>
                 <div className="flex gap-2 mt-2">
+                  {/* 2026-06-25 — round 6.2.63 (bug 7): removed
+                    the Approve and Reject inline buttons. Per
+                    Sky's directive, the dashboard should not
+                    show one-click approve/reject — staff
+                    approve/reject from the full Booking
+                    Review page (BookingApprovalQueue /
+                    BookingReview) where the supervisor
+                    endorsement flow lives. The "Review"
+                    button is preserved; it navigates to the
+                    booking detail where the proper
+                    supervisor-aware approve/reject lives.
+                    The unused `handleApprove` / `handleReject`
+                    + `onApproveBooking` / `onRejectBooking`
+                    props stay (no-op defaults) so the wrapper
+                    Dashboard.tsx compile doesn't break. */}
                   <button
                     onClick={() => handleOpenReview(item)}
-                    className="text-xs px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                    className="flex-1 text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                   >
                     <Eye className="w-3 h-3 inline mr-1" />
                     Review
-                  </button>
-                  <button
-                    onClick={() => handleApprove(item.id)}
-                    className="flex-1 text-xs px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                  >
-                    <CheckCircle className="w-3 h-3 inline mr-1" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => handleReject(item.id)}
-                    className="flex-1 text-xs px-3 py-1.5 bg-white border border-red-300 text-red-600 rounded hover:bg-red-50 transition-colors"
-                  >
-                    <XCircle className="w-3 h-3 inline mr-1" />
-                    Reject
                   </button>
                 </div>
               </div>
