@@ -1,4 +1,4 @@
-import { Car, ShoppingBag, Mail, FileText, Download, CreditCard, Ticket, Utensils, Loader2 } from 'lucide-react';
+import { Car, ShoppingBag, Mail, Download, CreditCard, Ticket, Utensils, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -275,8 +275,6 @@ export function BookingInvoiceDialog({
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl mb-2">HKIA VIP Lounge</h2>
-                <p className="text-sm text-gray-300">Hong Kong International Airport</p>
-                <p className="text-sm text-gray-300">Terminal 1, Level 6</p>
                 <p className="text-sm text-gray-300">Email: vip@hkia-lounge.com</p>
                 <p className="text-sm text-gray-300">Tel: +852 2345 6789</p>
               </div>
@@ -580,9 +578,6 @@ export function BookingInvoiceDialog({
               data-testid="invoice-download-pdf-button"
             >
               <Download className="w-4 h-4 mr-2" />Download PDF
-            </Button>
-            <Button variant="outline" onClick={() => window.print()}>
-              <FileText className="w-4 h-4 mr-2" />Print Invoice
             </Button>
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>

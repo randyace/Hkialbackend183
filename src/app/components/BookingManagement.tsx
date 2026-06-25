@@ -59,6 +59,14 @@ interface Booking {
   agencyDiscountRate?: number;
   originalAmountValue?: number;
   finalAmountValue?: number;
+  // 2026-06-25 — PS / LD assignment signals. The Suite
+  // column renders "Pending" when neither is assigned, and a
+  // small chip (PS / LD count) otherwise. Mirrors the booking
+  // detail's assignedSuiteNames / assignedLoungeNames badge
+  // pattern but compact (single-chip per kind).
+  premiereSuites?: number;
+  loungeDeluxeVip?: number;
+  loungeDeluxeNonFlying?: number;
 }
 
 // Travel Agency master data with default discount rates
@@ -750,7 +758,39 @@ export function BookingManagement({
                     </button>
                     <div className="text-xs text-gray-500">{booking.accountNo}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{booking.suite}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {(() => {
+                      const psCount = booking.premiereSuites ?? 0;
+                      const ldCount = (booking.loungeDeluxeVip ?? 0) + (booking.loungeDeluxeNonFlying ?? 0);
+                      if (psCount === 0 && ldCount === 0) {
+                        return (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                            Pending
+                          </span>
+                        );
+                      }
+                      return (
+                        <div className="flex gap-1 items-center">
+                          {psCount > 0 && (
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200"
+                              title={`${psCount} Premiere Suite${psCount === 1 ? '' : 's'}`}
+                            >
+                              PS {psCount}
+                            </span>
+                          )}
+                          {ldCount > 0 && (
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                              title={`${ldCount} Lounge Deluxe entr${ldCount === 1 ? 'y' : 'ies'}`}
+                            >
+                              LD {ldCount}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="text-xs text-gray-500 mb-1">{booking.dateTime.split(' ')[0]}</div>
                     <div className="flex items-center gap-1">

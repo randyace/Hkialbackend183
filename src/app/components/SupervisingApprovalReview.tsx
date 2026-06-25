@@ -3,7 +3,7 @@ import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle, Plane,
   Car, ShoppingBag, Clock, Building2, User, BadgePercent,
   MailCheck, Info, Receipt, PenLine, RefreshCcw, ShieldCheck,
-  DollarSign, CalendarDays, FileText, Printer, ChevronRight,
+  DollarSign, CalendarDays, FileText, ChevronRight,
   ThumbsUp, ThumbsDown, ShieldAlert
 } from 'lucide-react';
 import { Card } from './ui/card';
@@ -274,10 +274,6 @@ export function SupervisingApprovalReview({
               : 'Provide a reason for overriding the staff\'s decision.'}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="gap-2 text-gray-600 hidden md:flex">
-          <Printer className="w-4 h-4" />
-          Print Invoice
-        </Button>
       </div>
 
       {/* Workflow Banner — shows staff decision */}
