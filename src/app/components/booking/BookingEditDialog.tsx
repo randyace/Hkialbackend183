@@ -234,12 +234,52 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
   const [editNumLuggage,    setEditNumLuggage]    = useState(booking.numberOfLuggage ?? 1);
   const [editSpecialReqs,   setEditSpecialReqs]   = useState(booking.specialRequests ?? '');
   const [editLimoStops, setEditLimoStops] = useState<EditLimoStop[]>(
-    (booking.limoStops && booking.limoStops.length > 0)
-      ? booking.limoStops
-      : [{ id: 1, type: 'Pick-up', location: '' }]
+    (() => {
+      // 2026-06-26 (round 6.2.71, B9 fix) — defense-in-depth
+      // for Limo destinations. Read order:
+      //   1. `booking.limoStops` — the structured field the
+      //      standalone edit page (`BookingEdit.tsx:161`)
+      //      populates from `booking_items[].meta.destinations`.
+      //   2. `booking.addons[].destinations` — the mapper's
+      //      canonical read shape for the dialog's input
+      //      (round 6.1.2). The first stop is "Pick-up"; any
+      //      additional stops are "Destination" (mirrors the
+      //      create form's Pick-up → Destination convention).
+      //   3. `[{ id: 1, type: 'Pick-up', location: '' }]` —
+      //      the legacy default for a new Limo selection.
+      // Pre-fix the dialog only read option 1 and fell back
+      // to the empty default. Bookings saved via the
+      // standalone edit page or any caller that only populated
+      // `booking.addons[]` (the canonical source) lost every
+      // destination on every edit-save.
+      if (booking.limoStops && booking.limoStops.length > 0) {
+        return booking.limoStops;
+      }
+      const limoAddon = booking.addons?.find(
+        (a) => a.name === 'Limousine Transfer',
+      );
+      if (limoAddon?.destinations && limoAddon.destinations.length > 0) {
+        return limoAddon.destinations.map((location, idx) => ({
+          id: idx + 1,
+          type: idx === 0 ? 'Pick-up' : 'Destination',
+          location,
+        }));
+      }
+      return [{ id: 1, type: 'Pick-up', location: '' }];
+    })()
   );
   const [editWheelchairPassenger, setEditWheelchairPassenger] = useState(booking.wheelchairPassenger ?? '');
-  const [editSelectedServices, setEditSelectedServices] = useState<string[]>(booking.services ?? []);
+  const [editSelectedServices, setEditSelectedServices] = useState<string[]>(
+    // 2026-06-26 (round 6.2.71, B9 fix) — defense-in-depth
+    // seed. Prefer the mapper's canonical `booking.addons[]`
+    // (populated from `api.booking_items[].bookable_item.name_en`).
+    // Fall back to `booking.services` (legacy field) for any
+    // caller that still wires only the services array. Empty
+    // when neither is set (back-compat).
+    booking.addons?.map((a) => a.name).filter((n): n is string => typeof n === 'string' && n.length > 0)
+      ?? booking.services
+      ?? []
+  );
   const [editAddonSearch, setEditAddonSearch] = useState('');
   const [showEditAddonDropdown, setShowEditAddonDropdown] = useState(false);
   // 2026-06-17 (Phase 1) — account-level editable state.

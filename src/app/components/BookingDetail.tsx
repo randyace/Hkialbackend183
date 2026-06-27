@@ -332,24 +332,53 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // Mount uses the `useState` initializer's value (which already
   // reads from `booking.passengers` per the round 6.2.7 fix).
   const isPassengersInitialMount = useRef(true);
+  // 2026-06-26 — round 6.2.67 (M20 PS/LD order fix):
+  // direction-aware grow. Same algorithm as the
+  // CreateBooking.tsx:1132+ useEffect. Tracks previous
+  // vipPS/vipLD via refs and INSERTS PS empties at the
+  // PS/LD boundary instead of always appending to the
+  // tail. See the CreateBooking comment for the full
+  // rationale. The mount-skip ref (`isPassengersInitialMount`)
+  // is preserved from the round 6.2.9 fix — it prevents
+  // the useEffect from overwriting the `useState`
+  // initializer's value on first mount (which loads
+  // existing-booking passenger data per the round 6.2.7
+  // fix).
+  const prevVipPSRef = useRef(vipPS);
+  const prevVipLDRef = useRef(vipLD);
   useEffect(() => {
     if (isPassengersInitialMount.current) {
       isPassengersInitialMount.current = false;
+      prevVipPSRef.current = vipPS;
+      prevVipLDRef.current = vipLD;
       return;                                              // skip mount — initializer wins
     }
-    const total = vipPS + vipLD;
+    const prevVipPS = prevVipPSRef.current;
+    const prevVipLD = prevVipLDRef.current;
+    prevVipPSRef.current = vipPS;
+    prevVipLDRef.current = vipLD;
+    const psDelta = vipPS - prevVipPS;
+    const ldDelta = vipLD - prevVipLD;
     setPassengers(prev => {
-      // 2026-06-08 round 6.2.11 (future ticket #1 from
-      // round 6.2.10) — INV-13: only-GROW semantics even on
-      // post-mount fires. The detail page is read-only display
-      // + local editing; removal goes through the explicit
-      // delete dialog (BookingDetail.tsx:524+), not the
-      // useEffect. Pre-6.2.11: prev.slice(0, total) would
-      // silently destroy user-typed data if the user changes
-      // the stepper.
-      if (prev.length < total)
-        return [...prev, ...Array.from({ length: total - prev.length }, emptyPassenger)];
-      return prev;                                          // never truncate (INV-13)
+      const total = vipPS + vipLD;
+      // 2026-06-08 round 6.2.11 — INV-13: only-GROW
+      // semantics even on post-mount fires. Pre-6.2.11:
+      // prev.slice(0, total) would silently destroy
+      // user-typed data if the user changes the stepper.
+      if (prev.length >= total) return prev;                // never truncate (INV-13)
+      let next = prev;
+      if (ldDelta > 0) {
+        next = [...next, ...Array.from({ length: ldDelta }, emptyPassenger)];
+      }
+      if (psDelta > 0) {
+        const insertAt = prevVipPS;
+        next = [
+          ...next.slice(0, insertAt),
+          ...Array.from({ length: psDelta }, emptyPassenger),
+          ...next.slice(insertAt),
+        ];
+      }
+      return next;
     });
   }, [vipPS, vipLD]);
 
@@ -707,20 +736,48 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // [Will Boss, Mary Jane, empty, empty] instead of just
   // [Will Boss, Mary Jane].
   const isNonFlyingInitialMount = useRef(true);
+  // 2026-06-26 — round 6.2.67 (M20 PS/LD order fix):
+  // direction-aware grow. Same algorithm as the VIP
+  // useEffect at line 335+ and the CreateBooking.tsx
+  // useEffect at line 1132+. INSERTs PS empties at the
+  // PS/LD boundary; APPENDs LD empties at the tail.
+  // `isNonFlyingInitialMount` mount-skip ref preserved
+  // (round 6.2.9 fix).
+  const prevNonFlyingPSRef = useRef(nonFlyingPS);
+  const prevNonFlyingLDRef = useRef(nonFlyingLD);
   useEffect(() => {
     if (isNonFlyingInitialMount.current) {
       isNonFlyingInitialMount.current = false;
+      prevNonFlyingPSRef.current = nonFlyingPS;
+      prevNonFlyingLDRef.current = nonFlyingLD;
       return;                                              // skip mount — initializer wins
     }
-    const total = nonFlyingPS + nonFlyingLD;
+    const prevNonFlyingPS = prevNonFlyingPSRef.current;
+    const prevNonFlyingLD = prevNonFlyingLDRef.current;
+    prevNonFlyingPSRef.current = nonFlyingPS;
+    prevNonFlyingLDRef.current = nonFlyingLD;
+    const psDelta = nonFlyingPS - prevNonFlyingPS;
+    const ldDelta = nonFlyingLD - prevNonFlyingLD;
     setNonFlyingGuests(prev => {
-      // 2026-06-08 round 6.2.11 — INV-13: only-GROW semantics.
-      // See the passengers useEffect (line 183) for the full
-      // comment. The TRUNCATE branch is removed; removal goes
-      // through the explicit delete dialog.
-      if (prev.length < total)
-        return [...prev, ...Array.from({ length: total - prev.length }, emptyNonFlyingGuest)];
-      return prev;                                          // never truncate (INV-13)
+      const total = nonFlyingPS + nonFlyingLD;
+      // 2026-06-08 round 6.2.11 — INV-13: only-GROW
+      // semantics. See the passengers useEffect for the
+      // full comment. The TRUNCATE branch is removed;
+      // removal goes through the explicit delete dialog.
+      if (prev.length >= total) return prev;                // never truncate (INV-13)
+      let next = prev;
+      if (ldDelta > 0) {
+        next = [...next, ...Array.from({ length: ldDelta }, emptyNonFlyingGuest)];
+      }
+      if (psDelta > 0) {
+        const insertAt = prevNonFlyingPS;
+        next = [
+          ...next.slice(0, insertAt),
+          ...Array.from({ length: psDelta }, emptyNonFlyingGuest),
+          ...next.slice(insertAt),
+        ];
+      }
+      return next;
     });
   }, [nonFlyingPS, nonFlyingLD]);
 

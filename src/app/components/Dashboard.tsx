@@ -353,7 +353,16 @@ export function Dashboard({
             {recentBookings.map((booking) => (
               <div
                 key={booking.id}
-                className={`p-3 rounded-lg border ${
+                role="button"
+                tabIndex={0}
+                onClick={() => onViewBookingDetail(booking.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onViewBookingDetail(booking.id);
+                  }
+                }}
+                className={`p-3 rounded-lg border cursor-pointer transition-shadow hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
                   booking.isAdHoc
                     ? 'border-amber-200 bg-amber-50'
                     : 'border-gray-200 bg-white'

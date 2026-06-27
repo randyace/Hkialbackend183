@@ -913,7 +913,20 @@ export function CreateBooking({
   const numLoungeDeluxe = vipLD;
 
   // ── Passengers ──────────────────────────────────────────────────────────────
-  const [passengers, setPassengers] = useState<PassengerDetail[]>([emptyPassenger()]);
+  // 2026-06-26 — round 6.2.67 (M20 PS/LD order fix):
+  // the seed was `[emptyPassenger()]` (length 1) — an artifact
+  // from the Figma Make export that left a "ghost" entry at
+  // array index 0. Combined with the direction-aware grow at
+  // line 1132+, the ghost would persist at idx 2 after the
+  // user bumps vipPS (e.g. vipPS 2 → 3 with the array already
+  // length 5 due to the ghost + vipLD=2 → no growth fires,
+  // and the ghost entry at idx 2 gets filled with the user's
+  // "LD0" data via DOM input 2 — producing the Carol-at-PS
+  // bug pattern). Fix: seed with `[]` so the array layout
+  // matches `(vipPS + vipLD)` exactly after every grow.
+  // The render's empty state (line 2221) handles the
+  // `total = 0` case so no card is shown initially.
+  const [passengers, setPassengers] = useState<PassengerDetail[]>([]);
   const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>([]);
 
   // ── Contact Person ──────────────────────────────────────────────────────────
@@ -1129,22 +1142,61 @@ export function CreateBooking({
   // maintains its own local `passengers` state for the
   // "VIP Passenger Details" rendering. We need the useEffect
   // here too.
+  // 2026-06-26 — round 6.2.67 (M20 PS/LD order fix):
+  // direction-aware grow. Pre-6.2.67 this useEffect appended
+  // all new empties to the TAIL of `passengers[]` regardless
+  // of whether the growth came from PS or LD. When the user
+  // bumped `vipPS` while `vipLD > 0` was already filled, the
+  // render (`passengers.slice(0, vipPS+vipLD).map((p, idx) =>
+  // { const isPS = idx < vipPS; ... })`) mis-classified the
+  // original first LD card as PS (it now sat at idx >= vipPS
+  // due to the tail-append) and the new empty card landed at
+  // the very end, mis-labelled as LD. Fix: track previous
+  // `vipPS` / `vipLD` via refs and INSERT new PS empties at
+  // the PS/LD boundary (`prevVipPS` = the index of the first
+  // LD card, or array length if no LD yet), while LD empties
+  // still APPEND at the tail (LD is at the array end by
+  // invariant). When both sections grow in the same render
+  // (React batches the two `setState` calls), we append LD
+  // empties first then splice PS empties at `prevVipPS` —
+  // that index is unchanged by the LD append because LD
+  // empties land AFTER position `prevVipPS`. Net result:
+  // the array's PS-then-LD layout is preserved across any
+  // (PS, LD) delta, so the render's `idx < vipPS` classifier
+  // stays correct.
+  const prevVipPSRef = useRef(vipPS);
+  const prevVipLDRef = useRef(vipLD);
   useEffect(() => {
-    const total = vipPS + vipLD;
+    const prevVipPS = prevVipPSRef.current;
+    const prevVipLD = prevVipLDRef.current;
+    prevVipPSRef.current = vipPS;
+    prevVipLDRef.current = vipLD;
+    const psDelta = vipPS - prevVipPS;
+    const ldDelta = vipLD - prevVipLD;
     setPassengers((prev) => {
-      if (prev.length >= total) return prev; // already enough or more — never truncate
-      // Only-GROW: add empties to reach `total`.
-      return [...prev, ...Array.from({ length: total - prev.length }, () => ({
-        title: '',
-        firstName: '',
-        lastName: '',
-        travelDocNo: '',
-        membershipNo: '',
-        ageGroup: '',
-        birthdayDay: '',
-        birthdayMonth: '',
-        birthdayYear: '',
-      }))];
+      const total = vipPS + vipLD;
+      if (prev.length >= total) return prev; // INV-13 only-grow, never truncate
+      let next = prev;
+      if (ldDelta > 0) {
+        next = [...next, ...Array.from({ length: ldDelta }, emptyPassenger)];
+      }
+      if (psDelta > 0) {
+        // Splice PS empties at the PS/LD boundary (= the
+        // FIRST LD card's position, OR array length when
+        // there's no LD section yet). Indices below this
+        // point are the existing PS section (untouched by
+        // the LD append above since LD empties land at
+        // indices >= prevVipPS + ldDelta in `next`, and
+        // our splice point is `prevVipPS` which sits
+        // BEFORE that).
+        const insertAt = prevVipPS;
+        next = [
+          ...next.slice(0, insertAt),
+          ...Array.from({ length: psDelta }, emptyPassenger),
+          ...next.slice(insertAt),
+        ];
+      }
+      return next;
     });
   }, [vipPS, vipLD]);
 
@@ -1156,16 +1208,40 @@ export function CreateBooking({
   //
   // Round 6.2.22 (2026-06-09) — re-applied. Lost in Figma
   // Make regen.
+  // 2026-06-26 — round 6.2.67 (M20 PS/LD order fix):
+  // direction-aware grow. Same algorithm as the VIP
+  // useEffect at line 1132+ — non-flying guests have the
+  // same PS-then-LD array layout, so tail-append on a PS
+  // bump would mis-classify the original first LD card
+  // as PS. INSERT new PS empties at the PS/LD boundary
+  // (`prevNonFlyingPS`); APPEND new LD empties at the
+  // tail. See the VIP useEffect comment for the full
+  // rationale.
+  const prevNonFlyingPSRef = useRef(nonFlyingPS);
+  const prevNonFlyingLDRef = useRef(nonFlyingLD);
   useEffect(() => {
-    const total = nonFlyingPS + nonFlyingLD;
+    const prevNonFlyingPS = prevNonFlyingPSRef.current;
+    const prevNonFlyingLD = prevNonFlyingLDRef.current;
+    prevNonFlyingPSRef.current = nonFlyingPS;
+    prevNonFlyingLDRef.current = nonFlyingLD;
+    const psDelta = nonFlyingPS - prevNonFlyingPS;
+    const ldDelta = nonFlyingLD - prevNonFlyingLD;
     setNonFlyingGuests((prev) => {
-      if (prev.length >= total) return prev; // already enough or more — never truncate
-      return [...prev, ...Array.from({ length: total - prev.length }, () => ({
-        title: '',
-        firstName: '',
-        lastName: '',
-        ageGroup: '',
-      }))];
+      const total = nonFlyingPS + nonFlyingLD;
+      if (prev.length >= total) return prev; // INV-13 only-grow, never truncate
+      let next = prev;
+      if (ldDelta > 0) {
+        next = [...next, ...Array.from({ length: ldDelta }, emptyNonFlying)];
+      }
+      if (psDelta > 0) {
+        const insertAt = prevNonFlyingPS;
+        next = [
+          ...next.slice(0, insertAt),
+          ...Array.from({ length: psDelta }, emptyNonFlying),
+          ...next.slice(insertAt),
+        ];
+      }
+      return next;
     });
   }, [nonFlyingPS, nonFlyingLD]);
 
