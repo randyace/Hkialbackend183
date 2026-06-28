@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Search, Calendar, CheckCircle, XCircle, Eye, AlertCircle, Plane,
+  Search, Calendar, CheckCircle, XCircle, AlertCircle, Plane,
   Car, ShoppingBag, Clock, Building2, User, BadgePercent,
   ChevronDown, ChevronUp, MailCheck, ThumbsUp, ThumbsDown,
   Receipt, RefreshCcw, DollarSign, ShieldCheck, Info
@@ -936,13 +936,18 @@ export function SupervisingApproval({
                             </Button>
                             {onViewDetail && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
-                                title="View Booking Detail"
+                                className="h-8 px-3 text-blue-600 border-blue-200 hover:bg-blue-50"
                                 onClick={() => onViewDetail(booking.id)}
                               >
-                                <Eye className="w-4 h-4" />
+                                {/* 2026-06-27 (round 6.2.70, Sky directive):
+                                    Eye icon was a too-cryptic
+                                    affordance for supervisors —
+                                    replaced with a text "View"
+                                    button to match the staff queue
+                                    list's new affordance. */}
+                                View
                               </Button>
                             )}
                             {activeTab !== 'processed' && (

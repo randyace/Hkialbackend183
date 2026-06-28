@@ -1,29 +1,222 @@
 /**
  * BookingEditView.tsx
  *
- * New view per refactor spec (item 21).
- * Pure presentational form — zero internal business state for form data.
- * CI4 container passes initialData; empty falls back to MOCK_BOOKING_FORM.
+ * 2026-06-28 round 6.2.72 — refactored into a thin orchestrator.
+ * Pre-6.2.72 this file was a 1536-line monolith with internal state
+ * for every form field. Round 6.2.72 extracted 11 section components
+ * into `./booking/sections/` (`EditSectionFlight`, `EditSectionPassengers`,
+ * `EditSectionNFGs`, `EditSectionPhysicalResource`, `EditSectionGuestCounts`,
+ * `EditSectionAddons`, `EditSectionLimoStops`,
+ * `EditSectionWheelchair`, `EditSectionStaff`, `EditSectionAccountInfo`).
+ *
+ * 2026-06-28 (round 6.2.75, Phase B — Create parity) — the
+ * pre-6.2.75 `EditSectionBooleanAddons` is deleted; its 6
+ * boolean toggles are folded into `EditSectionAddons` (the
+ * unified card). This legacy orchestrator now renders
+ * `EditSectionAddons` once instead of the two-card split.
+ *
+ * This file now:
+ *   1. Holds lifted state via a single `useState<BookingFormData>`.
+ *   2. Has useEffects that re-slice passengers[] / nonFlyingGuestsList[]
+ *      arrays when per-kind counts change (round 6.2.7 invariant).
+ *   3. Has `validateCompleteness` (round 6.2.65 gate) + `handleSave`.
+ *   4. Renders the section components in order; reads/sets via
+ *      `formData` + `onFormChange` props (controlled inputs).
+ *
+ * Usage (unchanged from 6.2.71):
+ *   <BookingEdit
+ *     bookingId="123"
+ *     initialData={...}             // BookingFormData | null
+ *     staffOptions={...}            // EditStaffOption[]
+ *     suiteOptions={...}            // EditSuiteOption[]
+ *     onSave={(data) => ...}
+ *     onCancel={() => ...}
+ *     isSubmitting={false}
+ *   />
+ *
+ * Pre-6.2.72 history:
+ *  - 2026-06-28 round 6.2.71 Phase 2 — standalone edit page is the
+ *    single edit surface; this form exposes 50+ fields.
+ *  - 2026-06-08 round 6.2.6.1 — INV-11 rename (Transit in flightType).
+ *  - 2026-06-11 round 6.2.35 — Phase 1.1 account info editable.
+ *  - 2026-06-11 round 6.2.37 — Limo stops + passenger detail forms.
+ *  - 2026-06-12 round 6.2.39 — 4-key CATALOG_ADDONS.
+ *  - 2026-06-23 round 6.2.65 — VIP/NFG completeness gate.
+ *  - 2026-06-23 round 6.2.7 — per-kind count re-slice useEffect.
+ *  - 2026-06-24 round 6.2.66 — back-compat age group strings.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  ArrowLeft, Save, X, Calendar, Plane, User, Building2,
-  Car, ShoppingBag, Accessibility, Clock, AlertCircle,
+  ArrowLeft, Save, X, User, Building2, MessageSquare,
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { toast } from 'sonner';
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from './ui/select';
+  EditSectionAccountInfo,
+  EditSectionFlight,
+  EditSectionGuestCounts,
+  EditSectionPassengers,
+  EditSectionNFGs,
+  EditSectionPhysicalResource,
+  EditSectionLimoStops,
+  EditSectionWheelchair,
+  EditSectionAddons,
+  EditSectionStaff,
+} from './booking/sections';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type EditFlightType   = 'Arrival' | 'Departure';
+export type EditFlightType   = 'Arrival' | 'Departure' | 'Transit';
 export type EditFlightClass  = 'Economy Class' | 'Business Class' | 'First Class';
 export type EditPaymentMode  = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 export type EditAccountType  = 'Individual' | 'Corporate' | 'Agency';
+export type EditMembershipTier = 'Diamond' | 'Platinum' | 'Gold' | 'Sapphire';
+export type EditBookingChannel = 'Online' | 'Email/Call to HKIAL';
+
+export interface EditPassenger {
+  title: string;
+  firstName: string;
+  lastName: string;
+  ageGroup: 'Adult (13+ years)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | 'Child' | 'Infant' | '';
+  birthdayDay?: string;
+  birthdayMonth?: string;
+  birthdayYear?: string;
+  travelDocNo: string;
+  membershipNo?: string;
+  foodAllergies?: string;
+}
+export interface EditNonFlyingGuest {
+  title: string;
+  firstName: string;
+  lastName: string;
+  ageGroup: 'Adult (13+ years)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | 'Child' | 'Infant' | '';
+  foodAllergies?: string;
+}
+
+export interface EditLimoStop {
+  id: number;
+  type: 'Pick-up' | 'Destination';
+  location: string;
+}
+
+export interface EditStaffOption {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export interface EditSuiteOption {
+  id: number;
+  name: string;
+  kind: 'suite' | 'lounge';
+}
+
+// ── 3h booking-time rule (round 6.2.74) ───────────────────────────────────────
+// Sky's directive: "The booking time not later than arrival time 3 hour,
+// not ealier then departure them 3 hour". Parsing:
+//   - booking_time ≤ arrival_time + 3h   (at most 3h AFTER flight arrives at HKG)
+//   - booking_time ≥ departure_time - 3h (at least 3h BEFORE flight departs from HKG)
+//
+// For each flightType:
+//   - Departure: only departure rule applies → [flightTime - 3h, flightTime]
+//   - Arrival:   only arrival rule applies   → [flightTime, flightTime + 3h]
+//   - Transit:   combined rule using leg1 (arrival at HKG) + leg2 (departure
+//                from HKG) → [leg2 - 3h, leg1 + 3h]. Range always non-empty
+//                due to the backend's 6h MAX transit rule (round 6.2.98).
+
+export interface VisitTimeRange {
+  /** HH:MM (00:00–23:59) — min bound for the visit time input. */
+  min?: string;
+  /** HH:MM (00:00–23:59) — max bound for the visit time input. */
+  max?: string;
+  /** User-facing error message when visitTime is out of range. */
+  error?: string;
+}
+
+const HHMM_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function hhmmToMinutes(hhmm: string): number {
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return 0;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+function minutesToHHMM(mins: number): string {
+  // Wrap to [0, 1440) — handles cross-midnight arithmetic
+  // (e.g., flightTime 23:30 + 3h = 02:30 next day).
+  const wrapped = ((mins % 1440) + 1440) % 1440;
+  const h = Math.floor(wrapped / 60);
+  const m = wrapped % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+/**
+ * Compute the valid visit-time range and a violation message for a booking
+ * per Sky's 3h rule (see block comment above). Returns empty range when
+ * `visitTime` is unset or the flight-time fields needed for the rule are
+ * missing (caller can decide whether to gate save).
+ */
+export function computeVisitTimeRange(
+  formData: Pick<BookingFormData, 'flightType' | 'flightTime' | 'visitTime' | 'leg2FlightTime'>,
+): VisitTimeRange {
+  const visitTime = formData.visitTime;
+  if (!visitTime || !HHMM_RE.test(visitTime)) return {};
+  const flightTime = formData.flightTime;
+  const flightType = formData.flightType;
+  const visitMins = hhmmToMinutes(visitTime);
+
+  if (flightType === 'Departure') {
+    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+    const minMins = hhmmToMinutes(flightTime) - 180;
+    const maxMins = hhmmToMinutes(flightTime);
+    if (visitMins < minMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be at least 3h before flight departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (visitMins > maxMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be before flight departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins) };
+  }
+
+  if (flightType === 'Arrival') {
+    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+    const minMins = hhmmToMinutes(flightTime);
+    const maxMins = hhmmToMinutes(flightTime) + 180;
+    if (visitMins < minMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be after flight arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (visitMins > maxMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be within 3h after flight arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins) };
+  }
+
+  if (flightType === 'Transit') {
+    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+    const leg2Time = formData.leg2FlightTime;
+    if (!leg2Time || !HHMM_RE.test(leg2Time)) return {};
+    const maxMins = hhmmToMinutes(flightTime) + 180;          // leg1 arrival + 3h
+    const minMins = hhmmToMinutes(leg2Time) - 180;            // leg2 departure - 3h
+    if (visitMins < minMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be at least 3h before 2nd-leg departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (visitMins > maxMins) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be within 3h after 1st-leg arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins) };
+  }
+
+  return {};
+}
 
 export interface BookingFormData {
   bookingNo: string;
@@ -38,19 +231,88 @@ export interface BookingFormData {
   flightOrigin?: string;
   flightDestination?: string;
   flightClass?: EditFlightClass;
+  leg2ArrivalDate?: string;
+  leg2FlightNo?: string;
+  leg2FlightTime?: string;
+  leg2FlightClass?: EditFlightClass;
+  leg2Destination?: string;
   visitDate: string;
   visitTime: string;
   suite: string;
+  assignedSuiteIds?: number[];
+  assignedLoungeIds?: number[];
+  numberOfLuggage?: number;
   numberOfGuests: number;
   nonFlyingGuests: number;
+  numPremiereSuites: number;
+  vipPassengersInPremiereSuite: number;
+  nonFlyingGuestsInPremiereSuite: number;
+  vipPassengersInLoungeDeluxe: number;
+  nonFlyingGuestsInLoungeDeluxe: number;
+  passengers: EditPassenger[];
+  nonFlyingGuestsList: EditNonFlyingGuest[];
   hasLimousine: boolean;
   hasShopping: boolean;
   hasWheelchair: boolean;
+  hasSecurity: boolean;
+  hasPrivateSales: boolean;
+  isAdHoc: boolean;
+  // 2026-06-28 (round 6.2.75, Phase B — Create parity) —
+  // Lounge Extension + qty stepper. Create form has had these
+  // since round 6.2.20; Edit form was missing them. The
+  // parent wrapper's PUT submit had been hardcoding
+  // `hasLoungeExtension: false, loungeExtensionQty: 0`, which
+  // silently wiped any pre-existing Lounge Extension item
+  // whenever the staff saved an edit. Surface both fields
+  // here so the unified EditSectionAddons can drive them
+  // and the wrapper can pass them through to
+  // `buildAddonsItems({hasLoungeExtension, loungeExtensionQty})`.
+  hasLoungeExtension: boolean;
+  loungeExtensionQty: number;
+  limoStops: EditLimoStop[];
+  wheelchairPassenger: string;
+  selectedAddonKeys: string[];
+  assignedStaffIds: number[];
   paymentMode: EditPaymentMode;
   specialRequests?: string;
+  membershipTier?: EditMembershipTier;
+  accountDiscountPct?: number;
+  promoCode?: string;
+  promoDiscountPct?: number;
+  accountRemark?: string;
+  bookingChannel?: EditBookingChannel;
+  // 2026-06-28 (round 6.2.77) — Contact Person save follow-up.
+  // The detail page's Contact Person card was display-only after
+  // the round 6.2.76 regionCode split fix; user edits did not
+  // reach `formData`, so the master Save PUT silently dropped
+  // them. Add these 5 fields so onFormChange patches flow into
+  // the lifted state and the master Save handler's
+  // `advanced_details.contact` block (parent BookingDetail.tsx
+  // handleMasterSave) includes the edited values. `regionCode`
+  // + `contactNo` are kept separate on the wire (the API stores
+  // `contactNo` as a single string `${regionCode} ${contactNo}`
+  // — see CreateBooking.tsx:1111-1113 + the parent wrapper's
+  // assemble logic).
+  contactName?: string;
+  contactEmail?: string;
+  regionCode?: string;
+  contactNo?: string;
+  contactMemo?: string;
 }
 
-// ── MOCK default form data ────────────────────────────────────────────────────
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+export interface BookingEditProps {
+  bookingId?: string;
+  initialData?: BookingFormData | null;
+  staffOptions?: EditStaffOption[];
+  suiteOptions?: EditSuiteOption[];
+  onSave?: (data: BookingFormData) => void;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+}
+
+// ── MOCK default (still here for demo / dev preview) ──────────────────────────
 
 const MOCK_BOOKING_FORM: BookingFormData = {
   bookingNo:        'A-202604-000001',
@@ -66,30 +328,55 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   visitDate:        '2026-04-15',
   visitTime:        '09:00',
   suite:            'Premier Suite A',
+  assignedSuiteIds: [],
+  assignedLoungeIds: [],
+  numberOfLuggage:  1,
   numberOfGuests:   2,
   nonFlyingGuests:  0,
+  numPremiereSuites: 1,
+  vipPassengersInPremiereSuite: 1,
+  nonFlyingGuestsInPremiereSuite: 0,
+  vipPassengersInLoungeDeluxe: 1,
+  nonFlyingGuestsInLoungeDeluxe: 0,
+  passengers: [
+    { title: 'Mr', firstName: 'James', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P1234567', membershipNo: 'CX-DIA-001' },
+    { title: 'Mrs', firstName: 'Sarah', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P7654321' },
+  ],
+  nonFlyingGuestsList: [],
   hasLimousine:     true,
   hasShopping:      false,
   hasWheelchair:    false,
+  hasSecurity:      false,
+  hasPrivateSales:  false,
+  isAdHoc:          false,
+  hasLoungeExtension: false,
+  loungeExtensionQty: 1,
+  limoStops:        [{ id: 1, type: 'Pick-up', location: 'HKG Terminal 1' }],
+  wheelchairPassenger: '',
+  selectedAddonKeys: [],
+  assignedStaffIds: [],
   paymentMode:      'Upfront',
   specialRequests:  '',
 };
 
-const SUITE_OPTIONS = [
-  'VIP Suite A', 'VIP Suite B', 'Executive Suite',
-  'Business Suite', 'Premier Suite A', 'Premier Suite B',
-  'Lounge Deluxe', 'Open Lounge',
-];
+// ── VIP/NFG completeness gate helpers (round 6.2.65) ──────────────────────────
 
-// ── Props interface ───────────────────────────────────────────────────────────
-
-export interface BookingEditProps {
-  bookingId?: string;
-  /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_FORM for demo */
-  initialData?: BookingFormData | null;
-  onSave?: (data: BookingFormData) => void;
-  onCancel?: () => void;
-  isSubmitting?: boolean;
+function getMissingPassengerFields(p: EditPassenger): string[] {
+  const missing: string[] = [];
+  if (!p.title) missing.push('Title');
+  if (!p.firstName) missing.push('First Name');
+  if (!p.lastName) missing.push('Last Name');
+  if (!p.ageGroup) missing.push('Age Group');
+  if (!p.travelDocNo) missing.push('Travel Doc No.');
+  return missing;
+}
+function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
+  const missing: string[] = [];
+  if (!g.title) missing.push('Title');
+  if (!g.firstName) missing.push('First Name');
+  if (!g.lastName) missing.push('Last Name');
+  if (!g.ageGroup) missing.push('Age Group');
+  return missing;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -97,42 +384,116 @@ export interface BookingEditProps {
 export function BookingEdit({
   bookingId,
   initialData,
+  staffOptions = [],
+  suiteOptions = [],
   onSave      = () => {},
   onCancel    = () => {},
   isSubmitting = false,
 }: BookingEditProps) {
   const seed = initialData ?? MOCK_BOOKING_FORM;
 
-  // Local form state — all form values live here in demo mode;
-  // in real mode the CI4 container should manage these via props + handlers.
-  const [flightType,    setFlightType]    = useState<EditFlightType>(seed.flightType);
-  const [flightNo,      setFlightNo]      = useState(seed.flightNo);
-  const [flightTime,    setFlightTime]    = useState(seed.flightTime);
-  const [flightOrigin,  setFlightOrigin]  = useState(seed.flightOrigin ?? '');
-  const [flightDest,    setFlightDest]    = useState(seed.flightDestination ?? '');
-  const [flightClass,   setFlightClass]   = useState<EditFlightClass | ''>(seed.flightClass ?? '');
-  const [visitDate,     setVisitDate]     = useState(seed.visitDate);
-  const [visitTime,     setVisitTime]     = useState(seed.visitTime);
-  const [suite,         setSuite]         = useState(seed.suite);
-  const [numGuests,     setNumGuests]     = useState(seed.numberOfGuests);
-  const [nonFlying,     setNonFlying]     = useState(seed.nonFlyingGuests);
-  const [hasLimo,       setHasLimo]       = useState(seed.hasLimousine);
-  const [hasShopping,   setHasShopping]   = useState(seed.hasShopping);
-  const [hasWheelchair, setHasWheelchair] = useState(seed.hasWheelchair);
-  const [paymentMode,   setPaymentMode]   = useState<EditPaymentMode>(seed.paymentMode);
-  const [specialReqs,   setSpecialReqs]   = useState(seed.specialRequests ?? '');
+  // 2026-06-28 round 6.2.72 — LIFTED STATE. Single useState
+  // replaces the 30+ individual useStates from pre-6.2.72.
+  // Sections are controlled components; onFormChange merges
+  // patches via shallow Object.assign.
+  const [formData, setFormData] = useState<BookingFormData>(seed);
+  const onFormChange = (patch: Partial<BookingFormData>) => {
+    setFormData(prev => ({ ...prev, ...patch }));
+  };
+
+  // 2026-06-23 round 6.2.7 — re-count useEffect for VIP passengers.
+  // When the admin changes a per-kind VIP count, the passenger
+  // array is sliced / padded to match. Order is [PS VIPs..., LD VIPs...]
+  // (create form's invariant). The parent wrapper's `handleSave`
+  // splits the array back into `suite_passengers[]` +
+  // `lounge_suite_passengers[]` using the round 6.2.68 order-based
+  // partition.
+  useEffect(() => {
+    const targetVipCount = formData.vipPassengersInPremiereSuite + formData.vipPassengersInLoungeDeluxe;
+    setFormData(prev => {
+      if (prev.passengers.length === targetVipCount) return prev;
+      if (prev.passengers.length > targetVipCount) {
+        return { ...prev, passengers: prev.passengers.slice(0, targetVipCount) };
+      }
+      return {
+        ...prev,
+        passengers: [
+          ...prev.passengers,
+          ...Array.from({ length: targetVipCount - prev.passengers.length }, () => ({
+            title: '',
+            firstName: '',
+            lastName: '',
+            ageGroup: '' as const,
+            travelDocNo: '',
+          })),
+        ],
+      };
+    });
+  }, [formData.vipPassengersInPremiereSuite, formData.vipPassengersInLoungeDeluxe]);
+
+  // 2026-06-23 round 6.2.7 — re-count useEffect for NFGs.
+  useEffect(() => {
+    const targetNfgCount = formData.nonFlyingGuestsInPremiereSuite + formData.nonFlyingGuestsInLoungeDeluxe;
+    setFormData(prev => {
+      if (prev.nonFlyingGuestsList.length === targetNfgCount) return prev;
+      if (prev.nonFlyingGuestsList.length > targetNfgCount) {
+        return { ...prev, nonFlyingGuestsList: prev.nonFlyingGuestsList.slice(0, targetNfgCount) };
+      }
+      return {
+        ...prev,
+        nonFlyingGuestsList: [
+          ...prev.nonFlyingGuestsList,
+          ...Array.from({ length: targetNfgCount - prev.nonFlyingGuestsList.length }, () => ({
+            title: '',
+            firstName: '',
+            lastName: '',
+            ageGroup: '' as const,
+          })),
+        ],
+      };
+    });
+  }, [formData.nonFlyingGuestsInPremiereSuite, formData.nonFlyingGuestsInLoungeDeluxe]);
+
+  // 2026-06-23 round 6.2.65 — VIP/NFG completeness gate.
+  // Validate before saving. Returns the first 3 incomplete
+  // passengers / NFGs and aggregates the rest into an
+  // "...and N more" suffix. The slice order matches the create
+  // form's invariant [PS VIPs..., LD VIPs..., PS NFGs..., LD NFGs...]
+  // so "#N" matches what the admin sees in the form.
+  const validateCompleteness = (data: BookingFormData): { ok: true } | { ok: false; message: string } => {
+    const incomplete: string[] = [];
+    const psPax = data.passengers.slice(0, data.vipPassengersInPremiereSuite);
+    const ldPax = data.passengers.slice(data.vipPassengersInPremiereSuite, data.vipPassengersInPremiereSuite + data.vipPassengersInLoungeDeluxe);
+    [...psPax, ...ldPax].forEach((p, i) => {
+      const missing = getMissingPassengerFields(p);
+      if (missing.length > 0) {
+        const name = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ') || `Passenger ${i + 1}`;
+        incomplete.push(`#${i + 1} ${name} — missing ${missing.join(', ')}`);
+      }
+    });
+    const psNfg = data.nonFlyingGuestsList.slice(0, data.nonFlyingGuestsInPremiereSuite);
+    const ldNfg = data.nonFlyingGuestsList.slice(data.nonFlyingGuestsInPremiereSuite, data.nonFlyingGuestsInPremiereSuite + data.nonFlyingGuestsInLoungeDeluxe);
+    [...psNfg, ...ldNfg].forEach((g, i) => {
+      const missing = getMissingNfgFields(g);
+      if (missing.length > 0) {
+        const name = [g.title, g.firstName, g.lastName].filter(Boolean).join(' ') || `NFG ${i + 1}`;
+        incomplete.push(`#${i + 1} ${name} — missing ${missing.join(', ')}`);
+      }
+    });
+    if (incomplete.length === 0) return { ok: true };
+    const sample = incomplete.slice(0, 3);
+    const extra = incomplete.length - sample.length;
+    const suffix = extra > 0 ? `…and ${extra} more` : '';
+    return { ok: false, message: `Please complete all VIP Passenger / NFG info (${incomplete.length} of ${data.passengers.length + data.nonFlyingGuestsList.length} incomplete).\n${sample.join('\n')}${suffix ? '\n' + suffix : ''}` };
+  };
 
   const handleSave = () => {
-    onSave({
-      ...seed,
-      flightType, flightNo, flightTime,
-      flightOrigin, flightDestination: flightDest,
-      flightClass: flightClass || undefined,
-      visitDate, visitTime, suite,
-      numberOfGuests: numGuests, nonFlyingGuests: nonFlying,
-      hasLimousine: hasLimo, hasShopping, hasWheelchair,
-      paymentMode, specialRequests: specialReqs,
-    });
+    const validation = validateCompleteness(formData);
+    if (!validation.ok) {
+      toast.error(validation.message);
+      return;
+    }
+    onSave(formData);
   };
 
   return (
@@ -151,7 +512,7 @@ export function BookingEdit({
                 <Badge className="bg-blue-100 text-blue-700 text-sm ml-1">{seed.bookingNo}</Badge>
               )}
             </h1>
-            <p className="text-gray-500 mt-0.5">Modify booking details below. Changes will be saved after confirming.</p>
+            <p className="text-gray-500 mt-0.5">Modify booking details below. Changes will be saved after clicking "Save Changes".</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -169,11 +530,10 @@ export function BookingEdit({
         </div>
       </div>
 
-      {/* Account info (read-only — can't be edited in this view) */}
+      {/* Account info (read-only summary) */}
       <Card className="p-5">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
           <User className="w-4 h-4" /> Account Information
-          <span className="normal-case text-xs text-gray-400 ml-1">(read-only)</span>
         </h3>
         <div className="grid grid-cols-3 gap-6 text-sm">
           <div>
@@ -205,205 +565,60 @@ export function BookingEdit({
         </div>
       </Card>
 
-      {/* Flight information */}
-      <Card className="p-5">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <Plane className="w-4 h-4" /> Flight Information
-        </h3>
-        <div className="grid grid-cols-3 gap-6">
+      {/* Account Settings (editable) */}
+      <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Flight Type</label>
-            <Select value={flightType} onValueChange={v => setFlightType(v as EditFlightType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Departure">Departure</SelectItem>
-                <SelectItem value="Arrival">Arrival</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Flight + Visit + Suite + Payment (editable) */}
+      <EditSectionFlight formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Flight Number</label>
-            <input
-              id="edit-flight-no"
-              type="text"
-              value={flightNo}
-              onChange={e => setFlightNo(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
-              placeholder="e.g. CX234"
-            />
-          </div>
+      {/* Per-kind guest counts (editable, drives pricing) */}
+      <EditSectionGuestCounts formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Flight Time</label>
-            <input
-              type="time"
-              value={flightTime}
-              onChange={e => setFlightTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
+      {/* Per-passenger detail forms (gated on row count > 0) */}
+      <EditSectionPassengers formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">
-              {flightType === 'Departure' ? 'Origin' : 'Destination (HKG)'}
-            </label>
-            <input
-              type="text"
-              value={flightType === 'Departure' ? flightOrigin : 'HKG'}
-              onChange={e => flightType === 'Departure' ? setFlightOrigin(e.target.value.toUpperCase()) : undefined}
-              readOnly={flightType === 'Arrival'}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
-              placeholder="e.g. LHR"
-            />
-          </div>
+      {/* Per-NFG detail forms (gated on row count > 0) */}
+      <EditSectionNFGs formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">
-              {flightType === 'Departure' ? 'Destination' : 'Origin'}
-            </label>
-            <input
-              type="text"
-              value={flightType === 'Departure' ? flightDest : flightOrigin}
-              onChange={e => flightType === 'Departure' ? setFlightDest(e.target.value.toUpperCase()) : setFlightOrigin(e.target.value.toUpperCase())}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
-              placeholder="e.g. NRT"
-            />
-          </div>
+      {/* Physical resource grid (PS + LD checkboxes) */}
+      <EditSectionPhysicalResource
+        formData={formData}
+        onFormChange={onFormChange}
+        suiteOptions={suiteOptions}
+      />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Flight Class</label>
-            <Select value={flightClass} onValueChange={v => setFlightClass(v as EditFlightClass)}>
-              <SelectTrigger><SelectValue placeholder="Select class…" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Economy Class">Economy Class</SelectItem>
-                <SelectItem value="Business Class">Business Class</SelectItem>
-                <SelectItem value="First Class">First Class</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Limousine stops editor */}
+      <EditSectionLimoStops formData={formData} onFormChange={onFormChange} />
 
-        </div>
-      </Card>
+      {/* Wheelchair recipient (gated on hasWheelchair) */}
+      <EditSectionWheelchair formData={formData} onFormChange={onFormChange} />
 
-      {/* Booking details */}
-      <Card className="p-5">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <Calendar className="w-4 h-4" /> Booking Details
-        </h3>
-        <div className="grid grid-cols-3 gap-6">
+      {/* Unified Add-on Services card (Create parity per Sky 2026-06-28,
+          round 6.2.75 Phase B). Replaces the pre-6.2.75 split between
+          `EditSectionBooleanAddons` (6 boolean toggles) + `EditSectionAddons`
+          (4-key CATALOG_ADDONS checkboxes). Chips + searchable dropdown over
+          CATALOG_ADDONS + Lounge Extension qty stepper + isAdHoc standalone
+          toggle. */}
+      <EditSectionAddons formData={formData} onFormChange={onFormChange} />
 
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Visit Date</label>
-            <input
-              id="edit-visit-date"
-              type="date"
-              value={visitDate}
-              onChange={e => setVisitDate(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Visit Time</label>
-            <input
-              type="time"
-              value={visitTime}
-              onChange={e => setVisitTime(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Suite / Venue</label>
-            <Select value={suite} onValueChange={setSuite}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SUITE_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">VIP Passengers</label>
-            <input
-              id="edit-guests"
-              type="number"
-              min={1}
-              value={numGuests}
-              onChange={e => setNumGuests(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Non-Flying Guests</label>
-            <input
-              type="number"
-              min={0}
-              value={nonFlying}
-              onChange={e => setNonFlying(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Payment Mode</label>
-            <Select value={paymentMode} onValueChange={v => setPaymentMode(v as EditPaymentMode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Upfront">Upfront</SelectItem>
-                <SelectItem value="Net Upfront">Net Upfront</SelectItem>
-                <SelectItem value="On-Credit">On-Credit</SelectItem>
-                <SelectItem value="Bulk Purchase/Monthly Invoice">Bulk Purchase / Monthly Invoice</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-        </div>
-      </Card>
-
-      {/* Add-on services */}
-      <Card className="p-5">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <Clock className="w-4 h-4" /> Add-on Services
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          {[
-            { key: 'limo',       label: 'Limousine Transfer',     icon: <Car className="w-4 h-4" />,          active: hasLimo,       toggle: () => setHasLimo(p => !p) },
-            { key: 'shopping',   label: 'In-lounge Shopping',     icon: <ShoppingBag className="w-4 h-4" />,  active: hasShopping,   toggle: () => setHasShopping(p => !p) },
-            { key: 'wheelchair', label: 'Wheelchair Assistance',  icon: <Accessibility className="w-4 h-4" />, active: hasWheelchair, toggle: () => setHasWheelchair(p => !p) },
-          ].map(svc => (
-            <button
-              key={svc.key}
-              onClick={svc.toggle}
-              className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all text-left ${
-                svc.active
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
-                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${svc.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                {svc.icon}
-              </div>
-              <span className="text-sm">{svc.label}</span>
-            </button>
-          ))}
-        </div>
-      </Card>
+      {/* In-Charge Staff multi-select */}
+      <EditSectionStaff
+        formData={formData}
+        onFormChange={onFormChange}
+        staffOptions={staffOptions}
+      />
 
       {/* Special requests */}
       <Card className="p-5">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" /> Special Requests
+          <MessageSquare className="w-4 h-4" /> Special Requests
         </h3>
         <div>
           <label className="block text-sm text-gray-600 mb-[10px]">Notes for lounge staff</label>
           <textarea
             rows={4}
-            value={specialReqs}
-            onChange={e => setSpecialReqs(e.target.value)}
+            value={formData.specialRequests ?? ''}
+            onChange={e => onFormChange({ specialRequests: e.target.value })}
             placeholder="e.g. Birthday celebration, kosher meal required, guest requires extra privacy…"
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
           />

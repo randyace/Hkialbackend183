@@ -1,10 +1,54 @@
-import { useState, useEffect, useRef, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, CalendarClock, Gem, Trophy, Star, Heart, Briefcase, Info } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
-import { BookingEditDialog } from './booking/BookingEditDialog';
+// 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
+// The standalone edit page (`/bookings/:id/edit`) is now the
+// SINGLE edit surface for admin bookings; the modal trigger is
+// replaced with a header button that calls `onOpenFullEditor`
+// (which the parent wrapper translates to `navigate('/bookings/{id}/edit')`).
+//
+// 2026-06-28 (round 6.2.72, Phase B) — pivot: the standalone
+// edit page is DEPRECATED. The detail page itself becomes the
+// sole edit surface. The `onOpenFullEditor` button in the
+// header is removed (Phase E), and the section components
+// from `./booking/sections/` are slotted into a new "Editable
+// Sections" container at the bottom of this page. The parent
+// wrapper manages `formData` lifted state and the master Save.
 import { BookingMovementLog, type MovementEntry, type MovementForm } from './booking/BookingMovementLog';
 import { BookingGuestsSearcher } from './booking/BookingGuestsSearcher';
 import { BookingCustomerProfile, type CustomerProfile } from './booking/BookingCustomerProfile';
+// 2026-06-28 (round 6.2.72, Phase B) — section components for
+// the inline-editable cards inside the new "Editable Sections"
+// container. Each section is a controlled-input component
+// reading from `formData` and patching via `onFormChange`.
+// The parent wrapper (`../BookingDetail.tsx`) owns the lifted
+// `formData` state and assembles these sections.
+import {
+  EditSectionAccountInfo,
+  EditSectionFlight,
+  EditSectionPhysicalResource,
+  EditSectionLimoStops,
+  EditSectionWheelchair,
+  EditSectionAddons,
+  EditSectionStaff,
+} from './booking/sections';
+// 2026-06-28 (round 6.2.72, Phase B) — `BookingFormData` +
+// `EditStaffOption` + `EditSuiteOption` types from the
+// orchestrator. The orchestrator (`./BookingEditView.tsx`)
+// owns the master Save pattern; this file slots the section
+// components inside an "Editable Sections" container.
+// 2026-06-28 (round 6.2.73) — also `EditPassenger` +
+// `EditNonFlyingGuest` for the upper VIP Passenger Details /
+// Non-Flying Guest Details cards, which now accept lifted
+// state via `passengersOverride` / `nonFlyingGuestsOverride`.
+import type {
+  BookingFormData,
+  EditStaffOption,
+  EditSuiteOption,
+  EditPassenger,
+  EditNonFlyingGuest,
+} from './BookingEditView';
+import { computeVisitTimeRange } from './BookingEditView';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -68,6 +112,66 @@ import {
   generateMockBooking,
 } from './booking/BookingDetailMocks';
 
+// 2026-06-28 (round 6.2.73) — type-bridge helpers between the
+// upper-card's local `PassengerDetail[]` / `NonFlyingGuest[]`
+// state (short-form `ageGroup` strings like 'Adults (aged 12
+// and above)') and the lifted `EditPassenger[]` /
+// `EditNonFlyingGuest[]` arrays (long-form union). Both
+// representations are accepted by the backend (see
+// `Booking.php::countAgeBandFromPassengerList` round 6.2.53 —
+// long-form aliases + short-form aliases both work). We pick
+// short-form on the way out (matches the existing master Save
+// wire format) and accept either on the way in.
+function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
+  return {
+    title: (p.title ?? '') as PassengerTitle,
+    firstName: p.firstName ?? '',
+    lastName: p.lastName ?? '',
+    travelDocNo: p.travelDocNo ?? '',
+    membershipNo: p.membershipNo ?? '',
+    ageGroup: (p.ageGroup ?? '') as AgeGroup,
+    birthdayDay: p.birthdayDay ?? '',
+    birthdayMonth: p.birthdayMonth ?? '',
+    birthdayYear: p.birthdayYear ?? '',
+    foodAllergies: p.foodAllergies ?? '',
+  };
+}
+
+function toEditPassenger(p: PassengerDetail): EditPassenger {
+  return {
+    title: p.title,
+    firstName: p.firstName,
+    lastName: p.lastName,
+    travelDocNo: p.travelDocNo,
+    membershipNo: p.membershipNo || undefined,
+    ageGroup: (p.ageGroup || '') as EditPassenger['ageGroup'],
+    birthdayDay: p.birthdayDay || undefined,
+    birthdayMonth: p.birthdayMonth || undefined,
+    birthdayYear: p.birthdayYear || undefined,
+    foodAllergies: p.foodAllergies || undefined,
+  };
+}
+
+function toNonFlyingGuest(g: Partial<EditNonFlyingGuest>): NonFlyingGuest {
+  return {
+    title: (g.title ?? '') as PassengerTitle,
+    firstName: g.firstName ?? '',
+    lastName: g.lastName ?? '',
+    ageGroup: (g.ageGroup ?? '') as AgeGroup,
+    foodAllergies: g.foodAllergies ?? '',
+  };
+}
+
+function toEditNonFlyingGuest(g: NonFlyingGuest): EditNonFlyingGuest {
+  return {
+    title: g.title,
+    firstName: g.firstName,
+    lastName: g.lastName,
+    ageGroup: (g.ageGroup || '') as EditNonFlyingGuest['ageGroup'],
+    foodAllergies: g.foodAllergies || undefined,
+  };
+}
+
 interface BookingDetailProps {
   bookingId: number;
   onBack: () => void;
@@ -84,13 +188,24 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   onApprove?: (id: number) => void;
   isLoading?: boolean;
   /**
-   * Called by the edit dialog with the new assignments. The parent
-   * should PATCH the booking and return once the API call resolves.
-   * The dialog stays open while the promise is pending and shows an
-   * error toast on rejection (without closing).
+   * 2026-06-28 (round 6.2.71, Phase 4A) — Edit Booking header button.
+   * Replaces the `onSaveEdit` + `isSavingEdit` props (which were
+   * wired to the now-deleted `<BookingEditDialog>` modal). The
+   * header button now calls `onOpenFullEditor(bookingId)` instead
+   * of opening a modal; the parent wrapper navigates to
+   * `/bookings/{id}/edit` (the standalone edit page).
+   *
+   * Single-edit-surface contract: there is now ONE place to edit
+   * a booking — the standalone edit page. The 6 inline save cards
+   * on this detail page (Save Guest Details / Save Assignment /
+   * Save Staff Assignment / Save Passenger Details / Save Guest
+   * Details for NFGs / Update Status) are still wired via their
+   * own callbacks and remain operational for status transitions
+   * + small in-place edits. Phase 4B will convert them to
+   * read-only display in a follow-up patch (per the consolidation
+   * plan — see `docs/handoff/2026-06-28-booking-edit-flow-consolidation-phase-1.md`).
    */
-  onSaveEdit?: (payload: import('./booking/BookingEditDialog').BookingEditPayload) => Promise<void>;
-  isSavingEdit?: boolean;
+  onOpenFullEditor?: (bookingId: number) => void;
   /**
    * Round 6.2.12 (2026-06-08, user-reported: "this part
    * should not be 3600, it is bookings/684") — live price
@@ -211,9 +326,79 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   onDeleteMovement?: (id: number) => Promise<void>;
   isAddingMovement?: boolean;
   isDeletingMovement?: boolean;
+
+  // 2026-06-28 (round 6.2.72, Phase B) — Inline Editable Sections
+  // container. Per Sky's pivot from round 6.2.71, the standalone
+  // edit page (`/bookings/:id/edit`) is deprecated; the detail
+  // page is now the sole edit surface. The 11 section components
+  // (in `./booking/sections/`) are slotted into a new container
+  // at the bottom of this page, controlled by lifted `formData`
+  // state owned by the parent wrapper. The master Save button
+  // calls `onSaveAllChanges(formData)` which the wrapper handles
+  // (PUT + refetch). Sky can lock down individual sections later.
+  /** Lifted BookingFormData state — drives the 11 section components. */
+  formData?: BookingFormData;
+  /** Patch the lifted formData. The wrapper merges via shallow Object.assign. */
+  onFormChange?: (patch: Partial<BookingFormData>) => void;
+  /** Master Save callback — receives the full formData. Wrapper does PUT + refetch. */
+  onSaveAllChanges?: (data: BookingFormData) => Promise<void> | void;
+  /** Master Save in-flight indicator (wrapper sets true during PUT). */
+  isSavingAllChanges?: boolean;
+  /** Staff roster for In-Charge Staff multi-select. Fetched from `/api/system/users`. */
+  staffOptions?: EditStaffOption[];
+  /** Physical resource catalog for PS/LD checkboxes. Fetched from `/api/suites`. */
+  suiteOptions?: EditSuiteOption[];
+
+  // 2026-06-28 (round 6.2.73) — Lift the upper Booking
+  // Details / VIP Passenger Details / Non-Flying Guest Details
+  // cards' state to the parent wrapper's `formData`. Sky's Q3
+  // + Q4: the whole page IS the editor; the upper cards'
+  // existing editable inputs (PS/LD counts + passenger/NFG
+  // rows) are wired to `formData` via these override props +
+  // onChange callbacks. When the override is provided, it
+  // wins over the legacy local useState. After a master Save
+  // refetch, the parent's formData updates → overrides change
+  // → a useEffect below re-seeds local state so the inputs
+  // reflect the new server values.
+  numPremiereSuitesOverride?: number;
+  vipPassengersInPremiereSuiteOverride?: number;
+  nonFlyingGuestsInPremiereSuiteOverride?: number;
+  vipPassengersInLoungeDeluxeOverride?: number;
+  nonFlyingGuestsInLoungeDeluxeOverride?: number;
+  passengersOverride?: EditPassenger[];
+  nonFlyingGuestsOverride?: EditNonFlyingGuest[];
+  /** Patch the lifted formData counts when an upper-card input changes. */
+  onGuestCountChange?: (patch: Partial<GuestDetailsCounts>) => void;
+  /** Replace the lifted formData passengers[] when an upper VIP row changes. */
+  onPassengersChange?: (next: EditPassenger[]) => void;
+  /** Replace the lifted formData nonFlyingGuestsList[] when an upper NFG row changes. */
+  onNonFlyingGuestsChange?: (next: EditNonFlyingGuest[]) => void;
+  /**
+   * `true` when the upper-card binding rules (PS must have ≥1
+   * VIP, max 6 guests per PS, max 3 NFG per LD, etc.) are
+   * violated. Disables the master Save button so the admin
+   * must fix the violation before saving. Computed by the
+   * parent wrapper from `formData`.
+   */
+  hasGuestErrors?: boolean;
+  // 2026-06-28 — number of VIP / NFG rows whose required fields
+  // (Title / First Name / Last Name / Age Group / [Travel Doc
+  // No. for VIPs]) are blank. Surfaced in the master Save
+  // warning text + used by the local fallback (line ~1260+)
+  // when the wrapper doesn't pass `hasGuestErrors`. Computed by
+  // the parent wrapper from `formData`.
+  incompleteVipInfoCount?: number;
+
+  // 2026-06-28 (round 6.2.75, Phase B — Create parity) —
+  // DB price map from `GET /api/bookable-items`. Forwarded
+  // to the unified `EditSectionAddons` so the chips + dropdown
+  // show DB prices instead of hard-coded `CATALOG_ADDONS.defaultPrice`.
+  // Optional — falls back to defaultPrice when missing (mirrors
+  // Create's behavior at CreateBooking.tsx:2706-2716).
+  bookableItemPrices?: Record<string, number>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onSaveEdit, isSavingEdit = false, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -280,14 +465,65 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const booking = bookingProp || generateMockBooking(bookingId);
 
   // Editable guest fields — Premiere Suite
-  const [numPremiereSuites, setNumPremiereSuites] = useState(booking.numberOfPremiereSuites ?? 0);
-  const [vipPS, setVipPS] = useState(booking.vipPassengersInPremiereSuite ?? 0);
-  const [nonFlyingPS, setNonFlyingPS] = useState(booking.nonFlyingGuestsInPremiereSuite ?? 0);
+  // 2026-06-28 (round 6.2.73) — local `useState` retained for
+  // legacy callers (no overrides). When `numPremiereSuitesOverride`
+  // is provided by the parent wrapper, it wins. The `setNumPremiereSuites`
+  // wrapper also emits via `onGuestCountChange` so the wrapper's
+  // `formData` stays in sync.
+  const [localNumPremiereSuites, setLocalNumPremiereSuites] = useState(booking.numberOfPremiereSuites ?? 0);
+  const numPremiereSuites = numPremiereSuitesOverride ?? localNumPremiereSuites;
+  const setNumPremiereSuites = (val: number) => {
+    setLocalNumPremiereSuites(val);
+    onGuestCountChange?.({ numPremiereSuites: val });
+  };
+  // After a master Save refetch, the parent re-maps the booking
+  // → formData → override changes → sync local state.
+  useEffect(() => {
+    if (numPremiereSuitesOverride !== undefined) setLocalNumPremiereSuites(numPremiereSuitesOverride);
+  }, [numPremiereSuitesOverride]);
+
+  const [localVipPS, setLocalVipPS] = useState(booking.vipPassengersInPremiereSuite ?? 0);
+  const vipPS = vipPassengersInPremiereSuiteOverride ?? localVipPS;
+  const setVipPS = (val: number) => {
+    setLocalVipPS(val);
+    onGuestCountChange?.({ vipPassengersInPremiereSuite: val });
+  };
+  useEffect(() => {
+    if (vipPassengersInPremiereSuiteOverride !== undefined) setLocalVipPS(vipPassengersInPremiereSuiteOverride);
+  }, [vipPassengersInPremiereSuiteOverride]);
+
+  const [localNonFlyingPS, setLocalNonFlyingPS] = useState(booking.nonFlyingGuestsInPremiereSuite ?? 0);
+  const nonFlyingPS = nonFlyingGuestsInPremiereSuiteOverride ?? localNonFlyingPS;
+  const setNonFlyingPS = (val: number) => {
+    setLocalNonFlyingPS(val);
+    onGuestCountChange?.({ nonFlyingGuestsInPremiereSuite: val });
+  };
+  useEffect(() => {
+    if (nonFlyingGuestsInPremiereSuiteOverride !== undefined) setLocalNonFlyingPS(nonFlyingGuestsInPremiereSuiteOverride);
+  }, [nonFlyingGuestsInPremiereSuiteOverride]);
 
   // Editable guest fields — Lounge Deluxe
-  const [vipLD, setVipLD] = useState(booking.vipPassengersInLoungeDeluxe ?? 0);
+  const [localVipLD, setLocalVipLD] = useState(booking.vipPassengersInLoungeDeluxe ?? 0);
+  const vipLD = vipPassengersInLoungeDeluxeOverride ?? localVipLD;
+  const setVipLD = (val: number) => {
+    setLocalVipLD(val);
+    onGuestCountChange?.({ vipPassengersInLoungeDeluxe: val });
+  };
+  useEffect(() => {
+    if (vipPassengersInLoungeDeluxeOverride !== undefined) setLocalVipLD(vipPassengersInLoungeDeluxeOverride);
+  }, [vipPassengersInLoungeDeluxeOverride]);
 
   // VIP Passenger detail forms — one entry per VIP passenger (PS + LD)
+  // 2026-06-28 (round 6.2.73) — local `useState` retained for
+  // legacy callers (no `passengersOverride`). When the override
+  // is provided, it wins. Two useEffects keep the two in sync:
+  //   1. local `passengers` change → emit via `onPassengersChange`
+  //   2. `passengersOverride` change → re-seed local state
+  //      (handles the master Save refetch path)
+  // Both useEffects track a JSON hash of the last-emitted /
+  // last-synced value to avoid an infinite loop (each emit
+  // causes a formData update → override change → sync useEffect
+  // would fire → loop).
   const [passengers, setPassengers] = useState<PassengerDetail[]>(() =>
     booking.passengers && booking.passengers.length > 0
       ? booking.passengers.map(p => ({
@@ -312,6 +548,44 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             bookingId
           )
   );
+  // 2026-06-28 (round 6.2.73) — JSON hash of the last-emitted
+  // value to prevent the emit↔sync feedback loop.
+  const lastEmittedPassengersRef = useRef<string>('');
+  // Emit local state → onPassengersChange when local changes.
+  // Round 6.2.73 (lifted state): the parent wrapper merges
+  // this into its `formData.passengers[]` so the master Save
+  // PUT payload includes the latest upper-card edits.
+  useEffect(() => {
+    if (onPassengersChange) {
+      const next = passengers.map(toEditPassenger);
+      const hash = JSON.stringify(next);
+      if (hash !== lastEmittedPassengersRef.current) {
+        lastEmittedPassengersRef.current = hash;
+        onPassengersChange(next);
+      }
+    }
+  }, [passengers, onPassengersChange]);
+  // Re-seed local state from override (post-master-Save refetch
+  // path; override change = parent updated formData.passengers).
+  // Skip the very first fire so we don't overwrite the
+  // useState initializer's value (which already loaded
+  // booking.passengers per round 6.2.7).
+  const isPassengersOverrideInitialMount = useRef(true);
+  useEffect(() => {
+    if (isPassengersOverrideInitialMount.current) {
+      isPassengersOverrideInitialMount.current = false;
+      return;
+    }
+    if (passengersOverride) {
+      const overrideHash = JSON.stringify(passengersOverride);
+      // Skip if override matches what we last emitted (prevents
+      // the emit↔sync feedback loop).
+      if (overrideHash !== lastEmittedPassengersRef.current) {
+        setPassengers(passengersOverride.map(toPassengerDetail));
+        lastEmittedPassengersRef.current = overrideHash;
+      }
+    }
+  }, [passengersOverride]);
 
   // Sync passenger list length whenever the total VIP count changes
   // 2026-06-08 round 6.2.9 — passengers useEffect (the count-based
@@ -477,13 +751,78 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
-  const [isEditBookingOpen, setIsEditBookingOpen] = useState(false);
+  // 2026-06-28 (round 6.2.71, Phase 4A) — `isEditBookingOpen`
+  // state DELETED. The modal that used to open on this state
+  // (`<BookingEditDialog>`) was removed per the consolidation
+  // plan. The header's `[Edit Booking]` button now calls
+  // `onOpenFullEditor?.(bookingId)` (parent wrapper navigates
+  // to `/bookings/{id}/edit`). The dead
+  // `{false && false && <div>` block that held the old inline
+  // edit dialog JSX (lines 4028-4720 pre-Phase 4) was also
+  // removed; the entire 700+ line dead-code block is gone.
+  // ────────────────────────────────────────────────────────────────────
 
   // ── Contact Person (from booking data) ──────────────────────────────────
-  const [contactName,  setContactName]  = useState(booking.contactPerson?.name ?? '');
-  const [contactEmail, setContactEmail] = useState(booking.contactPerson?.email ?? '');
-  const [contactNo,    setContactNo]    = useState(booking.contactPerson?.phone ?? '');
-  const [bookingMemo,  setBookingMemo]  = useState(booking.contactPerson?.memo ?? '');
+  // 2026-06-28 (round 6.2.76) — split `regionCode` from the local
+  // `contactNo` on initial load. The API stores the contact phone
+  // as either `+XXX 9876-5432` (post-6.2.8 customer form) or
+  // `+XXX-9876-5432` (legacy / admin form). The pre-6.2.76 view
+  // stuffed the whole string into one `contactNo` input, so the
+  // region code leaked into the number field on display.
+  //
+  // 2026-06-28 (round 6.2.77) — wire to lifted `formData` /
+  // `onFormChange` so user edits reach the master Save PUT. Pre-
+  // 6.2.77 the inputs read from local useState only and onChange
+  // never called `onFormChange` — `bookingToFormData` did NOT
+  // populate contact fields either, so even the unsaved-state
+  // didn't round-trip through the master Save. Now: prefer the
+  // lifted `formData` field when present (parent wrapper has
+  // fetched + mapped), otherwise fall back to local state
+  // initialised from `booking.contactPerson` (standalone demo
+  // mode + first-render flash). onChange dispatches to
+  // `onFormChange` when available, else to local state.
+  const parsePhone = (raw: string | undefined): { regionCode: string; contactNo: string } => {
+    if (!raw) return { regionCode: '', contactNo: '' };
+    // Match "+XXX" or "+XX-XXX" prefix followed by whitespace or
+    // a dash, then the local number.
+    const m = raw.match(/^(\+\d+(?:-\d+)?)[\s\-]+(.+)$/);
+    if (m) return { regionCode: m[1], contactNo: m[2] };
+    return { regionCode: '', contactNo: raw };
+  };
+  const initialPhone = parsePhone(booking.contactPerson?.phone);
+  const [localContactName,  setLocalContactName]  = useState(booking.contactPerson?.name ?? '');
+  const [localContactEmail, setLocalContactEmail] = useState(booking.contactPerson?.email ?? '');
+  const [localRegionCode,   setLocalRegionCode]   = useState(initialPhone.regionCode);
+  const [localContactNo,    setLocalContactNo]    = useState(initialPhone.contactNo);
+  const [localBookingMemo,  setLocalBookingMemo]  = useState(booking.contactPerson?.memo ?? '');
+  const contactName  = formData?.contactName  ?? localContactName;
+  const contactEmail = formData?.contactEmail ?? localContactEmail;
+  const regionCode   = formData?.regionCode   ?? localRegionCode;
+  const contactNo    = formData?.contactNo    ?? localContactNo;
+  const bookingMemo  = formData?.contactMemo  ?? localBookingMemo;
+  // Helper dispatchers: push to lifted formData when the parent
+  // wrapper provides onFormChange (master Save path), else fall
+  // back to local state (standalone demo mode without formData).
+  const setContactName  = (v: string) => {
+    if (onFormChange) onFormChange({ contactName: v });
+    else setLocalContactName(v);
+  };
+  const setContactEmail = (v: string) => {
+    if (onFormChange) onFormChange({ contactEmail: v });
+    else setLocalContactEmail(v);
+  };
+  const setRegionCode   = (v: string) => {
+    if (onFormChange) onFormChange({ regionCode: v });
+    else setLocalRegionCode(v);
+  };
+  const setContactNo    = (v: string) => {
+    if (onFormChange) onFormChange({ contactNo: v });
+    else setLocalContactNo(v);
+  };
+  const setBookingMemo  = (v: string) => {
+    if (onFormChange) onFormChange({ contactMemo: v });
+    else setLocalBookingMemo(v);
+  };
 
   // ── Promotion / Redemption Code ──────────────────────────────────────────
   const MOCK_PROMOS: Record<string, { label: string; benefit: string; type: 'percent' | 'fixed' }> = {
@@ -519,32 +858,25 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   // ── Suite & Time Assignment (Confirmed + Paid) ────────────────────────────
-  const SUITE_OPTIONS = [
-    'VIP Suite A', 'VIP Suite B', 'Executive Suite 1', 'Executive Suite 2',
-    'Business Suite 1', 'Business Suite 2', 'Business Suite 3', 'Business Suite 4',
-    'Premier Lounge Table 1', 'Premier Lounge Table 2', 'Premier Lounge Table 3',
-    'Open Lounge Area',
-  ];
-  const [assignedSuite,     setAssignedSuite]     = useState(booking.suite);
-  const [assignedDate,      setAssignedDate]      = useState(booking.dateTime.split(' ')[0]);
-  const [assignedStartTime, setAssignedStartTime] = useState('11:00');
-  const [assignedEndTime,   setAssignedEndTime]   = useState('14:00');
+  // 2026-06-28 (round 6.2.76) — "Suite / Lounge Table Assignment"
+  // card REMOVED. Per Sky: "we don't need the 'Suite / Lounge Table
+  // Assignment' which is showing after the booking is paid. we can
+  // keep using the visit date and visit time section". The visit
+  // date/time inputs in `<EditSectionFlight>` (round 6.2.74) are
+  // the canonical edit surface for time, and the physical-resource
+  // multi-select in `<EditSectionPhysicalResource>` (round 6.2.73)
+  // covers location. The hardcoded `SUITE_OPTIONS` list + the four
+  // `assigned*` useStates + the `{isConfirmedAndPaid && (<Card>...)}`
+  // JSX block are all gone.
+  //
+  // `isConfirmedAndPaid` is kept — it's still used by the Refund
+  // action button in the page header (line ~1528 pre-6.2.76).
   const isConfirmedAndPaid = booking.status === 'Confirmed' && booking.paymentStatus === 'Paid';
 
-  // ── In-Charge Staff ───────────────────────────────────────────────────────
-  const ALL_STAFF = [
-    { id: 1, name: 'Emily Chen',   role: 'Senior Lounge Manager'    },
-    { id: 2, name: 'Tom Ng',       role: 'VIP Concierge'            },
-    { id: 3, name: 'David Wong',   role: 'Lounge Supervisor'        },
-    { id: 4, name: 'Peter Chan',   role: 'Lounge Attendant'         },
-    { id: 5, name: 'Henry Yip',    role: 'F&B Coordinator'          },
-    { id: 6, name: 'Grace Liu',    role: 'Guest Relations Officer'  },
-    { id: 7, name: 'Michael Tam',  role: 'Operations Lead'          },
-    { id: 8, name: 'Rachel Wong',  role: 'VIP Escort'               },
-  ];
-  const [selectedStaffIds, setSelectedStaffIds] = useState<number[]>([]);
-  const toggleStaff = (id: number) =>
-    setSelectedStaffIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  // 2026-06-28 (round 6.2.71, Phase 5) — fake In-Charge Staff state
+  // (hardcoded `ALL_STAFF` + `selectedStaffIds` + `toggleStaff`) REMOVED.
+  // The real staff picker is now `<EditSectionStaff>` (bottom of the
+  // page), backed by `/api/system/users` and `formData.assignedStaffIds`.
 
   // ── Refund Dialog ─────────────────────────────────────────────────────────
   const [showRefundDialog, setShowRefundDialog] = useState(false);
@@ -675,7 +1007,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [nonFlyingLD, setNonFlyingLD] = useState(booking.nonFlyingGuestsInLoungeDeluxe ?? 0);
+  // 2026-06-28 (round 6.2.73) — `nonFlyingLD` lifted to formData
+  // via override. See comment block above for the same pattern.
+  const [localNonFlyingLD, setLocalNonFlyingLD] = useState(booking.nonFlyingGuestsInLoungeDeluxe ?? 0);
+  const nonFlyingLD = nonFlyingGuestsInLoungeDeluxeOverride ?? localNonFlyingLD;
+  const setNonFlyingLD = (val: number) => {
+    setLocalNonFlyingLD(val);
+    onGuestCountChange?.({ nonFlyingGuestsInLoungeDeluxe: val });
+  };
+  useEffect(() => {
+    if (nonFlyingGuestsInLoungeDeluxeOverride !== undefined) setLocalNonFlyingLD(nonFlyingGuestsInLoungeDeluxeOverride);
+  }, [nonFlyingGuestsInLoungeDeluxeOverride]);
 
   // ── Status Management state (2026-06-15, round 6.2.41) ─────────────────────
   // Pre-fix the Status Management card used `defaultValue={booking.status}`
@@ -725,6 +1067,36 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           bookingId
         );
   });
+  // 2026-06-28 (round 6.2.73) — see the same pattern in the
+  // `passengers` state above. Re-seed from `nonFlyingGuestsOverride`
+  // after a master Save refetch; emit local edits via
+  // `onNonFlyingGuestsChange` so the lifted `formData` stays in sync.
+  // Both useEffects share a JSON hash ref to avoid emit↔sync loop.
+  const lastEmittedNonFlyingRef = useRef<string>('');
+  useEffect(() => {
+    if (onNonFlyingGuestsChange) {
+      const next = nonFlyingGuests.map(toEditNonFlyingGuest);
+      const hash = JSON.stringify(next);
+      if (hash !== lastEmittedNonFlyingRef.current) {
+        lastEmittedNonFlyingRef.current = hash;
+        onNonFlyingGuestsChange(next);
+      }
+    }
+  }, [nonFlyingGuests, onNonFlyingGuestsChange]);
+  const isNonFlyingOverrideInitialMount = useRef(true);
+  useEffect(() => {
+    if (isNonFlyingOverrideInitialMount.current) {
+      isNonFlyingOverrideInitialMount.current = false;
+      return;
+    }
+    if (nonFlyingGuestsOverride) {
+      const overrideHash = JSON.stringify(nonFlyingGuestsOverride);
+      if (overrideHash !== lastEmittedNonFlyingRef.current) {
+        setNonFlyingGuests(nonFlyingGuestsOverride.map(toNonFlyingGuest));
+        lastEmittedNonFlyingRef.current = overrideHash;
+      }
+    }
+  }, [nonFlyingGuestsOverride]);
 
   // 2026-06-08 round 6.2.9 — same fix as the passengers useEffect
   // (line 165+). Skip the mount-time fire so the `useState`
@@ -888,7 +1260,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // user directive.
   const voucherCount = totalVouchersApplied; // alias for invoice dialog compat
   const voucherTotal = 0;                          // placeholder (was `totalVouchersApplied * headCountRate`)
-  const amountDueAfterVouchers = 0;               // placeholder (was `headCountTotal + serviceSubtotal - voucherTotal`)
+  // 2026-06-28 (round 6.2.76) — max refundable amount was hardcoded
+  // to 0 ("placeholder (was `headCountTotal + serviceSubtotal -
+  // voucherTotal`)"), which broke the refund dialog for every
+  // booking. Sky's report: "After the booking was paid, the Refund
+  // max amount is still $0". `bookingService.formatAmount()` formats
+  // the persisted `total_price` as `"HK$12,345"` (or empty string
+  // when null); parse that back to a number so the Refund dialog's
+  // cap and the Fill-Max button reflect the actual paid amount.
+  // Voucher deduction is still 0 (placeholder) — vouchers are not
+  // refundable (see the "Vouchers non-refundable note" below), so
+  // the cap equals `parseAmount(booking.amount)` for now.
+  const parseAmount = (s: string | number | null | undefined): number => {
+    if (s === null || s === undefined) return 0;
+    if (typeof s === 'number') return Number.isFinite(s) ? s : 0;
+    // Skip the placeholder strings the ViewBooking type allows.
+    if (s === 'Pending Calculation' || s === 'Re-calculation' || s === 'Manual Adjustment') return 0;
+    const cleaned = s.replace(/[^0-9.]/g, '');
+    const n = parseFloat(cleaned);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const amountDueAfterVouchers = parseAmount(booking.amount);
 
   // Toggle a single passenger's voucher
   const togglePassengerVoucher = (idx: number) => {
@@ -940,6 +1332,54 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // Rule 4: if any PS guests exist, at least 1 Premiere Suite must be booked
   const psGuestsWithoutSuite = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
 
+  // 2026-06-28 — VIP / NFG completeness gate (round 6.2.65
+  // carry-over from the legacy BookingEditView). Required
+  // fields per row match the create form's invariant
+  // [PS VIPs..., LD VIPs..., PS NFGs..., LD NFGs...] so #N
+  // numbering matches what the admin sees in the section
+  // forms. Used by the local fallback for `hasGuestErrors`
+  // when the wrapper doesn't pass the prop, and surfaced in
+  // the master Save warning text via `incompleteVipInfoCount`.
+  function getMissingPassengerFields(p: { title: string; firstName: string; lastName: string; ageGroup: string; travelDocNo: string }): string[] {
+    const missing: string[] = [];
+    if (!p.title) missing.push('Title');
+    if (!p.firstName) missing.push('First Name');
+    if (!p.lastName) missing.push('Last Name');
+    if (!p.ageGroup) missing.push('Age Group');
+    if (!p.travelDocNo) missing.push('Travel Doc No.');
+    return missing;
+  }
+  function getMissingNfgFields(g: { title: string; firstName: string; lastName: string; ageGroup: string }): string[] {
+    const missing: string[] = [];
+    if (!g.title) missing.push('Title');
+    if (!g.firstName) missing.push('First Name');
+    if (!g.lastName) missing.push('Last Name');
+    if (!g.ageGroup) missing.push('Age Group');
+    return missing;
+  }
+  // Compute the local completeness count when the wrapper
+  // doesn't supply one (legacy callers / figma-ui preview
+  // without a real `formData` payload). Source-of-truth for
+  // the prop is the wrapper's `BookingDetail.tsx` memo.
+  const localIncompleteVipInfoCount = useMemo(() => {
+    if (!formData) return 0;
+    const data = formData;
+    const vipPS = data.vipPassengersInPremiereSuite ?? 0;
+    const vipLD = data.vipPassengersInLoungeDeluxe ?? 0;
+    const nonFlyingPS = data.nonFlyingGuestsInPremiereSuite ?? 0;
+    const nonFlyingLD = data.nonFlyingGuestsInLoungeDeluxe ?? 0;
+    const psPax = (data.passengers ?? []).slice(0, vipPS);
+    const ldPax = (data.passengers ?? []).slice(vipPS, vipPS + vipLD);
+    const psNfg = (data.nonFlyingGuestsList ?? []).slice(0, nonFlyingPS);
+    const ldNfg = (data.nonFlyingGuestsList ?? []).slice(nonFlyingPS, nonFlyingPS + nonFlyingLD);
+    let count = 0;
+    [...psPax, ...ldPax].forEach(p => { if (getMissingPassengerFields(p).length > 0) count++; });
+    [...psNfg, ...ldNfg].forEach(g => { if (getMissingNfgFields(g).length > 0) count++; });
+    return count;
+  }, [formData]);
+  // Wrapper-supplied value wins; local is the fallback.
+  const effectiveIncompleteVipInfoCount = incompleteVipInfoCount > 0 ? incompleteVipInfoCount : localIncompleteVipInfoCount;
+
   const psErrors: string[] = [];
   if (psGuestsWithoutSuite) psErrors.push('Quantity of Premiere Suite must be at least 1 when guests are assigned to it.');
   if (psNoVip) psErrors.push('At least 1 VIP Passenger is required per Premiere Suite booking.');
@@ -949,7 +1389,57 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   if (ldNoVip) ldErrors.push('At least 1 VIP Passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingExceeded) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
 
-  const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
+  // 2026-06-28 — VIP / NFG completeness errors. Surfaced under
+  // the PS section when any PS VIP / PS NFG is incomplete, under
+  // the LD section when any LD VIP / LD NFG is incomplete.
+  // Mirrors the create form's slice order
+  // [PS VIPs..., LD VIPs..., PS NFGs..., LD NFGs...] so the
+  // #N matches what the admin sees.
+  // 2026-06-28 — VIP / NFG incompleteness counts (per PS/LD +
+  // VIP/NFG slice). Surfaced inline in the VIP Passenger Details
+  // and Non-Flying Guest Details card headers (lines ~2702 and
+  // ~2952), NOT in the Booking Details (Part 1/Part 2) cards —
+  // per Sky: "those warning should not be shown in the Booking
+  // Details section. please show in VIP Passenger Details and
+  // Non-Flying Guest Details instead".
+  const psVipIncomplete = (formData?.passengers ?? []).slice(0, vipPS).filter(p => getMissingPassengerFields(p).length > 0).length;
+  const ldVipIncomplete = (formData?.passengers ?? []).slice(vipPS, vipPS + vipLD).filter(p => getMissingPassengerFields(p).length > 0).length;
+  const psNfgIncomplete = (formData?.nonFlyingGuestsList ?? []).slice(0, nonFlyingPS).filter(g => getMissingNfgFields(g).length > 0).length;
+  const ldNfgIncomplete = (formData?.nonFlyingGuestsList ?? []).slice(nonFlyingPS, nonFlyingPS + nonFlyingLD).filter(g => getMissingNfgFields(g).length > 0).length;
+  const totalVipIncomplete = psVipIncomplete + ldVipIncomplete;
+  const totalNfgIncomplete = psNfgIncomplete + ldNfgIncomplete;
+
+  // 2026-06-28 (round 6.2.73) — `hasGuestErrors` is now a
+  // prop passed in by the parent wrapper (which mirrors the
+  // same rules from `formData`). The local computation
+  // `psErrors.length > 0 || ldErrors.length > 0` is kept as a
+  // fallback for legacy callers (e.g. figma-ui preview without
+  // a real booking) that don't pass the prop. The prop wins
+  // because callers will pass `false` explicitly when no
+  // errors — see the destructured `hasGuestErrors = false`
+  // default at line 386.
+  const localHasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
+
+  // 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule. Computed
+  // locally via the shared `computeVisitTimeRange` helper so the master
+  // Save button stays gated when visitTime is out of range. The parent
+  // wrapper (BookingDetail.tsx) also computes this for the `hasGuestErrors`
+  // prop — when the prop is provided (current behavior post-6.2.73),
+  // the wrapper already includes the visitTime error in the prop value.
+  // Local computation here is the fallback for legacy callers.
+  const visitTimeRange = useMemo(
+    () => formData ? computeVisitTimeRange(formData) : {},
+    [formData],
+  );
+  const hasVisitTimeError = !!visitTimeRange.error;
+
+  const hasGuestErrorsFinal = hasGuestErrors || localHasGuestErrors || hasVisitTimeError;
+  // ^ when the prop is provided, this equals the prop value;
+  //   when it's NOT provided (default false), this equals the
+  //   local computation.
+  //   The local visitTimeError always fires when formData is provided
+  //   — it's a free, deterministic check that doesn't depend on the
+  //   wrapper passing a prop.
 
   // ── Similar Profile Detection ─────────────────────────────────────────────
   const [showSimilarBanner, setShowSimilarBanner] = useState(true);
@@ -1031,10 +1521,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <FileText className="w-4 h-4 mr-2" />
             Generate Invoice
           </Button>
-          <Button variant="outline" onClick={() => setIsEditBookingOpen(true)}>
-            <Edit2 className="w-4 h-4 mr-2" />
-            Edit Booking
-          </Button>
+          {/* 2026-06-28 (round 6.2.72, Phase E) — `[Edit Booking
+              (full editor)]` button REMOVED. Per Sky's pivot
+              from round 6.2.71, the standalone edit page is
+              deprecated. The detail page itself is now the sole
+              edit surface (via the new "Editable Sections"
+              container at the bottom — see Phase B). The
+              `onOpenFullEditor` prop is kept in the interface
+              for backward compatibility with the parent
+              wrapper but is unused. */}
         </div>
       </div>
 
@@ -1081,15 +1576,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             Share with Partners
           </Button>
 
-          <Button variant="outline" onClick={() => setIsMovementLogOpen(true)}>
-            <History className="w-4 h-4 mr-2" />
-            Movement Log
-          </Button>
+          {/* 2026-06-27 — Movement Log + Guests Searcher buttons hidden
+              per Sky directive. The dialogs + handlers are still wired
+              so the button can be restored by uncommenting if needed. */}
+          {false && (
+            <Button variant="outline" onClick={() => setIsMovementLogOpen(true)}>
+              <History className="w-4 h-4 mr-2" />
+              Movement Log
+            </Button>
+          )}
 
-          <Button variant="outline" disabled onClick={() => { setCustomerSearchQuery(''); setIsCustomerSearchOpen(true); }}>
-            <Users className="w-4 h-4 mr-2" />
-            Guests Searcher
-          </Button>
+          {false && (
+            <Button variant="outline" disabled onClick={() => { setCustomerSearchQuery(''); setIsCustomerSearchOpen(true); }}>
+              <Users className="w-4 h-4 mr-2" />
+              Guests Searcher
+            </Button>
+          )}
 
           {/* Refund Action for Cancelled bookings with Paid status */}
           {booking.status === 'Cancelled' && 
@@ -2066,208 +2568,55 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           )}
         </div>
 
-        {/* Save Guest Details */}
-        <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-            disabled={hasGuestErrors || isSavingGuestDetails}
-            onClick={() => {
-              if (hasGuestErrors) return;
-              if (!onSaveGuestDetails) {
-                toast.info('Guest details save not yet wired — please use the Edit Booking dialog for now.');
-                return;
-              }
-              onSaveGuestDetails({
-                numPremiereSuites,
-                vipPassengersInPremiereSuite: vipPS,
-                nonFlyingGuestsInPremiereSuite: nonFlyingPS,
-                vipPassengersInLoungeDeluxe: vipLD,
-                nonFlyingGuestsInLoungeDeluxe: nonFlyingLD,
-              }).catch(() => { /* wrapper toasts */ });
-            }}
-          >
-            <CheckCircle className="w-4 h-4 mr-2" />
-            {isSavingGuestDetails ? 'Saving…' : 'Save Guest Details'}
-          </Button>
-          {hasGuestErrors && (
-            <p className="text-sm text-red-600 flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" />
-              Please fix the errors above before saving.
-            </p>
-          )}
-        </div>
+        {/* 2026-06-28 (round 6.2.73) — "Save Guest Details" button
+            REMOVED in round 6.2.71 Phase 4B. Per-kind guest counts
+            shown above are wired to lifted `formData` via
+            `numPremiereSuitesOverride` / `vipPassengersInPremiereSuiteOverride`
+            / `nonFlyingGuestsInPremiereSuiteOverride` /
+            `vipPassengersInLoungeDeluxeOverride` /
+            `nonFlyingGuestsInLoungeDeluxeOverride` +
+            `onGuestCountChange` (Sky's Q4 — "we will rely on that
+            sect to config the guest composition"). The master
+            Save button at the bottom of this page aggregates
+            these into `PUT /api/bookings/{id}`. */}
       </Card>
 
-      {/* 8b. Suite & Time Assignment — only for Confirmed + Paid bookings */}
-      {isConfirmedAndPaid && (
-        <Card className="p-6 border-blue-200 bg-blue-50/30">
-          <div className="flex items-center gap-2 mb-5">
-            <CalendarClock className="w-5 h-5 text-blue-600" />
-            <h3 className="text-sm uppercase tracking-wide text-blue-800">Suite / Lounge Table Assignment</h3>
-            <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium border border-blue-200">
-              <CheckCircle className="w-3 h-3" /> Confirmed & Paid
-            </span>
-          </div>
-
-          <div className="grid grid-cols-4 gap-5">
-            {/* Suite / Lounge Table */}
-            <div className="col-span-2">
-              <label className="text-sm text-gray-600 block mb-[10px]">Suite / Lounge Table</label>
-              <select
-                value={assignedSuite}
-                onChange={e => setAssignedSuite(e.target.value)}
-                className="w-full px-3 py-2 border border-blue-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-400"
-              >
-                {SUITE_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Date */}
-            <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Booking Date</label>
-              <input
-                type="date"
-                value={assignedDate}
-                onChange={e => setAssignedDate(e.target.value)}
-                className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-            </div>
-
-            {/* Time Range */}
-            <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Time Slot</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  value={assignedStartTime}
-                  onChange={e => setAssignedStartTime(e.target.value)}
-                  className="flex-1 px-2 py-2 border border-blue-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <span className="text-gray-400 text-sm shrink-0">to</span>
-                <input
-                  type="time"
-                  value={assignedEndTime}
-                  onChange={e => setAssignedEndTime(e.target.value)}
-                  className="flex-1 px-2 py-2 border border-blue-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Current assignment preview */}
-          <div className="mt-4 flex items-center gap-3 px-4 py-2.5 bg-white border border-blue-100 rounded-lg text-sm text-gray-600">
-            <MapPin className="w-4 h-4 text-blue-500 shrink-0" />
-            <span>
-              Assigned: <strong className="text-gray-900">{assignedSuite}</strong>
-              {' '}&nbsp;·&nbsp;{' '}
-              <strong className="text-gray-900">{assignedDate}</strong>
-              {' '}&nbsp;·&nbsp;{' '}
-              <strong className="text-gray-900">{assignedStartTime} – {assignedEndTime}</strong>
-            </span>
-          </div>
-
-          <div className="flex gap-3 mt-5">
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-              disabled={isSavingAssignment}
-              onClick={() => {
-                if (!onSaveAssignment) {
-                  toast.info('Assignment save not yet wired — please use the Edit Booking dialog for now.');
-                  return;
-                }
-                onSaveAssignment({
-                  assignedSuite,
-                  assignedDate,
-                  assignedStartTime,
-                  assignedEndTime,
-                }).catch(() => { /* wrapper toasts */ });
-              }}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {isSavingAssignment ? 'Saving…' : 'Save Assignment'}
-            </Button>
-          </div>
-        </Card>
+      {/* 2026-06-28 (round 6.2.73, Sky's #4) — Physical Resource
+          assignment moved up to just below the Booking Details
+          Part 1/2 card. Per Sky: "move the Physical Resources up,
+          just below Booking Details: Part 1 — Premiere Suite and
+          Part 2 — Lounge Deluxe". The PS/LD checkbox grids
+          populate `assignedSuiteIds[]` / `assignedLoungeIds[]`
+          which the backend uses to resolve the pricing product
+          (premiere_suite | lounge_deluxe | mixed). Per Sky's
+          follow-up: the count inputs above are the pricing
+          source of truth (drives pricing); the location
+          assignment here is "extra info, not affecting the price,
+          so we have to keep both". The master Save button at the
+          bottom of the page aggregates everything via lifted
+          `formData`. */}
+      {formData && onFormChange && (
+        <EditSectionPhysicalResource
+          formData={formData}
+          onFormChange={onFormChange}
+          suiteOptions={suiteOptions}
+        />
       )}
 
-      {/* 8c. In-Charge Staff — only for Confirmed + Paid bookings */}
-      {isConfirmedAndPaid && (
-        <Card className="p-6 border-indigo-200 bg-indigo-50/20">
-          <div className="flex items-center gap-2 mb-5">
-            <UserCheck className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-sm uppercase tracking-wide text-indigo-800">In-Charge Staff</h3>
-            {selectedStaffIds.length > 0 && (
-              <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-indigo-600 text-white text-[11px] font-bold">
-                {selectedStaffIds.length}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mb-4">Select one or more staff members who will be responsible for this booking. Multiple selections are allowed.</p>
+      {/* 8b. Suite & Time Assignment — REMOVED in round 6.2.76 (Sky's
+          "remove the Suite / Lounge Table Assignment which is
+          showing after the booking is paid"). Visit date/time
+          inputs in `<EditSectionFlight>` and physical-resource
+          multi-select in `<EditSectionPhysicalResource>` are the
+          canonical edit surfaces for time + location. */}
 
-          <div className="grid grid-cols-2 gap-3">
-            {ALL_STAFF.map(staff => {
-              const isSelected = selectedStaffIds.includes(staff.id);
-              return (
-                <label
-                  key={staff.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                    isSelected
-                      ? 'bg-indigo-50 border-indigo-400 ring-1 ring-indigo-300'
-                      : 'bg-white border-gray-200 hover:border-indigo-200 hover:bg-indigo-50/40'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleStaff(staff.id)}
-                    className="accent-indigo-600 w-4 h-4 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${isSelected ? 'text-indigo-900' : 'text-gray-800'}`}>
-                      {staff.name}
-                    </p>
-                    <p className="text-xs text-gray-500">{staff.role}</p>
-                  </div>
-                  {isSelected && (
-                    <span className="shrink-0 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
-                      In-Charge
-                    </span>
-                  )}
-                </label>
-              );
-            })}
-          </div>
-
-          {selectedStaffIds.length > 0 && (
-            <div className="mt-4 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg">
-              <p className="text-xs text-indigo-700">
-                <strong>Assigned:</strong>{' '}
-                {ALL_STAFF.filter(s => selectedStaffIds.includes(s.id)).map(s => s.name).join(', ')}
-              </p>
-            </div>
-          )}
-
-          <div className="mt-4">
-            <Button
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
-              disabled={isSavingStaffAssignment}
-              onClick={() => {
-                if (selectedStaffIds.length === 0) { toast.error('Please select at least one staff member.'); return; }
-                if (!onSaveStaffAssignment) {
-                  toast.info('Staff assignment save not yet wired — backend has no staff endpoint yet.');
-                  return;
-                }
-                onSaveStaffAssignment({ selectedStaffIds }).catch(() => { /* wrapper toasts */ });
-              }}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {isSavingStaffAssignment ? 'Saving…' : 'Save Staff Assignment'}
-            </Button>
-          </div>
-        </Card>
-      )}
+      {/* 2026-06-28 (round 6.2.71, Phase 5) — fake "In-Charge Staff"
+        card REMOVED from the detail page. It used a hardcoded
+        `ALL_STAFF` checklist that did not persist (read-only
+        toggle for visual feedback only) and was redundant with
+        the real `EditSectionStaff` block rendered below, which
+        reads from `bookings.assigned_staff_ids` and the staff
+        roster fetched from `/api/system/users`. */}
 
       {/* 9. Contact Person */}
       <Card className="p-6">
@@ -2299,18 +2648,50 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               className="w-full px-3 py-2 border rounded text-sm"
             />
           </div>
-          {/* Contact No */}
+          {/* Contact No — round 6.2.76: region code + local number split */}
           <div>
             <label className="text-sm text-gray-600 block mb-[10px]">
               <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />Contact No.</span>
             </label>
-            <input
-              type="tel"
-              value={contactNo}
-              onChange={e => setContactNo(e.target.value)}
-              placeholder="e.g. +852 9123 4567"
-              className="w-full px-3 py-2 border rounded text-sm"
-            />
+            <div className="flex gap-2">
+              {/* 2026-06-28 (round 6.2.76) — short region-code select.
+                  Mirrors the Create form's pattern (CreateBooking.tsx
+                  uses a `<RegionCodeCombobox>` sourced from
+                  `GET /api/lookups/region-codes`; here we use a
+                  simple <select> with the most common HKG guest
+                  codes — pragmatic simplification since the parent
+                  wrapper only needs the region-code prefix to
+                  re-assemble `contactNo` as `${regionCode}
+                  ${contactNo}` on the master Save PUT.
+                  2026-06-28 (round 6.2.77) — wired to lifted
+                  formData / onFormChange so user edits persist
+                  (was display-only pre-6.2.77). */}
+              <select
+                value={regionCode}
+                onChange={e => setRegionCode(e.target.value)}
+                aria-label="Region code"
+                className="w-28 px-2 py-2 border rounded text-sm bg-white"
+              >
+                <option value="">—</option>
+                <option value="+852">+852 (HK)</option>
+                <option value="+86">+86 (CN)</option>
+                <option value="+1">+1 (US/CA)</option>
+                <option value="+44">+44 (UK)</option>
+                <option value="+81">+81 (JP)</option>
+                <option value="+65">+65 (SG)</option>
+                <option value="+61">+61 (AU)</option>
+                <option value="+886">+886 (TW)</option>
+                <option value="+853">+853 (MO)</option>
+                <option value="+82">+82 (KR)</option>
+              </select>
+              <input
+                type="tel"
+                value={contactNo}
+                onChange={e => setContactNo(e.target.value)}
+                placeholder="9123 4567"
+                className="flex-1 px-3 py-2 border rounded text-sm"
+              />
+            </div>
           </div>
           {/* Booking Memo — full width */}
           <div className="col-span-3">
@@ -2356,6 +2737,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <span className="text-xs">
                   Account profile has spouse on record: <strong>{profileSpouseDisplayName}</strong>
                   {' '}— no matching passenger or non-flying guest in this booking.
+                </span>
+              </div>
+            )}
+            {/* 2026-06-28 — VIP Passenger completeness inline warning.
+                Moved here from the Booking Details (Part 1 / Part 2)
+                card per Sky's directive. Surfaces any VIP Passenger
+                row (PS or LD) with missing Title / First Name / Last
+                Name / Age Group / Travel Doc No. */}
+            {totalVipIncomplete > 0 && (
+              <div
+                className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800"
+                data-testid="vip-passenger-incomplete-warning"
+              >
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-xs">
+                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Travel Doc No.
                 </span>
               </div>
             )}
@@ -2584,23 +2981,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               );
             })}
 
-            {/* Save button */}
-            <div className="pt-2">
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                disabled={isSavingPassengerDetails}
-                onClick={() => {
-                  if (!onSavePassengerDetails) {
-                    toast.info('Passenger details save not yet wired.');
-                    return;
-                  }
-                  onSavePassengerDetails(passengers).catch(() => { /* wrapper toasts */ });
-                }}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                {isSavingPassengerDetails ? 'Saving…' : 'Save Passenger Details'}
-              </Button>
-            </div>
+            {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Save Passenger Details"
+            button REMOVED. The per-passenger cards above remain
+            rendered with the existing data (name / ageGroup /
+            travelDocNo / birthday / membershipNo) but edits
+            don't persist from the detail page. Admin edits via
+            the standalone edit page (click `[Edit Booking (full editor)]`
+            in the header). The VIP/NFG completeness gate (round
+            6.2.65) is now enforced on the standalone edit page's
+            Save Changes handler. */}
           </div>
         )}
       </Card>
@@ -2616,6 +3005,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {nonFlyingPS > 0 && nonFlyingLD > 0 && ','}
               {nonFlyingLD > 0 && ` ${nonFlyingLD} from Lounge Deluxe`}
             </p>
+            {/* 2026-06-28 — Non-Flying Guest completeness inline warning.
+                Moved here from the Booking Details (Part 1 / Part 2)
+                card per Sky's directive. Surfaces any NFG row (PS or
+                LD) with missing Title / First Name / Last Name / Age
+                Group. NFGs do NOT have a Travel Doc No. field. */}
+            {totalNfgIncomplete > 0 && (
+              <div
+                className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800"
+                data-testid="nfg-incomplete-warning"
+              >
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="text-xs">
+                  {totalNfgIncomplete} Non-Flying Guest row{totalNfgIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group.
+                </span>
+              </div>
+            )}
           </div>
           {nonFlyingGuests.length > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
@@ -2771,23 +3176,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               );
             })}
 
-            {/* Save button */}
-            <div className="pt-2">
-              <Button
-                className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                disabled={isSavingNonFlyingGuestDetails}
-                onClick={() => {
-                  if (!onSaveNonFlyingGuestDetails) {
-                    toast.info('Non-flying guest save not yet wired.');
-                    return;
-                  }
-                  onSaveNonFlyingGuestDetails(nonFlyingGuests).catch(() => { /* wrapper toasts */ });
-                }}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                {isSavingNonFlyingGuestDetails ? 'Saving…' : 'Save Guest Details'}
-              </Button>
-            </div>
+            {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Save Guest Details (NFG)"
+            button REMOVED. NFG detail edits go through the
+            standalone edit page (single edit surface). The
+            per-NFG cards above remain rendered with existing
+            data (name / ageGroup / foodAllergies) but edits
+            don't persist from the detail page. */}
           </div>
         )}
       </Card>
@@ -3683,26 +4077,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               onChange={e => setRejectionReasonText(e.target.value)}
             />
           </div>
-          <div className="col-span-2">
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-              disabled={isUpdatingStatus}
-              onClick={() => {
-                if (!onUpdateStatus) {
-                  toast.info('Status save not yet wired — please use the Edit Booking dialog for now.');
-                  return;
-                }
-                onUpdateStatus({
-                  status: statusValue,
-                  paymentStatus: paymentStatusValue,
-                  rejectionReason: rejectionReasonText.trim() || undefined,
-                }).catch(() => { /* wrapper toasts; swallow here so unhandled-rejection doesn't break the click handler */ });
-              }}
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {isUpdatingStatus ? 'Updating…' : 'Update Status'}
-            </Button>
-          </div>
+          {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Update Status" button
+              REMOVED. Booking status transitions (Pending for
+              Review → Pending for Approval → Approved →
+              Confirmed, etc.) now happen via the supervisor
+              approval queue (`/bookings/supervising-approval`)
+              and the staff approval queue (`/bookings/approve`).
+              The status dropdown + reason textarea remain on
+              the detail page for VISIBILITY but are no longer
+              editable from here. The wrapper's `handleUpdateStatus`
+              + `onUpdateStatus` prop forwarding will be removed
+              in Phase 5. */}
         </div>
       </Card>
 
@@ -3841,6 +4226,121 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         );
       })()}
       {/* ────────────────────────────────────────────────────────────────── */}
+
+      {/* 2026-06-28 (round 6.2.72, Phase B) — Inline Editable
+          Sections container. Per Sky's pivot from round 6.2.71,
+          the standalone edit page (`/bookings/:id/edit`) is
+          deprecated; this detail page is now the sole edit
+          surface. The 11 section components below cover all 50+
+          fields the admin previously edited via the deleted
+          `<BookingEditDialog>` modal + 6 inline save cards.
+
+          State management: parent wrapper (`../BookingDetail.tsx`)
+          owns the lifted `formData` state and passes it via the
+          `formData` prop + `onFormChange` patch callback. The
+          master Save button at the bottom of this container
+          calls `onSaveAllChanges(formData)` which the wrapper
+          handles (PUT + refetch). Sky can later lock down
+          individual sections (delete from this container) per
+          the round 6.2.72 plan.
+
+          The remaining 8 sections render only when `formData` is
+          provided (i.e. parent wrapper mounted the lifted state).
+          Pre-6.2.72 callers (e.g. legacy tests, mocks) that
+          don't pass `formData` see no Editable Sections block
+          — the rest of the detail page (read-only display)
+          remains operational. 2026-06-28 (round 6.2.73):
+            • Removed `EditSectionGuestCounts` (#3), `EditSectionPassengers`
+              (#4), `EditSectionNFGs` (#5) — the upper Booking
+              Details / VIP Passenger Details / Non-Flying Guest
+              Details cards are wired to lifted state via
+              `numPremiereSuitesOverride` / `vipPassengersInPremiereSuiteOverride`
+              / `passengersOverride` / `nonFlyingGuestsOverride` +
+              `onGuestCountChange` / `onPassengersChange` /
+              `onNonFlyingGuestsChange`. They are the canonical
+              edit surfaces for those fields.
+            • Removed the "Edit Booking · All sections · Master
+              Save" banner line — Sky: "the whole page is the
+              editor".
+            • Moved `EditSectionPhysicalResource` (#6) up to
+              just below the Booking Details Part 1/2 card (see
+              the Booking Details Card render at line 1989+).
+            • Added `hasGuestErrors` gating on the master Save
+              button (binding rules enforced in lines 1026-1033). */}
+      {formData && onFormChange && (
+        <div className="pt-6 mt-6 border-t-2 border-blue-300 space-y-6">
+          {/* 1. Account Settings (editable) */}
+          <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} />
+
+          {/* 2. Flight + Visit + Suite + Payment (editable) */}
+          <EditSectionFlight formData={formData} onFormChange={onFormChange} />
+
+          {/* 3. Limo stops editor (gated on hasLimousine in detail logic) */}
+          <EditSectionLimoStops formData={formData} onFormChange={onFormChange} />
+
+          {/* 4. Wheelchair recipient (gated on hasWheelchair in section) */}
+          <EditSectionWheelchair formData={formData} onFormChange={onFormChange} />
+
+          {/* 5. Unified Add-on Services (Create parity per Sky 2026-06-28) —
+              chips + searchable dropdown over CATALOG_ADDONS + Lounge
+              Extension qty stepper + isAdHoc standalone toggle. Replaces
+              the pre-6.2.75 split between EditSectionBooleanAddons +
+              EditSectionAddons. */}
+          <EditSectionAddons formData={formData} onFormChange={onFormChange} bookableItemPrices={bookableItemPrices} />
+
+          {/* 7. In-Charge Staff multi-select */}
+          <EditSectionStaff
+            formData={formData}
+            onFormChange={onFormChange}
+            staffOptions={staffOptions}
+          />
+
+          {/* Master Save bar */}
+          <Card className="p-5 border-blue-300 bg-blue-50/40">
+            <div className="flex items-center justify-between">
+              <div>
+                {/* 2026-06-28 — Sky removed the "Master Save" title
+                    and the "Sends all section values to PUT /api/bookings/{id}.
+                    The detail page re-fetches on success." description
+                    from this bar. The save button below still says
+                    "Save All Changes" so the user knows what it does. */}
+                {hasGuestErrorsFinal && (
+                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {effectiveIncompleteVipInfoCount > 0
+                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group${vipPS + vipLD > 0 ? ' / Travel Doc No.' : ''}) before saving.`
+                      : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.'}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onBack}
+                  disabled={isSavingAllChanges}
+                >
+                  <X className="w-4 h-4 mr-1.5" /> Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => onSaveAllChanges?.(formData)}
+                  disabled={isSavingAllChanges || hasGuestErrorsFinal}
+                  title={hasGuestErrorsFinal
+                    ? (effectiveIncompleteVipInfoCount > 0
+                        ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} before saving.`
+                        : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.')
+                    : undefined}
+                  className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4 mr-1.5" />
+                  {isSavingAllChanges ? 'Saving…' : 'Save All Changes'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
       {/* ── Refund Dialog ────────────────────────────────────────────────── */}
       <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
@@ -4010,696 +4510,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       </Dialog>
       {/* ─────────────────────────────────────────────────────────────────── */}
 
-      {/* ── Edit Booking Dialog ──────────────────────────────────────────── */}
-      <BookingEditDialog
-        open={isEditBookingOpen}
-        onClose={() => setIsEditBookingOpen(false)}
-        booking={booking}
-        onSave={onSaveEdit}
-        isSaving={isSavingEdit}
-      />
-      {false && false && <div>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Edit2 className="w-4 h-4 text-blue-600" />
-              Edit Booking — {booking.bookingNo}
-            </DialogTitle>
-            <DialogDescription>
-              Update the booking details below. Changes will be saved after clicking "Save Changes".
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-6 pt-1">
-
-            {/* Section 1: Flight Details */}
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
-                <Plane className="w-3.5 h-3.5" /> Flight Details
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Type</label>
-                  <select value={editFlightType} onChange={e => setEditFlightType(e.target.value as 'Arrival' | 'Departure' | 'Transition')} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
-                    <option value="Arrival">Arrival</option>
-                    <option value="Departure">Departure</option>
-                    <option value="Transition">Transition</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number <span className="text-red-500">*</span></label>
-                  <input type="text" value={editFlightNo} onChange={e => setEditFlightNo(e.target.value.toUpperCase())} placeholder="e.g. CX880" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time</label>
-                  <input type="time" value={editFlightTime} onChange={e => setEditFlightTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Class</label>
-                  <select value={editFlightClass} onChange={e => setEditFlightClass(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
-                    <option value="">— Select —</option>
-                    <option value="Economy Class">Economy Class</option>
-                    <option value="Business Class">Business Class</option>
-                    <option value="First Class">First Class</option>
-                  </select>
-                </div>
-                {editFlightType === 'Departure' ? (
-                  <div>
-                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination (IATA)</label>
-                    <input type="text" value={editFlightDest} onChange={e => setEditFlightDest(e.target.value.toUpperCase())} placeholder="e.g. LHR" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Origin (IATA)</label>
-                    <input type="text" value={editFlightOrigin} onChange={e => setEditFlightOrigin(e.target.value.toUpperCase())} placeholder="e.g. NRT" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
-                  </div>
-                )}
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Luggage</label>
-                  <input type="number" value={editNumLuggage} min={0} onChange={e => setEditNumLuggage(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Lounge Details */}
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5" /> Lounge Details
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Suite / Area <span className="text-red-500">*</span></label>
-                  <select value={editSuite} onChange={e => setEditSuite(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
-                    {['VIP Suite A', 'VIP Suite B', 'Executive Suite', 'Business Suite', 'Premier Suite', 'Open Lounge'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-                  <input type="date" value={editVisitDate} onChange={e => setEditVisitDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time</label>
-                  <input type="time" value={editVisitTime} onChange={e => setEditVisitTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of VIP Guests</label>
-                  <input type="number" value={editNumGuests} min={1} onChange={e => setEditNumGuests(Math.max(1, parseInt(e.target.value) || 1))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Non-Flying Guests</label>
-                  <input type="number" value={editNonFlying} min={0} onChange={e => setEditNonFlying(Math.max(0, parseInt(e.target.value) || 0))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Add-on Services */}
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5" /> Add-on Services
-              </h4>
-
-              {/* Selected chips */}
-              {editSelectedServices.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {editSelectedServices.map(svc => {
-                    const meta = addonServices.find(s => s.key === svc);
-                    return (
-                      <div key={svc} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-800">
-                        <span className="text-blue-500 [&>svg]:w-3.5 [&>svg]:h-3.5 shrink-0">{meta?.icon}</span>
-                        <span>{svc}</span>
-                        <button type="button" onClick={() => setEditSelectedServices(prev => prev.filter(s => s !== svc))} className="ml-0.5 text-blue-400 hover:text-blue-700">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Search input */}
-              <div className="relative">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    placeholder="Search services to add, e.g. Limousine, Fast Track, Shower…"
-                    value={editAddonSearch}
-                    onChange={e => { setEditAddonSearch(e.target.value); setShowEditAddonDropdown(true); }}
-                    onFocus={() => setShowEditAddonDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowEditAddonDropdown(false), 150)}
-                    className="w-full pl-9 pr-10 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  {editAddonSearch && (
-                    <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setEditAddonSearch(''); setShowEditAddonDropdown(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {showEditAddonDropdown && (
-                  <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-64 overflow-y-auto">
-                    {(() => {
-                      const q = editAddonSearch.trim().toLowerCase();
-                      const results = q
-                        ? addonServices.filter(s => s.key.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
-                        : addonServices;
-                      if (results.length === 0) return (
-                        <div className="px-4 py-3 text-sm text-gray-500">No services found for "<span className="font-medium">{editAddonSearch}</span>"</div>
-                      );
-                      return results.map(({ key, icon, desc, defaultPrice }) => {
-                        const selected = editSelectedServices.includes(key);
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onMouseDown={e => e.preventDefault()}
-                            onClick={() => handleEditToggleService(key)}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors ${selected ? 'bg-blue-50/60' : ''}`}
-                          >
-                            <span className={`p-1.5 rounded-md shrink-0 ${selected ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900">{key}</p>
-                              <p className="text-xs text-gray-500">{desc}</p>
-                            </div>
-                            <span className="text-xs text-gray-400 shrink-0">
-                              {parseFloat(defaultPrice) === 0 ? 'Complimentary' : `HK$${parseFloat(defaultPrice).toLocaleString()}`}
-                            </span>
-                            {selected
-                              ? <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                              : <Plus className="w-4 h-4 text-gray-300 shrink-0" />
-                            }
-                          </button>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 mt-2">
-                {editSelectedServices.length === 0
-                  ? 'No add-on services selected. Search above to add services.'
-                  : `${editSelectedServices.length} service${editSelectedServices.length !== 1 ? 's' : ''} selected. Click a chip above to remove.`
-                }
-              </p>
-
-              {/* Limousine stops */}
-              {editSelectedServices.includes('Limousine Transfer') && (
-                <div className="mt-3 p-3 rounded-lg border border-purple-200 bg-purple-50/40">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Car className="w-4 h-4 text-purple-600" />
-                    <p className="text-xs text-purple-800 font-medium">Limousine Service — Pick-up &amp; Drop-off Stops</p>
-                  </div>
-                  <div className="space-y-2">
-                    {editLimoStops.map((stop, idx) => (
-                      <div key={stop.id} className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">{idx + 1}</span>
-                        <select value={stop.type} onChange={e => updateEditLimoStop(stop.id, 'type', e.target.value)} className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0">
-                          <option value="Pick-up">Pick-up</option>
-                          <option value="Destination">Destination</option>
-                        </select>
-                        <input type="text" value={stop.location} onChange={e => updateEditLimoStop(stop.id, 'location', e.target.value)} placeholder={stop.type === 'Pick-up' ? 'e.g. Terminal 1, Arrival Hall' : 'e.g. Four Seasons Hotel, HK'} className="flex-1 px-3 py-1.5 border rounded text-sm" />
-                        <button type="button" onClick={() => removeEditLimoStop(stop.id)} disabled={editLimoStops.length === 1} className="p-1.5 rounded border text-gray-400 hover:text-red-500 hover:border-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={addEditLimoStop} className="mt-2 gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
-                    <Plus className="w-3.5 h-3.5" /> Add Stop
-                  </Button>
-                </div>
-              )}
-
-              {/* Wheelchair passenger */}
-              {editSelectedServices.includes('Wheelchair Assistance') && (
-                <div className="mt-3 p-3 rounded-lg border border-blue-200 bg-blue-50/40">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Accessibility className="w-4 h-4 text-blue-600" />
-                    <p className="text-xs text-blue-800 font-medium">Wheelchair Assistance — Passenger Details</p>
-                  </div>
-                  <input type="text" placeholder="Name of passenger requiring wheelchair assistance" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-              )}
-            </div>
-
-            {/* Section 4: Special Requests */}
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
-                <MessageSquare className="w-3.5 h-3.5" /> Special Requests &amp; Notes
-              </h4>
-              <textarea
-                value={editSpecialReqs}
-                onChange={e => setEditSpecialReqs(e.target.value)}
-                placeholder="e.g. Birthday celebration, Kosher meal required, Allergy to nuts…"
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-            </div>
-          </div>
-
-      </div>}
-
-      {/* ── Movement Log Dialog ─────────────────────────────────────────── */}
-      <BookingMovementLog
-        open={isMovementLogOpen}
-        onClose={() => setIsMovementLogOpen(false)}
-        booking={booking}
-        movements={movements}
-        onAddMovement={onAddMovement}
-        onDeleteMovement={onDeleteMovement}
-        isAddingMovement={isAddingMovement}
-        isDeletingMovement={isDeletingMovement}
-      />
-      {false && <Dialog open={false} onOpenChange={setIsMovementLogOpen}>
-        <DialogContent className="max-w-[96vw] w-[96vw] min-w-[1000px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Movement Log — {booking.bookingNo}
-            </DialogTitle>
-            <DialogDescription>
-              Full movement details for this booking. Booking reference fields are pre-filled from the booking record.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex items-center justify-between mt-2 mb-3">
-            <div className="flex items-center gap-3 text-xs text-gray-500">
-              <p>{bookingMovements.length} record{bookingMovements.length !== 1 ? 's' : ''}</p>
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking ref columns</span>
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200"></span> Time columns</span>
-            </div>
-            <Button size="sm" onClick={() => setIsAddMovementOpen(true)}>
-              <Plus className="w-4 h-4 mr-1.5" />
-              Add Movement
-            </Button>
-          </div>
-
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
-              <thead>
-                <tr className="bg-[#0f2942] text-white">
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {bookingMovements.length === 0 ? (
-                  <tr>
-                    <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
-                      No movement records yet. Click "Add Movement" to create the first entry.
-                    </td>
-                  </tr>
-                ) : bookingMovements.map((m, idx) => {
-                  const cell = 'px-3 py-2.5 whitespace-nowrap align-middle';
-                  const dash = <span className="text-gray-300">—</span>;
-                  const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
-                  return (
-                    <tr key={m.id} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
-                      <td className={`${cell} sticky left-0 z-10 ${rowBg} border-r border-gray-200 text-center`}>
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
-                      </td>
-                      <td className={cell}>{m.movementInCharge || dash}</td>
-                      <td className={cell}>{m.cicSupport || dash}</td>
-                      <td className={cell}>{m.driver || dash}</td>
-                      <td className={`${cell} bg-blue-50/30`}>
-                        <span className="font-mono text-[11px] text-blue-800">{m.orderNo}</span>
-                      </td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.deptDate || dash}</td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.arrDate || dash}</td>
-                      <td className={`${cell} bg-blue-50/30 font-medium`}>{m.flightNo}</td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.flightTime}</td>
-                      <td className={`${cell} bg-blue-50/30`}>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px]">{m.destinationOrigin}</span>
-                      </td>
-                      <td className={cell}>{m.lobbySuite || dash}</td>
-                      <td className={`${cell} text-center`}>{m.noOfPax ?? dash}</td>
-                      <td className={cell}>{m.title || dash}</td>
-                      <td className={cell}>{m.firstName || dash}</td>
-                      <td className={cell}>{m.lastName || dash}</td>
-                      <td className={`${cell} text-center`}>{m.noOfCIBaggage ?? dash}</td>
-                      <td className={`${cell} max-w-[140px]`}>
-                        <span className="block truncate" title={m.remarks}>{m.remarks || dash}</span>
-                      </td>
-                      <td className={cell}>{m.nationality || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.arrTimeNonFlyingGuests || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeMetVIPAtGate || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeBackToHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalStart || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalEnd || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageArrivalAtHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeLeftHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>
-                        {m.totalProcessingTime
-                          ? <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px]">{m.totalProcessingTime}</span>
-                          : dash}
-                      </td>
-                      <td className={`${cell} max-w-[140px]`}>
-                        <span className="block truncate text-orange-700" title={m.remarksAdminIssue}>{m.remarksAdminIssue || dash}</span>
-                      </td>
-                      <td className={`${cell} text-center sticky right-0 z-10 ${rowBg} border-l border-gray-200`}>
-                        <Button variant="ghost" size="sm"
-                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => { setBookingMovements(prev => prev.filter(x => x.id !== m.id)); toast.success('Movement record deleted.'); }}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>}
-
-      {/* ── Add Movement Sub-Dialog (now inside BookingMovementLog) ──────────── */}
-      {false && <Dialog open={false} onOpenChange={setIsMovementLogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Add Movement Record
-            </DialogTitle>
-            <DialogDescription>
-              Fields marked * are required. Booking reference fields are pre-filled from the booking — edit if needed.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 pt-1">
-
-            {/* Section A: Assignment */}
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Assignment</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
-                  <input type="text" placeholder="Staff name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
-                  <input type="text" placeholder="Staff name(s)" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Driver</label>
-                  <input type="text" placeholder="Driver name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-              </div>
-            </div>
-
-            {/* Section B: Booking Reference — pre-filled from booking */}
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">
-                Booking Reference
-                <span className="ml-2 normal-case text-blue-500">(pre-filled from booking)</span>
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3 md:col-span-1">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Order No. (Booking No.) <span className="text-red-500">*</span></label>
-                  <input type="text" defaultValue={booking.bookingNo} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono bg-blue-50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
-                  <input type="date" defaultValue={booking.flightType === 'Departure' ? booking.arrivalDate : ''} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arr Date</label>
-                  <input type="date" defaultValue={booking.flightType === 'Arrival' ? booking.arrivalDate : ''} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight No. <span className="text-red-500">*</span></label>
-                  <input type="text" defaultValue={booking.flightNo} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  <input type="time" defaultValue={booking.flightTime} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
-                  <input type="text" defaultValue={booking.flightOrigin || booking.flightDestination || ''} placeholder="IATA code, e.g. LHR" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50" />
-                </div>
-              </div>
-            </div>
-
-            {/* Section C: Lounge & Guest Details */}
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge &amp; Guest Details</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>
-                  <input type="text" defaultValue={booking.suite} placeholder="e.g. VIP Suite A" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Pax</label>
-                  <input type="number" min={1} defaultValue={booking.numberOfGuests} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of C/I Baggage</label>
-                  <input type="number" min={0} defaultValue={booking.numberOfLuggage} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Title</label>
-                  <input type="text" placeholder="Mr. / Mrs. / Ms." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>First Name</label>
-                  <input type="text" placeholder="First name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Last Name</label>
-                  <input type="text" placeholder="Last name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
-                  <input type="text" placeholder="e.g. United Kingdom" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
-                  <textarea rows={2} placeholder="General remarks for this movement..." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none" />
-                </div>
-              </div>
-            </div>
-
-            {/* Section D: Movement Times */}
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Movement Times</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
-                  <input type="text" placeholder="e.g. 1h 30m" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks for Admin Issue</label>
-                  <textarea rows={2} placeholder="Admin issue details..." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4 pt-2 border-t">
-            <Button variant="outline" onClick={() => setIsAddMovementOpen(false)}>Cancel</Button>
-            <Button onClick={() => {
-              toast.success('Movement record added successfully.');
-              setIsAddMovementOpen(false);
-            }}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Movement
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>}
-
-      {/* ── Guests Searcher Dialog ─────────────────────────────────────── */}
-      <BookingGuestsSearcher
-        open={isCustomerSearchOpen}
-        onClose={() => setIsCustomerSearchOpen(false)}
-        searchQuery={customerSearchQuery}
-        setSearchQuery={setCustomerSearchQuery}
-      />
-      {false && <Dialog open={false} onOpenChange={setIsCustomerSearchOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              Guests Searcher
-            </DialogTitle>
-            <DialogDescription>
-              Search all past guests who have visited the HKIA VIP Lounge — VIP passengers and non-flying guests.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Search bar */}
-          <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search by name, booking no., or food allergy…"
-              value={customerSearchQuery}
-              onChange={e => setCustomerSearchQuery(e.target.value)}
-              autoFocus
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            {customerSearchQuery && (
-              <button onClick={() => setCustomerSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Summary chips */}
-          <div className="flex items-center gap-2 mt-2 flex-wrap text-xs">
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 border border-gray-200 rounded-full text-gray-500">
-              <Users className="w-3 h-3" />
-              {HISTORICAL_GUESTS.length} total guests
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-50 border border-purple-200 rounded-full text-purple-700">
-              <Plane className="w-3 h-3" />
-              {HISTORICAL_GUESTS.filter(g => g.type === 'VIP Passenger').length} VIP Passengers
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-700">
-              <User className="w-3 h-3" />
-              {HISTORICAL_GUESTS.filter(g => g.type === 'Non-Flying Guest').length} Non-Flying Guests
-            </span>
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-full text-red-600">
-              <Utensils className="w-3 h-3" />
-              {HISTORICAL_GUESTS.filter(g => g.foodAllergies).length} with allergies
-            </span>
-          </div>
-
-          {/* Guest list */}
-          <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-1">
-            {(() => {
-              const q = customerSearchQuery.trim().toLowerCase();
-              const results = q
-                ? HISTORICAL_GUESTS.filter(g =>
-                    g.name.toLowerCase().includes(q) ||
-                    g.bookingNo.toLowerCase().includes(q) ||
-                    g.foodAllergies.toLowerCase().includes(q) ||
-                    g.ageGroup.toLowerCase().includes(q)
-                  )
-                : HISTORICAL_GUESTS;
-
-              if (results.length === 0) return (
-                <div className="text-center py-10 text-gray-400 text-sm">
-                  No guests found matching "<span className="font-medium">{customerSearchQuery}</span>"
-                </div>
-              );
-
-              return results.map(g => {
-                const isVip = g.type === 'VIP Passenger';
-                return (
-                  <div
-                    key={g.id}
-                    className={`flex items-start gap-3 p-3 border rounded-lg ${
-                      isVip ? 'border-purple-100 bg-purple-50/40' : 'border-blue-100 bg-blue-50/40'
-                    }`}
-                  >
-                    {/* Avatar */}
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isVip ? 'bg-purple-100' : 'bg-blue-100'}`}>
-                      {isVip
-                        ? <Plane className="w-4 h-4 text-purple-600" />
-                        : <User className="w-4 h-4 text-blue-600" />}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0 space-y-1.5">
-                      {/* Name + type badge */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium text-gray-900">{g.name}</span>
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                          isVip ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {g.type}
-                        </span>
-                        {g.totalVisits >= 10 && (
-                          <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">
-                            Frequent Guest
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Meta row */}
-                      <p className="text-xs text-gray-400">
-                        Last visit: <span className="text-gray-600">{g.lastVisit}</span>
-                        <span className="mx-1.5 text-gray-300">·</span>
-                        Booking: <span className="font-mono text-gray-600">{g.bookingNo}</span>
-                        <span className="mx-1.5 text-gray-300">·</span>
-                        {g.totalVisits} visit{g.totalVisits !== 1 ? 's' : ''}
-                      </p>
-
-                      {/* Food allergies — always shown */}
-                      <div className={`inline-flex items-center gap-1.5 text-xs rounded px-2 py-1 ${
-                        g.foodAllergies
-                          ? 'bg-red-50 border border-red-200 text-red-700'
-                          : 'bg-gray-50 border border-gray-200 text-gray-400'
-                      }`}>
-                        <Utensils className="w-3 h-3 shrink-0" />
-                        {g.foodAllergies
-                          ? <span><span className="font-medium">Allergies:</span> {g.foodAllergies}</span>
-                          : <span>No food allergies recorded</span>}
-                      </div>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        </DialogContent>
-      </Dialog>}
 
       {/* ── Customer Profile Dialog ──────────────────────────────────────── */}
       <BookingCustomerProfile

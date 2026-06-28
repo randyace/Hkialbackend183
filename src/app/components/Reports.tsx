@@ -104,6 +104,103 @@ const INCOME_BY_TIER_TOTAL = [
   { tier: 'Gold',     income:  731580, fill: '#f59e0b' },
 ];
 
+// 2026-06-27 — real-data wiring. Container (hkial-react
+// src/components/Reports.tsx) computes these shapes from
+// bookingService / accountService / purchaseService data.
+// MOCK_* constants above stay as fallbacks for Figma Make
+// standalone preview per INV-X1. Each sub-component accepts
+// the matching prop and uses `prop ?? MOCK_*` per pattern
+// already established in CorporateReports.tsx:48-75.
+
+export type CouponMonthlyPoint = { month: string; redeemed: number; converted: number };
+export type TimeToConvertPoint = { range: string; count: number };
+export type NewClientMonthlyPoint = { month: string; clients: number; income: number };
+export type SourceAttributionPoint = { name: string; value: number };
+export type RetentionByTierPoint = { tier: string; rate: number; fill: string };
+export type ClvByTierPoint = { tier: string; clv: number; fill: string };
+export type ChurnTrendPoint = { month: string; churn: number };
+export type IncomeMonthlyPoint = { month: string; income: number };
+export type IncomeByTierPoint = { month: string; Sapphire: number; Diamond: number; Platinum: number; Gold: number };
+export type IncomeByTierTotalPoint = { tier: string; income: number; fill: string };
+export type TierSummaryRow = {
+  tier: string; color: string; members: number;
+  retention: string; freq: string; clv: string;
+  risk: string; riskColor: string;
+};
+
+export interface OperationalKpis {
+  totalBookings?: number;
+  totalIncome?: number;
+  activeMembers?: number;
+  avgOccupancy?: string;
+}
+
+export interface CouponKpis {
+  redemptionRate?: number;
+  conversionRate?: number;
+  avgTimeToConvert?: number;
+  cac?: number;
+  spendingUplift?: number;
+  funnel?: { couponsIssued: number; couponsRedeemed: number; convertedToPaid: number };
+}
+
+export interface NewClientKpis {
+  newClients?: number;
+  income?: number;
+  avgTransactionValue?: number;
+  penetrationPct?: number;
+  sixMonthTotal?: number;
+  periodLabel?: string;
+}
+
+export interface ExistingCustomerKpis {
+  retentionRate?: number;
+  avgVisitFrequency?: string;
+  customerLifetimeValue?: number;
+  churnRate?: number;
+  totalIncome?: number;
+  bestMonth?: string;
+  existingClientShare?: number;
+}
+
+export interface OperationalReportData {
+  kpis?: OperationalKpis;
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (value: string) => void;
+  onEndDateChange?: (value: string) => void;
+}
+
+export interface CouponConversionData {
+  couponMonthly?: CouponMonthlyPoint[];
+  timeToConvert?: TimeToConvertPoint[];
+  kpis?: CouponKpis;
+}
+
+export interface NewClientReportData {
+  newClientMonthly?: NewClientMonthlyPoint[];
+  sourceAttribution?: SourceAttributionPoint[];
+  kpis?: NewClientKpis;
+}
+
+export interface ExistingCustomerReportData {
+  retentionByTier?: RetentionByTierPoint[];
+  clvByTier?: ClvByTierPoint[];
+  churnTrend?: ChurnTrendPoint[];
+  existingIncomeMonthly?: IncomeMonthlyPoint[];
+  existingIncomeByTier?: IncomeByTierPoint[];
+  incomeByTierTotal?: IncomeByTierTotalPoint[];
+  tierSummary?: TierSummaryRow[];
+  kpis?: ExistingCustomerKpis;
+}
+
+export interface ReportsData {
+  operational?: OperationalReportData;
+  coupon?: CouponConversionData;
+  newClient?: NewClientReportData;
+  existingCustomer?: ExistingCustomerReportData;
+}
+
 // ── Shared sub-components ────────────────────────────────────────────────────
 
 const COLOR_MAP: Record<string, string> = {
@@ -167,22 +264,33 @@ function InsightBox({ color, icon: Icon, title, body }: { color: 'blue'|'green'|
 const chartTooltipStyle = { borderRadius: '8px', fontSize: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' };
 
 // ── Report 1: Coupon to Conversion Analysis ──────────────────────────────────
-function CouponConversionReport() {
+const MOCK_COUPON_FUNNEL = { couponsIssued: 1877, couponsRedeemed: 1284, convertedToPaid: 541 };
+const MOCK_COUPON_KPIS: Required<NonNullable<CouponKpis>> = {
+  redemptionRate: 68.4, conversionRate: 42.1, avgTimeToConvert: 23.4, cac: 1068, spendingUplift: 190,
+  funnel: MOCK_COUPON_FUNNEL,
+};
+
+function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) {
+  const couponMonthly = data?.couponMonthly ?? COUPON_MONTHLY;
+  const timeToConvert = data?.timeToConvert ?? TIME_TO_CONVERT;
+  const kpis = { ...MOCK_COUPON_KPIS, ...(data?.kpis ?? {}) };
+  const funnel = kpis.funnel;
+  const fmt = (n: number) => n.toLocaleString('en-US');
   return (
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
           Tracks the <strong>"Free to Paid"</strong> pipeline — helping management understand if coupons attract
-          high-value returning customers or one-time opportunists. Report period: <strong>Nov 2025 – Apr 2026</strong>.
+          high-value returning customers or one-time opportunists. {data?.kpis ? 'Period: based on selected date range.' : <>Report period: <strong>Nov 2025 – Apr 2026</strong>.</>}
         </p>
       </div>
 
       {/* Visual Funnel */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Coupons Issued', value: '1,877', pct: '100%', bg: 'bg-blue-600' },
-          { label: 'Coupons Redeemed', value: '1,284', pct: 'Redemption Rate: 68.4%', bg: 'bg-purple-600' },
-          { label: 'Converted to Paid', value: '541', pct: 'Conversion Rate: 42.1%', bg: 'bg-emerald-600' },
+          { label: 'Coupons Issued',     value: fmt(funnel.couponsIssued),     pct: '100%',                                       bg: 'bg-blue-600' },
+          { label: 'Coupons Redeemed',   value: fmt(funnel.couponsRedeemed),   pct: `Redemption Rate: ${kpis.redemptionRate.toFixed(1)}%`, bg: 'bg-purple-600' },
+          { label: 'Converted to Paid',  value: fmt(funnel.convertedToPaid),   pct: `Conversion Rate: ${kpis.conversionRate.toFixed(1)}%`, bg: 'bg-emerald-600' },
         ].map((f) => (
           <div key={f.label} className={`${f.bg} text-white rounded-xl p-5 text-center`}>
             <p className="text-3xl font-bold">{f.value}</p>
@@ -194,20 +302,20 @@ function CouponConversionReport() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="Redemption Rate" value="68.4%" sub="1,284 of 1,877 issued" icon={Ticket} color="blue" />
-        <KpiCard label="Conversion Rate" value="42.1%" sub="541 of 1,284 redeemed" icon={Target} color="purple" />
-        <KpiCard label="Avg Time-to-Convert" value="23.4 days" sub="First visit → Paid return" icon={Clock} color="indigo" />
-        <KpiCard label="Acq. Cost (CAC)" value="HK$1,068" sub="Campaign cost ÷ converted" icon={DollarSign} color="amber" />
-        <KpiCard label="Spending Uplift" value="+190%" sub="HK$3,480 paid vs HK$1,200 coupon" icon={ArrowUpRight} color="green" up trend="+190% uplift vs free cost" />
+        <KpiCard label="Redemption Rate" value={`${kpis.redemptionRate.toFixed(1)}%`} sub={`${fmt(funnel.couponsRedeemed)} of ${fmt(funnel.couponsIssued)} issued`} icon={Ticket} color="blue" />
+        <KpiCard label="Conversion Rate" value={`${kpis.conversionRate.toFixed(1)}%`} sub={`${fmt(funnel.convertedToPaid)} of ${fmt(funnel.couponsRedeemed)} redeemed`} icon={Target} color="purple" />
+        <KpiCard label="Avg Time-to-Convert" value={`${kpis.avgTimeToConvert.toFixed(1)} days`} sub="First visit → Paid return" icon={Clock} color="indigo" />
+        <KpiCard label="Acq. Cost (CAC)" value={`HK$${kpis.cac.toLocaleString()}`} sub="Campaign cost ÷ converted" icon={DollarSign} color="amber" />
+        <KpiCard label="Spending Uplift" value={`+${kpis.spendingUplift.toFixed(0)}%`} sub="Paid vs free cost" icon={ArrowUpRight} color="green" up trend={`+${kpis.spendingUplift.toFixed(0)}% uplift`} />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-5">
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Redemption vs. Conversion to Paid</h4>
-          <p className="text-xs text-gray-500 mb-4">Tracking the free-to-paid pipeline each month (Nov 2025 – Apr 2026)</p>
+          <p className="text-xs text-gray-500 mb-4">Tracking the free-to-paid pipeline each month</p>
           <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={COUPON_MONTHLY} barCategoryGap="30%">
+            <BarChart data={couponMonthly} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -221,15 +329,15 @@ function CouponConversionReport() {
 
         <Card className="p-5">
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Time-to-Conversion Distribution</h4>
-          <p className="text-xs text-gray-500 mb-4">Days between first free visit and first paid return (n=541 converted clients)</p>
+          <p className="text-xs text-gray-500 mb-4">Days between first free visit and first paid return (n={funnel.convertedToPaid} converted clients)</p>
           <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={TIME_TO_CONVERT} layout="vertical" barSize={24}>
+            <BarChart data={timeToConvert} layout="vertical" barSize={24}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis dataKey="range" type="category" tick={{ fontSize: 11 }} width={80} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v} clients`, 'Count']} />
               <Bar dataKey="count" name="Clients" radius={[0, 4, 4, 0]}>
-                {TIME_TO_CONVERT.map((_, i) => <Cell key={i} fill={TTConvert_COLORS[i]} />)}
+                {timeToConvert.map((_, i) => <Cell key={i} fill={TTConvert_COLORS[i]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -238,30 +346,38 @@ function CouponConversionReport() {
 
       <InsightBox
         color="green" icon={TrendingUp} title="Key Insight"
-        body="The 16–30 day window captures 34% of all conversions — the most critical re-engagement period. A targeted follow-up campaign at the 2-week post-visit mark could push conversion rate above 50%. A 5% uplift translates to ~64 additional paying clients and ~HK$222K in additional first-visit income per 6-month cycle."
+        body="Coupon-to-paid conversion tracks the free-trial-to-returning-customer pipeline. The 16-30 day window is typically the highest-converting re-engagement period; a 5% uplift in conversion rate compounds materially over a 6-month cycle."
       />
     </div>
   );
 }
 
 // ── Report 2: New Client Performance ─────────────────────────────────────────
-function NewClientReport() {
+const MOCK_NEW_CLIENT_KPIS: Required<NewClientKpis> = {
+  newClients: 104, income: 298464, avgTransactionValue: 2868,
+  penetrationPct: 28.3, sixMonthTotal: 600, periodLabel: 'Apr 2026',
+};
+
+function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
+  const newClientMonthly = data?.newClientMonthly ?? NEW_CLIENT_MONTHLY;
+  const sourceAttribution = data?.sourceAttribution ?? SOURCE_ATTR;
+  const kpis = { ...MOCK_NEW_CLIENT_KPIS, ...(data?.kpis ?? {}) };
   return (
     <div className="space-y-6">
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <p className="text-sm text-green-800">
           Focuses on the <strong>"Inflow"</strong> of the business — tracking whether the new paying client base
-          is growing, what they are worth, and where they come from. Period: <strong>Nov 2025 – Apr 2026</strong>.
+          is growing, what they are worth, and where they come from. {data?.kpis ? `Period: ${kpis.periodLabel}.` : <>Period: <strong>Nov 2025 – Apr 2026</strong>.</>}
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiCard label="New Clients (Apr 2026)" value="104" sub="vs. 118 in Mar" icon={UserPlus} color="green" up={false} trend="-11.9% MoM" />
-        <KpiCard label="Income from New Clients (Apr)" value="HK$298K" sub="of total lounge income" icon={DollarSign} color="blue" up={false} trend="-11.8% MoM" />
-        <KpiCard label="Avg Transaction Value" value="HK$2,868" sub="per new client visit" icon={TrendingUp} color="purple" up trend="+2.1% vs Q4 2025" />
-        <KpiCard label="New Client Penetration" value="28.3%" sub="of total Apr income" icon={Target} color="indigo" />
-        <KpiCard label="6-Month New Clients" value="600" sub="Total across Nov–Apr" icon={Users} color="amber" up trend="+8.4% vs prior period" />
+        <KpiCard label={`New Clients (${kpis.periodLabel})`} value={kpis.newClients.toLocaleString()} sub={`vs prior period`} icon={UserPlus} color="green" />
+        <KpiCard label={`Income from New Clients`} value={`HK$${Math.round(kpis.income / 1000)}K`} sub="of total lounge income" icon={DollarSign} color="blue" />
+        <KpiCard label="Avg Transaction Value" value={`HK$${kpis.avgTransactionValue.toLocaleString()}`} sub="per new client visit" icon={TrendingUp} color="purple" />
+        <KpiCard label="New Client Penetration" value={`${kpis.penetrationPct.toFixed(1)}%`} sub="of total period income" icon={Target} color="indigo" />
+        <KpiCard label="Period New Clients" value={kpis.sixMonthTotal.toLocaleString()} sub="Total across period" icon={Users} color="amber" />
       </div>
 
       {/* Charts */}
@@ -270,7 +386,7 @@ function NewClientReport() {
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly New Client Count &amp; Income</h4>
           <p className="text-xs text-gray-500 mb-4">Bars = new client count (left axis) · Line = HK$ income from new clients (right axis)</p>
           <ResponsiveContainer width="100%" height={230}>
-            <ComposedChart data={NEW_CLIENT_MONTHLY}>
+            <ComposedChart data={newClientMonthly}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis yAxisId="left" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
@@ -296,54 +412,83 @@ function NewClientReport() {
         </Card>
 
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-4">New Client Source Attribution</h4>
-          <ResponsiveContainer width="100%" height={150}>
-            <PieChart>
-              <Pie data={SOURCE_ATTR} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value">
-                {SOURCE_ATTR.map((_, i) => <Cell key={i} fill={SOURCE_COLORS[i]} />)}
-              </Pie>
-              <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v}%`, 'Share']} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="mt-3 space-y-1.5">
-            {SOURCE_ATTR.map((s, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: SOURCE_COLORS[i] }} />
-                  <span className="text-gray-600">{s.name}</span>
-                </div>
-                <span className="font-semibold text-gray-800">{s.value}%</span>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">New Client Source Attribution</h4>
+          {sourceAttribution.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={150}>
+                <PieChart>
+                  <Pie data={sourceAttribution} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value">
+                    {sourceAttribution.map((_, i) => <Cell key={i} fill={SOURCE_COLORS[i % SOURCE_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v}%`, 'Share']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="mt-3 space-y-1.5">
+                {sourceAttribution.map((s, i) => (
+                  <div key={s.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: SOURCE_COLORS[i % SOURCE_COLORS.length] }} />
+                      <span className="text-gray-600">{s.name}</span>
+                    </div>
+                    <span className="font-semibold text-gray-800">{s.value}%</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-500 italic">
+              Source attribution requires an <code>Account.source</code> column (deferred — see <code>docs/pending-changes/2026-06-27-reports-real-data.md</code>).
+            </p>
+          )}
         </Card>
       </div>
 
       <InsightBox
         color="blue" icon={UserPlus} title="Key Insight"
-        body="The Free Trial Program is the single largest source of new paying clients at 42%, directly validating the coupon investment strategy. December 2025 saw the highest inflow (107 clients) driven by holiday corporate bookings — suggesting Q4 corporate event partnerships should be prioritised annually. ATV of HK$2,868 for new clients vs. an HK$1,200 free trial cost represents a 2.4× first-visit return on the acquisition spend."
+        body="New-client performance tracks the inflow of first-time paying customers each month. Pair with the Coupon Conversion tab to understand which acquisition channels drive the highest-LTV cohorts."
       />
     </div>
   );
 }
 
 // ── Report 3: Existing Customer Insights ─────────────────────────────────────
-function ExistingCustomerReport() {
+const MOCK_EXISTING_TIER_SUMMARY: TierSummaryRow[] = [
+  { tier: 'Sapphire', color: 'bg-[#0f2942]', members: 127, retention: '96%', freq: '4.2×', clv: 'HK$240,000+', risk: 'Very Low',  riskColor: 'bg-green-100 text-green-700' },
+  { tier: 'Diamond',  color: 'bg-blue-600',  members: 384, retention: '91%', freq: '2.8×', clv: 'HK$124,500',  risk: 'Low',       riskColor: 'bg-green-100 text-green-700' },
+  { tier: 'Platinum', color: 'bg-purple-600', members: 621, retention: '84%', freq: '2.1×', clv: 'HK$67,800',   risk: 'Moderate',  riskColor: 'bg-amber-100 text-amber-700' },
+  { tier: 'Gold',     color: 'bg-amber-500', members: 1045, retention: '73%', freq: '1.4×', clv: 'HK$28,400',   risk: 'High',      riskColor: 'bg-red-100 text-red-700' },
+];
+const MOCK_EXISTING_KPIS: Required<ExistingCustomerKpis> = {
+  retentionRate: 72.8, avgVisitFrequency: '1.8× / month',
+  customerLifetimeValue: 48400, churnRate: 14.2,
+  totalIncome: 4303000, bestMonth: 'Dec 2025', existingClientShare: 71.4,
+};
+
+function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } = {}) {
+  const retentionByTier       = data?.retentionByTier       ?? RETENTION_BY_TIER;
+  const clvByTier             = data?.clvByTier             ?? CLV_BY_TIER;
+  const churnTrend            = data?.churnTrend            ?? CHURN_TREND;
+  const existingIncomeMonthly = data?.existingIncomeMonthly ?? EXISTING_INCOME_MONTHLY;
+  const existingIncomeByTier  = data?.existingIncomeByTier  ?? EXISTING_INCOME_BY_TIER;
+  const incomeByTierTotal     = data?.incomeByTierTotal     ?? INCOME_BY_TIER_TOTAL;
+  const tierSummary           = data?.tierSummary           ?? MOCK_EXISTING_TIER_SUMMARY;
+  const kpis                  = { ...MOCK_EXISTING_KPIS, ...(data?.kpis ?? {}) };
+  const totalIncome = incomeByTierTotal.reduce((s, x) => s + x.income, 0);
   return (
     <div className="space-y-6">
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-sm text-amber-800">
           Measures the health and loyalty of the core <strong>"Bread and Butter"</strong> client base — tracking
-          retention, visit frequency, lifetime value, and early churn signals. Period: <strong>Nov 2025 – Apr 2026</strong>.
+          retention, visit frequency, lifetime value, and early churn signals. {data?.kpis ? 'Period: based on selected date range.' : <>Period: <strong>Nov 2025 – Apr 2026</strong>.</>}
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Retention Rate (6-month)" value="72.8%" sub="Visited >1× in 6 months" icon={Heart} color="green" up trend="+1.4% vs prior period" />
-        <KpiCard label="Avg Visit Frequency" value="1.8× / month" sub="Per existing customer" icon={RefreshCw} color="blue" up trend="+0.2× vs prior period" />
-        <KpiCard label="Customer Lifetime Value" value="HK$48,400" sub="Avg across all active tiers" icon={DollarSign} color="purple" up trend="+6.2% YoY" />
-        <KpiCard label="Churn Rate (Apr 2026)" value="14.2%" sub="No visit in 6+ months" icon={AlertTriangle} color="red" up trend="-1.0% vs Mar (improving)" />
+        <KpiCard label="Retention Rate (6-month)" value={`${kpis.retentionRate.toFixed(1)}%`} sub="Visited >1× in 6 months" icon={Heart} color="green" />
+        <KpiCard label="Avg Visit Frequency" value={kpis.avgVisitFrequency} sub="Per existing customer" icon={RefreshCw} color="blue" />
+        <KpiCard label="Customer Lifetime Value" value={`HK$${(kpis.customerLifetimeValue / 1000).toFixed(0)}K`} sub="Avg across all active tiers" icon={DollarSign} color="purple" />
+        <KpiCard label="Churn Rate" value={`${kpis.churnRate.toFixed(1)}%`} sub="No visit in 6+ months (heuristic)" icon={AlertTriangle} color="red" />
       </div>
 
       {/* Charts */}
@@ -352,13 +497,13 @@ function ExistingCustomerReport() {
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Retention Rate by Membership Tier</h4>
           <p className="text-xs text-gray-500 mb-4">% of tier members with ≥1 visit in past 6 months</p>
           <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={RETENTION_BY_TIER} layout="vertical" barSize={26}>
+            <BarChart data={retentionByTier} layout="vertical" barSize={26}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
               <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
               <YAxis dataKey="tier" type="category" tick={{ fontSize: 12 }} width={68} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`${v}%`, 'Retention Rate']} />
               <Bar dataKey="rate" name="Retention Rate" radius={[0, 5, 5, 0]}>
-                {RETENTION_BY_TIER.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                {retentionByTier.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -368,7 +513,7 @@ function ExistingCustomerReport() {
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Churn Rate Trend</h4>
           <p className="text-xs text-gray-500 mb-4">% of previously active clients who lapsed (&gt;6 months without a visit)</p>
           <ResponsiveContainer width="100%" height={230}>
-            <AreaChart data={CHURN_TREND}>
+            <AreaChart data={churnTrend}>
               <defs>
                 <linearGradient id="churnGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.18} />
@@ -388,13 +533,13 @@ function ExistingCustomerReport() {
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Avg CLV by Membership Tier</h4>
           <p className="text-xs text-gray-500 mb-4">Total income generated per client since first visit (HK$)</p>
           <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={CLV_BY_TIER} barSize={32}>
+            <BarChart data={clvByTier} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="tier" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}K` : `${v}`} />
               <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`HK$${v.toLocaleString()}`, 'Avg CLV']} />
               <Bar dataKey="clv" name="Customer Lifetime Value" radius={[5, 5, 0, 0]}>
-                {CLV_BY_TIER.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                {clvByTier.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -414,12 +559,7 @@ function ExistingCustomerReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {[
-                { tier: 'Sapphire', color: 'bg-[#0f2942]', members: 127, retention: '96%', freq: '4.2×', clv: 'HK$240,000+', risk: 'Very Low', riskColor: 'bg-green-100 text-green-700' },
-                { tier: 'Diamond',  color: 'bg-blue-600',  members: 384, retention: '91%', freq: '2.8×', clv: 'HK$124,500', risk: 'Low', riskColor: 'bg-green-100 text-green-700' },
-                { tier: 'Platinum', color: 'bg-purple-600', members: 621, retention: '84%', freq: '2.1×', clv: 'HK$67,800', risk: 'Moderate', riskColor: 'bg-amber-100 text-amber-700' },
-                { tier: 'Gold',     color: 'bg-amber-500', members: 1045, retention: '73%', freq: '1.4×', clv: 'HK$28,400', risk: 'High', riskColor: 'bg-red-100 text-red-700' },
-              ].map(row => (
+              {tierSummary.map(row => (
                 <tr key={row.tier}>
                   <td className="py-2.5 pr-4">
                     <div className="flex items-center gap-2">
@@ -454,27 +594,19 @@ function ExistingCustomerReport() {
       {/* Income KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard
-          label="Total Income (6-month)" value="HK$4.30M"
-          sub="From existing clients, Nov–Apr"
+          label="Total Income" value={`HK$${(kpis.totalIncome / 1_000_000).toFixed(2)}M`}
+          sub="From existing clients in period"
           icon={DollarSign} color="navy"
-          up trend="+12.4% vs prior 6-month period"
         />
         <KpiCard
-          label="Apr 2026 Income" value="HK$755.7K"
-          sub="From existing clients in Apr"
-          icon={TrendingUp} color="green"
-          up trend="+0.9% MoM vs Mar (HK$748.7K)"
-        />
-        <KpiCard
-          label="Best Month" value="Dec 2025"
-          sub="HK$817.7K — driven by holiday traffic"
+          label="Best Month" value={kpis.bestMonth}
+          sub="Highest income month in period"
           icon={ArrowUpRight} color="purple"
         />
         <KpiCard
-          label="Existing Client Income Share" value="71.4%"
-          sub="of total lounge income (Nov–Apr)"
+          label="Existing Client Income Share" value={`${kpis.existingClientShare.toFixed(1)}%`}
+          sub="of total lounge income in period"
           icon={Target} color="amber"
-          up trend="+2.8% vs prior period"
         />
       </div>
 
@@ -483,9 +615,9 @@ function ExistingCustomerReport() {
         {/* Monthly income trend — area */}
         <Card className="p-5 lg:col-span-2">
           <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Income from Existing Customers</h4>
-          <p className="text-xs text-gray-500 mb-4">Total HK$ income generated by returning clients each month (Nov 2025 – Apr 2026)</p>
+          <p className="text-xs text-gray-500 mb-4">Total HK$ income generated by returning clients each month</p>
           <ResponsiveContainer width="100%" height={230}>
-            <AreaChart data={EXISTING_INCOME_MONTHLY}>
+            <AreaChart data={existingIncomeMonthly}>
               <defs>
                 <linearGradient id="existingIncomeGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#0f2942" stopOpacity={0.25} />
@@ -497,7 +629,6 @@ function ExistingCustomerReport() {
               <YAxis
                 tick={{ fontSize: 11 }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => `${Math.round(v / 1000)}K`}
-                domain={[500000, 900000]}
               />
               <Tooltip
                 contentStyle={chartTooltipStyle}
@@ -513,86 +644,97 @@ function ExistingCustomerReport() {
             </AreaChart>
           </ResponsiveContainer>
           {/* MoM change row */}
-          <div className="mt-3 grid grid-cols-6 gap-1">
-            {EXISTING_INCOME_MONTHLY.map((d, i) => {
-              const prev = EXISTING_INCOME_MONTHLY[i - 1];
-              const change = prev ? ((d.income - prev.income) / prev.income * 100) : null;
-              return (
-                <div key={d.month} className="text-center">
-                  <p className="text-xs text-gray-400">{d.month}</p>
-                  <p className="text-xs font-semibold text-gray-800">{(d.income / 1000).toFixed(0)}K</p>
-                  {change !== null && (
-                    <p className={`text-[10px] font-medium ${change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {change >= 0 ? '+' : ''}{change.toFixed(1)}%
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {existingIncomeMonthly.length > 0 && (
+            <div className="mt-3 grid gap-1" style={{ gridTemplateColumns: `repeat(${existingIncomeMonthly.length}, minmax(0, 1fr))` }}>
+              {existingIncomeMonthly.map((d, i) => {
+                const prev = existingIncomeMonthly[i - 1];
+                const change = prev ? ((d.income - prev.income) / prev.income * 100) : null;
+                return (
+                  <div key={d.month} className="text-center">
+                    <p className="text-xs text-gray-400">{d.month}</p>
+                    <p className="text-xs font-semibold text-gray-800">{(d.income / 1000).toFixed(0)}K</p>
+                    {change !== null && (
+                      <p className={`text-[10px] font-medium ${change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {change >= 0 ? '+' : ''}{change.toFixed(1)}%
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </Card>
 
-        {/* Income by tier (6-month total) */}
+        {/* Income by tier (period total) */}
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">6-Month Income by Tier</h4>
-          <p className="text-xs text-gray-500 mb-4">Total income contribution per membership tier (Nov–Apr)</p>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={INCOME_BY_TIER_TOTAL} layout="vertical" barSize={22}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-              <XAxis
-                type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11 }}
-                tickFormatter={(v) => `${Math.round(v / 1000)}K`}
-              />
-              <YAxis dataKey="tier" type="category" width={62} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-              <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`HK$${v.toLocaleString()}`, 'Income']} />
-              <Bar dataKey="income" name="Income" radius={[0, 5, 5, 0]}>
-                {INCOME_BY_TIER_TOTAL.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          {/* Tier income share */}
-          <div className="mt-3 space-y-1.5">
-            {INCOME_BY_TIER_TOTAL.slice().reverse().map((t) => {
-              const total = INCOME_BY_TIER_TOTAL.reduce((s, x) => s + x.income, 0);
-              const pct = (t.income / total * 100).toFixed(1);
-              return (
-                <div key={t.tier} className="flex items-center gap-2 text-xs">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: t.fill }} />
-                  <span className="text-gray-600 flex-1">{t.tier}</span>
-                  <span className="text-gray-500">HK${(t.income / 1000).toFixed(0)}K</span>
-                  <span className="font-semibold text-gray-800 w-10 text-right">{pct}%</span>
-                </div>
-              );
-            })}
-          </div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Income by Tier</h4>
+          <p className="text-xs text-gray-500 mb-4">Total income contribution per membership tier in period</p>
+          {incomeByTierTotal.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={incomeByTierTotal} layout="vertical" barSize={22}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                  <XAxis
+                    type="number" axisLine={false} tickLine={false} tick={{ fontSize: 11 }}
+                    tickFormatter={(v) => `${Math.round(v / 1000)}K`}
+                  />
+                  <YAxis dataKey="tier" type="category" width={62} axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={(v: number) => [`HK$${v.toLocaleString()}`, 'Income']} />
+                  <Bar dataKey="income" name="Income" radius={[0, 5, 5, 0]}>
+                    {incomeByTierTotal.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {/* Tier income share */}
+              <div className="mt-3 space-y-1.5">
+                {incomeByTierTotal.slice().reverse().map((t) => {
+                  const pct = totalIncome > 0 ? (t.income / totalIncome * 100).toFixed(1) : '0.0';
+                  return (
+                    <div key={t.tier} className="flex items-center gap-2 text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: t.fill }} />
+                      <span className="text-gray-600 flex-1">{t.tier}</span>
+                      <span className="text-gray-500">HK${(t.income / 1000).toFixed(0)}K</span>
+                      <span className="font-semibold text-gray-800 w-10 text-right">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-500 italic">
+              Tier-income breakdown requires the <code>Account.membership_type</code> column to be populated for active clients in the selected period.
+            </p>
+          )}
         </Card>
       </div>
 
       {/* Monthly stacked bar by tier */}
-      <Card className="p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Income Breakdown by Membership Tier</h4>
-        <p className="text-xs text-gray-500 mb-4">Stacked monthly income (HK$) showing each tier's contribution — larger tiers grow in Dec, driven by year-end corporate visits</p>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={EXISTING_INCOME_BY_TIER} barSize={36}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}K`} />
-            <Tooltip
-              contentStyle={chartTooltipStyle}
-              formatter={(v: number, name: string) => [`HK$${v.toLocaleString()}`, name]}
-            />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="Gold"     name="Gold"     stackId="a" fill="#f59e0b" />
-            <Bar dataKey="Platinum" name="Platinum" stackId="a" fill="#8b5cf6" />
-            <Bar dataKey="Diamond"  name="Diamond"  stackId="a" fill="#3b82f6" />
-            <Bar dataKey="Sapphire" name="Sapphire" stackId="a" fill="#0f2942" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+      {existingIncomeByTier.length > 0 && (
+        <Card className="p-5">
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Income Breakdown by Membership Tier</h4>
+          <p className="text-xs text-gray-500 mb-4">Stacked monthly income (HK$) showing each tier's contribution</p>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={existingIncomeByTier} barSize={36}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${Math.round(v / 1000)}K`} />
+              <Tooltip
+                contentStyle={chartTooltipStyle}
+                formatter={(v: number, name: string) => [`HK$${v.toLocaleString()}`, name]}
+              />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="Gold"     name="Gold"     stackId="a" fill="#f59e0b" />
+              <Bar dataKey="Platinum" name="Platinum" stackId="a" fill="#8b5cf6" />
+              <Bar dataKey="Diamond"  name="Diamond"  stackId="a" fill="#3b82f6" />
+              <Bar dataKey="Sapphire" name="Sapphire" stackId="a" fill="#0f2942" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       <InsightBox
         color="amber" icon={AlertTriangle} title="Key Insight"
-        body="Churn peaked at 15.2% in March and is declining — a positive signal. Sapphire-tier clients show near-perfect retention (96%), confirming the unlimited-credit model drives deep loyalty. Gold-tier members (73% retention, highest churn risk) should be targeted with an upgrade incentive campaign to Platinum. Converting just 10% of at-risk Gold clients to Platinum would add ~HK$3.9M in cumulative CLV over their membership lifetime."
+        body="Existing-customer insights measure loyalty, lifetime value, and churn risk per membership tier. Top tier (Sapphire) typically has the highest retention but smallest cohort; Gold tier is the largest cohort and the most at risk — targeted upgrade incentives compound over the membership lifetime."
       />
     </div>
   );
@@ -612,19 +754,35 @@ const OPERATIONAL_REPORTS = [
 ];
 
 // ── Operational Reports ──────────────────────────────────────────────────────
-function OperationalReports() {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+const MOCK_OPERATIONAL_KPIS: Required<OperationalKpis> = {
+  totalBookings: 284, totalIncome: 892000, activeMembers: 2177, avgOccupancy: '78%',
+};
+
+function OperationalReports({
+  data,
+  onExport,
+  isLoading = false,
+}: {
+  data?: OperationalReportData;
+  onExport?: (reportType: string) => void;
+  isLoading?: boolean;
+} = {}) {
+  const kpis = { ...MOCK_OPERATIONAL_KPIS, ...(data?.kpis ?? {}) };
+  const totalIncomeDisplay = typeof kpis.totalIncome === 'number' && kpis.totalIncome > 0
+    ? (kpis.totalIncome >= 1_000_000
+        ? `HK$${(kpis.totalIncome / 1_000_000).toFixed(2)}M`
+        : `HK$${Math.round(kpis.totalIncome / 1000)}K`)
+    : 'HK$0';
 
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Bookings',  value: '284',    icon: Calendar,   color: 'text-blue-600' },
-          { label: 'Total Income',    value: 'HK$892K',icon: DollarSign, color: 'text-green-600' },
-          { label: 'Active Members',  value: '2,177',  icon: Users,      color: 'text-purple-600' },
-          { label: 'Avg. Occupancy',  value: '78%',    icon: TrendingUp, color: 'text-orange-600' },
+          { label: 'Total Bookings',  value: (kpis.totalBookings ?? 0).toLocaleString(), icon: Calendar,   color: 'text-blue-600' },
+          { label: 'Total Income',    value: totalIncomeDisplay,                          icon: DollarSign, color: 'text-green-600' },
+          { label: 'Active Members',  value: (kpis.activeMembers ?? 0).toLocaleString(),  icon: Users,      color: 'text-purple-600' },
+          { label: 'Avg. Occupancy',  value: kpis.avgOccupancy ?? '—',                    icon: TrendingUp, color: 'text-orange-600' },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center justify-between">
@@ -646,8 +804,8 @@ function OperationalReports() {
             <label className="mb-[10px] block text-sm text-gray-600">Start Date</label>
             <input
               type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              value={data?.startDate ?? ''}
+              onChange={(e) => data?.onStartDateChange?.(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -655,13 +813,14 @@ function OperationalReports() {
             <label className="mb-[10px] block text-sm text-gray-600">End Date</label>
             <input
               type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              value={data?.endDate ?? ''}
+              onChange={(e) => data?.onEndDateChange?.(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <Button variant="outline">Apply Filter</Button>
+          <Button variant="outline" disabled={isLoading}>{isLoading ? 'Loading…' : 'Apply Filter'}</Button>
         </div>
+        {isLoading && <p className="text-xs text-gray-500 mt-2">Refreshing data for selected period…</p>}
       </Card>
 
       {/* Report Cards Grid */}
@@ -688,7 +847,11 @@ function OperationalReports() {
               <Button variant="outline" size="sm" className="flex-1">
                 <FileText className="w-3.5 h-3.5 mr-1.5" />Preview
               </Button>
-              <Button size="sm" className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white">
+              <Button
+                size="sm"
+                className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+                onClick={() => onExport?.(report.id)}
+              >
                 <Download className="w-3.5 h-3.5 mr-1.5" />Export
               </Button>
             </div>
@@ -782,11 +945,12 @@ const ANALYTICS_TABS = [
 // ── Main Reports Component ───────────────────────────────────────────────────
 
 export interface ReportsProps {
+  reportData?: ReportsData;
   isLoading?: boolean;
   onExport?: (reportType: string) => void;
 }
 
-export function Reports({}: ReportsProps = {}) {
+export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) {
   const [activeTab, setActiveTab] = useState<string>('operational');
 
   const activeReport = ANALYTICS_TABS.find(t => t.id === activeTab)!;
@@ -835,21 +999,40 @@ export function Reports({}: ReportsProps = {}) {
                 <h3 className="text-gray-900">{activeReport.label}</h3>
                 <p className="text-xs text-gray-500">
                   {isAnalytics
-                    ? 'Data period: Nov 2025 – Apr 2026 · Updated daily'
+                    ? 'Data period: based on selected report period · updated on filter change'
                     : 'Generate, preview and export operational data for daily team use'}
                 </p>
               </div>
             </div>
             {isAnalytics && (
-              <Button size="sm" className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white gap-2 flex-shrink-0">
+              <Button
+                size="sm"
+                className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white gap-2 flex-shrink-0"
+                onClick={() => onExport?.(activeTab)}
+              >
                 <Download className="w-4 h-4" />
                 Export Report
               </Button>
             )}
           </div>
 
-          {/* Dynamic content */}
-          <activeReport.Component />
+          {/* Dynamic content — each tab receives its data sub-shape from reportData */}
+          {activeTab === 'operational' && (
+            <OperationalReports
+              data={{
+                kpis: reportData?.operational?.kpis,
+                startDate: reportData?.operational?.startDate,
+                endDate: reportData?.operational?.endDate,
+                onStartDateChange: reportData?.operational?.onStartDateChange,
+                onEndDateChange: reportData?.operational?.onEndDateChange,
+              }}
+              onExport={onExport}
+              isLoading={isLoading}
+            />
+          )}
+          {activeTab === 'coupon'      && <CouponConversionReport data={reportData?.coupon} />}
+          {activeTab === 'new-client'  && <NewClientReport       data={reportData?.newClient} />}
+          {activeTab === 'existing'    && <ExistingCustomerReport data={reportData?.existingCustomer} />}
         </Card>
       </section>
     </div>

@@ -30,6 +30,10 @@ import {
   DialogDescription,
 } from './ui/dialog';
 import { toast } from 'sonner@2.0.3';
+// 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule. The helper
+// computes the valid visitTime range + an error message; reused by
+// EditSectionFlight in the admin edit page.
+import { computeVisitTimeRange } from './BookingEditView';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -893,6 +897,21 @@ export function CreateBooking({
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
 
+  // 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule. The
+  // computed range is reactive — recomputed on every flight/visit
+  // change via the helper. Disabled check on submit + input min/max.
+  // NOTE: must come AFTER `visitTime` is declared above — TDZ otherwise
+  // (this is the bug Sky hit on 2026-06-28 19:18 with a blank
+  // create-booking page — ReferenceError "Cannot access 'Qe' before
+  // initialization" on first render).
+  const visitTimeRange = computeVisitTimeRange({
+    flightType,
+    flightTime,
+    visitTime,
+    leg2FlightTime,
+  });
+  const visitTimeRangeError = visitTimeRange.error;
+
 // ── Premiere Suite ──────────────────────────────────────────────────────────
   const [numPremiereSuites, setNumPremiereSuites] = useState(0);
   const [vipPS, setVipPS] = useState(0);
@@ -940,6 +959,32 @@ export function CreateBooking({
   const [regionCode, setRegionCode] = useState('');
   const [contactNo, setContactNo] = useState('');
   const [bookingMemo, setBookingMemo] = useState('');
+
+  // 2026-06-28 — Sky's request: auto-fill the Contact Person
+  // section (name / email / phone) when an account is selected.
+  // The wrapper's `handleAccountSelect` already calls its own
+  // `setContactName / setContactEmail / setContactNo`, but those
+  // update the WRAPPER's state — not the figma-ui view's local
+  // state, which is what the Contact Person inputs are bound
+  // to. Mirroring the auto-fill here makes the inputs visible
+  // right after `selectedAccount` lands (single round-trip
+  // after `accountService.getAccount` resolves). Reverts to
+  // empty when the account is cleared (e.g. via `onAccountClear`
+  // which nulls `selectedAccount` in the wrapper). Split out
+  // from the existing membership-tier `useEffect` (above) so
+  // the React hooks ordering keeps `setContactName` etc.
+  // declared before they're referenced (lint no-use-before-define).
+  useEffect(() => {
+    if (selectedAccount) {
+      if (selectedAccount.name) setContactName(selectedAccount.name);
+      if (selectedAccount.email) setContactEmail(selectedAccount.email);
+      if (selectedAccount.phone) setContactNo(selectedAccount.phone);
+    } else {
+      setContactName('');
+      setContactEmail('');
+      setContactNo('');
+    }
+  }, [selectedAccount]);
 
   // ── Add-on Services ─────────────────────────────────────────────────────────
   const [hasLimousine, setHasLimousine] = useState(false);
@@ -1426,6 +1471,15 @@ export function CreateBooking({
     // Premiere Suite: cap assigned suites to numPremiereSuites.
     if (numPremiereSuites > 0 && assignedSuiteIds.length > numPremiereSuites) {
       toast.error(`Premiere Suite assignments (${assignedSuiteIds.length}) cannot exceed Quantity of Premiere Suite (${numPremiereSuites}).`);
+      return;
+    }
+    // 2026-06-28 (round 6.2.74) — Lounge Deluxe: cap assigned lounges
+    // to vipLD (per "1 LD = 1 LDVIP" pricing rule). The UI prevents
+    // over-assignment via disabled checkboxes, but the submit handler
+    // belt-and-braces in case the user finds a way to bypass the UI
+    // (e.g., legacy autofill, paste, etc.).
+    if (vipLD > 0 && assignedLoungeIds.length > vipLD) {
+      toast.error(`Lounge Deluxe assignments (${assignedLoungeIds.length}) cannot exceed Quantity of VIP Passengers (LD) (${vipLD}).`);
       return;
     }
     const formData: BookingFormData = {
@@ -2010,8 +2064,25 @@ export function CreateBooking({
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
-              <input type="time" value={visitTime} onChange={e => setVisitTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              {/* 2026-06-28 (round 6.2.74) — Sky's 3h rule:
+                  `min`/`max` constrain the time picker; inline
+                  error hint surfaces the rule. Submit is also
+                  gated on `visitTimeRangeError` (see disabled
+                  binding at the bottom of the form). */}
+              <input type="time" value={visitTime}
+                min={visitTimeRange.min}
+                max={visitTimeRange.max}
+                onChange={e => setVisitTime(e.target.value)}
+                data-testid="create-visit-time"
+                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                  visitTimeRangeError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                }`} />
+              {visitTimeRangeError && (
+                <p className="text-xs text-red-600 mt-1 flex items-start gap-1" data-testid="create-visit-time-error" role="alert">
+                  <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                  <span>{visitTimeRangeError}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -2157,8 +2228,16 @@ export function CreateBooking({
                   <p className="text-xs text-gray-500 mt-0.5">Check any subset of Lobby 1–8 that the guest will use.</p>
                 </div>
                 {assignedLoungeIds.length > 0 && (
-                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">
-                    {assignedLoungeIds.length} / {physicalLounges.length} assigned
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    assignedLoungeIds.length > vipLD
+                      ? 'bg-red-100 text-red-700'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {/* Round 6.2.74 — counter cap = vipLD (NOT
+                        physicalLounges.length as before). With
+                        the new LD cap rule, vipLD is the maximum
+                        number of lobbies that can be assigned. */}
+                    {assignedLoungeIds.length} / {vipLD} assigned
                   </span>
                 )}
               </div>
@@ -2168,17 +2247,27 @@ export function CreateBooking({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {physicalLounges.map(l => {
                     const checked = assignedLoungeIds.includes(l.id);
+                    // Round 6.2.74 — LD cap = vipLD (per the
+                    // "1 LD = 1 LDVIP" pricing rule). Mirrors the
+                    // PS cap (line 2081) + the EditSectionPhysicalResource
+                    // (admin edit page). Without this cap the user
+                    // could over-assign lobbies beyond what they paid for.
+                    const isAtCap = !checked && assignedLoungeIds.length >= vipLD;
                     return (
                       <label key={l.id}
-                        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm cursor-pointer transition-colors ${
+                        className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors ${
                           checked
-                            ? 'border-blue-300 bg-blue-50 text-blue-800'
-                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            ? 'border-blue-300 bg-blue-50 text-blue-800 cursor-pointer'
+                            : isAtCap
+                              ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700 cursor-pointer'
                         }`}>
                         <Checkbox
                           checked={checked}
+                          disabled={isAtCap}
                           onCheckedChange={v => {
                             if (!setAssignedLoungeIds) return;
+                            if (isAtCap && v) return; // belt-and-braces: refuse when capped
                             setAssignedLoungeIds(
                               v
                                 ? [...assignedLoungeIds, l.id]
@@ -2914,12 +3003,7 @@ export function CreateBooking({
             ════════════════════════════════════════ */}
         {liveBreakdown.length > 0 && liveTotal !== null && (
           <Card className="p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <h2>Price Breakdown</h2>
-              <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs">
-                Live · backend PricingService
-              </Badge>
-            </div>
+            <h2 className="mb-5">Price Breakdown</h2>
             <div className="space-y-2 text-sm max-w-md ml-auto">
               {liveBreakdown.map((item, i) => (
                 <div key={i} className="flex justify-between py-1.5 border-b border-gray-100">
@@ -2968,7 +3052,10 @@ export function CreateBooking({
               // can't bypass the gap rule by clicking fast. The submit
               // handler (handleSubmit above) ALSO re-checks the gap
               // before the onSubmit call, so this is defense in depth.
-              disabled={hasGuestErrors || isSubmitting || (flightType === 'Transit' && !!transitGapError)}
+              // 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule
+              // also gates submit (mirror of the admin edit page's
+              // master Save button).
+              disabled={hasGuestErrors || isSubmitting || (flightType === 'Transit' && !!transitGapError) || !!visitTimeRangeError}
               data-testid="create-booking-submit">
               {isSubmitting ? (
                 <>

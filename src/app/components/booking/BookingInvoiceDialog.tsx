@@ -1,4 +1,4 @@
-import { Car, ShoppingBag, Mail, Download, CreditCard, Ticket, Utensils, Loader2 } from 'lucide-react';
+import { Mail, Download, Ticket, Utensils, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -100,9 +100,13 @@ export function BookingInvoiceDialog({
   voucherCount, voucherTotal, voucherUnitValue,
   livePreviewTotal, breakdown = [],
   serviceSubtotal,
-  amountDueAfterVouchers,
+  // 2026-06-27 (round 6.2.69) — `amountDueAfterVouchers` and
+  // `onSendPaymentLink` are kept in the props interface for
+  // forward-compat but not destructured here. The merged
+  // send-invoice flow no longer needs them (backend creates
+  // the payment link as part of send-invoice; voucher pricing
+  // is still a placeholder per round 6.2.13).
   getStatusColor, getPaymentStatusColor,
-  onSendPaymentLink,
   apiBaseUrl,
   authToken,
   onInvoiceSent,
@@ -114,20 +118,37 @@ export function BookingInvoiceDialog({
   const baseUrl = apiBaseUrl ?? (typeof window !== 'undefined' ? window.location.origin : '');
   const token = authToken ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
 
-  // 2026-06-19 (round 6.2.49, payment_getway merge) — local
-  // loading flags for the two async buttons. Both wrap a
-  // network call + a re-fetch in the parent wrapper, so a
-  // few seconds is normal. The flag drives a `disabled +
-  // Loader2` UX so the user doesn't double-click and so they
-  // see the action is in flight (otherwise the dialog just
-  // looks frozen until the parent refetch updates the badge).
+  // 2026-06-27 (round 6.2.69) — the merged send-invoice call is
+  // a single round-trip + a queued email dispatch, so a few
+  // seconds is normal. The flag drives a `disabled + Loader2`
+  // UX so the user doesn't double-click and so they see the
+  // action is in flight (otherwise the dialog looks frozen
+  // until the parent refetch updates the badge).
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
-  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
 
-  const handleSendInvoice = async () => {
+  // 2026-06-27 — "Send Invoice & Payment Link" handler.
+  //
+  // Round 6.2.49: this fired BOTH a local send-invoice POST
+  // AND the parent's onSendPaymentLink callback, producing TWO
+  // emails (invoice PDF email + payment-link email).
+  //
+  // Round 6.2.69 (2026-06-27, Sky directive): merged into ONE
+  // email. The backend `POST /api/bookings/{id}/send-invoice`
+  // now ALSO creates the Adyen payment link internally
+  // (silently on Adyen failure) and the `SendInvoiceEmail`
+  // queued job includes the payment URL inline in the email
+  // body. So a single click → ONE API call → ONE email with
+  // the invoice PDF attached AND a "Pay Now" CTA inline.
+  //
+  // We still re-fetch the booking via `onInvoiceSent` so the
+  // dialog's payment-status badge + the page header chip
+  // refresh after the backend flips `payment_status` to
+  // `PaymentLinkSent` (AdyenPaymentService::createPaymentLink
+  // does the flip when the link succeeds).
+  const handleSendInvoiceAndPaymentLink = async () => {
     if (isSendingInvoice) return;
     if (!token) {
-      toast.error('Not signed in. Please log in to send an invoice.');
+      toast.error('Not signed in. Please log in to send.');
       return;
     }
     setIsSendingInvoice(true);
@@ -145,41 +166,26 @@ export function BookingInvoiceDialog({
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      toast.success('Invoice emailed to customer!', {
-        description: `Invoice ${body.data?.invoice_no ?? ''} has been sent to ${booking.guestName || 'the customer'} (PDF attached). Payment status is now "Invoice Sent".`,
+      const invoiceNo = body.data?.invoice_no ?? '';
+      const paymentId = body.data?.payment_id ?? null;
+      const paymentLinkReason = body.data?.payment_link_reason ?? null;
+      // 2026-06-27 (user-reported "payment link is missing in
+      // the email") — surface the backend's `payment_link_reason`
+      // when the link couldn't be generated so the staff user
+      // sees WHY (Adyen SDK failed, booking isn't Upfront, etc.)
+      // instead of silently getting an invoice-only email.
+      toast.success('Invoice + payment link sent!', {
+        description: paymentId
+          ? `${invoiceNo} + Adyen payment link emailed to ${booking.guestName || 'the customer'} (one email, PDF attached + Pay Now button).`
+          : `${invoiceNo} emailed to ${booking.guestName || 'the customer'} (PDF attached, no Pay Now CTA).${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
       });
-      onInvoiceSent?.({ invoice_no: body.data?.invoice_no ?? '', data: body.data ?? {} });
+      onInvoiceSent?.({ invoice_no: invoiceNo, data: body.data ?? {} });
     } catch (err) {
       toast.error('Failed to send invoice', {
         description: err instanceof Error ? err.message : 'Unknown error',
       });
     } finally {
       setIsSendingInvoice(false);
-    }
-  };
-
-  // 2026-06-19 (round 6.2.49, payment_getway merge) — the
-  // "Generate Payment Link" button now delegates to the
-  // parent's `handleSendPaymentLink` callback (which hits
-  // `POST /api/bookings/{id}/send-payment-link` via
-  // `paymentApi.sendPaymentLink`, then re-fetches the
-  // booking so `payment_status` flips to `PaymentLinkSent`).
-  // The dialog stays free of the `paymentApi` import to keep
-  // the figma-ui surface thin (per INV-X1 surgical patch
-  // policy). Errors and toasts surface here so the user
-  // sees feedback in the same place as the invoice flow.
-  const handleSendPaymentLink = async () => {
-    if (isSendingPaymentLink || !onSendPaymentLink) return;
-    setIsSendingPaymentLink(true);
-    try {
-      await onSendPaymentLink();
-    } catch (err) {
-      // Parent already toasts on failure; we only guard
-      // against an uncaught throw so the dialog's loading
-      // flag always resets.
-      console.error('[BookingInvoiceDialog] send payment link failed:', err);
-    } finally {
-      setIsSendingPaymentLink(false);
     }
   };
 
@@ -229,15 +235,6 @@ export function BookingInvoiceDialog({
         description: err instanceof Error ? err.message : 'Unknown error',
       });
     }
-  };
-
-  const handleEmailInvoice = () => {
-    // The send-invoice endpoint already records the action in
-    // AuditLog. The actual email delivery is a future ops
-    // concern. For now, sending the invoice IS the email trigger
-    // (the backend logs to AuditLog with action='CREATE' on
-    // entity_type='invoices').
-    handleSendInvoice();
   };
 
   return (
@@ -355,12 +352,22 @@ export function BookingInvoiceDialog({
                     // warning. Post-fix the key is
                     // `${product}::${key}::${idx}` — unique
                     // across the breakdown[].
+                    //
+                    // 2026-06-27 (round 6.2.70, Sky directive):
+                    // removed the second-line product slug
+                    // (`<p className="text-sm text-gray-500">{
+                    // line.product}</p>`) — the product code is
+                    // an internal identifier (e.g.
+                    // `premier_suite_a`) and was leaking into
+                    // the customer-facing invoice PDF. Each line
+                    // item now shows only the human-readable
+                    // label on a single row. The `line.product`
+                    // field is preserved on the data side for
+                    // any future per-product UI (e.g. grouping
+                    // toggles) without re-introducing the slug.
                     <tr key={`${line.product ?? 'unknown'}::${line.key}::${idx}`}>
                       <td className="px-6 py-4">
                         <p className="font-medium">{line.label}</p>
-                        {line.product && (
-                          <p className="text-sm text-gray-500">{line.product}</p>
-                        )}
                       </td>
                       <td className="px-6 py-4 text-center">{line.qty}</td>
                       <td className="px-6 py-4 text-right text-gray-700">
@@ -526,52 +533,6 @@ export function BookingInvoiceDialog({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
-            {/* 2026-06-24 (round 6.2.54, user-reported
-              * "payment link button is missing") — expand the
-              * visibility to all Upfront non-Paid states. Pre-fix
-              * the button only rendered for the strict
-              * `Pending + Upfront` combo, so once an invoice was
-              * sent and `payment_status` flipped to `InvoiceSent`
-              * the button vanished — staff couldn't re-send a
-              * payment link from the dialog after sending the
-              * invoice first. Now visible for any Upfront booking
-              * that's not yet Paid (Pending / InvoiceSent /
-              * PaymentLinkSent). `OnCredit` bookings still hide
-              * the button (payment-link doesn't apply to credit
-              * accounts), and Paid bookings hide it (the link
-              * would be a no-op). */}
-            {booking.paymentMode === 'Upfront' &&
-             booking.paymentStatus !== 'Paid' &&
-             booking.paymentStatus !== 'PaymentLinkPaid' && (
-              <Button
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={handleSendPaymentLink}
-                disabled={isSendingPaymentLink || !onSendPaymentLink}
-                data-testid="invoice-payment-link-button"
-              >
-                {isSendingPaymentLink ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <CreditCard className="w-4 h-4 mr-2" />
-                )}
-                {isSendingPaymentLink ? 'Sending payment link…' : 'Generate Payment Link'}
-              </Button>
-            )}
-            {(booking.paymentStatus === 'Pending' || booking.paymentStatus === 'Payment Link Sent' || booking.paymentStatus === 'Invoice Sent' || booking.paymentStatus === 'InvoiceSent') && (
-              <Button
-                className="bg-green-600 hover:bg-green-700"
-                onClick={handleEmailInvoice}
-                disabled={isSendingInvoice}
-                data-testid="invoice-email-button"
-              >
-                {isSendingInvoice ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Mail className="w-4 h-4 mr-2" />
-                )}
-                Email Invoice to Customer
-              </Button>
-            )}
             <Button
               variant="outline"
               onClick={handleDownloadPdf}
@@ -582,21 +543,40 @@ export function BookingInvoiceDialog({
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
 
-          <div className="pt-4 border-t">
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
-              onClick={handleSendInvoice}
-              disabled={isSendingInvoice}
-              data-testid="invoice-send-button"
-            >
-              {isSendingInvoice ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : (
-                <Mail className="w-5 h-5 mr-2" />
-              )}
-              {isSendingInvoice ? 'Sending invoice…' : 'Send Invoice to Client'}
-            </Button>
-          </div>
+          {/* 2026-06-27 — Send Invoice + Send Payment Link merged
+            into a single button per Sky directive. The single
+            click fires BOTH the send-invoice POST and the
+            send-payment-link POST (sequential, awaiting each)
+            so the customer receives one invoice email with the
+            PDF and a separate payment-link email. Visibility is
+            gated on supervisor approval (status must be
+            'Approved' or 'Confirmed' — the same gate the QR
+            scanner uses for entry permission per
+            `QREntryScanner.tsx`). OnCredit + Paid bookings
+            still hide the button (payment-link doesn't apply to
+            credit accounts, and Paid bookings don't need a new
+            invoice / link). */}
+          {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
+           booking.paymentStatus !== 'Paid' &&
+           booking.paymentStatus !== 'PaymentLinkPaid' && (
+            <div className="pt-4 border-t">
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
+                onClick={handleSendInvoiceAndPaymentLink}
+                disabled={isSendingInvoice}
+                data-testid="invoice-send-button"
+              >
+                {(isSendingInvoice) ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-5 h-5 mr-2" />
+                )}
+                {(isSendingInvoice)
+                  ? 'Sending invoice & payment link…'
+                  : 'Send Invoice & Payment Link'}
+              </Button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import {
-  Search, Calendar, CheckCircle, XCircle, Eye, Clock, RotateCcw,
+  Search, Calendar, Clock, RotateCcw,
   Building2, Plane, User, BadgePercent, ChevronDown, ChevronUp,
   Filter, AlertCircle,
 } from 'lucide-react';
@@ -383,22 +383,25 @@ export function BookingApprovalQueue({
                     {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
+                        {/* 2026-06-27 (round 6.2.70, Sky directive):
+                            the Eye icon was a too-cryptic
+                            affordance for staff — replace with a
+                            text "View" button. Approve / Reject
+                            icons removed: those quick actions were
+                            too easy to click by mistake. Staff
+                            and supervisors must open the detail
+                            view to approve or reject (the detail
+                            page has the proper Approve / Reject
+                            flows with reason capture). Send Back
+                            (supervisor-only) is retained as the
+                            single inline quick-action. */}
                         <Button
                           size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-blue-600"
+                          variant="outline"
+                          className="h-7 px-3 text-blue-600 border-blue-200 hover:bg-blue-50"
                           onClick={() => onViewDetail(booking.id)}
-                          title="View detail"
                         >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-7 px-2 bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => onApprove(booking.id)}
-                          title={mode === 'staff' ? 'Approve & Forward' : 'Final Approve'}
-                        >
-                          <CheckCircle className="w-4 h-4" />
+                          View
                         </Button>
                         {mode === 'supervisor' && (
                           <Button
@@ -411,15 +414,6 @@ export function BookingApprovalQueue({
                             <RotateCcw className="w-4 h-4" />
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-red-600 hover:bg-red-50"
-                          onClick={() => onReject(booking.id)}
-                          title="Reject"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
