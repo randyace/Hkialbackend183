@@ -75,6 +75,17 @@ export type EditPaymentMode  = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk P
 export type EditAccountType  = 'Individual' | 'Corporate' | 'Agency';
 export type EditMembershipTier = 'Diamond' | 'Platinum' | 'Gold' | 'Sapphire';
 export type EditBookingChannel = 'Online' | 'Email/Call to HKIAL';
+// 2026-06-29 (round 6.2.78, Bug #4) — Status Management enums
+// moved into the orchestrator's type surface so the BookingFormData
+// interface can reference them. Re-typed locally here (instead of
+// imported from BookingDetail.tsx) so the orchestrator's compile
+// stays self-contained; they are the exact unions BookingDetail.tsx
+// line 96-99 exports.
+export type BookingStatusValue =
+  | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
+  | 'Rejected' | 'Cancelled' | 'No-show';
+export type PaymentStatusValue =
+  | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
 export interface EditPassenger {
   title: string;
@@ -298,6 +309,18 @@ export interface BookingFormData {
   regionCode?: string;
   contactNo?: string;
   contactMemo?: string;
+  // 2026-06-29 (round 6.2.78, Bug #4) — Status Management card
+  // wires through the master Save. The 3 controls (Booking
+  // Status dropdown / Payment Status dropdown / Status Update
+  // Reason textarea) use the figma-ui display-string enum
+  // (`'No-show'`, `'Payment Link Sent'`, etc.); the parent
+  // wrapper's `handleMasterSave` maps them to the backend
+  // PascalCase wire format (`'NoShow'`, `'PaymentLinkSent'`)
+  // before the PUT. Pre-6.2.78 these lived only in figma-ui
+  // local useState and were never persisted.
+  status: BookingStatusValue;
+  paymentStatus: PaymentStatusValue;
+  rejectionReason?: string;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -357,6 +380,13 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   assignedStaffIds: [],
   paymentMode:      'Upfront',
   specialRequests:  '',
+  // 2026-06-29 (round 6.2.78, Bug #4) — defaults for the Status
+  // Management card. Match the backend's seeded default values
+  // (`status: PendingForReview`, `payment_status: Pending`) mapped
+  // to the figma-ui display-string enum.
+  status: 'Pending for Review',
+  paymentStatus: 'Pending',
+  rejectionReason: '',
 };
 
 // ── VIP/NFG completeness gate helpers (round 6.2.65) ──────────────────────────

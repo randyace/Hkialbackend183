@@ -1024,9 +1024,36 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // (uncontrolled selects + textarea) — Save just toasted without ever
   // reading the user's selection. Now they are controlled; the new
   // `onUpdateStatus` callback (line above) reads these values on click.
-  const [statusValue,         setStatusValue]         = useState<BookingStatusValue>(booking.status);
-  const [paymentStatusValue,  setPaymentStatusValue]  = useState<PaymentStatusValue>(booking.paymentStatus);
-  const [rejectionReasonText, setRejectionReasonText] = useState(booking.rejectionReason ?? '');
+  // 2026-06-29 (round 6.2.78, Bug #4) — Status Management
+  // card lifted to `formData` via the same local+override+onFormChange
+  // dispatcher pattern as the round 6.2.77 contact fields.
+  // Pre-6.2.78 these useState hooks were local-only and the
+  // master Save handler never read them. Post-6.2.78 the
+  // JSX-bound `value` reads from `formData?.status` /
+  // `formData?.paymentStatus` / `formData?.rejectionReason`
+  // when the parent wrapper provides them (master Save path),
+  // else from local state (standalone demo mode + first-render
+  // flash). The `onChange` handlers dispatch to `onFormChange`
+  // when available, else to the local setter (per the contact
+  // field convention at lines 783-823).
+  const [localStatusValue,        setLocalStatusValue]        = useState<BookingStatusValue>(booking.status);
+  const [localPaymentStatusValue, setLocalPaymentStatusValue] = useState<PaymentStatusValue>(booking.paymentStatus);
+  const [localRejectionReasonText, setLocalRejectionReasonText] = useState(booking.rejectionReason ?? '');
+  const statusValue         = formData?.status         ?? localStatusValue;
+  const paymentStatusValue  = formData?.paymentStatus  ?? localPaymentStatusValue;
+  const rejectionReasonText = formData?.rejectionReason ?? localRejectionReasonText;
+  const setStatusValue = (v: BookingStatusValue) => {
+    if (onFormChange) onFormChange({ status: v });
+    else setLocalStatusValue(v);
+  };
+  const setPaymentStatusValue = (v: PaymentStatusValue) => {
+    if (onFormChange) onFormChange({ paymentStatus: v });
+    else setLocalPaymentStatusValue(v);
+  };
+  const setRejectionReasonText = (v: string) => {
+    if (onFormChange) onFormChange({ rejectionReason: v });
+    else setLocalRejectionReasonText(v);
+  };
 
   // ── Per-guest voucher toggles (true = this guest's entry is covered by a voucher) ──
   // Only Account Owner and Spouse are eligible; toggling consumes one voucher from account.
