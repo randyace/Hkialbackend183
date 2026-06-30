@@ -197,6 +197,10 @@ export interface PurchaseCreateProps {
   accounts?: AccountOption[];
   onSubmit?: (record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>) => void;
   onBack?: () => void;
+  // 2026-06-30 (round 6.2.74) — hide the "VIP Accounts to Create"
+  // input from the Corporate form. Default true keeps the figma Make
+  // base compatible; the production admin wrapper passes false.
+  showVipAccounts?: boolean;
 }
 
 export function PurchaseCreate({
@@ -205,6 +209,7 @@ export function PurchaseCreate({
   accounts: accountsProp,
   onSubmit,
   onBack,
+  showVipAccounts = true,
 }: PurchaseCreateProps = {}) {
   const availablePackages  = packagesProp?.length  ? packagesProp  : GRADING_PACKAGES;
   const availableBundles   = sessionBundlesProp?.length ? sessionBundlesProp : SESSION_BUNDLES;
@@ -618,22 +623,24 @@ export function PurchaseCreate({
                       onChange={e => setPromoCodeQuantity(e.target.value)}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="vipAccountQty" className="mb-[10px] block">
-                      VIP Accounts to Create <span className="text-gray-400 text-xs">(optional)</span>
-                    </Label>
-                    <Input
-                      id="vipAccountQty"
-                      type="number"
-                      min="0"
-                      placeholder="e.g. 10"
-                      value={vipAccountQuantity}
-                      onChange={e => setVipAccountQuantity(e.target.value)}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Number of new VIP accounts to be created for this corporate customer.
-                    </p>
-                  </div>
+                  {showVipAccounts && (
+                    <div>
+                      <Label htmlFor="vipAccountQty" className="mb-[10px] block">
+                        VIP Accounts to Create <span className="text-gray-400 text-xs">(optional)</span>
+                      </Label>
+                      <Input
+                        id="vipAccountQty"
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 10"
+                        value={vipAccountQuantity}
+                        onChange={e => setVipAccountQuantity(e.target.value)}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Number of new VIP accounts to be created for this corporate customer.
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="totalPrice" className="mb-[10px] block">
                       Total Price (HKD) <span className="text-red-500">*</span>
