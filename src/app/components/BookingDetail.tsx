@@ -175,6 +175,10 @@ function toEditNonFlyingGuest(g: NonFlyingGuest): EditNonFlyingGuest {
 interface BookingDetailProps {
   bookingId: number;
   onBack: () => void;
+  // 2026-06-30 — forward `showTransit` to <EditSectionFlight>
+  // so the Transit option + 2nd-leg block can be hidden. Wrapper
+  // (admin BookingDetail.tsx) passes false per Sky's directive.
+  showTransit?: boolean;
 }
 
 // ── Passenger detail types ────────────────────────��─────────────────────────
@@ -187,6 +191,22 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   onEdit?: () => void;
   onApprove?: (id: number) => void;
   isLoading?: boolean;
+  /**
+   * 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) — active
+   * promo-code catalog forwarded to `EditSectionAccountInfo`
+   * so the Promo Code `<Select>` can present real codes (id /
+   * code / discountType / discountValue). Mirrors the
+   * `staffOptions` / `suiteOptions` empty-fallback pattern:
+   * when omitted (figma-ui standalone preview), the section
+   * renders the disabled text-input fallback so the MOCK
+   * booking stays self-previewable per INV-X1.
+   */
+  promoCodeOptions?: Array<{
+    id: number;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number | string;
+  }>;
   /**
    * 2026-06-28 (round 6.2.71, Phase 4A) — Edit Booking header button.
    * Replaces the `onSaveEdit` + `isSavingEdit` props (which were
@@ -398,7 +418,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   bookableItemPrices?: Record<string, number>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices }: BookingDetailFullProps) {
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+ showTransit = true }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -1666,6 +1687,43 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <Card className="p-6 border-red-200 bg-red-50">
           <h3 className="text-sm uppercase tracking-wide text-red-700 mb-2">Rejection Reason</h3>
           <p className="text-sm text-red-900">{booking.rejectionReason}</p>
+        </Card>
+      )}
+
+      {/* 4b. 2026-06-29 (round 6.2.79-B, Bug #1) — Supervisor
+          Decision card. Surfaces the supervisor's push-back /
+          reject reason and timestamp + supervisor name when
+          a supervisor has acted on the booking. Pre-6.2.79-B
+          the supervisor's reason was overwritten by the next
+          staff-reject event (both wrote to `rejection_reason`).
+          Round 6.2.79-B separates the writes — supervisor now
+          owns `supervisor_rejection_reason`; staff still owns
+          `rejection_reason`. The staff view surfaces BOTH
+          independently: the existing "Rejection Reason" card
+          (line 1665) shows the staff's reason; this new
+          "Supervisor Decision" card shows the supervisor's
+          reason. Rendered when EITHER `supervisorRejectionReason`
+          is set OR `supervisorRejectedAt` is set (i.e., the
+          supervisor has at minimum stamped the booking). */}
+      {(booking.supervisorRejectionReason || booking.supervisorRejectedAt) && (
+        <Card className="p-6 border-amber-200 bg-amber-50">
+          <h3 className="text-sm uppercase tracking-wide text-amber-700 mb-2 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4" />
+            Supervisor Decision
+          </h3>
+          {booking.supervisorRejectionReason && (
+            <p className="text-sm text-amber-900 mb-2">
+              {booking.supervisorRejectionReason}
+            </p>
+          )}
+          <div className="flex items-center gap-4 text-xs text-amber-700">
+            {booking.supervisorRejectedByName && (
+              <span>By <strong>{booking.supervisorRejectedByName}</strong></span>
+            )}
+            {booking.supervisorRejectedAt && (
+              <span>{new Date(booking.supervisorRejectedAt).toLocaleString()}</span>
+            )}
+          </div>
         </Card>
       )}
 
@@ -3492,6 +3550,63 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </>
               )}
 
+              {/* Lounge Extension Service — round 6.2.81 (Bug B:
+                  "lounge extension not shown in admin panel booking
+                  detail"). Customer mapper writes a "Lounge Extension"
+                  booking_items row with `quantity` = hours (1-6 cap).
+                  The booking detail read view previously had no named
+                  row for it (only Limo + Shopping had explicit
+                  sections; the e2e at tests/e2e/booking-lifecycle-addons.spec.ts:297-299
+                  had commented this gap). Reads from `booking.addons[]`
+                  (populated by `mapBookingFromApi` from
+                  `api.booking_items[].bookable_item.name_en`) —
+                  mirrors the Limo block above (:3432-3500).
+                  Renders only when at least one addon row has
+                  `name === 'Lounge Extension'`. The edit form's
+                  separate Lounge Extension toggle + qty stepper
+                  lives in `EditSectionAddons.tsx:226-261`. */}
+              {booking.addons?.some(a => a.name === 'Lounge Extension') && (() => {
+                const loungeAddon = booking.addons!.find(a => a.name === 'Lounge Extension')!;
+                const qty = Number(loungeAddon.quantity ?? 1);
+                const unit = Number(loungeAddon.unitPrice ?? 1500);
+                const subtotal = Number(loungeAddon.subtotal ?? unit * qty);
+                return (
+                  <>
+                    <tr>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-amber-600" />
+                          <div>
+                            <p className="font-medium">Lounge Extension Service</p>
+                            <p className="text-xs text-gray-500">Additional hours beyond the base 3 hours</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="number"
+                          defaultValue={qty}
+                          className="w-20 px-2 py-1 border rounded text-center"
+                          min="1"
+                          max="6"
+                          readOnly
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="text"
+                          defaultValue={unit.toFixed(2)}
+                          className="w-32 px-2 py-1 border rounded text-right"
+                          readOnly
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">—</td>
+                      <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
+                    </tr>
+                  </>
+                );
+              })()}
+
               {/* Spa Service */}
               {false && (
                 <>
@@ -4297,10 +4412,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       {formData && onFormChange && (
         <div className="pt-6 mt-6 border-t-2 border-blue-300 space-y-6">
           {/* 1. Account Settings (editable) */}
-          <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} />
+          <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} promoCodeOptions={promoCodeOptions} />
 
           {/* 2. Flight + Visit + Suite + Payment (editable) */}
-          <EditSectionFlight formData={formData} onFormChange={onFormChange} />
+          <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
 
           {/* 3. Limo stops editor (gated on hasLimousine in detail logic) */}
           <EditSectionLimoStops formData={formData} onFormChange={onFormChange} />

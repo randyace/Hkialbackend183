@@ -35,6 +35,11 @@ import { computeVisitTimeRange } from '../../BookingEditView';
 export interface EditSectionFlightProps {
   formData: BookingFormData;
   onFormChange: (patch: Partial<BookingFormData>) => void;
+  // 2026-06-30 — hide Transit option + 2nd-leg block in the Flight
+  // Type <Select>. Default true (backward-compat). Wrapper passes
+  // false from the admin Detail page per Sky's directive to stop
+  // staff from flipping existing bookings into Transit.
+  showTransit?: boolean;
 }
 
 // 2026-06-28 (round 6.2.76) — "Suite / Venue (legacy)" dropdown
@@ -47,6 +52,7 @@ export interface EditSectionFlightProps {
 export function EditSectionFlight({
   formData,
   onFormChange,
+  showTransit = true,
 }: EditSectionFlightProps) {
   const flightType = formData.flightType;
   // Round 6.2.74 — Sky's 3h booking-time rule. The range is empty when
@@ -78,7 +84,7 @@ export function EditSectionFlight({
                   'Transit'; bookings that came in as Transit
                   had flightType coerced to 'Arrival' on the
                   form (round 6.2.36 bug). */}
-              <SelectItem value="Transit">Transit</SelectItem>
+              {showTransit && <SelectItem value="Transit">Transit</SelectItem>}
             </SelectContent>
           </Select>
         </div>
@@ -169,8 +175,10 @@ export function EditSectionFlight({
       {/* 2026-06-08 round 6.2.6.1 — 2nd-leg editor (Transit only).
           The create form has had this since round 6.2.36 (Phase 1.1).
           Pre-6.2.71 the standalone edit page had no leg2 UI — Transit
-          bookings' 2nd leg was effectively read-only. */}
-      {flightType === 'Transit' && (
+          bookings' 2nd leg was effectively read-only.
+          2026-06-30 — also gated on `showTransit` so the block
+          disappears when the wrapper opts out of Transit. */}
+      {showTransit && flightType === 'Transit' && (
         <div className="mt-6 pt-4 border-t border-gray-200">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-1.5">
             <Plane className="w-3.5 h-3.5" /> Transit 2nd Leg (outbound from HKG)

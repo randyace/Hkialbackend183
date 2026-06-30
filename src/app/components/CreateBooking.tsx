@@ -220,6 +220,11 @@ interface AccountOption {
 
 // ── Props interface ───────────────────────────────────────────────────────────
 export interface CreateBookingProps {
+  // 2026-06-30 — hide Transit option in the Flight Type 3-way toggle
+  // + the 2nd-leg block + the Transit-only Destination "optional"
+  // hint. Default true (backward-compat). Wrapper (admin
+  // CreateBooking.tsx) passes false per Sky's directive.
+  showTransit?: boolean;
   onSubmit?: (data: BookingFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
@@ -754,6 +759,7 @@ function RegionCodeCombobox({
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function CreateBooking({
+  showTransit = true,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -1848,7 +1854,7 @@ export function CreateBooking({
                 {([
                   { type: 'Arrival'    as FlightType, activeClass: 'bg-emerald-600 border-emerald-600 text-white', iconClass: '-rotate-45' },
                   { type: 'Departure'  as FlightType, activeClass: 'bg-rose-600    border-rose-600    text-white', iconClass: 'rotate-45'  },
-                  { type: 'Transit'    as FlightType, activeClass: 'bg-sky-600     border-sky-600     text-white', iconClass: 'rotate-90'  },
+                  ...(showTransit ? [{ type: 'Transit' as FlightType, activeClass: 'bg-sky-600 border-sky-600 text-white', iconClass: 'rotate-90' }] : []),
                 ]).map(({ type: ft, activeClass, iconClass }) => (
                   <button key={ft} type="button"
                     onClick={() => setFlightType(ft)}
@@ -1910,16 +1916,16 @@ export function CreateBooking({
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 Destination (IATA)
-                {flightType === 'Transit'
+                {showTransit && flightType === 'Transit'
                   ? <span className="ml-2 text-xs font-normal text-gray-400">— optional</span>
                   : null
                 }
               </label>
               <input type="text" value={flightDestination} onChange={e => setFlightDestination(e.target.value.toUpperCase())}
-                placeholder={flightType === 'Transit' ? 'May be unknown' : 'e.g. HKG'}
+                placeholder={showTransit && flightType === 'Transit' ? 'May be unknown' : 'e.g. HKG'}
                 maxLength={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
-              {flightType === 'Transit' && (
+              {showTransit && flightType === 'Transit' && (
                 <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                   <Info className="w-3 h-3 flex-shrink-0" />
                   Final destination may not be identifiable from the transit flight number.
@@ -1960,8 +1966,10 @@ export function CreateBooking({
               shows the error inline and disables submit via
               `transitGapError`. The backend's TransitLegsRule is the
               source of truth; this is the UX layer that prevents the
-              user from even trying to submit a < 6h gap. */}
-          {flightType === 'Transit' && (
+              user from even trying to submit a < 6h gap.
+              2026-06-30 — also gated on `showTransit` so the block
+              disappears when the wrapper opts out of Transit. */}
+          {showTransit && flightType === 'Transit' && (
             <div className="mt-6 pt-6 border-t border-gray-200" data-testid="transit-leg2-block">
               <h3 className="text-sm font-semibold text-sky-700 mb-1">2nd Flight (Outbound) <span className="text-red-500">*</span></h3>
               <p className="text-xs text-gray-500 mb-4">

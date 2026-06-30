@@ -288,6 +288,21 @@ export interface BookingFormData {
   specialRequests?: string;
   membershipTier?: EditMembershipTier;
   accountDiscountPct?: number;
+  // 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) — FK to
+  // `promo_codes.id` (top-level column on `bookings`, NOT
+  // the legacy `advanced_details.account.promoApplied` nested
+  // block). The wrapper's `handleMasterSave` writes this
+  // as `promo_code_id` in the top-level PUT body; the backend
+  // `BookingController::update` validator accepts it as
+  // `sometimes|nullable|exists:promo_codes,id`. The legacy
+  // `promoCode?: string` field below is retained for
+  // backward-compat with admin-created bookings that pre-date
+  // round 6.2.80 (the wrapper still writes it to
+  // `advanced_details.account.promoApplied.code` in
+  // `handleMasterSave`). New code should populate
+  // `promoCodeId` from `mapBookingFromApi.promoCodeId` and
+  // let the legacy field stay empty.
+  promoCodeId?: number | null;
   promoCode?: string;
   promoDiscountPct?: number;
   accountRemark?: string;
@@ -387,6 +402,15 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   status: 'Pending for Review',
   paymentStatus: 'Pending',
   rejectionReason: '',
+  // 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) —
+  // default the new `promoCodeId` FK to `null` (no code
+  // attached). The MOCK booking has no promo code; the
+  // EditSectionAccountInfo card's new `<Select>` (added
+  // round 6.2.80) renders the placeholder when this is
+  // null. Legacy `promoCode` string is also empty here (the
+  // wrapper's `bookingToFormData` seeds it from
+  // `booking.promoCode?.code ?? ''` on real bookings).
+  promoCodeId: null,
 };
 
 // ── VIP/NFG completeness gate helpers (round 6.2.65) ──────────────────────────

@@ -409,16 +409,32 @@ export function BookingReviewPage({
         memo: booking.contactPerson?.memo ?? '',
       }
     : CONTACT_SEEDS[id % CONTACT_SEEDS.length];
-  // 2026-06-24: real booking.promoCode wins (sourced from the
-  // wrapper's `mapApiBookingToPending` from `api.advanced_details
-  // .account.promoApplied.code` via `mapBookingFromApi`); the
-  // PROMO_CODES array is mock fallback ONLY for standalone-preview
-  // mode (no `booking` prop passed). This matches the same pattern
-  // as `hasRealSuiteBreakdown` / `hasRealPassengerData` above.
-  const hasRealPromoCode = !!booking.promoCode;
-  const promoCode = hasRealPromoCode
-    ? booking.promoCode
-    : PROMO_CODES[id % PROMO_CODES.length];
+  // 2026-06-30 (round 6.2.81, Bug #6 follow-up — Sky: "booking
+  // 1321 review page shows 'VIP20' even though no promo was
+  // applied at create"). Pre-6.2.81 the mock-fallback check was
+  // `!!booking.promoCode` which fires whenever the wrapper's
+  // forwarded `pendingBooking.promoCode` is undefined — i.e. for
+  // EVERY real booking in wrapper-mode that didn't apply a code.
+  // `PROMO_CODES[id % 10]` then deterministically surfaced a
+  // mock string (e.g. 1321 % 10 = 1 → 'VIP20') even though the
+  // wrapper passed `bookingProp` (so the view is NOT a figma-Make
+  // standalone preview).
+  //
+  // Fix: gate the mock fallback on `bookingProp === undefined`
+  // (true standalone-preview mode, where `MOCK_PENDING_BOOKING`
+  // is used and the mock array keeps the figma Make preview
+  // rendering meaningful per INV-X1). In wrapper mode, render
+  // `booking.promoCode || ''` so an empty value falls through to
+  // the existing '<Field>—' placeholder below (line 688).
+  //
+  // Pattern matches `hasRealSuiteBreakdown` / `hasRealPassenger
+  // Data` above but the gating condition is 'preview mode?' rather
+  // than 'real data present?' — the empty-real-data path must NOT
+  // be treated as preview mode.
+  const isStandalonePreview = bookingProp === undefined;
+  const promoCode = isStandalonePreview
+    ? PROMO_CODES[id % PROMO_CODES.length]
+    : (booking.promoCode || '');
   const accountDiscount = booking.agencyDiscountRate
     ? `${booking.agencyDiscountRate}% (Agency Default)`
     : id % 4 === 0 ? '10%' : '—';
