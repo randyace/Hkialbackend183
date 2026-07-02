@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Building2, UserPlus, Mail, Phone, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2, Shuffle } from 'lucide-react';
+import { ArrowLeft, Building2, UserPlus, Mail, Phone, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -243,34 +243,6 @@ export function CompanyEdit({
 
   const isEditMode = companyId !== null;
 
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setFormCompanyName('Hong Kong Airlines');
-    setFormCompanyCode('CORP-HX-001');
-    setFormPaymentMethod('On-Credit');
-    setFormDiscountRate(12);
-    setFormBillingAddress('Hong Kong International Airport, 1 Sky Plaza Road, Lantau, Hong Kong');
-    setFormRemarks('Preferred corporate partner since 2023. Excellent payment record.');
-    setCompanyStatus(true);
-    setCompany({
-      id: companyId ?? 99,
-      companyName: 'Hong Kong Airlines',
-      companyCode: 'CORP-HX-001',
-      contactPerson: 'Peter Leung',
-      email: 'peter.leung@hkairlines.com',
-      phone: '+852 3916 3666',
-      paymentMethod: 'On-Credit',
-      discountRate: 12,
-      status: 'active',
-      address: 'Hong Kong International Airport, 1 Sky Plaza Road, Lantau, Hong Kong',
-      remarks: 'Preferred corporate partner since 2023. Excellent payment record.',
-    });
-    setContactPersons([
-      { id: '1', name: 'Peter Leung', email: 'peter.leung@hkairlines.com', phone: '+852 3916 3666' },
-      { id: '2', name: 'Amy Chan', email: 'amy.chan@hkairlines.com', phone: '+852 3916 3888' },
-    ]);
-  };
-
   const handleAddContactPerson = () => {
     const newId = (contactPersons.length + 1).toString();
     setContactPersons([...contactPersons, { id: newId, name: '', email: '', phone: '' }]);
@@ -323,17 +295,6 @@ export function CompanyEdit({
           <p className="text-gray-600">
             {isEditMode ? 'Edit the details of the company' : 'Enter the details of the new company'}
           </p>
-        </div>
-        <div className="ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleQuickFill}
-            className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-          >
-            <Shuffle className="w-3 h-3" />
-            Quick Fill Demo
-          </Button>
         </div>
       </div>
 

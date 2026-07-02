@@ -1115,7 +1115,16 @@ export function CreateBooking({
       premiereChildrenUnder2,
       loungeChildrenAge2To11,
       loungeChildrenUnder2,
-      additionalHours: 0,
+      // R6.2.100 (2026-07-02): "Lounge Extension" / "Additional
+      // Hour of Stay" now drives `bookings.additional_hours`
+      // directly via the formal `prices.add_on_additional_hour`
+      // price list (PS $3k/suite/hr, LD $1k/person/hr) instead
+      // of a BookableItem item (HK$1500/hr flat, retired). The
+      // Lounge Extension chip toggle still owns the UI state
+      // here; its value is mirrored into `additionalHours` so
+      // the wrapper can forward it to `usePricePreview` and the
+      // POST body.
+      additionalHours: hasLoungeExtension ? loungeExtensionQty : 0,
       // Round 6.2.28 (2026-06-09) — staff override. Push the
       // current value through the same channel so the wrapper
       // can forward it to `usePricePreview` → backend live

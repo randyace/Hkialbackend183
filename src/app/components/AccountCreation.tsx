@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from './ui/textarea';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
-import { Building2, Plane, Shuffle, X, UserPlus } from 'lucide-react';
+import { Building2, Plane, X, UserPlus } from 'lucide-react';
 
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
@@ -217,34 +217,6 @@ export function AccountCreation({
     remarks: '',
   });
 
-  // ── Quick Fill ────────────────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    if (accountType === 'individual') {
-      setFormData({
-        ...formData,
-        title: 'mr', firstName: 'James', lastName: 'Wong',
-        regionCode: '852', contactNumber: '91234567',
-        email: 'james.wong@gmail.com', nationality: 'hk',
-        passportNumber: 'H123', remarks: '',
-      });
-    } else if (accountType === 'corporate') {
-      setCorporateForms([{
-        id: Date.now(),
-        title: 'mrs', firstName: 'Alice', lastName: 'Lam',
-        email: 'alice.lam@cathaypacific.com',
-        regionCode: '852', contactNumber: '98765432',
-        paymentMethod: 'on-credit', remarks: 'VIP corporate client',
-      }]);
-    } else {
-      setFormData({
-        ...formData,
-        title: 'ms', firstName: 'Fiona', lastName: 'Cheung',
-        regionCode: '852', contactNumber: '95556789',
-        email: 'fiona@pacificworld.hk', nationality: '', passportNumber: '',
-      });
-    }
-  };
-
   // ── Company search handler ───────────────────────────────────────────────
   const handleCompanySearchChange = (value: string) => {
     setCompanySearch(value);
@@ -318,10 +290,6 @@ export function AccountCreation({
           <h2 className="text-2xl font-bold text-gray-900">Create New Account</h2>
           <p className="text-gray-600">Fill in the details below to create a new account</p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={handleQuickFill}>
-          <Shuffle className="w-4 h-4 mr-2" />
-          Quick Fill
-        </Button>
       </div>
 
       {/* Account Type Toggle */}

@@ -977,6 +977,32 @@ export function BookingReviewPage({
                 </div>
                 {booking.hasShopping && <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />}
               </div>
+              {/* R6.2.100 (2026-07-02) — Lounge Extension card. The
+                  wrapper now synthesises a "Lounge Extension" addon
+                  entry from `apiBookings.additional_hours` (the
+                  post-R6.2.100 source of truth — the legacy
+                  `bookable_items['Lounge Extension']` row was
+                  retired). Mirrors the rendering pattern of Limo +
+                  Shopping above. Renders only when the wrapper
+                  forwarded the addon (i.e. additional_hours > 0);
+                  standalone-preview mode (no prop) has no addon so
+                  this card stays hidden, preserving the figma Make
+                  import. Quantity shown as hours. */}
+              {(() => {
+                const loungeAddon = booking.addons?.find((a) => a.name === 'Lounge Extension');
+                if (!loungeAddon) return null;
+                const hours = Number(loungeAddon.quantity ?? 0);
+                return (
+                  <div className="flex items-center gap-2 p-3 rounded-lg border bg-amber-50 border-amber-200">
+                    <Clock className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">Lounge Extension</p>
+                      <p className="text-xs text-gray-500">{hours} additional hour{hours !== 1 ? 's' : ''}</p>
+                    </div>
+                    <CheckCircle className="w-4 h-4 text-amber-500 ml-auto" />
+                  </div>
+                );
+              })()}
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasWheelchair ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
                 <Accessibility className={`w-5 h-5 ${hasWheelchair ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div>

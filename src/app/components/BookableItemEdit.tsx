@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Loader2, Save, Shuffle } from 'lucide-react';
+import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 
 export interface BookableItemFormData {
@@ -60,25 +60,6 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
     }
   };
 
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setFormData({
-      nameEn: 'Premium Champagne Lounge',
-      nameSimp: '高级香槟休息室',
-      nameTrad: '高級香檳休息室',
-      category: 'Suite',
-      descriptionEn: 'Exclusive champagne lounge with panoramic airport views and premium beverage service',
-      descriptionSimp: '独享香槟休息室，拥有全景机场景观和高级饮品服务',
-      descriptionTrad: '獨享香檳休息室，擁有全景機場景觀和高級飲品服務',
-      price: 2500,
-      discountRate: 10,
-      priceCalEquation: '(qty * unitPrice) - discount',
-      availability: 'available',
-      stock: '',
-      priority: 2,
-    });
-  };
-
   const handleCancel = () => {
     if (onBack) {
       onBack();
@@ -108,20 +89,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
             {isEditMode ? 'Update the details of the bookable item' : 'Enter the details of the new bookable item'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {!isEditMode && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleQuickFill}
-              className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-            >
-              <Shuffle className="w-3 h-3" />
-              Quick Fill Demo
-            </Button>
-          )}
         </div>
-      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">

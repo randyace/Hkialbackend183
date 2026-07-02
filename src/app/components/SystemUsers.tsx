@@ -13,7 +13,7 @@ import { useState, type FormEvent } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Shuffle, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -230,16 +230,6 @@ export function SystemUsers({
     setFormStatus(user.status);
     setFormPassword('');
     setIsDialogOpen(true);
-  };
-
-  const handleQuickFill = () => {
-    setFormName('Karen Leung');
-    setFormEmail('karen.leung@hkial.com');
-    setFormRole('Supervisor');
-    setFormDepartment('Lounge Operations');
-    setFormPermissions(['bookings.view', 'bookings.approve', 'bookings.update']);
-    setFormStatus('Active');
-    setFormPassword('password123');
   };
 
   const togglePermission = (perm: string) => {
@@ -527,18 +517,7 @@ export function SystemUsers({
                 ? 'Edit the details of an existing system user.'
                 : 'Create a new system user with the following details.'}
             </DialogDescription>
-            {!editingUser && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleQuickFill}
-                className="gap-1 mt-2 w-fit bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-              >
-                <Shuffle className="w-3 h-3" />
-                Quick Fill Demo
-              </Button>
-            )}
-          </DialogHeader>
+            </DialogHeader>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">

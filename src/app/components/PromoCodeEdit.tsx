@@ -4,17 +4,59 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Save, Shuffle, Building2, Eye, Receipt } from 'lucide-react';
+import { ArrowLeft, Save, Building2, Eye, Receipt } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { INITIAL_RECORDS, PurchaseRecord } from './PurchaseCreate';
+import { INITIAL_RECORDS } from './PurchaseCreate';
 import { toast } from 'sonner@2.0.3';
 import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+// 2026-07-02 — wrapper-supplied contract shape. Mirrors the PurchaseRecord
+// fields the dropdown renders (id, primaryName, purchaseRef, packagePrice,
+// sessionsAdded, purchaseCategory). When the production wrapper passes a
+// populated array, we use it; otherwise we fall back to INITIAL_RECORDS so
+// figma Make export still works with no wrapper.
+//
+// `value` is a wrapper-supplied, globally-unique string used as the Radix
+// SelectItem's `value` prop. Radix internally clones each item and uses the
+// value as the React key in that clone layer, so the value MUST be unique
+// across the entire array. Real `purchases.id` and `travel_agency_contracts.id`
+// share the same AUTO_INCREMENT and can collide — `value` namespaces them
+// by purchaseCategory so Radix's internal keying stays unique.
+export interface ContractOption {
+  id: number;
+  value: string;
+  purchaseRef: string;
+  purchaseCategory: 'Corporate' | 'Agency';
+  primaryName: string;
+  packagePrice: number;
+  sessionsAdded?: number;
+  // 2026-07-02 — wrapper-supplied resolved `companies.id` for this
+  // contract (Corporate purchases resolve via `purchase.account.company_id`;
+  // Agency contracts leave this undefined because travel agencies aren't
+  // companies in the current schema). Sent through `onNavigateToCodesPage`
+  // so the wrapper can pass it as the `company_id` field on the batch
+  // API without sending the wrong id.
+  companyId?: number;
+}
+
 // ─── Get available contracts ──────────────────────────────────────────────────
-function getAvailableContracts(): PurchaseRecord[] {
-  return INITIAL_RECORDS.filter(r =>
-    r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Agency'
-  );
+function getAvailableContracts(prop?: ContractOption[]): ContractOption[] {
+  if (prop && prop.length > 0) {
+    return prop.filter(c => c.purchaseCategory === 'Corporate' || c.purchaseCategory === 'Agency');
+  }
+  // figma Make fallback — mock records when no wrapper is present
+  return INITIAL_RECORDS
+    .filter(r => r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Agency')
+    .map(r => ({
+      id: r.id,
+      value: `${r.purchaseCategory}-${r.id}`,
+      purchaseRef: r.purchaseRef,
+      purchaseCategory: r.purchaseCategory as 'Corporate' | 'Agency',
+      primaryName: r.primaryName,
+      packagePrice: r.packagePrice,
+      sessionsAdded: r.sessionsAdded,
+    }));
 }
 
 // ─── Generate short code from company name ────────────────────────────────────
@@ -66,6 +108,10 @@ export interface PromoCodeEditProps {
   initialData?: PromoCodeEditInitialData | null;
   onBack?: () => void;
   onNavigateToCodesPage?: (data: GeneratedCodesData) => void;
+  // 2026-07-02 — wrapper fetches real contracts (Corporate purchases +
+  // TravelAgency contracts) and passes them down. View falls back to
+  // INITIAL_RECORDS when prop is missing (figma Make export case).
+  availableContracts?: ContractOption[];
 }
 
 // ─── Mock batch data for edit mode ───────────────────────────────────────────
@@ -89,9 +135,9 @@ const MOCK_BATCH_EDIT = {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCodesPage }: PromoCodeEditProps) {
+export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCodesPage, availableContracts: availableContractsProp }: PromoCodeEditProps) {
   const isEditMode = promoCodeId !== null;
-  const availableContracts = getAvailableContracts();
+  const availableContracts = getAvailableContracts(availableContractsProp);
 
   // ── Contract & prefix state ────────────────────────────────────────────────
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
@@ -137,14 +183,21 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     }
   }, [initialData]);
 
-  // ── When contract changes, auto-fill prefix ───────────────────────────────
+  // ── When contract changes, auto-fill prefix + code count + promotion name ───
+  // 2026-07-02 — previously only auto-filled `prefix` and `codeCount`
+  // (when sessionsAdded was available). Now also fills `titleEn` with a
+  // sensible default derived from the contract's primaryName so the
+  // user doesn't have to retype it. Skips auto-fill on titleEn if the
+  // user already typed something — we only seed when empty.
   const handleContractChange = (val: string) => {
-    const id = Number(val);
-    setSelectedContractId(id);
-    const contract = availableContracts.find(c => c.id === id);
+    const contract = availableContracts.find(c => c.value === val);
     if (contract) {
+      setSelectedContractId(contract.id);
       setPrefix(generateShortCode(contract.primaryName));
       if (contract.sessionsAdded) setCodeCount(contract.sessionsAdded);
+      if (!titleEn.trim()) {
+        setTitleEn(`${contract.primaryName} Promo Codes`);
+      }
     }
   };
 
@@ -192,6 +245,10 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         descriptionSimpChi,
         descriptionTradChi,
         selectedContractId,
+        // 2026-07-02 — pass through the wrapper-resolved company_id so
+        // the container can send it as `company_id` in the batch payload
+        // (rather than the misleading `selectedContractId`).
+        companyId: contract?.companyId ?? null,
       });
     }, 800);
   };
@@ -206,26 +263,6 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       purchaseCategory: selectedContract?.purchaseCategory as 'Corporate' | 'Agency' | undefined,
       mode: 'view',
     });
-  };
-
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setPrefix('HOLIDAY');
-    setCodeCount(100);
-    setCodeType('Free bookings');
-    setAmount(1);
-    setUseLimit(1);
-    setReusable(false);
-    setAvailability(true);
-    setStartDate('2026-06-01');
-    setEndDate('2026-12-31');
-    setTitleEn('Holiday Promo 2026');
-    setTitleSimpChi('2026 年假日促销');
-    setTitleTradChi('2026 年假日促銷');
-    setDescriptionEn('Special holiday offer for lounge bookings');
-    setDescriptionSimpChi('休息室预订特别假日优惠');
-    setDescriptionTradChi('休息室預訂特別假日優惠');
-    toast.success('Demo data filled', { duration: 2000 });
   };
 
   const selectedContract = availableContracts.find(c => c.id === selectedContractId);
@@ -250,17 +287,6 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         </div>
 
         <div className="flex items-center gap-2">
-          {!isEditMode && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleQuickFill}
-              className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 text-[10px] px-2 py-0.5 h-[25px]"
-            >
-              <Shuffle className="w-3 h-3" />
-              Quick Fill Demo
-            </Button>
-          )}
           {isEditMode && (
             <Button
               type="button"
@@ -309,7 +335,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
               ) : (
                 <>
                   <Select
-                    value={selectedContractId !== null ? String(selectedContractId) : ''}
+                    value={availableContracts.find(c => c.id === selectedContractId)?.value ?? ''}
                     onValueChange={handleContractChange}
                   >
                     <SelectTrigger>
@@ -320,7 +346,12 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                         <div className="px-3 py-6 text-center text-sm text-gray-500">No available contracts found.</div>
                       ) : (
                         availableContracts.map(c => (
-                          <SelectItem key={c.id} value={String(c.id)}>
+                          // 2026-07-02 — key/value uses c.value (a globally-unique
+                          // string like "Corporate-1" or "Agency-1") so Radix's
+                          // internal clone layer doesn't trip on the duplicate
+                          // numeric ids that come from separate AUTO_INCREMENT
+                          // tables (`purchases.id` vs `travel_agency_contracts.id`).
+                          <SelectItem key={c.value} value={c.value}>
                             <div className="flex flex-col gap-1 py-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-gray-900">{c.primaryName}</span>

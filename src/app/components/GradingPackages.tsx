@@ -17,7 +17,7 @@ import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
 import {
   Edit, Star, Gem, Award, Trophy,
-  Plus, X, Check, DollarSign, CreditCard, Clock, Gift, Shuffle,
+  Plus, X, Check, DollarSign, CreditCard, Clock, Gift,
 } from 'lucide-react';
 import {
   Dialog,
@@ -147,26 +147,6 @@ export function GradingPackages({
     });
   };
 
-  // ── Quick Fill (demo convenience only) ────────────────────────────────────
-
-  const handleQuickFill = () => {
-    if (!editingPackage) return;
-    setEditingPackage({
-      ...editingPackage,
-      description: `Premium ${editingPackage.tier} membership package with exclusive airport lounge access, priority services, and complimentary refreshments.`,
-      price: editingPackage.tier === 'Gold' ? 32000
-           : editingPackage.tier === 'Platinum' ? 45000
-           : editingPackage.tier === 'Diamond' ? 84000
-           : 325000,
-      bookingCredits: editingPackage.tier === 'Gold' ? 8
-                    : editingPackage.tier === 'Platinum' ? 12
-                    : editingPackage.tier === 'Diamond' ? 24
-                    : -1,
-      validityMonths: 12,
-      isActive: true,
-    });
-  };
-
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -279,15 +259,6 @@ export function GradingPackages({
                 </span>
               )}
             </DialogTitle>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleQuickFill}
-              className="gap-1 mt-2 w-fit bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-            >
-              <Shuffle className="w-3 h-3" />
-              Quick Fill Demo
-            </Button>
           </DialogHeader>
 
           {editingPackage && (

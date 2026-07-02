@@ -7,7 +7,7 @@ import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import {
   ArrowLeft, Search, User, Building2, Plane, Star, Gem, Award, Trophy,
-  CheckCircle, TrendingUp, Package, CreditCard, Info, Shuffle,
+  CheckCircle, TrendingUp, Package, CreditCard, Info, FileText, X,
 } from 'lucide-react';
 
 // ─── Shared Types (exported for PurchaseManagement) ───────────────────────────
@@ -195,7 +195,14 @@ export interface PurchaseCreateProps {
   packages?: GradingPackage[];
   sessionBundles?: SessionBundle[];
   accounts?: AccountOption[];
-  onSubmit?: (record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>) => void;
+  onSubmit?: (
+    record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>,
+    // 2026-07-02 — payment proof file is collected in the view (UI
+    // lives here) but the upload-to-Azure call is owned by the
+    // parent wrapper (it owns the apiClient). The wrapper receives
+    // the raw `File` and uploads it before posting the purchase.
+    paymentProofFile?: File | null,
+  ) => void;
   onBack?: () => void;
   // 2026-06-30 (round 6.2.74) — hide the "VIP Accounts to Create"
   // input from the Corporate form. Default true keeps the figma Make
@@ -222,6 +229,11 @@ export function PurchaseCreate({
   const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>('Bank Transfer');
   const [transactionRef, setTransactionRef] = useState('');
   const [purchaseNotes, setPurchaseNotes]   = useState('');
+  // 2026-07-02 — payment proof (image/PDF) attached at Payment Details.
+  // The view collects the file; the parent wrapper uploads it to Azure
+  // Blob before POSTing the purchase.
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [paymentProofError, setPaymentProofError] = useState<string | null>(null);
   
   // For Corporate / Travel Agency custom contract
   const [promoCodeName, setPromoCodeName]       = useState('');
@@ -229,25 +241,6 @@ export function PurchaseCreate({
   const [vipAccountQuantity, setVipAccountQuantity] = useState(''); // New field for Corporate VIP account creation
   const [creditBalance, setCreditBalance]       = useState('');
   const [totalPrice, setTotalPrice]             = useState('');
-
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    // Select a Corporate account
-    const corpAccount = availableAccounts.find(a => a.purchaseCategory === 'Corporate');
-    if (corpAccount) {
-      setSelectedAccount(corpAccount);
-      setCatFilter('Corporate');
-      setPromoCodeName('SPRING2026');
-      setPromoCodeQuantity('200');
-      setVipAccountQuantity('15');
-      setTotalPrice('45000');
-      setPaymentMethod('Bank Transfer');
-      setTransactionRef('TXN-BT-DEMO-001');
-      setPurchaseNotes('Spring 2026 corporate lounge package with VIP accounts for senior management.');
-      setSelectedPackage(null);
-      setCreditBalance('');
-    }
-  };
 
   const isIndividual = selectedAccount?.purchaseCategory === 'Individual';
   const isTravelAgency = selectedAccount?.purchaseCategory === 'Agency';
@@ -422,7 +415,7 @@ export function PurchaseCreate({
       expiryDate: record.expiryDate,
       status: record.status,
       invoiceSentDate: record.invoiceSentDate,
-    });
+    }, paymentProofFile);
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -443,15 +436,6 @@ export function PurchaseCreate({
         <p className="text-sm text-gray-500">
           Select an account, choose a package, fill in payment details, then confirm.
         </p>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleQuickFill}
-          className="gap-1 mt-2 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-        >
-          <Shuffle className="w-3 h-3" />
-          Quick Fill Demo
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -738,6 +722,58 @@ export function PurchaseCreate({
                   value={purchaseNotes}
                   onChange={e => setPurchaseNotes(e.target.value)}
                 />
+              </div>
+
+              {/* ── 2026-07-02 — payment proof upload (image / PDF) ── */}
+              <div>
+                <Label htmlFor="paymentProof" className="mb-[10px] block">
+                  Payment Proof <span className="text-gray-400 font-normal">(image or PDF, optional)</span>
+                </Label>
+                {paymentProofFile ? (
+                  <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="w-9 h-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 truncate">{paymentProofFile.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(paymentProofFile.size / 1024).toFixed(1)} KB · {paymentProofFile.type || 'unknown'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setPaymentProofFile(null); setPaymentProofError(null); }}
+                      className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                      aria-label="Remove payment proof"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <Input
+                    id="paymentProof"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                    onChange={e => {
+                      const file = e.target.files?.[0] ?? null;
+                      setPaymentProofError(null);
+                      if (file && file.size > 10 * 1024 * 1024) {
+                        setPaymentProofError('File too large (max 10 MB).');
+                        setPaymentProofFile(null);
+                        e.target.value = '';
+                        return;
+                      }
+                      setPaymentProofFile(file);
+                    }}
+                    className="cursor-pointer file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:bg-[#0f2942] file:text-white file:text-sm file:cursor-pointer"
+                  />
+                )}
+                {paymentProofError && (
+                  <p className="text-xs text-red-600 mt-1">{paymentProofError}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Uploaded to Azure Blob Storage after you confirm the purchase.
+                </p>
               </div>
 
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">

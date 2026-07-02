@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Save, Shuffle } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
 const MOCK_SETTINGS = {
@@ -37,26 +37,6 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
     toast.success('Booking settings updated successfully');
   };
 
-  // ── Quick Fill for Demo ───────────────────────────────────────────────────
-  const handleQuickFill = () => {
-    setSettings({
-      defaultCutoffHours: 4,
-      maxGuestsPerBooking: 8,
-      allowAdHocBookings: true,
-      requireFlightInfo: true,
-      enableSMSNotifications: true,
-      enableEmailNotifications: true,
-      autoApproveVIP: true,
-      autoApproveCorporate: false,
-      limousineLeadTime: 48,
-      minBookingAdvance: 3,
-      maxBookingAdvance: 120,
-      allowNonFlyingGuests: true,
-      requirePaymentForUpfront: true,
-      paymentLinkExpiry: 72,
-    });
-  };
-
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -67,17 +47,6 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
         <div>
           <h1>Booking Settings</h1>
           <p className="text-gray-600">Configure system-wide booking parameters</p>
-        </div>
-        <div className="ml-auto">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleQuickFill}
-            className="gap-1 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 border-yellow-400/50 text-yellow-700 hover:from-yellow-400/30 hover:to-amber-400/30 hover:border-yellow-500/70 hover:text-yellow-800 transition-all text-[10px] px-2 py-0.5 h-[25px]"
-          >
-            <Shuffle className="w-3 h-3" />
-            Quick Fill Demo
-          </Button>
         </div>
       </div>
 
