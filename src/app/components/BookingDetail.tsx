@@ -846,37 +846,31 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   // ── Promotion / Redemption Code ──────────────────────────────────────────
-  const MOCK_PROMOS: Record<string, { label: string; benefit: string; type: 'percent' | 'fixed' }> = {
-    'SUMMER2024': { label: 'Summer 2024 Promotion',     benefit: '10%',      type: 'percent' },
-    'VIP20':      { label: 'VIP Member Discount',        benefit: '20%',      type: 'percent' },
-    'WELCOME':    { label: 'Welcome Offer',              benefit: 'HK$100',   type: 'fixed'   },
-    'TRAVEL10':   { label: 'Agency Partner Rate', benefit: '10%',      type: 'percent' },
-    'REDEEM50':   { label: 'Redemption Voucher',         benefit: 'HK$50',    type: 'fixed'   },
-    'DIAMOND15':  { label: 'Diamond Member Exclusive',   benefit: '15%',      type: 'percent' },
-  };
-  const [promoInput,   setPromoInput]   = useState('');
-  const [promoApplied, setPromoApplied] = useState<{ code: string; label: string; benefit: string; type: 'percent' | 'fixed' } | null>(null);
-  const [promoError,   setPromoError]   = useState('');
-
-  const handleApplyPromo = () => {
-    const code = promoInput.trim().toUpperCase();
-    if (!code) { setPromoError('Please enter a promo or redemption code.'); return; }
-    const found = MOCK_PROMOS[code];
-    if (found) {
-      setPromoApplied({ code, ...found });
-      setPromoError('');
-      setPromoInput('');
-      toast.success(`Code "${code}" applied — ${found.benefit} off!`);
-    } else {
-      setPromoError('Invalid or expired code. Please check and try again.');
-    }
-  };
-
-  const handleRemovePromo = () => {
-    setPromoApplied(null);
-    setPromoError('');
-    toast.info('Promotion code removed.');
-  };
+  // 2026-07-02 (round 6.2.82) — REMOVED the legacy "13. Promotion /
+  // Redemption Code" Card. The card validated against a 6-entry
+  // `MOCK_PROMOS` hardcoded dictionary (SUMMER2024 / VIP20 / WELCOME /
+  // TRAVEL10 / REDEEM50 / DIAMOND15), so real promo codes added via
+  // `POST /api/promo-codes` (PromoCodeList / PromoCodeEdit) were
+  // always rejected with "Invalid or expired code". The card's
+  // `promoApplied` state was also local-only and never seeded from
+  // the booking's eager-loaded `promo_code` FK, so an existing
+  // applied code did not show up. The proper edit surface is the
+  // Promo Code `<Select>` in `<EditSectionAccountInfo>` (slot
+  // `<EditSectionAccountInfo formData={...} promoCodeOptions={...} />`
+  // further down), which is wired to:
+  //   • `promoCodeService.getPromoCodes({status:'active', per_page:100})`
+  //     loaded in the wrapper's parallel-fetch (BookingDetail.tsx:482)
+  //   • `formData.promoCodeId` seeded from `bookingToFormData` reading
+  //     `currentBooking.promo_code_id` (the eager FK) + the
+  //     `promoCode` string from `currentBooking.promo_code?.code`
+  //     (BookingDetail.tsx:757-763)
+  //   • `handleMasterSave` writes `promo_code_id` top-level in the
+  //     PUT body (BookingDetail.tsx:1358)
+  // That path was shipped in round 6.2.80 and is the source of truth.
+  // The standalone-preview / figma Make export path stays intact
+  // per INV-X1 — the EditSectionAccountInfo's `promoCodeOptions`
+  // empty-fallback renders a disabled `placeholder="e.g. SUMMER2024"`
+  // text input so the view remains self-previewable.
 
   // ── Suite & Time Assignment (Confirmed + Paid) ────────────────────────────
   // 2026-06-28 (round 6.2.76) — "Suite / Lounge Table Assignment"
@@ -4042,70 +4036,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </div>
       </Card>
 
-      {/* 13. Promotion / Redemption Code */}
-      <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Promotion / Redemption Code</h3>
-
-        {/* Applied badge */}
-        {promoApplied && (
-          <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-green-50 border border-green-200">
-            <BadgePercent className="w-5 h-5 text-green-600 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-green-800">
-                <span className="font-mono font-semibold tracking-wider">{promoApplied.code}</span>
-                <span className="mx-2 text-green-400">·</span>
-                <span>{promoApplied.label}</span>
-              </p>
-              <p className="text-xs text-green-600 mt-0.5">
-                Discount applied: <span className="font-semibold">{promoApplied.benefit} off</span>
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleRemovePromo}
-              className="p-1.5 rounded-full hover:bg-green-100 text-green-500 hover:text-green-700 transition-colors"
-              title="Remove code"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Input row */}
-        {!promoApplied && (
-          <div className="space-y-2">
-            <label className="text-sm text-gray-600 block mb-[10px]">
-              <span className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" />Enter Promo / Redemption Code</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={promoInput}
-                onChange={e => { setPromoInput(e.target.value); setPromoError(''); }}
-                onKeyDown={e => e.key === 'Enter' && handleApplyPromo()}
-                placeholder="e.g. SUMMER2024"
-                className={`w-72 px-3 py-2 border rounded text-sm font-mono tracking-wider uppercase ${promoError ? 'border-red-400 focus:outline-none focus:ring-1 focus:ring-red-400' : ''}`}
-              />
-              <button
-                type="button"
-                onClick={handleApplyPromo}
-                className="px-4 py-2 rounded bg-[#0f2942] hover:bg-[#1a3a5c] text-white text-sm transition-colors"
-              >
-                Apply
-              </button>
-            </div>
-            {promoError && (
-              <p className="flex items-center gap-1.5 text-xs text-red-500 mt-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                {promoError}
-              </p>
-            )}
-            <p className="text-xs text-gray-400 mt-1">
-              Valid codes: SUMMER2024 · VIP20 · WELCOME · TRAVEL10 · REDEEM50 · DIAMOND15
-            </p>
-          </div>
-        )}
-      </Card>
+      {/* 13. Promotion / Redemption Code — REMOVED 2026-07-02 (round 6.2.82).
+          The card validated against a 6-entry hardcoded `MOCK_PROMOS`
+          dictionary (SUMMER2024 / VIP20 / WELCOME / TRAVEL10 / REDEEM50 /
+          DIAMOND15), so real promo codes created via
+          `POST /api/promo-codes` were always rejected with "Invalid or
+          expired code". The proper edit surface is the Promo Code
+          `<Select>` in `<EditSectionAccountInfo>` further down (wired
+          to `promoCodeService.getPromoCodes` + `formData.promoCodeId`
+          in round 6.2.80). See L848-880 for the full rationale. */}
 
       {/* 15. Pricing Information */}
       <Card className="p-6">
