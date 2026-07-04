@@ -1,4 +1,4 @@
-import { ArrowLeft, User, CreditCard, Utensils, Clock, MapPin, Phone, Mail, DollarSign, AlertCircle, Plus, Minus, Search } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, Clock, MapPin, Phone, Mail, DollarSign, AlertCircle, Plus, Minus, Search, X, Loader2 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -14,6 +14,7 @@ import {
 
 interface OrderItem {
   id: string;
+  posOrderItemId?: number;
   name: string;
   category: string;
   quantity: number;
@@ -22,6 +23,7 @@ interface OrderItem {
   status: 'pending' | 'preparing' | 'served' | 'cancelled';
   orderTime: string;
   servedTime?: string;
+  cancelledAt?: string | null;
 }
 
 interface FoodAllergy {
@@ -323,6 +325,8 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   }>;
   onFireHeldPreorders?: () => void;
   isFiringHeldPreorders?: boolean;
+  onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
+  cancellingOrderItemId?: number | null;
 }
 
 export function POSBookingDetail({
@@ -334,6 +338,8 @@ export function POSBookingDetail({
   heldPreorderItems = [],
   onFireHeldPreorders,
   isFiringHeldPreorders = false,
+  onCancelOrderItem,
+  cancellingOrderItemId = null,
 }: POSBookingDetailFullProps) {
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
@@ -355,7 +361,7 @@ export function POSBookingDetail({
       case 'served':
         return 'bg-green-100 text-green-800 border border-green-200';
       case 'cancelled':
-        return 'bg-red-100 text-red-800 border border-red-200';
+        return 'bg-gray-100 text-gray-600 border border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -779,47 +785,70 @@ export function POSBookingDetail({
                     <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Qty</th>
                     <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Time</th>
+                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {booking.orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
+                  {booking.orders.map((order) => {
+                    const isCancelled = Boolean(order.cancelledAt);
+                    const rowTextClass = isCancelled ? 'line-through text-gray-400' : '';
+
+                    return (
+                    <tr key={order.id} className={isCancelled ? 'bg-gray-50/60' : 'hover:bg-gray-50'}>
+                      <td className={`px-4 py-3 ${rowTextClass}`}>
                         <div>
                           <p className="font-medium">{order.name}</p>
                           <p className="text-xs text-gray-500">{order.id}</p>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={`px-4 py-3 ${rowTextClass}`}>
                         <Badge variant="outline" className="text-xs">
                           {order.category}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-center">{order.quantity}</td>
-                      <td className="px-4 py-3">
+                      <td className={`px-4 py-3 text-center ${rowTextClass}`}>{order.quantity}</td>
+                      <td className={`px-4 py-3 ${rowTextClass}`}>
                         <Badge className={getOrderStatusColor(order.status)}>
                           {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className={`px-4 py-3 ${rowTextClass}`}>
                         <div className="text-sm">
                           <div className="flex items-center gap-1">
                             <Clock className="w-3 h-3 text-gray-400" />
                             <span>{order.orderTime}</span>
                           </div>
-                          {order.servedTime && (
+                          {order.servedTime && !isCancelled ? (
                             <div className="text-xs text-green-600 mt-1">
                               Served: {order.servedTime}
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-right">
+                        {!isCancelled && order.posOrderItemId && onCancelOrderItem ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 text-xs font-medium text-red-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={cancellingOrderItemId === order.posOrderItemId}
+                            onClick={() => void onCancelOrderItem(order.posOrderItemId!)}
+                          >
+                            {cancellingOrderItemId === order.posOrderItemId ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <X className="h-3.5 w-3.5" />
+                            )}
+                            Cancel
+                          </button>
+                        ) : null}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
                 <tfoot className="bg-gray-50 border-t-2">
                   <tr>
-                    <td colSpan={5} className="px-4 py-3"></td>
+                    <td colSpan={6} className="px-4 py-3"></td>
                   </tr>
                 </tfoot>
               </table>
