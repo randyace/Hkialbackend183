@@ -313,6 +313,7 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_DETAIL */
   booking?: POSBooking | null;
   onCheckout?: (paymentData: { method: string }) => void;
+  onCheckoutClick?: () => void;
   onAddItem?: (item: CartItem) => void;
   onRemoveItem?: (itemId: string) => void;
   isLoading?: boolean;
@@ -322,6 +323,7 @@ export function POSBookingDetail({
   bookingNo,
   onBack,
   booking: bookingProp,
+  onCheckoutClick,
   isLoading = false,
 }: POSBookingDetailFullProps) {
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
@@ -812,17 +814,9 @@ export function POSBookingDetail({
           <Card className="p-6">
             <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Actions</h3>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline">
-                <Utensils className="w-4 h-4 mr-2" />
-                Update Order Status
-              </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={onCheckoutClick}>
                 <CreditCard className="w-4 h-4 mr-2" />
-                Process Payment
-              </Button>
-              <Button variant="outline">
-                <Mail className="w-4 h-4 mr-2" />
-                Send Receipt
+                Checkout
               </Button>
               <Button variant="outline">
                 Print Bill
