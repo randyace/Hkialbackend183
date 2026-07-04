@@ -27,6 +27,7 @@ export interface PosFloorPlanSuite {
   capacity: number;
   floor: string | null;
   booking: PosFloorPlanBooking | null;
+  has_upcoming_conflict?: boolean;
 }
 
 export interface PosFloorPlanLayoutItem {
@@ -54,6 +55,7 @@ export interface PosFloorPlanCanvasProps {
   canvasHeight?: number | null;
   isLoading?: boolean;
   isMultiAssignMode?: boolean;
+  isInteractiveModeActive?: boolean;
   selectedSuiteIdsForAssignment?: number[];
   onSuiteClick?: (suite: PosFloorPlanSuiteClick) => void;
   onOpenQrScanner?: () => void;
@@ -95,6 +97,21 @@ function getSuiteBgColor(status: SuiteStatus): string {
   }
 }
 
+function getInteractiveModeClasses(
+  status: SuiteStatus,
+  isInteractiveModeActive: boolean,
+): string {
+  if (!isInteractiveModeActive) {
+    return '';
+  }
+
+  if (status === 'available') {
+    return 'ring-4 ring-green-400 ring-offset-2 animate-pulse cursor-pointer transform hover:scale-105 transition-all';
+  }
+
+  return 'opacity-40 grayscale pointer-events-none';
+}
+
 function staticItemStyles(label: string): string {
   switch (label) {
     case 'Reception':
@@ -125,6 +142,7 @@ export function PosFloorPlanCanvas({
   canvasHeight,
   isLoading = false,
   isMultiAssignMode = false,
+  isInteractiveModeActive = false,
   selectedSuiteIdsForAssignment = [],
   onSuiteClick,
   onOpenQrScanner,
@@ -314,10 +332,16 @@ export function PosFloorPlanCanvas({
                   const suiteName = suite?.suite_name ?? item.label;
                   const booking = suite?.booking ?? null;
                   const hasBooking = Boolean(booking);
+                  const hasUpcomingConflict = Boolean(suite?.has_upcoming_conflict);
                   const isSelectedForAssignment =
                     isMultiAssignMode &&
                     suite != null &&
                     selectedSuiteIdsForAssignment.includes(suite.id);
+
+                  const interactiveModeClasses = getInteractiveModeClasses(
+                    status,
+                    isInteractiveModeActive,
+                  );
 
                   return (
                     <button
@@ -331,7 +355,7 @@ export function PosFloorPlanCanvas({
                           status,
                         });
                       }}
-                      className={`absolute flex cursor-pointer flex-col items-center justify-center rounded-md border-2 p-1.5 text-gray-700 transition-all hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${getSuiteBgColor(status)} ${isSelectedForAssignment ? 'ring-4 ring-blue-500 border-blue-500' : ''}`}
+                      className={`absolute flex flex-col items-center justify-center rounded-md border-2 p-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${getSuiteBgColor(status)} ${interactiveModeClasses || 'cursor-pointer transition-all hover:border-blue-400 hover:shadow-md'} ${!isInteractiveModeActive && isSelectedForAssignment ? 'ring-4 ring-blue-500 border-blue-500' : ''} ${!isInteractiveModeActive && hasUpcomingConflict ? 'ring-2 ring-red-500 border-red-400' : ''}`}
                       style={{
                         left: item.x,
                         top: item.y,
@@ -339,6 +363,14 @@ export function PosFloorPlanCanvas({
                         height: item.height,
                       }}
                     >
+                      {hasUpcomingConflict ? (
+                        <span
+                          className="absolute -right-1.5 -top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold leading-none text-white shadow"
+                          title="Upcoming booking conflict"
+                        >
+                          !
+                        </span>
+                      ) : null}
                       <div className="line-clamp-2 w-full px-0.5 text-center text-[11px] font-medium leading-tight">
                         {suiteName}
                       </div>

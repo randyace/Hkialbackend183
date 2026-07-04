@@ -49,6 +49,7 @@ export interface SuiteSidebarProps {
   onStartMultiAssign?: () => void;
   onExitMultiAssign?: () => void;
   onMultiAssignComplete?: () => void | Promise<void>;
+  onStartTransfer?: (suiteId: number) => void;
 }
 
 function formatCheckInTime(value: string | null | undefined): string {
@@ -134,6 +135,7 @@ export function SuiteSidebar({
   onStartMultiAssign,
   onExitMultiAssign,
   onMultiAssignComplete,
+  onStartTransfer,
 }: SuiteSidebarProps) {
   const navigate = useNavigate();
   const [view, setView] = useState<SidebarView>('LIST');
@@ -820,6 +822,15 @@ export function SuiteSidebar({
               onClick={() => goToOrder()}
             >
               View Full Details
+            </Button>
+            <Button
+              className="flex-1 bg-purple-600 text-white hover:bg-purple-700"
+              onClick={() => {
+                onStartTransfer?.(suiteId);
+                onClose();
+              }}
+            >
+              Transfer
             </Button>
             <Button
               className="flex-1 bg-green-600 text-white hover:bg-green-700"
