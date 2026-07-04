@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Calendar, Plus, BadgePercent, Building2, CheckCircle, Info, Tag,
   AlertCircle, Plane, Car, ShoppingBag, Accessibility, ShieldCheck,
@@ -414,6 +415,33 @@ export interface CreateBookingProps {
 // AccountCreation.tsx::filterContactNumber.
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
+// Splits a stored contact phone ("+852 9876-5432") into the
+// region code + number pair that the split input uses. Mirrors
+// the customer-side `splitContactPhone` in
+// `frontend/.../NewBooking.tsx:95-108` + `EditBooking.tsx:122`.
+// The `options` arg drives the `known` check against the active
+// region list — caller passes `regionCodes` prop when loaded,
+// else `FALLBACK_REGION_CODES` so the helper still resolves
+// common HK/CN/US/UK codes during the prefetch window.
+// When the leading +XX code is not in the known list, we fall
+// back to '+852' to match customer-side behaviour (legacy data
+// sometimes stored numbers without a recognised region).
+function splitContactPhone(
+  raw: string | undefined | null,
+  options: { code: string; name: string }[],
+): { regionCode: string; contactNumber: string } {
+  if (!raw) return { regionCode: '+852', contactNumber: '' };
+  const trimmed = String(raw).trim();
+  const match = trimmed.match(/^(\+\d{1,4})\s*(.*)$/);
+  if (match) {
+    const code = match[1];
+    const num = match[2].replace(/[^0-9-]/g, '');
+    const known = options.some((o) => o.code === code);
+    return { regionCode: known ? code : '+852', contactNumber: num };
+  }
+  return { regionCode: '+852', contactNumber: trimmed.replace(/[^0-9-]/g, '') };
+}
+
 // Typeahead combobox for the phone region code. Reads from the
 // `regionCodes` prop (sourced from `GET /api/lookups/region-codes`
 // by the wrapper). Falls back to the full canonical list when the
@@ -642,6 +670,24 @@ const FALLBACK_REGION_CODES: { code: string; name: string }[] = [
   { code: '+996', name: 'Kyrgyzstan' },
   { code: '+998', name: 'Uzbekistan' },
 ];
+// 2026-07-04 (Sky) — switched to the customer-side
+// `ContactNoSplit`-style pattern (AuthPage.tsx:170-228 +
+// NewBooking.tsx:602-749 + EditBooking.tsx:161-269). The
+// pre-7.4 figma-ui shape had its own internal `query`
+// state + `hasFocus` toggle + a focus-aware `displayValue`
+// that swapped between the typed text and the formatted
+// "code - name" string. In practice the focus-aware
+// display was confusing — the typeahead felt "stuck"
+// because the formatted string would re-appear mid-typing
+// if focus was lost (e.g. user clicked a sibling input)
+// and the parent's `value` was the formatted string (the
+// only thing the parent could read). The customer-side
+// pattern is simpler: the parent owns `regionCode`, the
+// input is bound directly to it, the filter is a `useMemo`
+// keyed on `regionCode`, and the dropdown uses a chevron
+// toggle. The 4 working repo sites all use this exact
+// shape — this is the "still not working like others"
+// fix Sky asked for.
 function RegionCodeCombobox({
   id,
   value,
@@ -655,74 +701,88 @@ function RegionCodeCombobox({
   onChange: (code: string) => void;
   placeholder?: string;
 }) {
-  const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const [hasFocus, setHasFocus] = useState(false);
+  const [highlight, setHighlight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const matched = options.find(o => o.code === value);
-  // While focused, treat the input as a typeahead search box (query
-  // is the source of truth, the field is empty by default). When
-  // blurred, show the formatted "code - name" so the selected value
-  // stays visible. Showing the formatted text while focused previously
-  // caused typed characters to be appended to "852 - Hong Kong",
-  // making the typeahead appear stuck.
-  const displayValue = hasFocus
-    ? query
-    : (matched ? `${matched.code} - ${matched.name}` : value);
+  // Filter the option list against the current input value
+  // (the parent's `value` is the single source of truth — no
+  // internal `query` state to keep in sync). Mirrors
+  // `AuthPage.tsx:176-182` and `NewBooking.tsx:624-630`.
+  const filtered = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) => o.code.toLowerCase().includes(q) || o.name.toLowerCase().includes(q),
+    );
+  }, [value, options]);
 
-  const filtered = query.length === 0
-    ? options
-    : options.filter(o =>
-        o.code.toLowerCase().includes(query.toLowerCase()) ||
-        o.name.toLowerCase().includes(query.toLowerCase())
-      );
-
+  // Close dropdown on outside click
   useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
-        setQuery('');
-        setHasFocus(false);
       }
     };
-    document.addEventListener('mousedown', onDocDown);
-    return () => document.removeEventListener('mousedown', onDocDown);
-  }, []);
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
 
-  const handleSelect = (code: string) => {
+  const pickRegion = (code: string) => {
     onChange(code);
-    setQuery('');
-    setHasFocus(false);
     setOpen(false);
+    setHighlight(0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      setOpen(true);
+      return;
+    }
+    if (!open) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, filtered.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const pick = filtered[highlight];
+      if (pick) pickRegion(pick.code);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative w-full" ref={containerRef}>
       <Input
         id={id}
         role="combobox"
         aria-expanded={open}
         aria-controls={`${id || 'rc'}-listbox`}
+        aria-haspopup="listbox"
         aria-autocomplete="list"
         autoComplete="off"
-        value={displayValue}
+        value={value}
         placeholder={placeholder}
-        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
-        onFocus={() => { setHasFocus(true); setOpen(true); }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && filtered.length > 0) {
-            e.preventDefault();
-            handleSelect(filtered[0].code);
-          } else if (e.key === 'Escape') {
-            setOpen(false);
-            setQuery('');
-            setHasFocus(false);
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); setHighlight(0); }}
+        onFocus={() => { setOpen(true); setHighlight(0); }}
+        onKeyDown={handleKeyDown}
         required
+        className="pr-8"
       />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setOpen((o) => !o)}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+        aria-label="Toggle region code list"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
       {open && (
         <ul
           id={`${id || 'rc'}-listbox`}
@@ -734,21 +794,25 @@ function RegionCodeCombobox({
               {options.length === 0 ? 'Loading region codes…' : 'No matching region codes'}
             </li>
           ) : (
-            filtered.map(rc => (
-              <li
-                key={rc.code}
-                role="option"
-                aria-selected={value === rc.code}
-                className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
-                  value === rc.code ? 'bg-blue-50' : ''
-                }`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => handleSelect(rc.code)}
-              >
-                <span className="font-medium">{rc.code}</span>
-                <span className="text-gray-500 text-sm ml-2">{rc.name}</span>
-              </li>
-            ))
+            filtered.map((rc, idx) => {
+              const selected = value === rc.code;
+              const isHighlighted = idx === highlight;
+              return (
+                <li
+                  key={rc.code}
+                  role="option"
+                  aria-selected={selected}
+                  onMouseEnter={() => setHighlight(idx)}
+                  onMouseDown={(e) => { e.preventDefault(); pickRegion(rc.code); }}
+                  className={`p-3 cursor-pointer border-b last:border-b-0 flex justify-between items-center text-sm ${
+                    isHighlighted ? 'bg-blue-50' : ''
+                  } ${selected ? 'font-semibold' : ''}`}
+                >
+                  <span>{rc.name}</span>
+                  <span className="text-gray-500">{rc.code}</span>
+                </li>
+              );
+            })
           )}
         </ul>
       )}
@@ -980,17 +1044,38 @@ export function CreateBooking({
   // from the existing membership-tier `useEffect` (above) so
   // the React hooks ordering keeps `setContactName` etc.
   // declared before they're referenced (lint no-use-before-define).
+  //
+  // 2026-07-04 (Sky, round 6.2.103) — phone split. Before this
+  // round the autofill pushed the WHOLE `selectedAccount.phone`
+  // (e.g. "+852 9876-5432") into the number input, leaving the
+  // region-code field empty. The wrapper still emitted a valid
+  // `guest_phone` (its own setContactNo + the fallback path at
+  // CreateBooking.tsx:1115-1117), but the UI was broken: region
+  // code field showed nothing, the number field held the whole
+  // string with the leading "+852 " in it. Fix: split via
+  // `splitContactPhone`, mirror the region into `regionCode`
+  // and the digits/dash tail into `contactNo`. The combobox's
+  // `value={value}` (regionCode) now matches an option, so the
+  // highlighted/selected row lights up.
   useEffect(() => {
     if (selectedAccount) {
       if (selectedAccount.name) setContactName(selectedAccount.name);
       if (selectedAccount.email) setContactEmail(selectedAccount.email);
-      if (selectedAccount.phone) setContactNo(selectedAccount.phone);
+      if (selectedAccount.phone) {
+        const split = splitContactPhone(
+          selectedAccount.phone,
+          (regionCodes && regionCodes.length > 0) ? regionCodes : FALLBACK_REGION_CODES,
+        );
+        setRegionCode(split.regionCode);
+        setContactNo(split.contactNumber);
+      }
     } else {
       setContactName('');
       setContactEmail('');
+      setRegionCode('');
       setContactNo('');
     }
-  }, [selectedAccount]);
+  }, [selectedAccount, regionCodes]);
 
   // ── Add-on Services ─────────────────────────────────────────────────────────
   const [hasLimousine, setHasLimousine] = useState(false);
