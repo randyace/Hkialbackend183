@@ -317,6 +317,12 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   onAddItem?: (item: CartItem) => void;
   onRemoveItem?: (itemId: string) => void;
   isLoading?: boolean;
+  heldPreorderItems?: Array<{
+    name_en?: string | null;
+    quantity: number;
+  }>;
+  onFireHeldPreorders?: () => void;
+  isFiringHeldPreorders?: boolean;
 }
 
 export function POSBookingDetail({
@@ -325,6 +331,9 @@ export function POSBookingDetail({
   booking: bookingProp,
   onCheckoutClick,
   isLoading = false,
+  heldPreorderItems = [],
+  onFireHeldPreorders,
+  isFiringHeldPreorders = false,
 }: POSBookingDetailFullProps) {
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
@@ -721,6 +730,33 @@ export function POSBookingDetail({
 
         {/* Right Column - Order Details (2 columns wide) */}
         <div className="col-span-2 space-y-6">
+          {heldPreorderItems.length > 0 ? (
+            <Card className="border border-yellow-200 bg-yellow-50 p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-yellow-900">
+                Held Pre-orders (Guest not yet arrived / Ready to fire)
+              </h3>
+              <ul className="mt-4 space-y-2">
+                {heldPreorderItems.map((item, index) => (
+                  <li
+                    key={`${item.name_en ?? 'item'}-${index}`}
+                    className="flex items-center justify-between rounded-md border border-yellow-200 bg-white/70 px-3 py-2 text-sm"
+                  >
+                    <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
+                    <span className="text-gray-600">x{item.quantity}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                type="button"
+                className="mt-4 w-full bg-amber-600 text-white hover:bg-amber-700"
+                onClick={onFireHeldPreorders}
+                disabled={isFiringHeldPreorders || !onFireHeldPreorders}
+              >
+                {isFiringHeldPreorders ? 'Sending to kitchen...' : 'Send Held Pre-orders to Kitchen'}
+              </Button>
+            </Card>
+          ) : null}
+
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">

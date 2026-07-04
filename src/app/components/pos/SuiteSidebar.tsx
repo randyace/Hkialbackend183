@@ -101,7 +101,7 @@ function renderBookingResourceCounts(booking: Pick<PosUnassignedBooking, 'suite_
     items.push({
       key: 'lounge',
       icon: Armchair,
-      label: formatResourceCount(booking.lounge_count, 'lounge', 'lounges'),
+      label: formatResourceCount(booking.lounge_count, 'lounge guest', 'lounge guests'),
     });
   }
 

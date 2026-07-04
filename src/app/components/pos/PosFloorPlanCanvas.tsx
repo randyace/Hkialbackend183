@@ -58,6 +58,7 @@ export interface PosFloorPlanCanvasProps {
   isInteractiveModeActive?: boolean;
   selectedSuiteIdsForAssignment?: number[];
   onSuiteClick?: (suite: PosFloorPlanSuiteClick) => void;
+  onToggleSuiteSelection?: (suiteId: number) => void;
   onOpenQrScanner?: () => void;
 }
 
@@ -97,19 +98,49 @@ function getSuiteBgColor(status: SuiteStatus): string {
   }
 }
 
-function getInteractiveModeClasses(
-  status: SuiteStatus,
-  isInteractiveModeActive: boolean,
+function getAssignmentModeClasses(
+  rawStatus: SuiteStatus,
+  isAssignmentModeActive: boolean,
+  isSelectedForAssignment: boolean,
 ): string {
-  if (!isInteractiveModeActive) {
+  if (!isAssignmentModeActive) {
     return '';
   }
 
-  if (status === 'available') {
-    return 'ring-4 ring-green-400 ring-offset-2 animate-pulse cursor-pointer transform hover:scale-105 transition-all';
+  if (rawStatus !== 'available') {
+    return 'opacity-40 grayscale pointer-events-none';
   }
 
-  return 'opacity-40 grayscale pointer-events-none';
+  if (isSelectedForAssignment) {
+    return 'border-green-600 bg-green-500 text-white shadow-lg ring-4 ring-green-300 scale-105 transition-all cursor-pointer';
+  }
+
+  return 'ring-4 ring-green-400 ring-offset-2 animate-pulse cursor-pointer hover:scale-105 transition-all';
+}
+
+function getSuiteCardClasses(
+  displayStatus: SuiteStatus,
+  rawStatus: SuiteStatus,
+  isAssignmentModeActive: boolean,
+  isSelectedForAssignment: boolean,
+  hasUpcomingConflict: boolean,
+): string {
+  const base =
+    'absolute flex flex-col items-center justify-center rounded-md border-2 p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1';
+
+  if (isAssignmentModeActive) {
+    const assignmentClasses = getAssignmentModeClasses(
+      rawStatus,
+      isAssignmentModeActive,
+      isSelectedForAssignment,
+    );
+
+    return `${base} ${isSelectedForAssignment ? assignmentClasses : `${getSuiteBgColor(displayStatus)} ${assignmentClasses}`}`;
+  }
+
+  const conflictClasses = hasUpcomingConflict ? 'ring-2 ring-red-500 border-red-400' : '';
+
+  return `${base} text-gray-700 cursor-pointer transition-all hover:border-blue-400 hover:shadow-md ${getSuiteBgColor(displayStatus)} ${conflictClasses}`;
 }
 
 function staticItemStyles(label: string): string {
@@ -145,6 +176,7 @@ export function PosFloorPlanCanvas({
   isInteractiveModeActive = false,
   selectedSuiteIdsForAssignment = [],
   onSuiteClick,
+  onToggleSuiteSelection,
   onOpenQrScanner,
 }: PosFloorPlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -328,19 +360,24 @@ export function PosFloorPlanCanvas({
                   }
 
                   const suite = item.suite;
-                  const status = getSuiteDisplayStatus(suite ?? undefined);
+                  const displayStatus = getSuiteDisplayStatus(suite ?? undefined);
+                  const rawStatus = normalizeStatus(suite?.status ?? 'available');
                   const suiteName = suite?.suite_name ?? item.label;
                   const booking = suite?.booking ?? null;
                   const hasBooking = Boolean(booking);
                   const hasUpcomingConflict = Boolean(suite?.has_upcoming_conflict);
+                  const isAssignmentModeActive = isInteractiveModeActive || isMultiAssignMode;
                   const isSelectedForAssignment =
                     isMultiAssignMode &&
                     suite != null &&
                     selectedSuiteIdsForAssignment.includes(suite.id);
 
-                  const interactiveModeClasses = getInteractiveModeClasses(
-                    status,
-                    isInteractiveModeActive,
+                  const cardClasses = getSuiteCardClasses(
+                    displayStatus,
+                    rawStatus,
+                    isAssignmentModeActive,
+                    isSelectedForAssignment,
+                    hasUpcomingConflict,
                   );
 
                   return (
@@ -349,13 +386,27 @@ export function PosFloorPlanCanvas({
                       type="button"
                       onClick={() => {
                         if (!suite) return;
+
+                        if (isMultiAssignMode) {
+                          if (rawStatus !== 'available') {
+                            return;
+                          }
+
+                          onToggleSuiteSelection?.(suite.id);
+                          return;
+                        }
+
+                        if (isInteractiveModeActive && rawStatus !== 'available') {
+                          return;
+                        }
+
                         handleSuiteClick({
                           id: suite.id,
                           suite_name: suiteName,
-                          status,
+                          status: displayStatus,
                         });
                       }}
-                      className={`absolute flex flex-col items-center justify-center rounded-md border-2 p-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${getSuiteBgColor(status)} ${interactiveModeClasses || 'cursor-pointer transition-all hover:border-blue-400 hover:shadow-md'} ${!isInteractiveModeActive && isSelectedForAssignment ? 'ring-4 ring-blue-500 border-blue-500' : ''} ${!isInteractiveModeActive && hasUpcomingConflict ? 'ring-2 ring-red-500 border-red-400' : ''}`}
+                      className={cardClasses}
                       style={{
                         left: item.x,
                         top: item.y,
@@ -363,6 +414,14 @@ export function PosFloorPlanCanvas({
                         height: item.height,
                       }}
                     >
+                      {isSelectedForAssignment ? (
+                        <span
+                          className="absolute right-1 top-1 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold leading-none text-green-600 shadow"
+                          aria-hidden
+                        >
+                          ✓
+                        </span>
+                      ) : null}
                       {hasUpcomingConflict ? (
                         <span
                           className="absolute -right-1.5 -top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold leading-none text-white shadow"
@@ -371,27 +430,39 @@ export function PosFloorPlanCanvas({
                           !
                         </span>
                       ) : null}
-                      <div className="line-clamp-2 w-full px-0.5 text-center text-[11px] font-medium leading-tight">
+                      <div
+                        className={`line-clamp-2 w-full px-0.5 text-center text-[11px] font-medium leading-tight ${isSelectedForAssignment ? 'text-white' : ''}`}
+                      >
                         {suiteName}
                       </div>
 
                       {hasBooking ? (
                         <div className="mt-1 flex w-full min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
-                          <div className="line-clamp-1 w-full px-0.5 text-center text-[10px] text-gray-600">
+                          <div
+                            className={`line-clamp-1 w-full px-0.5 text-center text-[10px] ${isSelectedForAssignment ? 'text-white/90' : 'text-gray-600'}`}
+                          >
                             {booking!.guest_name}
                           </div>
                           <div className="flex flex-nowrap items-center justify-center gap-1 px-0.5">
-                            <span className="shrink-0 rounded bg-blue-100 px-1 py-0.5 text-[10px] text-blue-700">
+                            <span
+                              className={`shrink-0 rounded px-1 py-0.5 text-[10px] ${isSelectedForAssignment ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'}`}
+                            >
                               {booking!.flight_type}
                             </span>
                             {booking!.flight_time ? (
-                              <span className="shrink-0 text-[10px] text-blue-600">{booking!.flight_time}</span>
+                              <span
+                                className={`shrink-0 text-[10px] ${isSelectedForAssignment ? 'text-white/90' : 'text-blue-600'}`}
+                              >
+                                {booking!.flight_time}
+                              </span>
                             ) : null}
                           </div>
                         </div>
-                      ) : status === 'available' || status === 'cleaning' ? (
-                        <div className="mt-1 text-[10px] uppercase tracking-wide opacity-70">
-                          {status === 'cleaning' ? 'Cleaning' : 'Available'}
+                      ) : displayStatus === 'available' || displayStatus === 'cleaning' ? (
+                        <div
+                          className={`mt-1 text-[10px] uppercase tracking-wide ${isSelectedForAssignment ? 'text-white/90' : 'opacity-70'}`}
+                        >
+                          {displayStatus === 'cleaning' ? 'Cleaning' : 'Available'}
                         </div>
                       ) : null}
                     </button>
