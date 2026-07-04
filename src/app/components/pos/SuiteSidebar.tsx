@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -26,6 +26,7 @@ import {
   type PosUnassignedBooking,
 } from '@/services/posBookingService';
 import { MergeCheckoutModal } from '@/components/common/MergeCheckoutModal';
+import { ReservedSuitePreorderPanel } from '@/components/pos/ReservedSuitePreorderPanel';
 import { getApiErrorMessage } from '@/lib/api/errors';
 import { toast } from 'sonner';
 
@@ -161,9 +162,27 @@ export function SuiteSidebar({
     queryKey: ['pos-unassigned-bookings'],
     queryFn: () => posBookingService.getUnassignedToday(),
     enabled: !isOccupied && !isReserved && !isCleaning,
+    staleTime: 0,
   });
 
-  const unassignedBookings = data?.data ?? [];
+  const unassignedBookings = useMemo(() => {
+    const bookings = data?.data ?? [];
+
+    return bookings.filter((booking) => {
+      const assignedSuiteIds = booking.assigned_suite_ids ?? [];
+      const requiredAssignments = Math.max(1, booking.suite_count + booking.lounge_count);
+
+      if (assignedSuiteIds.length >= requiredAssignments) {
+        return false;
+      }
+
+      if (assignedSuiteIds.includes(suiteId) && requiredAssignments <= 1) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [data?.data, suiteId]);
 
   useEffect(() => {
     setSelectedBooking(null);
@@ -653,6 +672,11 @@ export function SuiteSidebar({
                 <div className="mt-6 border-t border-gray-200 pt-5">
                   {renderGuestAllergiesSection(guests)}
                 </div>
+
+                <ReservedSuitePreorderPanel
+                  items={reservedDetails?.preordered_items ?? []}
+                  suiteName={reservedDetails?.suite?.name ?? suiteName}
+                />
               </>
             )}
           </>
