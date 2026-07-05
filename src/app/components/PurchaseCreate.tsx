@@ -38,6 +38,15 @@ export interface SessionBundle {
 export type PackageChoice = GradingPackage | SessionBundle;
 
 export interface AccountOption {
+  // 2026-07-06 round 6.2.111 — `id` is now carried alongside `accountNumber`
+  // so the parent wrapper (`hkial-react/src/components/PurchaseManagement.tsx`
+  // handlePurchaseComplete) can map the selected dropdown option back to the
+  // API `Account.id` for `purchaseService.createPurchase({ account_id })`.
+  // Was previously dropped in the `allAccounts.map(...)` step, so every
+  // New Contract submission fired the silent "Unable to map selected account
+  // to API record" toast since the 6.2.49 split that converted `accounts`
+  // from raw `Account[]` to `AccountOption[]`.
+  id?: number;
   accountNumber: string;
   primaryName: string;
   email: string;
