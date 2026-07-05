@@ -978,7 +978,10 @@ export function CreateBooking({
     flightType,
     flightTime,
     visitTime,
+    visitDate,
+    arrivalDate,
     leg2FlightTime,
+    leg2ArrivalDate,
   });
   const visitTimeRangeError = visitTimeRange.error;
 

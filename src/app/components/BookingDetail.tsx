@@ -1555,6 +1555,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 Ad-hoc Booking
               </Badge>
             )}
+            {/* ── 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) ──
+                 Always-on header chip when booking.promoCode?.code is set.
+                 Renders the code (font-mono) + the discount hint (-15% for
+                 percentage; "Free bookings" for fixed+discountValue 0). ── */}
+            {booking.promoCode?.code && (
+              <Badge
+                data-testid="booking-header-promo-chip"
+                className="bg-indigo-100 text-indigo-800 border border-indigo-200"
+              >
+                <Tag className="w-3 h-3 mr-1" />
+                <span className="font-mono">{booking.promoCode.code}</span>
+                {booking.promoCode.discountType === 'percentage'
+                  ? <span className="ml-1">−{booking.promoCode.discountValue}%</span>
+                  : Number(booking.promoCode.discountValue) === 0
+                    ? <span className="ml-1">Free bookings</span>
+                    : null}
+              </Badge>
+            )}
           </div>
           <p className="text-gray-600">View and manage booking information</p>
         </div>
@@ -4111,6 +4129,36 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </p>
           </div>
         </div>
+        {/* ── 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) ──
+             Pricing-card deduction row when booking.promoCode?.code is
+             set AND originalAmountValue ≠ finalAmountValue. Renders the
+             persisted delta as `− HK$X`. Hides for pre-6.2.83
+             un-deducted bookings (the chip is the "needs pricing:reprice"
+             signal). ── */}
+        {booking.promoCode?.code
+          && booking.originalAmountValue != null
+          && booking.finalAmountValue != null
+          && booking.originalAmountValue !== booking.finalAmountValue && (
+          <div
+            data-testid="pricing-promo-deduction-row"
+            className="mt-3 flex items-center justify-between px-4 py-2 bg-indigo-50 border border-indigo-100 rounded"
+          >
+            <div className="flex items-center gap-2">
+              <Tag className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="text-sm text-indigo-800 font-medium">
+                Promo Discount ({booking.promoCode.code})
+              </span>
+              <span className="text-xs text-indigo-600">
+                {booking.promoCode.discountType === 'percentage'
+                  ? `${booking.promoCode.discountValue}% off`
+                  : 'Free bookings'}
+              </span>
+            </div>
+            <span className="text-sm font-medium text-indigo-700">
+              − HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}
+            </span>
+          </div>
+        )}
       </Card>
 
       {/* 16. Status Management */}

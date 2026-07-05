@@ -222,7 +222,11 @@ export function PurchaseCreate({
   const availableBundles   = sessionBundlesProp?.length ? sessionBundlesProp : SESSION_BUNDLES;
   const availableAccounts  = accountsProp?.length  ? accountsProp  : MOCK_ACCOUNTS;
 
-  const [catFilter, setCatFilter]           = useState<'all' | PurchaseCategory>('all');
+  // 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill items 1+2) —
+  // catFilter is now a real PurchaseCategory (no 'all' union member). Default
+  // = 'Individual' so the grading-package grid renders on first load without
+  // the user having to click a pill.
+  const [catFilter, setCatFilter]           = useState<PurchaseCategory>('Individual');
   const [acctSearch, setAcctSearch]         = useState('');
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<PackageChoice | null>(null);
@@ -245,6 +249,14 @@ export function PurchaseCreate({
   const isIndividual = selectedAccount?.purchaseCategory === 'Individual';
   const isTravelAgency = selectedAccount?.purchaseCategory === 'Agency';
   const isCorporate = selectedAccount?.purchaseCategory === 'Corporate';
+
+  // 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill item 3) —
+  // pill-driven booleans drive Section 2 form visibility. The account-derived
+  // booleans (isIndividual / isCorporate / isTravelAgency) are kept intact
+  // because canConfirm / handleConfirm / Order Summary still need them.
+  const showIndividualPackages = catFilter === 'Individual';
+  const showCorporateForm      = catFilter === 'Corporate';
+  const showAgencyForm         = catFilter === 'Agency';
   
   const canConfirm = selectedAccount 
     ? (isIndividual 
@@ -259,7 +271,10 @@ export function PurchaseCreate({
   // ── Filtered account list ───────────────────────────────────────────────────
 
   const filteredAccounts = availableAccounts.filter(a => {
-    const matchCat    = catFilter === 'all' || a.purchaseCategory === catFilter;
+    // 2026-07-05 round 6.2.106 — 'all' removed from catFilter union (T3-A);
+    // per-category match only. The dead `catFilter === 'all'` branch was
+    // dropped here because TypeScript flags the comparison as noOverlap.
+    const matchCat    = a.purchaseCategory === catFilter;
     const matchSearch = !acctSearch ||
       a.primaryName.toLowerCase().includes(acctSearch.toLowerCase()) ||
       a.accountNumber.toLowerCase().includes(acctSearch.toLowerCase()) ||
@@ -447,19 +462,33 @@ export function PurchaseCreate({
           <Card className="p-6">
             <SectionHeader num={1} title="Select Account" done={!!selectedAccount} />
 
-            {/* Type filter pills */}
+            {/* ── 2026-07-05 round 6.2.105 ── drop 'All Types' pill per Sky directive.
+                 2026-07-05 round 6.2.106 ── default catFilter narrowed from 'all'
+                 to 'Individual' (T3-A); pill onClick extends reset per T3-C ── */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {(['all', 'Individual', 'Corporate', 'Agency'] as const).map(cat => (
+              {/* ── 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill item 4) ──
+                   Switching pill clears the per-category form fields so a stale "50000"
+                   or "100" never bleeds into the wrong form. selectedPackage reset ensures
+                   the right-column Order Summary badge drops cleanly. ── */}
+              {(['Individual', 'Corporate', 'Agency'] as const).map(cat => (
                 <button
                   key={cat}
-                  onClick={() => setCatFilter(cat)}
+                  onClick={() => {
+                    setCatFilter(cat);
+                    setSelectedPackage(null);
+                    setPromoCodeName('');
+                    setPromoCodeQuantity('');
+                    setVipAccountQuantity('');
+                    setCreditBalance('');
+                    setTotalPrice('');
+                  }}
                   className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
                     catFilter === cat
                       ? 'bg-[#0f2942] text-white border-[#0f2942]'
                       : 'text-gray-600 border-gray-300 hover:border-gray-400 bg-white'
                   }`}
                 >
-                  {cat === 'all' ? 'All Types' : cat}
+                  {cat}
                 </button>
               ))}
             </div>
@@ -531,16 +560,8 @@ export function PurchaseCreate({
           <Card className="p-6">
             <SectionHeader num={2} title="Select Package" done={!!selectedPackage} />
 
-            {/* No account yet — placeholder */}
-            {!selectedAccount && (
-              <div className="flex flex-col items-center justify-center py-10 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-center">
-                <Package className="w-8 h-8 text-gray-300 mb-3" />
-                <p className="text-sm text-gray-400">Select an account above to see available packages.</p>
-              </div>
-            )}
-
             {/* Individual → Grading packages (2-column grid) */}
-            {selectedAccount && isIndividual && (
+            {showIndividualPackages && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
                   Grading packages include booking credits valid for 12 months.
@@ -577,7 +598,7 @@ export function PurchaseCreate({
             )}
 
             {/* Corporate → Promo Code fields */}
-            {selectedAccount && isCorporate && (
+            {showCorporateForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
                   Enter contract details for Corporate account.
@@ -644,7 +665,7 @@ export function PurchaseCreate({
             )}
 
             {/* Travel Agency → Credit balance fields */}
-            {selectedAccount && isTravelAgency && (
+            {showAgencyForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
                   Enter contract details for Agency account.

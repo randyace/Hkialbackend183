@@ -153,6 +153,15 @@ export interface Booking {
   agencyDiscountRate?: number;
   originalAmountValue?: number;
   finalAmountValue?: number;
+  // 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) —
+  // header chip + pricing-card deduction row read this. Eager-loaded
+  // relation from BookingController::show (round 6.2.80).
+  promoCode?: {
+    id: number;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number | string;
+  } | null;
   contactPerson?: {
     name?: string;
     email?: string;

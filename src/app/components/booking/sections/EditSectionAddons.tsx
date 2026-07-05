@@ -261,6 +261,19 @@ export function EditSectionAddons({
               HK${((bookableItemPrices?.['Lounge Extension'] ?? 0) * formData.loungeExtensionQty).toLocaleString()}
             </span>
           </p>
+          {/* ── 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) ──
+               Mixed PS+LD breakdown hint when BOTH PS>0 AND LD people>0.
+               Reads VIP+NFG from formData (live upper-card state) per the
+               round 6.2.100 wrapper memo contract. ── */}
+          {(formData.numPremiereSuites ?? 0) > 0
+            && ((formData.vipPassengersInLoungeDeluxe ?? 0) + (formData.nonFlyingGuestsInLoungeDeluxe ?? 0)) > 0 && (
+            <p
+              data-testid="lounge-extension-mixed-breakdown"
+              className="text-xs text-gray-600 mt-1"
+            >
+              HK$3,000 PS + HK${(bookableItemPrices?.['Lounge Extension'] ?? 0).toLocaleString()} LD per hour (mixed PS + LD)
+            </p>
+          )}
         </div>
       )}
 

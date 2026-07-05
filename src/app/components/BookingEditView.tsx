@@ -164,45 +164,82 @@ function minutesToHHMM(mins: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+/** 2026-07-05 (round 6.2.104) — parse "YYYY-MM-DD" + "HH:MM" into
+ *  absolute UTC minutes-since-epoch. Treats the date+time as UTC
+ *  wall clock (no TZ adjustment) — the ±180min window is too short
+ *  for any realistic TZ drift. Returns null on any parse failure
+ *  so callers can fall back to the empty-range no-validation path. */
+function dateTimeToAbsMinutes(date: string, time: string): number | null {
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!dm) return null;
+  const tm = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!tm) return null;
+  return Math.floor(
+    Date.UTC(+dm[1], +dm[2] - 1, +dm[3], +tm[1], +tm[2]) / 60000,
+  );
+}
+
 /**
  * Compute the valid visit-time range and a violation message for a booking
  * per Sky's 3h rule (see block comment above). Returns empty range when
- * `visitTime` is unset or the flight-time fields needed for the rule are
- * missing (caller can decide whether to gate save).
+ * `visitTime` / `visitDate` is unset OR any flight date+time field needed
+ * for the rule is missing or invalid (caller can decide whether to gate save).
+ *
+ * 2026-07-05 (round 6.2.104) — widened to take `arrivalDate` / `visitDate` /
+ * `leg2ArrivalDate` so the verdict compares absolute UTC minutes, fixing the
+ * midnight-crossing bug where late-night Arrivals + next-morning visits
+ * (and early-morning Departures + previous-night visits) were falsely
+ * rejected by HH:MM-only comparison.
  */
 export function computeVisitTimeRange(
-  formData: Pick<BookingFormData, 'flightType' | 'flightTime' | 'visitTime' | 'leg2FlightTime'>,
+  formData: Pick<
+    BookingFormData,
+    | 'flightType' | 'flightTime' | 'visitTime' | 'visitDate'
+    | 'arrivalDate' | 'leg2FlightTime' | 'leg2ArrivalDate'
+  >,
 ): VisitTimeRange {
+  const visitDate = formData.visitDate;
   const visitTime = formData.visitTime;
-  if (!visitTime || !HHMM_RE.test(visitTime)) return {};
   const flightTime = formData.flightTime;
   const flightType = formData.flightType;
-  const visitMins = hhmmToMinutes(visitTime);
+  if (!visitTime || !HHMM_RE.test(visitTime)) return {};
+  if (!visitDate) return {};
+  if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+  const visitAbs = dateTimeToAbsMinutes(visitDate, visitTime);
+  if (visitAbs === null) return {};
 
   if (flightType === 'Departure') {
-    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+    const arrivalDate = formData.arrivalDate;
+    if (!arrivalDate) return {};
+    const flightAbs = dateTimeToAbsMinutes(arrivalDate, flightTime);
+    if (flightAbs === null) return {};
+    const diff = visitAbs - flightAbs;
     const minMins = hhmmToMinutes(flightTime) - 180;
     const maxMins = hhmmToMinutes(flightTime);
-    if (visitMins < minMins) {
-      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
-        error: `Visit time must be at least 3h before flight departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
-    }
-    if (visitMins > maxMins) {
+    if (diff > 0) {
       return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
         error: `Visit time must be before flight departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (diff < -180) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be at least 3h before flight departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
     }
     return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins) };
   }
 
   if (flightType === 'Arrival') {
-    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
+    const arrivalDate = formData.arrivalDate;
+    if (!arrivalDate) return {};
+    const flightAbs = dateTimeToAbsMinutes(arrivalDate, flightTime);
+    if (flightAbs === null) return {};
+    const diff = visitAbs - flightAbs;
     const minMins = hhmmToMinutes(flightTime);
     const maxMins = hhmmToMinutes(flightTime) + 180;
-    if (visitMins < minMins) {
+    if (diff < 0) {
       return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
         error: `Visit time must be after flight arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
     }
-    if (visitMins > maxMins) {
+    if (diff > 180) {
       return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
         error: `Visit time must be within 3h after flight arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
     }
@@ -210,18 +247,32 @@ export function computeVisitTimeRange(
   }
 
   if (flightType === 'Transit') {
-    if (!flightTime || !HHMM_RE.test(flightTime)) return {};
-    const leg2Time = formData.leg2FlightTime;
-    if (!leg2Time || !HHMM_RE.test(leg2Time)) return {};
+    const arrivalDate = formData.arrivalDate;
+    const leg2FlightTime = formData.leg2FlightTime;
+    const leg2ArrivalDate = formData.leg2ArrivalDate;
+    if (!arrivalDate || !leg2FlightTime || !HHMM_RE.test(leg2FlightTime) || !leg2ArrivalDate) return {};
+    const leg1Abs = dateTimeToAbsMinutes(arrivalDate, flightTime);
+    const leg2Abs = dateTimeToAbsMinutes(leg2ArrivalDate, leg2FlightTime);
+    if (leg1Abs === null || leg2Abs === null) return {};
+    const diffLeg1 = visitAbs - leg1Abs;
+    const diffLeg2 = visitAbs - leg2Abs;
     const maxMins = hhmmToMinutes(flightTime) + 180;          // leg1 arrival + 3h
-    const minMins = hhmmToMinutes(leg2Time) - 180;            // leg2 departure - 3h
-    if (visitMins < minMins) {
+    const minMins = hhmmToMinutes(leg2FlightTime) - 180;      // leg2 departure - 3h
+    if (diffLeg1 < 0) {
       return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
-        error: `Visit time must be at least 3h before 2nd-leg departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+        error: `Visit time must be after 1st-leg arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
     }
-    if (visitMins > maxMins) {
+    if (diffLeg1 > 180) {
       return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
         error: `Visit time must be within 3h after 1st-leg arrival (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (diffLeg2 > 0) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be before 2nd-leg departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
+    }
+    if (diffLeg2 < -180) {
+      return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins),
+        error: `Visit time must be at least 3h before 2nd-leg departure (${minutesToHHMM(minMins)} – ${minutesToHHMM(maxMins)}).` };
     }
     return { min: minutesToHHMM(minMins), max: minutesToHHMM(maxMins) };
   }
@@ -242,6 +293,13 @@ export interface BookingFormData {
   flightOrigin?: string;
   flightDestination?: string;
   flightClass?: EditFlightClass;
+  /** 2026-07-05 (round 6.2.104) — flight date for the 1st leg. For
+   *  Arrival flights this is the arrival date; for Departure flights
+   *  this is the departure date; for Transit flights this is the
+   *  1st-leg (inbound to HKG) date. Optional: callers leave it
+   *  undefined when the date hasn't been entered yet, and the
+   *  helper returns `{}` (no validation) in that case. */
+  arrivalDate?: string;
   leg2ArrivalDate?: string;
   leg2FlightNo?: string;
   leg2FlightTime?: string;
