@@ -195,6 +195,11 @@ export interface PurchaseCreateProps {
   packages?: GradingPackage[];
   sessionBundles?: SessionBundle[];
   accounts?: AccountOption[];
+  // 2026-07-05 round 6.2.109 — pre-fills the selected account when
+  // "Create Contract" is launched from an account row on the
+  // account-centric /purchase page. When `null`/omitted the form
+  // opens with no account selected (header "New Contract" path).
+  initialAccount?: AccountOption | null;
   onSubmit?: (
     record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>,
     // 2026-07-02 — payment proof file is collected in the view (UI
@@ -214,6 +219,7 @@ export function PurchaseCreate({
   packages: packagesProp,
   sessionBundles: sessionBundlesProp,
   accounts: accountsProp,
+  initialAccount,
   onSubmit,
   onBack,
   showVipAccounts = true,
@@ -228,7 +234,7 @@ export function PurchaseCreate({
   // the user having to click a pill.
   const [catFilter, setCatFilter]           = useState<PurchaseCategory>('Individual');
   const [acctSearch, setAcctSearch]         = useState('');
-  const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
+  const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(initialAccount ?? null);
   const [selectedPackage, setSelectedPackage] = useState<PackageChoice | null>(null);
   const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>('Bank Transfer');
   const [transactionRef, setTransactionRef] = useState('');
