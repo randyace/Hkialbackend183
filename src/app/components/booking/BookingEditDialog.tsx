@@ -12,6 +12,87 @@ import { suiteService, type Suite } from '@/services/suiteService';
 // (2026-06-12): keep the 4 addons, remove the rest.
 import { CATALOG_ADDONS } from '../addons';
 
+// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
+
+/**
+ * Two-column HH:MM time picker with a fixed 5-minute step on the minute
+ * column. Built from native `<select>` elements so the browser renders ONLY
+ * the options we provide. See round 6.2.121 handoff for the full rationale
+ * + the 3 CreateBooking ports this pattern matches.
+ *
+ * Inlined per the established figma-ui convention (frontend/.../NewBooking.tsx:375
+ * docblock at line 363-365) — cross-file relative imports work in this tree
+ * (proven by `./addons`) but the Figma Make → figma-ui copy-back workflow is
+ * safer with single-file copies.
+ */
+const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TIME5MIN_SELECT_CLS =
+  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
+
+function Time5MinSelect({
+  value,
+  onChange,
+  required,
+  wrapperClassName,
+  wrapperStyle,
+  testId,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  wrapperClassName?: string;
+  wrapperStyle?: React.CSSProperties;
+  testId?: string;
+}) {
+  let safeH = '';
+  let safeM = '';
+  if (value && value.includes(':')) {
+    const [hStr = '', mStr = ''] = value.split(':');
+    const hNum = Number(hStr);
+    const mNum = Number(mStr);
+    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
+      safeH = hStr.padStart(2, '0');
+      safeM = mStr.padStart(2, '0').slice(0, 2);
+    }
+  }
+  return (
+    <div
+      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
+      style={wrapperStyle}
+      data-testid={testId}
+      data-hkial-time-5min-select
+    >
+      <select
+        aria-label="Hour"
+        value={safeH}
+        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>HH</option>
+        {TIME5MIN_HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="opacity-60 text-sm select-none">:</span>
+      <select
+        aria-label="Minute"
+        value={safeM}
+        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>MM</option>
+        {TIME5MIN_MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 interface EditBooking {
   bookingNo: string;
   // 2026-06-08 round 6.2.6.1 — INV-11 (next). Added 'Transit' to
@@ -533,7 +614,15 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
               </div>
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time</label>
-                <input type="time" value={editFlightTime} onChange={e => setEditFlightTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                {/* 2026-07-07 (round 6.2.122) — Safari/Firefox
+                    timepicker fix (sibling finding from M35).
+                    Same port as the 3 CreateBooking fields in 6.2.121. */}
+                <Time5MinSelect
+                  value={editFlightTime}
+                  onChange={setEditFlightTime}
+                  wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                  testId="edit-dialog-flightTime"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Class</label>
@@ -632,7 +721,20 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
               </div>
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time</label>
-                <input type="time" value={editVisitTime} onChange={e => setEditVisitTime(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                {/* 2026-07-07 (round 6.2.122) — same M35 sibling port as
+                    CreateBooking Visit Time: drop min/max UX (Safari/
+                    Firefox native picker behaviour), keep the Save
+                    gate + 3h rule validation. wrapper parent reads
+                    `visitTimeRange.error` from computeVisitTimeRange
+                    to disable its Save button — that's the validation
+                    layer that survives this port. testId preserved
+                    so any future Playwright selector keeps working. */}
+                <Time5MinSelect
+                  value={editVisitTime}
+                  onChange={setEditVisitTime}
+                  wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                  testId="edit-dialog-visitTime"
+                />
               </div>
             </div>
 

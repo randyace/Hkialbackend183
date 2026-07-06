@@ -20,6 +20,86 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 
+// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
+
+/**
+ * Two-column HH:MM time picker with a fixed 5-minute step on the minute
+ * column. See round 6.2.121 handoff for the rationale. Same convention
+ * as the 3 CreateBooking ports + the EditSectionFlight sibling port —
+ * inline copy per figma-ui Figma Make compatibility (per INV-X1).
+ *
+ * Note: this file already accepts an `onMovementFormChange` callback
+ * that receives the full form-object — every Time5MinSelect onChange
+ * spreads the previous prop and overrides just the time field.
+ */
+const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TIME5MIN_SELECT_CLS =
+  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
+
+function Time5MinSelect({
+  value,
+  onChange,
+  required,
+  wrapperClassName,
+  wrapperStyle,
+  testId,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  wrapperClassName?: string;
+  wrapperStyle?: React.CSSProperties;
+  testId?: string;
+}) {
+  let safeH = '';
+  let safeM = '';
+  if (value && value.includes(':')) {
+    const [hStr = '', mStr = ''] = value.split(':');
+    const hNum = Number(hStr);
+    const mNum = Number(mStr);
+    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
+      safeH = hStr.padStart(2, '0');
+      safeM = mStr.padStart(2, '0').slice(0, 2);
+    }
+  }
+  return (
+    <div
+      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
+      style={wrapperStyle}
+      data-testid={testId}
+      data-hkial-time-5min-select
+    >
+      <select
+        aria-label="Hour"
+        value={safeH}
+        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>HH</option>
+        {TIME5MIN_HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="opacity-60 text-sm select-none">:</span>
+      <select
+        aria-label="Minute"
+        value={safeM}
+        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>MM</option>
+        {TIME5MIN_MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // ── MOCK constant (isolated — container replaces via props) ───────────────────
 const MOCK_ACCOUNT_NUMBER = 'ACC-2024-1001';
 
@@ -2253,12 +2333,14 @@ export function MemberDetail({
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  <input
-                  type="time"
-                  value={movementFormProp.flightTime || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, flightTime: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  {/* 2026-07-07 (round 6.2.122) — Safari/Firefox timepicker
+                      fix (sibling finding from M35). */}
+                  <Time5MinSelect
+                    value={movementFormProp.flightTime || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, flightTime: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-flightTime"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
@@ -2369,66 +2451,66 @@ export function MemberDetail({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.arrTimeNonFlyingGuests || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, arrTimeNonFlyingGuests: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.arrTimeNonFlyingGuests || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, arrTimeNonFlyingGuests: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-arrTimeNonFlyingGuests"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.timeMetVIPAtGate || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeMetVIPAtGate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.timeMetVIPAtGate || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeMetVIPAtGate: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-timeMetVIPAtGate"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.timeBackToHKIAL || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeBackToHKIAL: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.timeBackToHKIAL || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeBackToHKIAL: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-timeBackToHKIAL"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.baggageRetrievalStart || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalStart: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.baggageRetrievalStart || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalStart: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-baggageRetrievalStart"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.baggageRetrievalEnd || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalEnd: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.baggageRetrievalEnd || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalEnd: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-baggageRetrievalEnd"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.baggageArrivalAtHKIAL || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, baggageArrivalAtHKIAL: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.baggageArrivalAtHKIAL || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageArrivalAtHKIAL: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-baggageArrivalAtHKIAL"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
-                  <input
-                  type="time"
-                  value={movementFormProp.timeLeftHKIAL || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, timeLeftHKIAL: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <Time5MinSelect
+                    value={movementFormProp.timeLeftHKIAL || ''}
+                    onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeLeftHKIAL: v })}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="memberdetail-timeLeftHKIAL"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>

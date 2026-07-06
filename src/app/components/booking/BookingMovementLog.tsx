@@ -4,6 +4,88 @@ import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
 
+// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
+
+/**
+ * Two-column HH:MM time picker with a fixed 5-minute step on the minute
+ * column. Built from native `<select>` elements so the browser renders ONLY
+ * the options we provide — Chrome/Safari's native `<input type="time">`
+ * picker ignores `step={300}` and still shows all 60 minutes, and Safari /
+ * Firefox also have edge cases with the native picker's `min` / `max`
+ * enforcement. See round 6.2.121 handoff for the customer-side pattern
+ * this was lifted from (frontend/.../NewBooking.tsx:375).
+ *
+ * Movement Log has NO `min`/`max` constraints on these time fields
+ * (no 3h rule here) — just the 5-min step + cross-browser UX consistency.
+ */
+const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TIME5MIN_SELECT_CLS =
+  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
+
+function Time5MinSelect({
+  value,
+  onChange,
+  required,
+  wrapperClassName,
+  wrapperStyle,
+  testId,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  wrapperClassName?: string;
+  wrapperStyle?: React.CSSProperties;
+  testId?: string;
+}) {
+  let safeH = '';
+  let safeM = '';
+  if (value && value.includes(':')) {
+    const [hStr = '', mStr = ''] = value.split(':');
+    const hNum = Number(hStr);
+    const mNum = Number(mStr);
+    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
+      safeH = hStr.padStart(2, '0');
+      safeM = mStr.padStart(2, '0').slice(0, 2);
+    }
+  }
+  return (
+    <div
+      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
+      style={wrapperStyle}
+      data-testid={testId}
+      data-hkial-time-5min-select
+    >
+      <select
+        aria-label="Hour"
+        value={safeH}
+        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>HH</option>
+        {TIME5MIN_HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="opacity-60 text-sm select-none">:</span>
+      <select
+        aria-label="Minute"
+        value={safeM}
+        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>MM</option>
+        {TIME5MIN_MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // 2026-06-18 (round 6.2.48) — prop-driven Movement Log dialog.
 // Pre-refactor: this component used a hard-coded `INITIAL_MOVEMENTS`
 // mock array + local-only state, with Add/Delete buttons firing
@@ -361,8 +443,16 @@ export function BookingMovementLog({
                   <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50"
                     value={form.flightNo ?? ''} onChange={e => setForm(f => ({ ...f, flightNo: e.target.value.toUpperCase() }))} /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50"
-                    value={form.flightTime ?? ''} onChange={e => setForm(f => ({ ...f, flightTime: e.target.value }))} /></div>
+                  {/* 2026-07-07 (round 6.2.122) — Safari/Firefox
+                      timepicker fix (sibling finding from M35).
+                      See round 6.2.121 handoff for the 3 CreateBooking
+                      ports this pattern matches. */}
+                  <Time5MinSelect
+                    value={form.flightTime ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, flightTime: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50 focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-flightTime"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
                   <input type="text" placeholder="IATA code" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50"
                     value={form.destinationOrigin ?? ''} onChange={e => setForm(f => ({ ...f, destinationOrigin: e.target.value.toUpperCase() }))} /></div>
@@ -403,26 +493,54 @@ export function BookingMovementLog({
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Movement Times</h4>
               <div className="grid grid-cols-3 gap-4">
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.arrTimeNonFlyingGuests ?? ''} onChange={e => setForm(f => ({ ...f, arrTimeNonFlyingGuests: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.arrTimeNonFlyingGuests ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, arrTimeNonFlyingGuests: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-arrTimeNonFlyingGuests"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.timeMetVIPAtGate ?? ''} onChange={e => setForm(f => ({ ...f, timeMetVIPAtGate: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.timeMetVIPAtGate ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, timeMetVIPAtGate: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-timeMetVIPAtGate"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.timeBackToHKIAL ?? ''} onChange={e => setForm(f => ({ ...f, timeBackToHKIAL: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.timeBackToHKIAL ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, timeBackToHKIAL: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-timeBackToHKIAL"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.baggageRetrievalStart ?? ''} onChange={e => setForm(f => ({ ...f, baggageRetrievalStart: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.baggageRetrievalStart ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, baggageRetrievalStart: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-baggageRetrievalStart"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.baggageRetrievalEnd ?? ''} onChange={e => setForm(f => ({ ...f, baggageRetrievalEnd: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.baggageRetrievalEnd ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, baggageRetrievalEnd: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-baggageRetrievalEnd"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.baggageArrivalAtHKIAL ?? ''} onChange={e => setForm(f => ({ ...f, baggageArrivalAtHKIAL: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.baggageArrivalAtHKIAL ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, baggageArrivalAtHKIAL: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-baggageArrivalAtHKIAL"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
-                  <input type="time" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.timeLeftHKIAL ?? ''} onChange={e => setForm(f => ({ ...f, timeLeftHKIAL: e.target.value }))} /></div>
+                  <Time5MinSelect
+                    value={form.timeLeftHKIAL ?? ''}
+                    onChange={(v) => setForm(f => ({ ...f, timeLeftHKIAL: v }))}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="movement-timeLeftHKIAL"
+                  /></div>
                 <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
                   <input type="text" placeholder="e.g. 1h 30m" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     value={form.totalProcessingTime ?? ''} onChange={e => setForm(f => ({ ...f, totalProcessingTime: e.target.value }))} /></div>

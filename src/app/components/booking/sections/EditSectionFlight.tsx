@@ -32,6 +32,82 @@ import type {
 } from '../../BookingEditView';
 import { computeVisitTimeRange } from '../../BookingEditView';
 
+// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
+
+/**
+ * Two-column HH:MM time picker with a fixed 5-minute step on the minute
+ * column. See round 6.2.121 handoff for the full rationale. The
+ * CreateBooking port is in `figma-ui/src/app/components/CreateBooking.tsx:104-187`;
+ * this EditSectionFlight copy follows the same inlined convention.
+ */
+const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+const TIME5MIN_SELECT_CLS =
+  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
+
+function Time5MinSelect({
+  value,
+  onChange,
+  required,
+  wrapperClassName,
+  wrapperStyle,
+  testId,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  wrapperClassName?: string;
+  wrapperStyle?: React.CSSProperties;
+  testId?: string;
+}) {
+  let safeH = '';
+  let safeM = '';
+  if (value && value.includes(':')) {
+    const [hStr = '', mStr = ''] = value.split(':');
+    const hNum = Number(hStr);
+    const mNum = Number(mStr);
+    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
+      safeH = hStr.padStart(2, '0');
+      safeM = mStr.padStart(2, '0').slice(0, 2);
+    }
+  }
+  return (
+    <div
+      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
+      style={wrapperStyle}
+      data-testid={testId}
+      data-hkial-time-5min-select
+    >
+      <select
+        aria-label="Hour"
+        value={safeH}
+        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>HH</option>
+        {TIME5MIN_HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="opacity-60 text-sm select-none">:</span>
+      <select
+        aria-label="Minute"
+        value={safeM}
+        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>MM</option>
+        {TIME5MIN_MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export interface EditSectionFlightProps {
   formData: BookingFormData;
   onFormChange: (patch: Partial<BookingFormData>) => void;
@@ -103,11 +179,14 @@ export function EditSectionFlight({
 
         <div>
           <label className="block text-sm text-gray-600 mb-[10px]">Flight Time</label>
-          <input
-            type="time"
+          {/* 2026-07-07 (round 6.2.122) — Safari/Firefox timepicker
+              fix (sibling finding from M35). Same port as the 3
+              CreateBooking fields in 6.2.121. */}
+          <Time5MinSelect
             value={formData.flightTime}
-            onChange={e => onFormChange({ flightTime: e.target.value })}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            onChange={(v) => onFormChange({ flightTime: v })}
+            wrapperClassName="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300"
+            testId="edit-section-flightTime"
           />
         </div>
 
@@ -196,11 +275,15 @@ export function EditSectionFlight({
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Flight Time</label>
-              <input
-                type="time"
+              {/* 2026-07-07 (round 6.2.122) — same M35 sibling port.
+                  Leg 2 has no 3h rule of its own (the visit-time 3h rule
+                  is enforced on `formData.visitTime` against either
+                  flightTime or leg2FlightTime depending on flightType). */}
+              <Time5MinSelect
                 value={formData.leg2FlightTime ?? ''}
-                onChange={e => onFormChange({ leg2FlightTime: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                onChange={(v) => onFormChange({ leg2FlightTime: v })}
+                wrapperClassName="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                testId="edit-section-leg2FlightTime"
               />
             </div>
             <div>
@@ -265,20 +348,28 @@ export function EditSectionFlight({
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Visit Time</label>
-            {/* Round 6.2.74 — Sky's 3h rule: `min`/`max` constrain the
-                time picker; inline hint/error surfaces the rule. The
-                master Save button (BookingDetail.tsx) is also gated on
-                `visitTimeError` via `hasGuestErrorsFinal`. */}
-            <input
-              type="time"
+            {/* Round 6.2.74 → 6.2.121 → 6.2.122 — Sky's 3h rule.
+                Pre-6.2.122: native `<input type="time">` with `min`/`max`
+                that broke on Safari/Firefox (see round 6.2.121 handoff).
+                6.2.122: dropped `min`/`max` UX (broken on the native
+                picker), kept the 3 enforcement layers:
+                  1. red-border CSS class on out-of-range
+                  2. inline error <p data-testid="edit-visit-time-error">
+                  3. master Save button gated on visitTimeRangeError
+                     in BookingDetail.tsx (hasGuestErrorsFinal).
+                The `visitTimeHint` <p> shows the range reminder when
+                flightTime + visitDate are present + in-range. testId
+                preserved so the existing Playwright e2e selector keeps
+                working — selectors targeting `input[type="time"]` need
+                to drop the `[type="time"]` qualifier (test updates in
+                BookingDetail.round6_2_74.test.tsx). */}
+            <Time5MinSelect
               value={formData.visitTime}
-              onChange={e => onFormChange({ visitTime: e.target.value })}
-              min={visitTimeRange.min}
-              max={visitTimeRange.max}
-              data-testid="edit-visit-time"
-              className={`w-full border rounded-md px-3 py-2 text-sm ${
+              onChange={(v) => onFormChange({ visitTime: v })}
+              wrapperClassName={`w-full border rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
                 visitTimeRangeError ? 'border-red-400 bg-red-50' : 'border-gray-300'
               }`}
+              testId="edit-visit-time"
             />
             {visitTimeRangeError ? (
               <p
