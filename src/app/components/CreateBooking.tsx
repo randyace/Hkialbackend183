@@ -73,6 +73,107 @@ const now = new Date();
 const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
 const BOOKING_SEQ = String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0');
 
+// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.121) ──────
+
+/**
+ * Two-column HH:MM time picker with a fixed 5-minute step on the minute
+ * column. Built from native `<select>` elements so the browser renders ONLY
+ * the options we provide — Chrome/Safari's native `<input type="time">`
+ * picker ignores `step={300}` and still shows all 60 minutes, and Safari /
+ * Firefox also have edge cases with the native picker's `min` / `max`
+ * enforcement (the visit-time `min`/`max` setter on the native input was
+ * what Sky flagged as "not working fine in safari and firefox").
+ *
+ * Ported byte-for-byte from the customer-side `NewBooking.tsx::Time5MinSelect`
+ * (frontend/src/components/figma-ui/src/app/components/NewBooking.tsx:375)
+ * at Sky's request on 2026-07-07. Same shape, same `HH:MM` wire value so
+ * the parent wrapper `flightTime` / `visitTime` destructure at
+ * `hkial-react/src/components/CreateBooking.tsx:804` works unchanged.
+ *
+ * Inlined here (instead of imported from a parent-tree component) per
+ * INV-X1 — figma-ui files must keep working when Sky copies them back into
+ * the Figma Make code base, which has no access to hkial-react/src/components.
+ *
+ * Adoption sites in this file:
+ *   - leg 1 Flight Time (STD/STA)
+ *   - leg 2 Flight Time (Transit only)
+ *   - Visit Time (replaces the native picker's `min`/`max` UX; the 3h rule
+ *     is still enforced via `visitTimeRangeError` + red border + the
+ *     master submit-disabled gate at line 3163)
+ */
+const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
+
+/** Inner selects are visually transparent so the wrapper's border/background
+ *  shows through. They split the row equally via `flex-1`. */
+const TIME5MIN_SELECT_CLS =
+  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
+
+function Time5MinSelect({
+  value,
+  onChange,
+  required,
+  wrapperClassName,
+  wrapperStyle,
+  testId,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  required?: boolean;
+  wrapperClassName?: string;
+  wrapperStyle?: React.CSSProperties;
+  testId?: string;
+}) {
+  // Parse `HH:MM` defensively (mirrors the parent-tree Time5MinSelect).
+  // Empty / malformed → both columns empty so the disabled `HH`/`MM`
+  // placeholder is shown rather than a stale `00`.
+  let safeH = '';
+  let safeM = '';
+  if (value && value.includes(':')) {
+    const [hStr = '', mStr = ''] = value.split(':');
+    const hNum = Number(hStr);
+    const mNum = Number(mStr);
+    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
+      safeH = hStr.padStart(2, '0');
+      safeM = mStr.padStart(2, '0').slice(0, 2);
+    }
+  }
+  return (
+    <div
+      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
+      style={wrapperStyle}
+      data-testid={testId}
+      data-hkial-time-5min-select
+    >
+      <select
+        aria-label="Hour"
+        value={safeH}
+        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>HH</option>
+        {TIME5MIN_HOURS.map((hh) => (
+          <option key={hh} value={hh}>{hh}</option>
+        ))}
+      </select>
+      <span className="opacity-60 text-sm select-none">:</span>
+      <select
+        aria-label="Minute"
+        value={safeM}
+        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
+        required={required}
+        className={TIME5MIN_SELECT_CLS}
+      >
+        <option value="" disabled hidden>MM</option>
+        {TIME5MIN_MINUTES.map((mm) => (
+          <option key={mm} value={mm}>{mm}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type PassengerTitle = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
@@ -1993,8 +2094,21 @@ export function CreateBooking({
             {/* Flight Time */}
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time (STD/STA) <span className="text-red-500">*</span></label>
-              <input type="time" value={flightTime} onChange={e => setFlightTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              {/* 2026-07-07 (round 6.2.121) — Sky's Safari/Firefox
+                  timepicker fix: replaced the native `<input type="time">`
+                  (which ignored `step={300}` on Chrome/Safari AND had
+                  buggy `min`/`max` enforcement on Firefox) with the
+                  customer-side `Time5MinSelect` 2-column HH/MM select
+                  pattern (ported from
+                  `frontend/src/components/figma-ui/src/app/components/NewBooking.tsx:375`).
+                  Step is now hard-coded to 5 minutes via 12 fixed
+                  minute options (00, 05, 10, … 55). */}
+              <Time5MinSelect
+                value={flightTime}
+                onChange={setFlightTime}
+                wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                testId="create-flightTime"
+              />
             </div>
 
             {/* Origin */}
@@ -2122,12 +2236,16 @@ export function CreateBooking({
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Time (STD) <span className="text-red-500">*</span></label>
-                  <input
-                    type="time"
+                  {/* 2026-07-07 (round 6.2.121) — see comment on the
+                      leg-1 Flight Time cell above. Same Safari/Firefox
+                      fix. `testId="leg2-flightTime"` is preserved so
+                      Playwright e2e selectors that grep for it keep
+                      working. */}
+                  <Time5MinSelect
                     value={leg2FlightTime}
-                    onChange={e => setLeg2FlightTime(e.target.value)}
-                    data-testid="leg2-flightTime"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    onChange={setLeg2FlightTime}
+                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    testId="leg2-flightTime"
                   />
                 </div>
                 <div>
@@ -2169,19 +2287,28 @@ export function CreateBooking({
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
-              {/* 2026-06-28 (round 6.2.74) — Sky's 3h rule:
-                  `min`/`max` constrain the time picker; inline
-                  error hint surfaces the rule. Submit is also
-                  gated on `visitTimeRangeError` (see disabled
-                  binding at the bottom of the form). */}
-              <input type="time" value={visitTime}
-                min={visitTimeRange.min}
-                max={visitTimeRange.max}
-                onChange={e => setVisitTime(e.target.value)}
-                data-testid="create-visit-time"
-                className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+              {/* 2026-07-07 (round 6.2.121) — Sky's Safari/Firefox
+                  timepicker fix: swapped the native `<input type="time">`
+                  (with `min`/`max` that didn't work on Safari/Firefox
+                  for the 3h rule constraint) for the customer-side
+                  `Time5MinSelect`. The `min`/`max` UX is dropped — the
+                  3h rule is still enforced via `visitTimeRangeError` +
+                  the red border + the master submit-disabled gate at
+                  line 3163. `testId="create-visit-time"` is preserved
+                  so Playwright e2e selectors keep working, but the
+                  element is now a `<div>` (not `<input>`) — tests that
+                  previously did `querySelector('input[type="time"][data-testid="create-visit-time"]')`
+                  need to update to `querySelector('[data-testid="create-visit-time"]')`.
+                  (No figma-ui tests target that testId today.) */}
+              <Time5MinSelect
+                value={visitTime}
+                onChange={setVisitTime}
+                required
+                wrapperClassName={`w-full px-3 py-2 border rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
                   visitTimeRangeError ? 'border-red-400 bg-red-50' : 'border-gray-300'
-                }`} />
+                }`}
+                testId="create-visit-time"
+              />
               {visitTimeRangeError && (
                 <p className="text-xs text-red-600 mt-1 flex items-start gap-1" data-testid="create-visit-time-error" role="alert">
                   <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
