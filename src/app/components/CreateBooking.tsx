@@ -172,6 +172,13 @@ function Time5MinSelect({
       </select>
     </div>
   );
+const DATE_INPUT_BASE_CLASS =
+  'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300';
+
+function dateInputClassName(value: string): string {
+  return value
+    ? `${DATE_INPUT_BASE_CLASS} bg-white`
+    : `${DATE_INPUT_BASE_CLASS} bg-[#ececec]`;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -2073,7 +2080,7 @@ export function CreateBooking({
                 {flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
               </label>
               <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                className={dateInputClassName(arrivalDate)} />
             </div>
           </div>
 
@@ -2283,7 +2290,7 @@ export function CreateBooking({
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                className={dateInputClassName(visitDate)} />
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
