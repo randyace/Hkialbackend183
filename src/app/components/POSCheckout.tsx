@@ -35,33 +35,12 @@ interface BookingData {
   creditBalance: number;
 }
 
-const MOCK_BOOKING_DATA: BookingData = {
-  bookingNo: 'A-202602-000001',
-  guestName: 'John Smith',
-  accountNo: 'ACC-2024-001',
-  membershipTier: 'Platinum',
-  suiteName: 'VIP Suite A1',
-  checkInTime: '14:30',
-  checkOutTime: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-  duration: '3 hours 15 minutes',
-  loungeAccess: 450,
-  creditBalance: 25000,
-};
-
-const MOCK_ORDER_ITEMS: OrderItem[] = [
-  { id: 1, name: 'Espresso',             category: 'Beverage', quantity: 2, unitPrice: 45 },
-  { id: 2, name: 'Club Sandwich',        category: 'Food',     quantity: 1, unitPrice: 180 },
-  { id: 3, name: 'Glass of Champagne',   category: 'Beverage', quantity: 2, unitPrice: 250 },
-  { id: 4, name: 'Chocolate Soufflé',    category: 'Dessert',  quantity: 1, unitPrice: 120 },
-  { id: 5, name: 'Airport Limousine',    category: 'Transfer', quantity: 1, unitPrice: 800 },
-];
-
 export interface POSCheckoutProps {
   bookingNo?: string;
   bookingData?: BookingData;
   orderItems?: OrderItem[];
   onBack?: () => void;
-  onComplete?: (paymentData: { method: string; total: number }) => void;
+  onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
 }
 
 export function POSCheckout({
@@ -76,10 +55,18 @@ export function POSCheckout({
   const [isComplete, setIsComplete] = useState(false);
 
   const bookingData: BookingData = bookingDataProp ?? {
-    ...MOCK_BOOKING_DATA,
-    bookingNo: bookingNoProp ?? MOCK_BOOKING_DATA.bookingNo,
+    bookingNo: bookingNoProp ?? '—',
+    guestName: '—',
+    accountNo: '—',
+    membershipTier: 'Gold',
+    suiteName: '—',
+    checkInTime: '—',
+    checkOutTime: '—',
+    duration: '—',
+    loungeAccess: 0,
+    creditBalance: 0,
   };
-  const orderItems: OrderItem[] = orderItemsProp?.length ? orderItemsProp : MOCK_ORDER_ITEMS;
+  const orderItems: OrderItem[] = orderItemsProp ?? [];
 
   const subtotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const serviceCharge = subtotal * 0.1;
@@ -87,13 +74,22 @@ export function POSCheckout({
   const totalAmount = bookingData.loungeAccess + totalOrderAmount;
   
   const handleCompleteCheckout = () => {
+    if (onComplete) {
+      setIsProcessing(true);
+      void Promise.resolve(onComplete({ method: paymentMethod, total: totalAmount }))
+        .then(() => {
+          setIsComplete(true);
+        })
+        .finally(() => {
+          setIsProcessing(false);
+        });
+      return;
+    }
+
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
       setIsComplete(true);
-      if (onComplete) {
-        onComplete({ method: paymentMethod, total: totalAmount });
-      }
     }, 1500);
   };
 
@@ -225,17 +221,21 @@ export function POSCheckout({
           <Card className="p-6">
             <h3 className="text-lg mb-4">Order Summary</h3>
             <div className="space-y-3">
-              {orderItems.map((item) => (
-                <div key={item.id} className="flex justify-between items-center py-2 border-b">
-                  <div className="flex-1">
-                    <p className="font-semibold">{item.name}</p>
-                    <p className="text-sm text-gray-600">{item.category}</p>
+              {orderItems.length === 0 ? (
+                <p className="py-4 text-center text-sm text-gray-500">No food and beverage orders for this suite.</p>
+              ) : (
+                orderItems.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center py-2 border-b">
+                    <div className="flex-1">
+                      <p className="font-semibold">{item.name}</p>
+                      <p className="text-sm text-gray-600">{item.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-gray-600">x{item.quantity}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-gray-600">x{item.quantity}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
 
