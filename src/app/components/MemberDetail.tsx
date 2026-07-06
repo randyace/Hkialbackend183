@@ -20,6 +20,16 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
 
 /**
@@ -2159,7 +2169,7 @@ export function MemberDetail({
             <Button variant="outline" onClick={() => { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
               if (!activeAllergyForm.allergen.trim()) { toast.error('Allergen name is required'); return; }
-              const today = new Date().toISOString().split('T')[0];
+              const today = localDateStr();
               const newItem: FoodAllergy = {
                 id: Date.now(),
                 allergen: activeAllergyForm.allergen.trim(),

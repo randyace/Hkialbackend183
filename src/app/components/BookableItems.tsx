@@ -13,6 +13,16 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 interface BookableItem {
   id: number;
   nameEn: string;
@@ -58,7 +68,7 @@ const generateMockItems = (): BookableItem[] => {
       descriptionTrad: 'Premium VIP suite with private facilities and luxury amenities',
       availability: availabilities[i % availabilities.length],
       stock: availabilities[i % availabilities.length] === 'limited' ? 2 + (i % 5) : undefined,
-      createdDate: date.toISOString().split('T')[0],
+      createdDate: localDateStr(date),
       priceCalEquation: 'unitPrice',
       priority: i + 1
     });
@@ -77,7 +87,7 @@ const generateMockItems = (): BookableItem[] => {
     descriptionSimp: 'Extended stay package with private rooms and resting zone access',
     descriptionTrad: 'Extended stay package with private rooms and resting zone access',
     availability: 'available',
-    createdDate: new Date(2024, 0, 20).toISOString().split('T')[0],
+    createdDate: localDateStr(new Date(2024, 0, 20)),
     priceCalEquation: '(qty * unitPrice * noOfPrivateRoom) + (qty * 1000 * totalNoOfPplInRestingZone) - discount',
     priority: 16
   });
@@ -99,7 +109,7 @@ const generateMockItems = (): BookableItem[] => {
       descriptionTrad: 'Professional transfer service with experienced chauffeur and luxury vehicle',
       availability: availabilities[i % availabilities.length],
       stock: availabilities[i % availabilities.length] === 'limited' ? 3 + (i % 4) : undefined,
-      createdDate: date.toISOString().split('T')[0],
+      createdDate: localDateStr(date),
       priceCalEquation: isAirportLimo ? '(qty * unitPrice) - discount' : 'unitPrice',
       priority: i + 17
     });
@@ -121,7 +131,7 @@ const generateMockItems = (): BookableItem[] => {
       descriptionTrad: 'Premium food and beverage service with finest ingredients',
       availability: availabilities[i % availabilities.length],
       stock: availabilities[i % availabilities.length] === 'limited' ? 5 + (i % 3) : undefined,
-      createdDate: date.toISOString().split('T')[0],
+      createdDate: localDateStr(date),
       priceCalEquation: 'unitPrice',
       priority: i + 32
     });
@@ -143,7 +153,7 @@ const generateMockItems = (): BookableItem[] => {
       descriptionTrad: 'Personal shopping assistance and luxury goods access',
       availability: availabilities[i % availabilities.length],
       stock: availabilities[i % availabilities.length] === 'limited' ? 2 + (i % 4) : undefined,
-      createdDate: date.toISOString().split('T')[0],
+      createdDate: localDateStr(date),
       priceCalEquation: 'unitPrice',
       priority: i + 44
     });

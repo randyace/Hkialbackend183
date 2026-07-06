@@ -16,6 +16,16 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 type DealStage = 'Prospecting' | 'Proposal Sent' | 'Negotiation' | 'Renewal Due' | 'Closed Won' | 'Closed Lost';
 type InteractionType = 'Meeting' | 'Call' | 'Email' | 'Site Visit';
 type AccountType = 'Corporate' | 'Agency';
@@ -193,7 +203,7 @@ export function OpportunityTracking({
   const [logOppId,  setLogOppId]  = useState<number | null>(null);
   const [logType,   setLogType]   = useState<InteractionType>('Meeting');
   const [logSummary, setLogSummary] = useState('');
-  const [logDate,    setLogDate]   = useState(new Date().toISOString().split('T')[0]);
+  const [logDate,    setLogDate]   = useState(() => localDateStr());
   const [logFollowUp, setLogFollowUp] = useState('');
   const [logBy,      setLogBy]     = useState('HKIAL Staff');
 
@@ -236,7 +246,7 @@ export function OpportunityTracking({
   };
 
   const openLogDialog = (opp: Opportunity) => {
-    setLogOppId(opp.id); setLogDate(new Date().toISOString().split('T')[0]);
+    setLogOppId(opp.id); setLogDate(localDateStr());
     setLogType('Meeting'); setIsLogOpen(true);
   };
 

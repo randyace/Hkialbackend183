@@ -10,6 +10,16 @@ import {
   CheckCircle, TrendingUp, Package, CreditCard, Info, FileText, X,
 } from 'lucide-react';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // ─── Shared Types (exported for PurchaseManagement) ───────────────────────────
 
 export type PurchaseCategory = 'Individual' | 'Corporate' | 'Agency';
@@ -317,7 +327,7 @@ export function PurchaseCreate({
     if (isTravelAgency && (!creditBalance || !totalPrice)) return;
     
     const newId      = Math.max(...INITIAL_RECORDS.map(r => r.id), 0) + 1;
-    const today      = new Date().toISOString().split('T')[0];
+    const today      = localDateStr();
     const expiry     = new Date();
     
     let record: PurchaseRecord;
@@ -325,7 +335,7 @@ export function PurchaseCreate({
     if (isIndividual && selectedPackage) {
       // Individual package purchase
       expiry.setMonth(expiry.getMonth() + selectedPackage.validityMonths);
-      const expiryDate = expiry.toISOString().split('T')[0];
+      const expiryDate = localDateStr(expiry);
       
       if (selectedPackage.kind === 'grading') {
         record = {
@@ -372,7 +382,7 @@ export function PurchaseCreate({
     } else if (isTravelAgency) {
       // Travel Agency custom contract
       expiry.setFullYear(expiry.getFullYear() + 1); // 12 months default
-      const expiryDate = expiry.toISOString().split('T')[0];
+      const expiryDate = localDateStr(expiry);
       const balance = parseFloat(creditBalance);
       const price = parseFloat(totalPrice);
       
@@ -398,7 +408,7 @@ export function PurchaseCreate({
     } else {
       // Corporate custom contract
       expiry.setFullYear(expiry.getFullYear() + 1); // 12 months default
-      const expiryDate = expiry.toISOString().split('T')[0];
+      const expiryDate = localDateStr(expiry);
       const qty = parseInt(promoCodeQuantity);
       const price = parseFloat(totalPrice);
       

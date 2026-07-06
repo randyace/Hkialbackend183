@@ -22,6 +22,16 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 interface Company {
   id: number;
   companyName: string;
@@ -67,7 +77,7 @@ const generateMockCompanies = (): Company[] => {
       discountRate: 5 + (i % 4) * 5,
       customerCount: 15 + (i * 7) % 80,
       status: statuses[i % statuses.length],
-      createdDate: date.toISOString().split('T')[0]
+      createdDate: localDateStr(date)     
     });
   }
   return companies;

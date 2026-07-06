@@ -3,6 +3,16 @@ import { User, Heart, Eye, Star, AlertCircle, History, MessageSquare, Briefcase,
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // 2026-06-11 — round 6.2.34 UX. Sub-interfaces for the
 // customer-profile detail sections. Sourced from the Account's
 // `profile_*` JSON columns via the parent wrapper's
@@ -173,7 +183,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
 
   if (!customer) return null;
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   const isMember = customer.type === 'Individual' && !!customer.membershipExpiry && customer.membershipExpiry >= today;
   const isIndividual = customer.type === 'Individual';
 

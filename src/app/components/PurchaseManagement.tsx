@@ -24,6 +24,16 @@ import {
   TierBadge, CategoryBadge, StatusBadge,
 } from './PurchaseCreate';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 type TabView = 'all' | 'individual' | 'corporate';
 const TIERS: Tier[] = ['Gold', 'Platinum', 'Diamond', 'Sapphire'];
 const fmt = (d: string) => new Date(d).toLocaleDateString('en-HK', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -109,7 +119,7 @@ export function PurchaseManagement({
 
   const handleSendInvoice = () => {
     if (!invoiceTarget) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
 
     setRecords(prev => prev.map(r =>
       r.id === invoiceTarget.id

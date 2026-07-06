@@ -68,6 +68,16 @@ const MEMBERSHIP_DISCOUNT: Record<string, number> = {
   Gold: 5, Platinum: 8, Diamond: 12, Sapphire: 15,
 };
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 // Auto-generate a booking number preview
 const now = new Date();
 const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -989,8 +999,7 @@ export function CreateBooking({
   regionCodes = [],
 }: CreateBookingProps) {
 
-  // 2026-07-07 (round 6.2.125) — Sky's direction (after the round 6.2.124
-  // `placeholder` attribute approach didn't change Safari's behaviour):
+  // 2026-07-07 (round 6.2.125 + 6.2.126) — Sky's direction:
   // default the Flight Date AND Visit Date fields to TODAY's calendar
   // day. Safari's native `<input type="date">` shows TODAY as the
   // placeholder regardless of `value` or `placeholder` — so the only
@@ -1000,7 +1009,16 @@ export function CreateBooking({
   // `useMemo([])` so the date is locked at component mount — re-renders
   // don't drift across midnight, and React strict-mode double-mounts
   // don't re-roll "today".
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  //
+  // 2026-07-07 (round 6.2.126 — HK timezone correction) — previous
+  // version used `new Date().toISOString().split('T')[0]` which returns
+  // the UTC date, not the user's local date. In HK timezone (UTC+8)
+  // from 00:00 to 08:00 local time, `toISOString()` gives YESTERDAY's
+  // UTC date (verified live by Sky 2026-07-07: "today is 7/7 but it
+  // pick 6/7 for me"). The fix: use the module-level `localDateStr()`
+  // helper, which uses local-time components (`getFullYear` /
+  // `getMonth` / `getDate`) instead of UTC.
+  const today = useMemo(() => localDateStr(), []);
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');

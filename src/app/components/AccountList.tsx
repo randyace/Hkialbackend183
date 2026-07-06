@@ -20,6 +20,16 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 
+// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
+// per-site `new Date().toISOString().split('T')[0]` pattern, which
+// returns UTC date (off by one day for users in timezones east of
+// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
+// by Sky 2026-07-07 against admin CreateBooking). This helper uses
+// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
+// returned YYYY-MM-DD string matches the user's wall-clock day.
+const localDateStr = (d: Date = new Date()): string =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 interface Account {
   id: number;
   accountNumber: string;
@@ -100,7 +110,7 @@ export function AccountList({
   getStatusTone,
   deletingAccountId = null,
 }: AccountListProps = {}) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
 
   const getStatusBadge = (status: string) => {
     const tone = getStatusTone?.(status) ?? 'gray';
