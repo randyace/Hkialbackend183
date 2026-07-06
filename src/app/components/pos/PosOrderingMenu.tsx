@@ -88,7 +88,7 @@ export function PosOrderingMenu({
         ) : filteredItems.length === 0 ? (
           <p className="py-10 text-center text-sm text-gray-500">No menu items in this category.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
             {filteredItems.map((item) => (
               <MenuCard
                 key={item.id}

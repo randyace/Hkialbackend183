@@ -1,16 +1,9 @@
-import { ArrowLeft, User, CreditCard, Utensils, Clock, MapPin, Phone, Mail, DollarSign, AlertCircle, Plus, Minus, Search, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from './ui/dialog';
 
 interface OrderItem {
   id: string;
@@ -24,6 +17,7 @@ interface OrderItem {
   orderTime: string;
   servedTime?: string;
   cancelledAt?: string | null;
+  isNew?: boolean;
 }
 
 interface FoodAllergy {
@@ -65,6 +59,7 @@ interface POSBooking {
   foodAllergies: FoodAllergy[];
   dietaryRequirements: DietaryRequirement[];
   guestProfiles: GuestProfile[];
+  guests: GuestProfile[];
   
   // Booking Info
   checkInTime: string;
@@ -87,61 +82,6 @@ interface POSBookingDetailProps {
   bookingNo: string;
   onBack: () => void;
 }
-
-interface MenuItem {
-  id: string;
-  name: string;
-  price: number;
-  category: string;
-  description?: string;
-  foodAllergens?: string[]; // Food allergen warnings
-}
-
-interface CartItem extends MenuItem {
-  quantity: number;
-}
-
-const menuItems: MenuItem[] = [
-  // Coffee
-  { id: 'coffee-1', name: 'Latte', price: 50, category: 'Coffee', description: 'Classic espresso with steamed milk', foodAllergens: ['Dairy'] },
-  { id: 'coffee-2', name: 'Cappuccino', price: 50, category: 'Coffee', description: 'Espresso with foamed milk', foodAllergens: ['Dairy'] },
-  { id: 'coffee-3', name: 'Americano', price: 45, category: 'Coffee', description: 'Espresso with hot water' },
-  { id: 'coffee-4', name: 'Espresso', price: 40, category: 'Coffee', description: 'Rich Italian coffee' },
-  { id: 'coffee-5', name: 'Mocha', price: 55, category: 'Coffee', description: 'Espresso with chocolate and milk', foodAllergens: ['Dairy'] },
-  
-  // Tea
-  { id: 'tea-1', name: 'English Breakfast', price: 45, category: 'Tea', description: 'Traditional black tea' },
-  { id: 'tea-2', name: 'Green Tea', price: 45, category: 'Tea', description: 'Fresh green tea' },
-  { id: 'tea-3', name: 'Jasmine Tea', price: 45, category: 'Tea', description: 'Fragrant jasmine tea' },
-  { id: 'tea-4', name: 'Earl Grey', price: 45, category: 'Tea', description: 'Bergamot-flavored black tea' },
-  
-  // Beverages
-  { id: 'bev-1', name: 'Fresh Orange Juice', price: 60, category: 'Beverages', description: 'Freshly squeezed' },
-  { id: 'bev-2', name: 'Apple Juice', price: 60, category: 'Beverages', description: 'Pure apple juice' },
-  { id: 'bev-3', name: 'Mineral Water', price: 30, category: 'Beverages', description: 'Still or sparkling' },
-  { id: 'bev-4', name: 'Soft Drinks', price: 35, category: 'Beverages', description: 'Coca-Cola, Sprite, etc.' },
-  
-  // Breakfast
-  { id: 'breakfast-1', name: 'Premium Breakfast Set', price: 280, category: 'Breakfast', description: 'Eggs, bacon, toast, juice', foodAllergens: ['Eggs', 'Gluten', 'Dairy'] },
-  { id: 'breakfast-2', name: 'Continental Breakfast', price: 220, category: 'Breakfast', description: 'Pastries, croissant, jam, coffee', foodAllergens: ['Gluten', 'Dairy', 'Eggs'] },
-  { id: 'breakfast-3', name: 'Congee Set', price: 180, category: 'Breakfast', description: 'Rice porridge with sides' },
-  
-  // Main Course
-  { id: 'main-1', name: 'Dim Sum Platter', price: 380, category: 'Main Course', description: 'Assorted dim sum selection', foodAllergens: ['Shellfish', 'Gluten', 'Soy'] },
-  { id: 'main-2', name: 'Beef Noodles', price: 180, category: 'Main Course', description: 'Braised beef with noodles', foodAllergens: ['Gluten', 'Soy'] },
-  { id: 'main-3', name: 'Seafood Fried Rice', price: 200, category: 'Main Course', description: 'Wok-fried rice with seafood', foodAllergens: ['Shellfish', 'Fish', 'Eggs'] },
-  { id: 'main-4', name: 'Grilled Chicken', price: 220, category: 'Main Course', description: 'Herb-marinated chicken' },
-  
-  // Appetizer
-  { id: 'app-1', name: 'Caesar Salad', price: 120, category: 'Appetizer', description: 'Romaine with caesar dressing', foodAllergens: ['Dairy', 'Eggs', 'Fish'] },
-  { id: 'app-2', name: 'Spring Rolls', price: 90, category: 'Appetizer', description: 'Crispy vegetable rolls', foodAllergens: ['Gluten', 'Soy'] },
-  { id: 'app-3', name: 'Edamame', price: 70, category: 'Appetizer', description: 'Steamed soybeans with salt', foodAllergens: ['Soy'] },
-  
-  // Dessert
-  { id: 'dessert-1', name: 'Dessert Trio', price: 95, category: 'Dessert', description: 'Three mini desserts', foodAllergens: ['Dairy', 'Eggs', 'Gluten', 'Nuts'] },
-  { id: 'dessert-2', name: 'Mango Pudding', price: 75, category: 'Dessert', description: 'Traditional Hong Kong dessert', foodAllergens: ['Dairy'] },
-  { id: 'dessert-3', name: 'Ice Cream', price: 65, category: 'Dessert', description: 'Vanilla, chocolate, or strawberry', foodAllergens: ['Dairy', 'Eggs'] },
-];
 
 const generateMockBooking = (bookingNo: string): POSBooking => {
   const orders: OrderItem[] = [
@@ -211,6 +151,55 @@ const generateMockBooking = (bookingNo: string): POSBooking => {
     }
   ];
 
+  const guestProfiles: GuestProfile[] = [
+    {
+      guestId: 1,
+      name: 'John Smith',
+      relation: 'Main Member',
+      foodAllergies: [
+        {
+          id: 1,
+          allergen: 'Shellfish',
+          severity: 'Severe',
+          notes: 'Avoid all shellfish products.'
+        }
+      ],
+      dietaryRequirements: [
+        {
+          id: 1,
+          requirement: 'Vegetarian',
+          notes: 'No meat or fish.'
+        }
+      ]
+    },
+    {
+      guestId: 2,
+      name: 'Mary Smith',
+      relation: 'Spouse',
+      foodAllergies: [
+        {
+          id: 2,
+          allergen: 'Nuts',
+          severity: 'Severe',
+          notes: 'Severe tree nut allergy — carries EpiPen.'
+        },
+        {
+          id: 3,
+          allergen: 'Dairy',
+          severity: 'Mild',
+          notes: 'Mild lactose sensitivity.'
+        }
+      ],
+      dietaryRequirements: [
+        {
+          id: 2,
+          requirement: 'Gluten-Free',
+          notes: 'Coeliac disease — strict gluten-free required.'
+        }
+      ]
+    }
+  ];
+
   return {
     bookingNo: bookingNo,
     suiteId: 'vip-a1',
@@ -241,54 +230,8 @@ const generateMockBooking = (bookingNo: string): POSBooking => {
         notes: 'No meat or fish.'
       }
     ],
-    guestProfiles: [
-      {
-        guestId: 1,
-        name: 'John Smith',
-        relation: 'Main Member',
-        foodAllergies: [
-          {
-            id: 1,
-            allergen: 'Shellfish',
-            severity: 'Severe',
-            notes: 'Avoid all shellfish products.'
-          }
-        ],
-        dietaryRequirements: [
-          {
-            id: 1,
-            requirement: 'Vegetarian',
-            notes: 'No meat or fish.'
-          }
-        ]
-      },
-      {
-        guestId: 2,
-        name: 'Mary Smith',
-        relation: 'Spouse',
-        foodAllergies: [
-          {
-            id: 2,
-            allergen: 'Nuts',
-            severity: 'Severe',
-            notes: 'Severe tree nut allergy — carries EpiPen.'
-          },
-          {
-            id: 3,
-            allergen: 'Dairy',
-            severity: 'Mild',
-            notes: 'Mild lactose sensitivity.'
-          }
-        ],
-        dietaryRequirements: [
-          {
-            id: 2,
-            requirement: 'Gluten-Free',
-            notes: 'Coeliac disease — strict gluten-free required.'
-          }
-        ]
-      }
-    ],
+    guestProfiles,
+    guests: guestProfiles,
     
     // Booking Info
     checkInTime: '14:30',
@@ -316,8 +259,6 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   booking?: POSBooking | null;
   onCheckout?: (paymentData: { method: string }) => void;
   onCheckoutClick?: () => void;
-  onAddItem?: (item: CartItem) => void;
-  onRemoveItem?: (itemId: string) => void;
   isLoading?: boolean;
   heldPreorderItems?: Array<{
     name_en?: string | null;
@@ -327,6 +268,11 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   isFiringHeldPreorders?: boolean;
   onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
   cancellingOrderItemId?: number | null;
+  onRemoveNewItem?: (itemId: string) => void;
+  onSubmitPendingOrder?: () => void | Promise<void>;
+  hasPendingOrderItems?: boolean;
+  isSubmittingPendingOrder?: boolean;
+  menuContent?: ReactNode;
 }
 
 export function POSBookingDetail({
@@ -340,17 +286,14 @@ export function POSBookingDetail({
   isFiringHeldPreorders = false,
   onCancelOrderItem,
   cancellingOrderItemId = null,
+  onRemoveNewItem,
+  onSubmitPendingOrder,
+  hasPendingOrderItems = false,
+  isSubmittingPendingOrder = false,
+  menuContent = null,
 }: POSBookingDetailFullProps) {
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
-  const [isAddOrderOpen, setIsAddOrderOpen] = useState(false);
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([
-    { id: 'coffee-1', name: 'Latte', price: 50, category: 'Coffee', description: 'Classic espresso with steamed milk', quantity: 2 },
-    { id: 'breakfast-1', name: 'Premium Breakfast Set', price: 280, category: 'Breakfast', description: 'Eggs, bacon, toast, juice', quantity: 1 },
-    { id: 'bev-1', name: 'Fresh Orange Juice', price: 60, category: 'Beverages', description: 'Freshly squeezed', quantity: 2 },
-  ]);
+  const guests = booking.guests?.length > 0 ? booking.guests : booking.guestProfiles;
 
   const getOrderStatusColor = (status: OrderItem['status']) => {
     switch (status) {
@@ -382,370 +325,344 @@ export function POSBookingDetail({
     }
   };
 
-  const getSeverityColor = (severity: string) => {
+  const getGuestRelationBadgeClass = (relation: GuestProfile['relation']): string => {
+    const relationColors: Record<GuestProfile['relation'], string> = {
+      'Main Member': 'bg-blue-100 text-blue-800 border border-blue-300',
+      'Spouse': 'bg-pink-100 text-pink-800 border border-pink-300',
+      'Child': 'bg-green-100 text-green-800 border border-green-300',
+      'Companion': 'bg-purple-100 text-purple-800 border border-purple-300',
+      'Guest': 'bg-gray-100 text-gray-800 border border-gray-300',
+    };
+    return relationColors[relation];
+  };
+
+  const getAllergyBadgeClass = (severity: FoodAllergy['severity']): string => {
     switch (severity) {
-      case 'Mild':
-        return 'bg-yellow-100 text-yellow-700 border border-yellow-200';
-      case 'Moderate':
-        return 'bg-orange-100 text-orange-700 border border-orange-200';
       case 'Severe':
-        return 'bg-red-100 text-red-700 border border-red-300';
+        return 'bg-red-100 text-red-800 border border-red-300';
+      case 'Moderate':
+        return 'bg-orange-100 text-orange-800 border border-orange-300';
       default:
-        return 'bg-gray-100 text-gray-700';
+        return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
     }
   };
 
-  // Group orders by category
-  const ordersByCategory = booking.orders.reduce((acc, order) => {
-    if (!acc[order.category]) {
-      acc[order.category] = [];
-    }
-    acc[order.category].push(order);
-    return acc;
-  }, {} as Record<string, OrderItem[]>);
-
-  const pendingOrders = booking.orders.filter(o => o.status === 'pending').length;
+  const pendingOrders = booking.orders.filter(o => o.status === 'pending' && !o.isNew).length;
   const preparingOrders = booking.orders.filter(o => o.status === 'preparing').length;
   const servedOrders = booking.orders.filter(o => o.status === 'served').length;
 
-  // Get unique categories
-  const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))];
-
-  // Filter menu items
-  const filteredItems = menuItems.filter(item => {
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         item.category.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
-  // Cart functions
-  const addToCart = (item: MenuItem) => {
-    const existingItem = cart.find(cartItem => cartItem.id === item.id);
-    if (existingItem) {
-      setCart(cart.map(cartItem =>
-        cartItem.id === item.id
-          ? { ...cartItem, quantity: cartItem.quantity + 1 }
-          : cartItem
-      ));
-    } else {
-      setCart([...cart, { ...item, quantity: 1 }]);
-    }
+  const formatOrderStatusLabel = (status: OrderItem['status']): string => {
+    if (status === 'cancelled') return 'Cancelled';
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart(cart.filter(item => item.id !== itemId));
+  const guestsWithDietaryRecords = guests.filter(
+    (guest) => guest.foodAllergies.length > 0 || guest.dietaryRequirements.length > 0,
+  );
+  const [isContextDetailsOpen, setIsContextDetailsOpen] = useState(false);
+  const [isTicketSidebarVisible, setIsTicketSidebarVisible] = useState(true);
+  const [mobilePanel, setMobilePanel] = useState<'menu' | 'ticket'>('menu');
+  const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
+  const ticketItemCount = booking.orders.length;
+  const showTicketBottomBarOnMobile = mobilePanel === 'menu';
+  const showTicketBottomBarOnDesktop = !isTicketSidebarVisible;
+
+  const openTicketPanel = () => {
+    setIsTicketSidebarVisible(true);
+    setMobilePanel('ticket');
   };
 
-  const updateCartQuantity = (itemId: string, delta: number) => {
-    setCart(cart.map(item =>
-      item.id === itemId
-        ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-        : item
-    ));
-  };
+  const ticketPanelBody = (
+    <>
+      <div className="p-3 border-b border-gray-200 shrink-0">
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          <div className="rounded border border-green-200 bg-green-50 px-2 py-1">
+            <p className="text-[10px] font-medium text-green-700 leading-tight">Served</p>
+            <p className="text-base font-semibold text-green-900 leading-tight">{servedOrders}</p>
+          </div>
+          <div className="rounded border border-blue-200 bg-blue-50 px-2 py-1">
+            <p className="text-[10px] font-medium text-blue-700 leading-tight">Preparing</p>
+            <p className="text-base font-semibold text-blue-900 leading-tight">{preparingOrders}</p>
+          </div>
+          <div className="rounded border border-yellow-200 bg-yellow-50 px-2 py-1">
+            <p className="text-[10px] font-medium text-yellow-700 leading-tight">Pending</p>
+            <p className="text-base font-semibold text-yellow-900 leading-tight">{pendingOrders}</p>
+          </div>
+        </div>
+        <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
+        <p className="text-sm text-gray-600">{booking.memberName}</p>
+        <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
+      </div>
 
-  const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        {booking.orders.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No order items yet.</p>
+        ) : (
+          booking.orders.map((order) => {
+            const isCancelled = Boolean(order.cancelledAt);
 
-  const handlePlaceOrder = () => {
-    console.log('Placing order:', cart, { urgent: isUrgent });
-    setCart([]);
-    setIsUrgent(false);
-    setIsAddOrderOpen(false);
-  };
+            return (
+              <div
+                key={order.id}
+                className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${
+                  isCancelled ? 'border-gray-200 bg-gray-50' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    {order.name}
+                  </p>
+                  {order.id ? (
+                    <p className={`text-xs text-gray-400 truncate ${isCancelled ? 'line-through' : ''}`}>
+                      {order.id}
+                    </p>
+                  ) : null}
+                </div>
+                <span className={`text-sm tabular-nums shrink-0 ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  x{order.quantity}
+                </span>
+                {order.isNew ? (
+                  <Badge className="shrink-0 text-xs bg-blue-100 text-blue-800 border border-blue-200">
+                    New
+                  </Badge>
+                ) : (
+                  <Badge className={`shrink-0 text-xs ${getOrderStatusColor(order.status)}`}>
+                    {formatOrderStatusLabel(order.status)}
+                  </Badge>
+                )}
+                {order.isNew && onRemoveNewItem ? (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${order.name}`}
+                    className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
+                    onClick={() => onRemoveNewItem(order.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : !isCancelled && order.posOrderItemId && onCancelOrderItem ? (
+                  <button
+                    type="button"
+                    aria-label={`Cancel ${order.name}`}
+                    className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={cancellingOrderItemId === order.posOrderItemId}
+                    onClick={() => void onCancelOrderItem(order.posOrderItemId!)}
+                  >
+                    {cancellingOrderItemId === order.posOrderItemId ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                  </button>
+                ) : null}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="border-t border-gray-200 p-3 shrink-0 bg-white space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-gray-600">Total Amount</span>
+          <span className="text-xl font-bold text-purple-700">
+            HK${booking.totalAmount.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {hasPendingOrderItems && onSubmitPendingOrder ? (
+            <Button
+              className="inline-flex items-center px-4 py-2 text-sm bg-green-600 text-white rounded-md shadow hover:bg-green-700"
+              disabled={isSubmittingPendingOrder}
+              onClick={() => void onSubmitPendingOrder()}
+            >
+              {isSubmittingPendingOrder ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Utensils className="w-4 h-4 mr-1.5" />
+                  Send to Kitchen
+                </>
+              )}
+            </Button>
+          ) : null}
+          <Button variant="outline" className="flex-1 min-w-[90px]">
+            Print Bill
+          </Button>
+          <Button className="flex-1 min-w-[90px] bg-purple-700 hover:bg-purple-800 text-white" onClick={onCheckoutClick}>
+            Checkout
+          </Button>
+        </div>
+      </div>
+    </>
+  );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-3">
-          <Button variant="outline" onClick={onBack} className="w-fit">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Floor Plan
-          </Button>
-          <div>
-            <h1>POS Booking Details - {booking.bookingNo}</h1>
-            <p className="text-gray-600">{booking.suiteName} • {booking.memberName}</p>
+    <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-100">
+      <div className="shrink-0 border-b border-gray-200 bg-gray-100 px-2 py-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="outline" onClick={onBack} size="sm" className="w-fit shrink-0">
+              <ArrowLeft className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Back</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 rounded-full border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 shadow-sm hover:bg-purple-100"
+              onClick={() => {
+                if (isTicketSidebarVisible) {
+                  setIsTicketSidebarVisible(false);
+                  setMobilePanel('menu');
+                } else {
+                  openTicketPanel();
+                }
+              }}
+              aria-pressed={isTicketSidebarVisible}
+            >
+              {isTicketSidebarVisible ? (
+                <>
+                  <PanelLeftClose className="h-4 w-4" />
+                  <span>Hide Ticket</span>
+                </>
+              ) : (
+                <>
+                  <PanelLeftOpen className="h-4 w-4" />
+                  <span>View Ticket</span>
+                </>
+              )}
+            </Button>
           </div>
+          <h1 className="min-w-0 flex-1 text-sm font-semibold text-gray-900 truncate text-right sm:text-base sm:text-left">
+            <span className="lg:hidden">{booking.bookingNo}</span>
+            <span className="hidden lg:inline">POS Booking Details {booking.bookingNo}</span>
+          </h1>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4 bg-green-50 border-green-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-green-700">Served</p>
-              <p className="text-2xl text-green-900">{servedOrders}</p>
-            </div>
-            <Utensils className="w-8 h-8 text-green-600 opacity-50" />
+      <div
+        className={`flex flex-1 min-h-0 overflow-hidden flex-col lg:flex-row ${
+          showTicketBottomBarOnMobile ? 'pb-24 lg:pb-0' : ''
+        } ${showTicketBottomBarOnDesktop ? 'lg:pb-24' : ''}`}
+      >
+        {!isTicketSidebarVisible ? null : (
+          <div className="hidden lg:flex w-[350px] flex-shrink-0 flex-col bg-white border-r">
+            {ticketPanelBody}
           </div>
-        </Card>
-        
-        <Card className="p-4 bg-blue-50 border-blue-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-700">Preparing</p>
-              <p className="text-2xl text-blue-900">{preparingOrders}</p>
-            </div>
-            <Clock className="w-8 h-8 text-blue-600 opacity-50" />
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-yellow-50 border-yellow-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-yellow-700">Pending</p>
-              <p className="text-2xl text-yellow-900">{pendingOrders}</p>
-            </div>
-            <Clock className="w-8 h-8 text-yellow-600 opacity-50" />
-          </div>
-        </Card>
-        
-        <Card className="p-4 bg-purple-50 border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-purple-700">Total Amount</p>
-              <p className="text-2xl text-purple-900">HK${booking.totalAmount}</p>
-            </div>
-            <DollarSign className="w-8 h-8 text-purple-600 opacity-50" />
-          </div>
-        </Card>
-      </div>
+        )}
 
-      {/* Food Allergies & Dietary Requirements - Full Width */}
-      {(booking.foodAllergies.length > 0 || booking.dietaryRequirements.length > 0) && (
-        <Card className="p-6 border-red-200 bg-red-50">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <h3 className="text-sm uppercase tracking-wide text-red-600">⚠️ Food Allergies & Dietary</h3>
-          </div>
+        <div
+          className={`${mobilePanel === 'ticket' ? 'flex' : 'hidden'} lg:hidden flex-1 min-h-0 flex-col bg-white border-r`}
+        >
+          {ticketPanelBody}
+        </div>
 
-          <div className="space-y-4">
-            {booking.guestProfiles
-              .filter(guest => guest.foodAllergies.length > 0 || guest.dietaryRequirements.length > 0)
-              .map((guest) => {
-                const relationColors: Record<string, string> = {
-                  'Main Member': 'bg-blue-100 text-blue-800 border border-blue-300',
-                  'Spouse':      'bg-pink-100 text-pink-800 border border-pink-300',
-                  'Child':       'bg-green-100 text-green-800 border border-green-300',
-                  'Companion':   'bg-purple-100 text-purple-800 border border-purple-300',
-                  'Guest':       'bg-gray-100 text-gray-800 border border-gray-300',
-                };
-                return (
-                  <div key={guest.guestId} className="bg-white rounded-lg border border-red-100 p-4 flex flex-row items-start gap-4">
-                    {/* Guest identity - left column */}
-                    <div className="flex flex-col items-start gap-1.5 min-w-[120px] pt-0.5">
-                      <span className="text-sm text-gray-900 font-medium whitespace-nowrap">{guest.name}</span>
-                      <Badge className={`text-xs ${relationColors[guest.relation] ?? relationColors['Guest']}`}>
+        <div
+          className={`${mobilePanel === 'menu' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-h-0 overflow-hidden bg-gray-50 min-w-0`}
+        >
+          <div className="shrink-0 p-3 flex flex-col gap-3">
+
+          {guestsWithDietaryRecords.length > 0 ? (
+            <div className="bg-red-50 border-l-4 border-red-500 px-3 py-2 shadow-sm rounded-r-lg shrink-0">
+              <div className="flex items-center gap-1.5 mb-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <h3 className="text-xs font-semibold text-red-800 uppercase tracking-wide">
+                  Food Allergies &amp; Dietary
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {guestsWithDietaryRecords.map((guest) => (
+                  <div
+                    key={guest.guestId}
+                    className="grid grid-cols-1 md:grid-cols-[minmax(110px,1fr)_1fr_1fr] gap-2 md:gap-3 py-2 border-b border-red-100 last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{guest.name}</p>
+                      <Badge className={`mt-1 text-xs ${getGuestRelationBadgeClass(guest.relation)}`}>
                         {guest.relation}
                       </Badge>
                     </div>
 
-                    {/* Divider */}
-                    <div className="w-px self-stretch bg-red-100" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
+                        Food Allergies
+                      </p>
+                      {guest.foodAllergies.length > 0 ? (
+                        <>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {guest.foodAllergies.map((allergy) => (
+                              <span
+                                key={allergy.id}
+                                className={`inline-flex items-center rounded-full text-xs px-2 py-0.5 font-medium ${getAllergyBadgeClass(allergy.severity)}`}
+                              >
+                                {allergy.allergen}
+                                {allergy.severity === 'Severe' ? ' ⚠' : ''}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-1 space-y-0.5">
+                            {guest.foodAllergies
+                              .filter((allergy) => allergy.notes)
+                              .map((allergy) => (
+                                <p key={`note-${allergy.id}`} className="text-xs text-gray-500 italic">
+                                  {allergy.allergen}: {allergy.notes}
+                                </p>
+                              ))}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-400">None recorded</p>
+                      )}
+                    </div>
 
-                    {/* Food Allergies */}
-                    {guest.foodAllergies.length > 0 && (
-                      <div className="flex-1">
-                        <label className="text-xs text-red-700 font-semibold uppercase tracking-wide">Food Allergies</label>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {guest.foodAllergies.map((allergy) => (
-                            <div
-                              key={allergy.id}
-                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                                allergy.severity === 'Severe'
-                                  ? 'bg-red-100 text-red-800 border border-red-300'
-                                  : allergy.severity === 'Moderate'
-                                  ? 'bg-orange-100 text-orange-800 border border-orange-300'
-                                  : 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                              }`}
-                              title={allergy.notes}
-                            >
-                              {allergy.severity === 'Severe' && <span>⚠️</span>}
-                              {allergy.allergen}
-                              <Badge className={`ml-0.5 text-[10px] py-0 px-1 ${getSeverityColor(allergy.severity)}`}>
-                                {allergy.severity}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                        {/* Notes */}
-                        <div className="mt-2 space-y-1">
-                          {guest.foodAllergies.map((allergy) => allergy.notes ? (
-                            <p key={allergy.id} className="text-xs text-gray-500 italic">• {allergy.allergen}: {allergy.notes}</p>
-                          ) : null)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Divider */}
-                    {guest.foodAllergies.length > 0 && guest.dietaryRequirements.length > 0 && (
-                      <div className="w-px self-stretch bg-red-100" />
-                    )}
-
-                    {/* Dietary Requirements */}
-                    {guest.dietaryRequirements.length > 0 && (
-                      <div className="flex-1">
-                        <label className="text-xs text-green-700 font-semibold uppercase tracking-wide">Dietary Requirements</label>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {guest.dietaryRequirements.map((dietary) => (
-                            <div
-                              key={dietary.id}
-                              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-300"
-                              title={dietary.notes}
-                            >
-                              {dietary.requirement}
-                            </div>
-                          ))}
-                        </div>
-                        {/* Notes */}
-                        <div className="mt-2 space-y-1">
-                          {guest.dietaryRequirements.map((dietary) => dietary.notes ? (
-                            <p key={dietary.id} className="text-xs text-gray-500 italic">• {dietary.requirement}: {dietary.notes}</p>
-                          ) : null)}
-                        </div>
-                      </div>
-                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">
+                        Dietary Requirements
+                      </p>
+                      {guest.dietaryRequirements.length > 0 ? (
+                        <>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {guest.dietaryRequirements.map((dietary) => (
+                              <span
+                                key={dietary.id}
+                                className="inline-flex items-center rounded-full bg-green-100 text-green-800 border border-green-300 text-xs px-2 py-0.5 font-medium"
+                              >
+                                {dietary.requirement}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-1 space-y-0.5">
+                            {guest.dietaryRequirements
+                              .filter((dietary) => dietary.notes)
+                              .map((dietary) => (
+                                <p key={`note-${dietary.id}`} className="text-xs text-gray-500 italic">
+                                  {dietary.requirement}: {dietary.notes}
+                                </p>
+                              ))}
+                          </div>
+                        </>
+                      ) : (
+                        <p className="mt-1 text-xs text-gray-400">None recorded</p>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
-          </div>
-        </Card>
-      )}
+                ))}
+              </div>
+            </div>
+          ) : null}
 
-      <div className="grid grid-cols-3 gap-6">
-        {/* Left Column - Member Details */}
-        <div className="space-y-6">
-          {/* Member Information */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5 text-gray-500" />
-              <h3 className="text-sm uppercase tracking-wide text-gray-500">Member Information</h3>
-            </div>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600">Member Name</label>
-                <p className="text-lg">{booking.memberName}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Account Number</label>
-                <p className="text-lg">{booking.accountNo}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Account Type</label>
-                <p className="text-lg">{booking.accountType}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Membership Tier</label>
-                <div className="mt-1">
-                  <Badge className={getMembershipColor(booking.membershipTier)}>
-                    {booking.membershipTier}
-                  </Badge>
-                </div>
-              </div>
-              {booking.companyName && (
-                <div>
-                  <label className="text-sm text-gray-600">Company</label>
-                  <p className="text-lg">{booking.companyName}</p>
-                </div>
-              )}
-              <div>
-                <label className="text-sm text-gray-600">Email</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm">{booking.email}</p>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Phone</label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm">{booking.phone}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Booking Information */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <MapPin className="w-5 h-5 text-gray-500" />
-              <h3 className="text-sm uppercase tracking-wide text-gray-500">Booking Information</h3>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-600">Suite</label>
-                <p>{booking.suiteName}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Check-in Time</label>
-                <p>{booking.checkInTime}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Number of Guests</label>
-                <p>{booking.numberOfGuests} pax</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Flight Number</label>
-                <p>{booking.flightNo}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Flight Time</label>
-                <p>{booking.flightTime}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Destination</label>
-                <p>{booking.flightDestination}</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Payment Information */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CreditCard className="w-5 h-5 text-gray-500" />
-              <h3 className="text-sm uppercase tracking-wide text-gray-500">Payment Information</h3>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-sm text-gray-600">Payment Mode</label>
-                <p>{booking.paymentMode}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Payment Status</label>
-                <div className="mt-1">
-                  <Badge className="bg-green-100 text-green-800 border border-green-200">
-                    {booking.paymentStatus}
-                  </Badge>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600">Total Amount</label>
-                <p className="text-xl text-green-600">HK${booking.totalAmount.toLocaleString()}</p>
-              </div>
-              {booking.creditBalance !== undefined && (
-                <div>
-                  <label className="text-sm text-gray-600">Credit Balance</label>
-                  <p className="text-lg">HK${booking.creditBalance.toLocaleString()}</p>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Column - Order Details (2 columns wide) */}
-        <div className="col-span-2 space-y-6">
           {heldPreorderItems.length > 0 ? (
-            <Card className="border border-yellow-200 bg-yellow-50 p-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-yellow-900">
+            <Card className="border border-yellow-200 bg-yellow-50 p-3 shrink-0">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-yellow-900">
                 Held Pre-orders (Guest not yet arrived / Ready to fire)
               </h3>
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-2 space-y-1">
                 {heldPreorderItems.map((item, index) => (
                   <li
                     key={`${item.name_en ?? 'item'}-${index}`}
-                    className="flex items-center justify-between rounded-md border border-yellow-200 bg-white/70 px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
                   >
                     <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
                     <span className="text-gray-600">x{item.quantity}</span>
@@ -754,7 +671,8 @@ export function POSBookingDetail({
               </ul>
               <Button
                 type="button"
-                className="mt-4 w-full bg-amber-600 text-white hover:bg-amber-700"
+                size="sm"
+                className="mt-2 w-full bg-amber-600 text-white hover:bg-amber-700"
                 onClick={onFireHeldPreorders}
                 disabled={isFiringHeldPreorders || !onFireHeldPreorders}
               >
@@ -763,327 +681,205 @@ export function POSBookingDetail({
             </Card>
           ) : null}
 
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Utensils className="w-5 h-5 text-gray-500" />
-                <h3 className="text-sm uppercase tracking-wide text-gray-500">Order Details</h3>
+          <button
+            type="button"
+            onClick={() => setIsContextDetailsOpen((open) => !open)}
+            className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-left shadow-sm hover:bg-gray-50 transition-colors"
+            aria-expanded={isContextDetailsOpen}
+          >
+            <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+              Member, Booking &amp; Payment Details
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${isContextDetailsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          {isContextDetailsOpen ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="bg-white p-3 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <User className="w-3.5 h-3.5 text-gray-400" />
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Member</h3>
               </div>
-              <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddOrderOpen(true)}>
-                <Utensils className="w-4 h-4 mr-2" />
-                Add New Order
-              </Button>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="text-xs text-gray-500">Name</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.memberName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Account Number</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.accountNo}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Account Type</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.accountType}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Membership Tier</dt>
+                  <dd>
+                    <Badge className={`text-xs px-1.5 py-0 ${getMembershipColor(booking.membershipTier)}`}>
+                      {booking.membershipTier}
+                    </Badge>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Company</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.companyName || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Email</dt>
+                  <dd className="text-sm font-medium text-gray-900 truncate">{booking.email}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Phone</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.phone}</dd>
+                </div>
+              </dl>
             </div>
 
-            {/* Orders Table */}
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Time</th>
-                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {booking.orders.map((order) => {
-                    const isCancelled = Boolean(order.cancelledAt);
-                    const rowTextClass = isCancelled ? 'line-through text-gray-400' : '';
-
-                    return (
-                    <tr key={order.id} className={isCancelled ? 'bg-gray-50/60' : 'hover:bg-gray-50'}>
-                      <td className={`px-4 py-3 ${rowTextClass}`}>
-                        <div>
-                          <p className="font-medium">{order.name}</p>
-                          <p className="text-xs text-gray-500">{order.id}</p>
-                        </div>
-                      </td>
-                      <td className={`px-4 py-3 ${rowTextClass}`}>
-                        <Badge variant="outline" className="text-xs">
-                          {order.category}
-                        </Badge>
-                      </td>
-                      <td className={`px-4 py-3 text-center ${rowTextClass}`}>{order.quantity}</td>
-                      <td className={`px-4 py-3 ${rowTextClass}`}>
-                        <Badge className={getOrderStatusColor(order.status)}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </Badge>
-                      </td>
-                      <td className={`px-4 py-3 ${rowTextClass}`}>
-                        <div className="text-sm">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-gray-400" />
-                            <span>{order.orderTime}</span>
-                          </div>
-                          {order.servedTime && !isCancelled ? (
-                            <div className="text-xs text-green-600 mt-1">
-                              Served: {order.servedTime}
-                            </div>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {!isCancelled && order.posOrderItemId && onCancelOrderItem ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 text-xs font-medium text-red-500 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            disabled={cancellingOrderItemId === order.posOrderItemId}
-                            onClick={() => void onCancelOrderItem(order.posOrderItemId!)}
-                          >
-                            {cancellingOrderItemId === order.posOrderItemId ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <X className="h-3.5 w-3.5" />
-                            )}
-                            Cancel
-                          </button>
-                        ) : null}
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot className="bg-gray-50 border-t-2">
-                  <tr>
-                    <td colSpan={6} className="px-4 py-3"></td>
-                  </tr>
-                </tfoot>
-              </table>
+            <div className="bg-white p-3 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Booking</h3>
+              </div>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="text-xs text-gray-500">Suite</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.suiteName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Check-in Time</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.checkInTime}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Number of Guests</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.numberOfGuests} pax</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Flight Number</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.flightNo}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Flight Time</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.flightTime}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Destination</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.flightDestination}</dd>
+                </div>
+              </dl>
             </div>
-          </Card>
 
-          {/* Orders by Category Summary */}
-          <Card className="p-6">
-            <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Orders by Category</h3>
-            <div className="grid grid-cols-3 gap-4">
-              {Object.entries(ordersByCategory).map(([category, items]) => {
-                const categoryTotal = items.reduce((sum, item) => sum + item.total, 0);
-                const categoryQty = items.reduce((sum, item) => sum + item.quantity, 0);
-                
-                return (
-                  <Card key={category} className="p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm text-gray-600">{category}</h4>
-                      <Badge variant="outline" className="text-xs">{categoryQty} items</Badge>
-                    </div>
-                  </Card>
-                );
-              })}
+            <div className="bg-white p-3 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Payment</h3>
+              </div>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="text-xs text-gray-500">Payment Mode</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.paymentMode}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Payment Status</dt>
+                  <dd>
+                    <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs px-1.5 py-0">
+                      {booking.paymentStatus}
+                    </Badge>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Total Amount</dt>
+                  <dd className="text-sm font-medium text-gray-900">HK${booking.totalAmount.toLocaleString()}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Credit Balance</dt>
+                  <dd className="text-sm font-medium text-gray-900">
+                    {booking.creditBalance !== undefined
+                      ? `HK$${booking.creditBalance.toLocaleString()}`
+                      : '—'}
+                  </dd>
+                </div>
+              </dl>
             </div>
-          </Card>
+          </div>
+          ) : null}
+          </div>
 
-          {/* Action Buttons */}
-          <Card className="p-6">
-            <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Actions</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={onCheckoutClick}>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Checkout
-              </Button>
-              <Button variant="outline">
-                Print Bill
-              </Button>
+          {menuContent ? (
+            <div className="flex-1 min-h-0 overflow-y-auto border-t border-gray-200 bg-white px-3 py-3">
+              {menuContent}
             </div>
-          </Card>
+          ) : null}
         </div>
       </div>
 
-      {/* Add New Order Dialog */}
-      <Dialog open={isAddOrderOpen} onOpenChange={setIsAddOrderOpen}>
-        <DialogContent className="min-w-[1200px] max-w-[80vw] max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Add New Order - {booking.suiteName}</DialogTitle>
-            <DialogDescription>
-              Select items from the menu to add to {booking.memberName}'s order
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex-1 overflow-hidden flex gap-6">
-            {/* Left Side - Current Order (Cart) - 30% width */}
-            <div className="w-[30%] flex flex-col border-r pr-6">
-              <h3 className="text-lg font-semibold mb-4">Current Order</h3>
-              
-              {cart.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center text-gray-400">
-                  <div className="text-center">
-                    <Utensils className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>No items in cart</p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="flex-1 overflow-y-auto mb-4 space-y-2">
-                    {cart.map((item) => (
-                      <Card key={item.id} className="p-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm">{item.name}</h4>
-                          </div>
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="flex items-center">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateCartQuantity(item.id, -1)}
-                              className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-                            <span className="w-8 text-center">{item.quantity}</span>
-                            <button
-                              onClick={() => updateCartQuantity(item.id, 1)}
-                              className="w-6 h-6 rounded border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-
-                  <div className="border-t pt-4 space-y-3">
-                    <div className={`flex items-center justify-between px-3 py-2.5 rounded-lg border transition-colors ${isUrgent ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-200'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${isUrgent ? 'text-red-700' : 'text-gray-600'}`}>
-                          Urgent Order
-                        </span>
-                        {isUrgent && (
-                          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
-                            Priority
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isUrgent}
-                        onClick={() => setIsUrgent(v => !v)}
-                        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1 ${isUrgent ? 'bg-red-500' : 'bg-gray-300'}`}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${isUrgent ? 'translate-x-4' : 'translate-x-0'}`}
-                        />
-                      </button>
-                    </div>
-                    <Button
-                      className={`w-full ${isUrgent ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-                      onClick={handlePlaceOrder}
-                      disabled={cart.length === 0}
-                    >
-                      <Utensils className="w-4 h-4 mr-2" />
-                      {isUrgent ? 'Submit Urgent Order' : 'Submit Order'} ({cart.length} items)
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Right Side - Menu Items */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Search Bar */}
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search menu items..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
-              </div>
-
-              {/* Category Tabs */}
-              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
-                {categories.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedCategory(category)}
-                    className={`px-4 py-2 rounded-md text-sm whitespace-nowrap transition-colors ${
-                      selectedCategory === category
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
-              </div>
-
-              {/* Menu Items Grid */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-3">
-                  {filteredItems.map((item) => {
-                    // Check if item contains any allergens that match customer's allergies
-                    const hasMatchingAllergen = item.foodAllergens?.some(allergen =>
-                      booking.foodAllergies.some(allergy =>
-                        allergy.allergen.toLowerCase() === allergen.toLowerCase()
-                      )
-                    );
-                    
-                    return (
-                      <Card
-                        key={item.id}
-                        className={`p-4 cursor-pointer hover:shadow-md transition-shadow ${
-                          hasMatchingAllergen ? 'border-2 border-red-400 bg-red-50' : ''
-                        }`}
-                        onClick={() => addToCart(item)}
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-gray-900">{item.name}</h4>
-                            <p className="text-xs text-gray-500">{item.category}</p>
-                          </div>
-                        </div>
-                        {item.description && (
-                          <p className="text-xs text-gray-600 mt-1">{item.description}</p>
-                        )}
-                        
-                        {/* Food Allergens Warning */}
-                        {item.foodAllergens && item.foodAllergens.length > 0 && (
-                          <div className={`mt-2 p-2 rounded ${hasMatchingAllergen ? 'bg-red-100 border border-red-300' : 'bg-orange-50 border border-orange-200'}`}>
-                            <div className="flex items-center gap-1 mb-1">
-                              <AlertCircle className={`w-3 h-3 ${hasMatchingAllergen ? 'text-red-600' : 'text-orange-600'}`} />
-                              <p className={`text-xs font-semibold ${hasMatchingAllergen ? 'text-red-700' : 'text-orange-700'}`}>
-                                {hasMatchingAllergen ? '⚠️ ALLERGEN WARNING' : 'Contains:'}
-                              </p>
-                            </div>
-                            <p className={`text-xs ${hasMatchingAllergen ? 'text-red-600 font-medium' : 'text-orange-600'}`}>
-                              {item.foodAllergens.join(', ')}
-                            </p>
-                          </div>
-                        )}
-                        
-                        <Button
-                          size="sm"
-                          className={`w-full mt-3 ${hasMatchingAllergen ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(item);
-                          }}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          {hasMatchingAllergen ? 'Add with Caution' : 'Add to Cart'}
-                        </Button>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+      {(showTicketBottomBarOnMobile || showTicketBottomBarOnDesktop) ? (
+        <div
+          className={`fixed bottom-[52px] left-0 right-0 z-40 flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] lg:bottom-0 ${
+            showTicketBottomBarOnMobile ? 'flex' : 'hidden'
+          } ${showTicketBottomBarOnDesktop ? 'lg:flex' : 'lg:hidden'}`}
+        >
+          <button
+            type="button"
+            onClick={openTicketPanel}
+            className="rounded-lg bg-gray-100 px-4 py-2 font-semibold text-gray-800 shadow-sm"
+          >
+            🛒 View Ticket ({ticketItemCount} items)
+          </button>
+          <div className="flex items-center">
+            <span className="mr-6 text-2xl font-bold text-purple-700">
+              HK${booking.totalAmount.toLocaleString()}
+            </span>
+            <button
+              type="button"
+              onClick={onCheckoutClick}
+              className="rounded-lg bg-purple-700 px-8 py-3 text-lg font-bold text-white shadow-md hover:bg-purple-800"
+            >
+              Checkout
+            </button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ) : null}
+
+      <nav className="shrink-0 border-t border-gray-200 bg-white lg:hidden" aria-label="POS panels">
+        <div className="grid grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setMobilePanel('menu')}
+            className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 text-xs font-medium transition-colors ${
+              mobilePanel === 'menu'
+                ? 'bg-purple-50 text-purple-700'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+            aria-current={mobilePanel === 'menu' ? 'page' : undefined}
+          >
+            <Utensils className="h-5 w-5" />
+            Menu
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobilePanel('ticket')}
+            className={`flex flex-col items-center justify-center gap-1 px-3 py-2.5 text-xs font-medium transition-colors ${
+              mobilePanel === 'ticket'
+                ? 'bg-purple-50 text-purple-700'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+            aria-current={mobilePanel === 'ticket' ? 'page' : undefined}
+          >
+            <PanelLeftOpen className="h-5 w-5" />
+            <span className="flex items-center gap-1.5">
+              Ticket
+              {activeOrderCount > 0 ? (
+                <span className="rounded-full bg-purple-700 px-1.5 py-0.5 text-[10px] font-semibold text-white tabular-nums">
+                  {activeOrderCount}
+                </span>
+              ) : null}
+            </span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

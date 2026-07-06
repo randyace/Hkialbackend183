@@ -35,7 +35,7 @@ export function PosCategoryTabs({ categories, selectedTab, onSelectTab }: PosCat
             key={tabName}
             type="button"
             onClick={() => onSelectTab(tabName)}
-            className={`shrink-0 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+            className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors sm:px-4 sm:py-2 sm:text-sm ${
               isActive
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

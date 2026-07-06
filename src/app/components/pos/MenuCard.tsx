@@ -95,7 +95,7 @@ export function MenuCard({
           )}
         </div>
 
-        <div className="flex flex-1 flex-col p-3">
+        <div className="flex flex-1 flex-col p-2 sm:p-3">
           <div className="mb-2 min-w-0">
             <h4 className="truncate text-sm font-semibold text-gray-900">{item.nameEn}</h4>
             {item.nameZh ? (
@@ -149,7 +149,7 @@ export function MenuCard({
             <Button
               type="button"
               className={cn(
-                'w-full text-white',
+                'h-9 w-full text-xs text-white sm:h-10 sm:text-sm',
                 hasMatchingAllergen
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-green-600 hover:bg-green-700',
