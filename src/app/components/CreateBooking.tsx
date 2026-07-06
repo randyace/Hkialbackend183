@@ -68,16 +68,6 @@ const MEMBERSHIP_DISCOUNT: Record<string, number> = {
   Gold: 5, Platinum: 8, Diamond: 12, Sapphire: 15,
 };
 
-// 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
-// per-site `new Date().toISOString().split('T')[0]` pattern, which
-// returns UTC date (off by one day for users in timezones east of
-// UTC, e.g. HK at UTC+8 between 00:00–08:00 local time — verified live
-// by Sky 2026-07-07 against admin CreateBooking). This helper uses
-// LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
-// returned YYYY-MM-DD string matches the user's wall-clock day.
-const localDateStr = (d: Date = new Date()): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
 // Auto-generate a booking number preview
 const now = new Date();
 const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -999,27 +989,6 @@ export function CreateBooking({
   regionCodes = [],
 }: CreateBookingProps) {
 
-  // 2026-07-07 (round 6.2.125 + 6.2.126) — Sky's direction:
-  // default the Flight Date AND Visit Date fields to TODAY's calendar
-  // day. Safari's native `<input type="date">` shows TODAY as the
-  // placeholder regardless of `value` or `placeholder` — so the only
-  // way to make the visible state match the actual state (so Safari
-  // users don't see "today" in the field but get "please enter the
-  // visit date" errors on submit) is to set the value to today too.
-  // `useMemo([])` so the date is locked at component mount — re-renders
-  // don't drift across midnight, and React strict-mode double-mounts
-  // don't re-roll "today".
-  //
-  // 2026-07-07 (round 6.2.126 — HK timezone correction) — previous
-  // version used `new Date().toISOString().split('T')[0]` which returns
-  // the UTC date, not the user's local date. In HK timezone (UTC+8)
-  // from 00:00 to 08:00 local time, `toISOString()` gives YESTERDAY's
-  // UTC date (verified live by Sky 2026-07-07: "today is 7/7 but it
-  // pick 6/7 for me"). The fix: use the module-level `localDateStr()`
-  // helper, which uses local-time components (`getFullYear` /
-  // `getMonth` / `getDate`) instead of UTC.
-  const today = useMemo(() => localDateStr(), []);
-
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -1073,10 +1042,7 @@ export function CreateBooking({
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
-  // 2026-07-07 (round 6.2.125) — see `today` declaration above. Flight
-  // Date defaults to today (matches Safari's native `type="date"`
-  // placeholder so the visible and actual state agree).
-  const [arrivalDate, setArrivalDate] = useState(today);
+  const [arrivalDate, setArrivalDate] = useState('');
   const [flightNo, setFlightNo] = useState('');
   const [flightTime, setFlightTime] = useState('');
   const [flightOrigin, setFlightOrigin] = useState('');
@@ -1099,12 +1065,7 @@ export function CreateBooking({
   const [transitGapError, setTransitGapError] = useState<string | null>(null);
 
   // ── Booking ─────────────────────────────────────────────────────────────────
-  // 2026-07-07 (round 6.2.125) — see `today` declaration above. Visit
-  // Date defaults to today for the same Safari-state-consistency reason
-  // as Flight Date. The visit-time 3h rule (computed below) still
-  // applies on top — if the user picks today + a past visitTime the
-  // submit is blocked per the pre-existing validation.
-  const [visitDate, setVisitDate] = useState(today);
+  const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
 
   // 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule. The
@@ -2111,10 +2072,6 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 {flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
               </label>
-              {/* 2026-07-07 (round 6.2.125) — `value` defaults to
-                  `today` (declared at top of component) so Safari's
-                  native `type="date"` placeholder matches the actual
-                  state. See top-of-component comment. */}
               <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
@@ -2325,9 +2282,6 @@ export function CreateBooking({
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-              {/* 2026-07-07 (round 6.2.125) — `value` defaults to
-                  `today` (declared at top of component). See top-of-
-                  component comment. */}
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
