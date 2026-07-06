@@ -989,6 +989,19 @@ export function CreateBooking({
   regionCodes = [],
 }: CreateBookingProps) {
 
+  // 2026-07-07 (round 6.2.125) — Sky's direction (after the round 6.2.124
+  // `placeholder` attribute approach didn't change Safari's behaviour):
+  // default the Flight Date AND Visit Date fields to TODAY's calendar
+  // day. Safari's native `<input type="date">` shows TODAY as the
+  // placeholder regardless of `value` or `placeholder` — so the only
+  // way to make the visible state match the actual state (so Safari
+  // users don't see "today" in the field but get "please enter the
+  // visit date" errors on submit) is to set the value to today too.
+  // `useMemo([])` so the date is locked at component mount — re-renders
+  // don't drift across midnight, and React strict-mode double-mounts
+  // don't re-roll "today".
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -1042,7 +1055,10 @@ export function CreateBooking({
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
-  const [arrivalDate, setArrivalDate] = useState('');
+  // 2026-07-07 (round 6.2.125) — see `today` declaration above. Flight
+  // Date defaults to today (matches Safari's native `type="date"`
+  // placeholder so the visible and actual state agree).
+  const [arrivalDate, setArrivalDate] = useState(today);
   const [flightNo, setFlightNo] = useState('');
   const [flightTime, setFlightTime] = useState('');
   const [flightOrigin, setFlightOrigin] = useState('');
@@ -1065,7 +1081,12 @@ export function CreateBooking({
   const [transitGapError, setTransitGapError] = useState<string | null>(null);
 
   // ── Booking ─────────────────────────────────────────────────────────────────
-  const [visitDate, setVisitDate] = useState('');
+  // 2026-07-07 (round 6.2.125) — see `today` declaration above. Visit
+  // Date defaults to today for the same Safari-state-consistency reason
+  // as Flight Date. The visit-time 3h rule (computed below) still
+  // applies on top — if the user picks today + a past visitTime the
+  // submit is blocked per the pre-existing validation.
+  const [visitDate, setVisitDate] = useState(today);
   const [visitTime, setVisitTime] = useState('');
 
   // 2026-06-28 (round 6.2.74) — Sky's 3h booking-time rule. The
@@ -2072,16 +2093,11 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 {flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
               </label>
-              {/* 2026-07-07 (round 6.2.124) — Safari's native `<input
-                  type="date">` shows TODAY's date as the placeholder
-                  when `value=""` and no `placeholder` attribute is set,
-                  unlike Chrome which shows a grayed `mm/dd/yyyy`
-                  format hint. Adding `placeholder` matching the
-                  label above makes Safari show the label text instead
-                  of today, so the empty state is visually unambiguous
-                  across all 3 engines. */}
+              {/* 2026-07-07 (round 6.2.125) — `value` defaults to
+                  `today` (declared at top of component) so Safari's
+                  native `type="date"` placeholder matches the actual
+                  state. See top-of-component comment. */}
               <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
-                placeholder={flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
           </div>
@@ -2291,13 +2307,10 @@ export function CreateBooking({
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-              {/* 2026-07-07 (round 6.2.124) — see Flight Date comment
-                  above. Empty `<input type="date">` in Safari shows
-                  today's date as the placeholder; `placeholder="Visit
-                  Date"` makes it show the label text instead, matching
-                  Chrome's grayed-format-hint visual. */}
+              {/* 2026-07-07 (round 6.2.125) — `value` defaults to
+                  `today` (declared at top of component). See top-of-
+                  component comment. */}
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
-                placeholder="Visit Date"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div>
