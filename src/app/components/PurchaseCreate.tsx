@@ -634,13 +634,22 @@ export function PurchaseCreate({
                     <Label htmlFor="promoCodeQty" className="mb-[10px] block">
                       Promo Code Quantity <span className="text-red-500">*</span>
                     </Label>
+                    {/* 2026-07-05 round 6.2.110 — sibling fix to Total Price
+                        hardening: same three-layered treatment (spinner hide /
+                        integer strip / onWheel blur). See the Total Price
+                        input above for the full rationale. */}
                     <Input
                       id="promoCodeQty"
                       type="number"
                       min="1"
+                      step="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="e.g. 100"
                       value={promoCodeQuantity}
-                      onChange={e => setPromoCodeQuantity(e.target.value)}
+                      onChange={e => setPromoCodeQuantity(e.target.value.replace(/[^0-9]/g, ''))}
+                      onWheel={e => e.currentTarget.blur()}
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
                   {showVipAccounts && (
@@ -648,13 +657,23 @@ export function PurchaseCreate({
                       <Label htmlFor="vipAccountQty" className="mb-[10px] block">
                         VIP Accounts to Create <span className="text-gray-400 text-xs">(optional)</span>
                       </Label>
+                      {/* 2026-07-05 round 6.2.110 — sibling fix (same three-layered
+                          treatment as Total Price). Currently feature-flagged off
+                          in production (`showVipAccounts={false}` per 6.2.74) but
+                          hardened now for symmetry so it stays consistent if
+                          re-enabled. */}
                       <Input
                         id="vipAccountQty"
                         type="number"
                         min="0"
+                        step="1"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         placeholder="e.g. 10"
                         value={vipAccountQuantity}
-                        onChange={e => setVipAccountQuantity(e.target.value)}
+                        onChange={e => setVipAccountQuantity(e.target.value.replace(/[^0-9]/g, ''))}
+                        onWheel={e => e.currentTarget.blur()}
+                        className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Number of new VIP accounts to be created for this corporate customer.
@@ -665,14 +684,29 @@ export function PurchaseCreate({
                     <Label htmlFor="totalPrice" className="mb-[10px] block">
                       Total Price (HKD) <span className="text-red-500">*</span>
                     </Label>
+                    {/* 2026-07-05 round 6.2.110 — Total Price hardening:
+                        (a) hide native number-input spinner (Tailwind arbitrary
+                            variants target webkit inner+outer spin buttons + 
+                            Firefox appearance:textfield),
+                        (b) force integer-only via step=1 + inputMode/pattern +
+                            onChange regex that strips any non-digit characters
+                            (typing "15000.50" leaves "15000"; pasting "abc" 
+                            leaves ""),
+                        (c) onWheel=blur() so mouse-wheel scroll over the input
+                            does NOT increment/decrement the value (per Sky:
+                            "disable scrolling on it"). */}
                     <Input
                       id="totalPrice"
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="e.g. 50000"
                       value={totalPrice}
-                      onChange={e => setTotalPrice(e.target.value)}
+                      onChange={e => setTotalPrice(e.target.value.replace(/[^0-9]/g, ''))}
+                      onWheel={e => e.currentTarget.blur()}
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
@@ -690,28 +724,45 @@ export function PurchaseCreate({
                     <Label htmlFor="creditBalance" className="mb-[10px] block">
                       Credit Balance Charging (HKD) <span className="text-red-500">*</span>
                     </Label>
+                    {/* 2026-07-05 round 6.2.110 — sibling fix to Total Price
+                        hardening: same three-layered treatment (spinner hide /
+                        integer strip / onWheel blur). Travel Agency branch
+                        mirrors the Corporate Total Price fix. */}
                     <Input
                       id="creditBalance"
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="e.g. 50000"
                       value={creditBalance}
-                      onChange={e => setCreditBalance(e.target.value)}
+                      onChange={e => setCreditBalance(e.target.value.replace(/[^0-9]/g, ''))}
+                      onWheel={e => e.currentTarget.blur()}
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
                   <div>
                     <Label htmlFor="totalPriceTA" className="mb-[10px] block">
                       Total Price (HKD) <span className="text-red-500">*</span>
                     </Label>
+                    {/* 2026-07-05 round 6.2.110 — Total Price hardening (Travel
+                        Agency branch; mirrors the Corporate branch above). See
+                        the inline comment on the Corporate Total Price input
+                        for the three-change rationale (spinner hide / integer
+                        strip / onWheel blur). */}
                     <Input
                       id="totalPriceTA"
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       placeholder="e.g. 50000"
                       value={totalPrice}
-                      onChange={e => setTotalPrice(e.target.value)}
+                      onChange={e => setTotalPrice(e.target.value.replace(/[^0-9]/g, ''))}
+                      onWheel={e => e.currentTarget.blur()}
+                      className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
                 </div>
