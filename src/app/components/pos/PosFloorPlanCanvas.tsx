@@ -26,6 +26,7 @@ export interface PosFloorPlanSuite {
   display_status?: string;
   capacity: number;
   floor: string | null;
+  current_booking_id?: number | null;
   booking: PosFloorPlanBooking | null;
   has_upcoming_conflict?: boolean;
 }
@@ -56,6 +57,7 @@ export interface PosFloorPlanCanvasProps {
   isLoading?: boolean;
   isMultiAssignMode?: boolean;
   isInteractiveModeActive?: boolean;
+  activeBookingId?: number | null;
   selectedSuiteIdsForAssignment?: number[];
   onSuiteClick?: (suite: PosFloorPlanSuiteClick) => void;
   onToggleSuiteSelection?: (suiteId: number) => void;
@@ -98,8 +100,54 @@ function getSuiteBgColor(status: SuiteStatus): string {
   }
 }
 
-function getAssignmentModeClasses(
+function suiteBelongsToActiveBooking(
+  suite: PosFloorPlanSuite,
+  activeBookingId: number | null | undefined,
+): boolean {
+  if (activeBookingId == null) {
+    return false;
+  }
+
+  const activeId = Number(activeBookingId);
+
+  if (Number.isNaN(activeId)) {
+    return false;
+  }
+
+  if (
+    suite.current_booking_id != null &&
+    Number(suite.current_booking_id) === activeId
+  ) {
+    return true;
+  }
+
+  return suite.booking != null && Number(suite.booking.id) === activeId;
+}
+
+function canToggleSuiteInMultiAssign(
+  suite: PosFloorPlanSuite,
   rawStatus: SuiteStatus,
+  activeBookingId: number | null | undefined,
+): boolean {
+  return (
+    rawStatus === 'available' ||
+    suiteBelongsToActiveBooking(suite, activeBookingId)
+  );
+}
+
+function isSuiteLockedInAssignmentMode(
+  suite: PosFloorPlanSuite,
+  rawStatus: SuiteStatus,
+  activeBookingId: number | null | undefined,
+): boolean {
+  return (
+    rawStatus !== 'available' &&
+    !suiteBelongsToActiveBooking(suite, activeBookingId)
+  );
+}
+
+function getAssignmentModeClasses(
+  isLockedInAssignmentMode: boolean,
   isAssignmentModeActive: boolean,
   isSelectedForAssignment: boolean,
 ): string {
@@ -107,7 +155,7 @@ function getAssignmentModeClasses(
     return '';
   }
 
-  if (rawStatus !== 'available') {
+  if (isLockedInAssignmentMode) {
     return 'opacity-40 grayscale pointer-events-none';
   }
 
@@ -120,7 +168,7 @@ function getAssignmentModeClasses(
 
 function getSuiteCardClasses(
   displayStatus: SuiteStatus,
-  rawStatus: SuiteStatus,
+  isLockedInAssignmentMode: boolean,
   isAssignmentModeActive: boolean,
   isSelectedForAssignment: boolean,
   hasUpcomingConflict: boolean,
@@ -130,7 +178,7 @@ function getSuiteCardClasses(
 
   if (isAssignmentModeActive) {
     const assignmentClasses = getAssignmentModeClasses(
-      rawStatus,
+      isLockedInAssignmentMode,
       isAssignmentModeActive,
       isSelectedForAssignment,
     );
@@ -174,6 +222,7 @@ export function PosFloorPlanCanvas({
   isLoading = false,
   isMultiAssignMode = false,
   isInteractiveModeActive = false,
+  activeBookingId = null,
   selectedSuiteIdsForAssignment = [],
   onSuiteClick,
   onToggleSuiteSelection,
@@ -370,11 +419,16 @@ export function PosFloorPlanCanvas({
                   const isSelectedForAssignment =
                     isMultiAssignMode &&
                     suite != null &&
-                    selectedSuiteIdsForAssignment.includes(suite.id);
+                    selectedSuiteIdsForAssignment.some((selectedId) =>
+                      Number(selectedId) === Number(suite.id));
+                  const isLockedInAssignmentMode =
+                    isAssignmentModeActive &&
+                    suite != null &&
+                    isSuiteLockedInAssignmentMode(suite, rawStatus, activeBookingId);
 
                   const cardClasses = getSuiteCardClasses(
                     displayStatus,
-                    rawStatus,
+                    isLockedInAssignmentMode,
                     isAssignmentModeActive,
                     isSelectedForAssignment,
                     hasUpcomingConflict,
@@ -388,11 +442,11 @@ export function PosFloorPlanCanvas({
                         if (!suite) return;
 
                         if (isMultiAssignMode) {
-                          if (rawStatus !== 'available') {
+                          if (!canToggleSuiteInMultiAssign(suite, rawStatus, activeBookingId)) {
                             return;
                           }
 
-                          onToggleSuiteSelection?.(suite.id);
+                          onToggleSuiteSelection?.(Number(suite.id));
                           return;
                         }
 
