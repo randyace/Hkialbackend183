@@ -2072,7 +2072,16 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 {flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
               </label>
+              {/* 2026-07-07 (round 6.2.124) — Safari's native `<input
+                  type="date">` shows TODAY's date as the placeholder
+                  when `value=""` and no `placeholder` attribute is set,
+                  unlike Chrome which shows a grayed `mm/dd/yyyy`
+                  format hint. Adding `placeholder` matching the
+                  label above makes Safari show the label text instead
+                  of today, so the empty state is visually unambiguous
+                  across all 3 engines. */}
               <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
+                placeholder={flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
           </div>
@@ -2282,7 +2291,13 @@ export function CreateBooking({
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
+              {/* 2026-07-07 (round 6.2.124) — see Flight Date comment
+                  above. Empty `<input type="date">` in Safari shows
+                  today's date as the placeholder; `placeholder="Visit
+                  Date"` makes it show the label text instead, matching
+                  Chrome's grayed-format-hint visual. */}
               <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
+                placeholder="Visit Date"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div>
