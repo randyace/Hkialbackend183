@@ -48,6 +48,13 @@ import type {
   EditPassenger,
   EditNonFlyingGuest,
 } from './BookingEditView';
+// 2026-07-09 (round 6.2.129, M11 residual) — single source of truth
+// for persistable add-on keys. Pre-6.2.129 this page kept a 22-item
+// drifted list (names that did not match bookable_items.name_en)
+// that AddonsSyncService silently dropped. Create / Edit dialog /
+// EditSectionAddons already import CATALOG_ADDONS; this closes the
+// last admin surface still hardcoding its own list.
+import { CATALOG_ADDONS } from './addons';
 import { computeVisitTimeRange } from './BookingEditView';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -682,43 +689,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   // ── Add New Item (add-on services) ─────────────────────────────────────────
+  // 2026-07-09 (round 6.2.129, M11 residual) — derive from shared
+  // CATALOG_ADDONS only (4 persistable catalog keys). Pre-6.2.129
+  // this was a 22-item hard-coded list with names that did not
+  // match bookable_items.name_en → AddonsSyncService silent drop.
   type AddonService = string;
-  const addonServices: { key: AddonService; icon: ReactNode; desc: string; defaultPrice: string }[] = [
-    { key: 'Lounge Extension',              icon: <Clock className="w-5 h-5" />,         desc: 'Extend lounge access time',              defaultPrice: '500.00'  },
-    // 2026-06-16 (round 6.2.43 follow-up): catalog key
-    // renamed 'Limousine Service' -> 'Limousine Transfer' to
-    // match the wire-shape name used by the BookingEditDialog
-    // catalog (BookingEditDialog.tsx:189 CATALOG_ADDONS) and
-    // buildAddonsItems. The detail page's own catalog had
-    // drifted from the rest of the system; this aligns it.
-    // Display label (the {key} shown in dropdowns) becomes
-    // 'Limousine Transfer'; the `desc` field stays as the
-    // human-readable description.
-    { key: 'Limousine Transfer',            icon: <Car className="w-5 h-5" />,           desc: 'Private car transfer service',           defaultPrice: '800.00'  },
-    { key: 'Wheelchair Assistance',         icon: <Accessibility className="w-5 h-5" />, desc: 'Mobility & accessibility support',       defaultPrice: '0.00'    },
-    { key: 'Security Escort Service',       icon: <ShieldCheck className="w-5 h-5" />,   desc: 'Dedicated security escort',              defaultPrice: '1200.00' },
-    { key: 'Meet & Greet Service',          icon: <User className="w-5 h-5" />,          desc: 'Dedicated greeter at arrival gate',      defaultPrice: '600.00'  },
-    { key: 'Fast Track Immigration',        icon: <Plane className="w-5 h-5" />,         desc: 'Priority immigration clearance',         defaultPrice: '400.00'  },
-    { key: 'Buggy Transfer Service',        icon: <Car className="w-5 h-5" />,           desc: 'Electric buggy within terminal',         defaultPrice: '0.00'    },
-    { key: 'Baggage Handling',              icon: <ShoppingBag className="w-5 h-5" />,   desc: 'Assisted luggage service',               defaultPrice: '150.00'  },
-    { key: 'Porter Service',                icon: <ShoppingBag className="w-5 h-5" />,   desc: 'On-demand porter assistance',            defaultPrice: '100.00'  },
-    { key: 'Shower Service',                icon: <Building2 className="w-5 h-5" />,     desc: 'Private shower with amenities',          defaultPrice: '200.00'  },
-    { key: 'Day Room (4 hrs)',              icon: <Building2 className="w-5 h-5" />,     desc: 'Private suite day-use booking',          defaultPrice: '1800.00' },
-    { key: 'Day Room Extension (per hr)',   icon: <Clock className="w-5 h-5" />,         desc: 'Hourly extension of day room',           defaultPrice: '450.00'  },
-    { key: 'VIP Escort (Airside)',          icon: <ShieldCheck className="w-5 h-5" />,   desc: 'Escorted airside access with staff',     defaultPrice: '1500.00' },
-    { key: 'Printing Service',              icon: <FileText className="w-5 h-5" />,      desc: 'Document printing (per page)',           defaultPrice: '20.00'   },
-    { key: 'Flight Rebooking Assistance',   icon: <Plane className="w-5 h-5" />,         desc: 'Staff-assisted flight rebooking',        defaultPrice: '0.00'    },
-    { key: 'Lounge Access – Extra Adult',   icon: <User className="w-5 h-5" />,          desc: 'Additional adult lounge entry',          defaultPrice: '350.00'  },
-    { key: 'Lounge Access – Extra Child',   icon: <User className="w-5 h-5" />,          desc: 'Additional child entry (2–11 yrs)',      defaultPrice: '180.00'  },
-    { key: 'SIM Card Arrangement',          icon: <Phone className="w-5 h-5" />,         desc: 'Local SIM card for guest',               defaultPrice: '80.00'   },
-    { key: 'Currency Exchange Assistance',  icon: <DollarSign className="w-5 h-5" />,    desc: 'Guided to best exchange counter',        defaultPrice: '0.00'    },
-    { key: 'Special Meal Request',          icon: <Tag className="w-5 h-5" />,           desc: 'Dietary or custom meal arrangement',     defaultPrice: '0.00'    },
-    { key: 'Flower / Gift Arrangement',     icon: <Tag className="w-5 h-5" />,           desc: 'In-lounge gift or floral setup',         defaultPrice: '500.00'  },
-    { key: 'Birthday / Celebration Setup',  icon: <Tag className="w-5 h-5" />,           desc: 'Cake, décor & personalised message',     defaultPrice: '800.00'  },
-    { key: 'Video Conference Room',         icon: <MessageSquare className="w-5 h-5" />, desc: 'Private VC-equipped meeting room',       defaultPrice: '1200.00' },
-    { key: 'Private Dining Room',           icon: <Building2 className="w-5 h-5" />,     desc: 'Exclusive dining space (up to 8 pax)',   defaultPrice: '2500.00' },
-    { key: 'Smoking Room Access',           icon: <Building2 className="w-5 h-5" />,     desc: 'Designated smoking area access',         defaultPrice: '0.00'    },
-  ];
+  const addonServices: { key: AddonService; icon: ReactNode; desc: string; defaultPrice: string }[] =
+    CATALOG_ADDONS.map((a) => ({
+      key: a.key,
+      icon: a.icon,
+      desc: a.desc,
+      defaultPrice: a.defaultPrice.toFixed(2),
+    }));
   const [selectedAddon, setSelectedAddon] = useState<AddonService | null>(null);
   const [addonQty, setAddonQty]           = useState(1);
   const [addonUnitPrice, setAddonUnitPrice] = useState('');

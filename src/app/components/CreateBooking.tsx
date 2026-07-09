@@ -12,7 +12,9 @@ import { Badge } from './ui/badge';
 // 2026-06-12 (round 6.2.39, M11 fix) — import the shared
 // catalog of add-on services. The pre-6.2.39 hardcoded
 // CREATE_ADDON_SERVICES (4 items) is replaced by this import.
-import { CATALOG_ADDONS, CATALOG_ADDON_MAP } from './addons';
+// CATALOG_ADDON_MAP was never exported from addons.tsx (dead import
+// residual from 6.2.39). Only CATALOG_ADDONS is the shared catalog.
+import { CATALOG_ADDONS } from './addons';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
