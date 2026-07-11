@@ -161,6 +161,8 @@ export interface Booking {
     code: string;
     discountType: 'percentage' | 'fixed';
     discountValue: number | string;
+    /** Free-lounge codes: how many LD fees this code waives (round 6.2.133). */
+    freeSessions?: number | null;
   } | null;
   contactPerson?: {
     name?: string;

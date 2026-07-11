@@ -1550,8 +1550,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <span className="font-mono">{booking.promoCode.code}</span>
                 {booking.promoCode.discountType === 'percentage'
                   ? <span className="ml-1">−{booking.promoCode.discountValue}%</span>
-                  : Number(booking.promoCode.discountValue) === 0
-                    ? <span className="ml-1">Free bookings</span>
+                  : (booking.promoCode.freeSessions != null && booking.promoCode.freeSessions > 0)
+                      || Number(booking.promoCode.discountValue) === 0
+                    ? <span className="ml-1">
+                        Free lounge · −{booking.promoCode.freeSessions ?? 1} LD fee
+                        {(booking.promoCode.freeSessions ?? 1) !== 1 ? 's' : ''}
+                      </span>
                     : null}
               </Badge>
             )}
@@ -4128,12 +4132,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <div className="flex items-center gap-2">
               <Tag className="w-3.5 h-3.5 text-indigo-600" />
               <span className="text-sm text-indigo-800 font-medium">
-                Promo Discount ({booking.promoCode.code})
+                {booking.promoCode.discountType === 'percentage'
+                  ? `Promo Discount (${booking.promoCode.code})`
+                  : `Promo free lounge (${booking.promoCode.code})`}
               </span>
               <span className="text-xs text-indigo-600">
                 {booking.promoCode.discountType === 'percentage'
                   ? `${booking.promoCode.discountValue}% off`
-                  : 'Free bookings'}
+                  : `Deduction of ${booking.promoCode.freeSessions ?? 1} LD fee${(booking.promoCode.freeSessions ?? 1) !== 1 ? 's' : ''}`}
               </span>
             </div>
             <span className="text-sm font-medium text-indigo-700">
