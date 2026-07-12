@@ -66,9 +66,17 @@ const MONTHS = [
   'July','August','September','October','November','December',
 ];
 
-const MEMBERSHIP_DISCOUNT: Record<string, number> = {
-  Gold: 5, Platinum: 8, Diamond: 12, Sapphire: 15,
-};
+// Round 6.2.136 — Individual membership has NO tier % discount.
+// Benefits are free LD entries + free PS upgrades (see accounts.ld_entries_remaining
+// / ps_free_upgrades_remaining). The old MEMBERSHIP_DISCOUNT map
+// (Gold 5 / Platinum 8 / Diamond 12 / Sapphire 15) was mock UI data and
+// incorrectly auto-filled Account Discount. Removed.
+
+function formatMembershipQuota(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  if (value === -1) return 'Unlimited';
+  return String(value);
+}
 
 // Auto-generate a booking number preview
 const now = new Date();
@@ -366,6 +374,10 @@ export interface CreateBookingProps {
     phone: string;
     membership_type?: string;
     company_name?: string;
+    // Round 6.2.136 — Individual membership quotas (from Account.show).
+    // null = not initialised / not a member; -1 LD = unlimited.
+    ld_entries_remaining?: number | null;
+    ps_free_upgrades_remaining?: number | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
     // array (HasMany) — usually `[{ agency_code, agency_name,
@@ -1019,32 +1031,16 @@ export function CreateBooking({
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
 
-  // 2026-06-09 round 6.2.28 — when an account is selected, auto-load
-  // the Account Discount input with the tier/agency default rate.
-  // The staff can still type a different value to override (e.g.
-  // ad-hoc promotion), and clearing the account resets the input
-  // back to `''` (= fall back to tier/agency default, no override).
-  //
-  //   Gold      →  5%
-  //   Platinum  →  8%
-  //   Diamond   → 12%
-  //   Sapphire  → 15%
-  //
-  // Agency type already has its own rate from `selectedAgency`
-  // (set when the agency is picked). The Membership Tier
-  // Select is also disabled when an account is present so
-  // staff can't ad-hoc change it; the Account Discount input
-  // stays editable for the override case.
+  // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
+  // load Membership Tier from the account. Individual members do NOT
+  // get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
+  // Account Discount stays blank for Individual (staff override only);
+  // Agency default still comes from selectedAgency.discountRate in the
+  // placeholder below. Free LD / PS upgrade quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
-      // 2026-06-09 round 6.2.28 — auto-load the discount
-      // input with the tier's rate. `MEMBERSHIP_DISCOUNT`
-      // returns 0 for any tier not in the map (e.g. legacy
-      // "None" or empty string), so we only set the input
-      // when there's a positive rate to surface.
-      const tierRate = MEMBERSHIP_DISCOUNT[selectedAccount.membership_type as MembershipTier] ?? 0;
-      setAccountDiscountPct(tierRate > 0 ? tierRate : '');
+      setAccountDiscountPct('');
     } else {
       setMembershipTier('');
       setAccountDiscountPct('');
@@ -1976,14 +1972,32 @@ export function CreateBooking({
                   <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
                   <SelectContent>
                     {(['Gold', 'Platinum', 'Diamond', 'Sapphire'] as MembershipTier[]).map(t => (
-                      <SelectItem key={t} value={t}>
-                        <span className="flex items-center gap-2">
-                          {t}{MEMBERSHIP_DISCOUNT[t] > 0 && <Badge className="bg-indigo-100 text-indigo-700 text-xs">{MEMBERSHIP_DISCOUNT[t]}% disc.</Badge>}
-                        </span>
-                      </SelectItem>
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {accountType === 'Individual' && selectedAccount && (
+              <div className="col-span-2 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+                <p className="text-sm font-medium text-[#0f2942] mb-2">Membership benefits</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600">Free LD entries left</span>
+                    <p className="font-semibold text-[#0f2942]" data-testid="membership-ld-remaining">
+                      {formatMembershipQuota(selectedAccount.ld_entries_remaining)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Free PS upgrades left</span>
+                    <p className="font-semibold text-[#0f2942]" data-testid="membership-ps-remaining">
+                      {formatMembershipQuota(selectedAccount.ps_free_upgrades_remaining)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Pure LD bookings consume 1 free LD entry when available. Pure PS bookings use a free upgrade when available; otherwise 40% off PS base. No tier % discount.
+                </p>
               </div>
             )}
             <div>
@@ -2020,14 +2034,17 @@ export function CreateBooking({
                     const n = Number(raw);
                     if (Number.isFinite(n)) setAccountDiscountPct(Math.max(0, Math.min(100, n)));
                   }}
-                  placeholder={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '0'}
+                  placeholder={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : '0'}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 <span className="text-sm text-gray-500">%</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Default {selectedAgency ? `${selectedAgency.discountRate}% (Agency)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '—'}
-                {accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}
+                {selectedAgency
+                  ? <>Default {selectedAgency.discountRate}% (Agency){accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}</>
+                  : accountType === 'Individual'
+                    ? <>Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %</>
+                    : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
             <div>
