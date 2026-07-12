@@ -1996,7 +1996,7 @@ export function CreateBooking({
                   </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Pure LD bookings consume 1 free LD entry when available. Pure PS bookings use a free upgrade when available; otherwise 40% off PS base. No tier % discount.
+                  Pure LD: 1 free LD entry when available. Free PS upgrade (dual-quota): uses 1 LD entry ticket + 1 free PS upgrade voucher; otherwise 40% off PS base. No tier % discount.
                 </p>
               </div>
             )}
