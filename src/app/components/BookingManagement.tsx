@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2 } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -59,6 +59,8 @@ interface Booking {
   agencyDiscountRate?: number;
   originalAmountValue?: number;
   finalAmountValue?: number;
+  /** Round 6.2.137 — membership free PS/LD waiver label for list Amount column. */
+  membershipBenefitLabel?: string;
   // 2026-06-25 — PS / LD assignment signals. The Suite
   // column renders "Pending" when neither is assigned, and a
   // small chip (PS / LD count) otherwise. Mirrors the booking
@@ -835,16 +837,27 @@ export function BookingManagement({
                     <div className="text-xs text-gray-500 mt-1">{booking.paymentMode}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {booking.agencyDiscountRate && booking.originalAmountValue ? (
+                    {(booking.agencyDiscountRate || booking.membershipBenefitLabel)
+                      && booking.originalAmountValue != null
+                      && booking.finalAmountValue != null
+                      && booking.originalAmountValue > booking.finalAmountValue ? (
                       <div className="space-y-0.5">
                         <p className="text-gray-400 line-through text-xs leading-tight">
                           HK${booking.originalAmountValue.toLocaleString()}
                         </p>
                         <p className="text-green-700 font-medium">{booking.amount}</p>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-xs">
-                          <BadgePercent className="w-3 h-3" />
-                          {booking.agencyDiscountRate}% off
-                        </span>
+                        {booking.agencyDiscountRate ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-xs">
+                            <BadgePercent className="w-3 h-3" />
+                            {booking.agencyDiscountRate}% off
+                          </span>
+                        ) : null}
+                        {booking.membershipBenefitLabel ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs">
+                            <Gem className="w-3 h-3" />
+                            {booking.membershipBenefitLabel}
+                          </span>
+                        ) : null}
                         {booking.agencyName && (
                           <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
                             <Building2 className="w-3 h-3" />{booking.agencyName}

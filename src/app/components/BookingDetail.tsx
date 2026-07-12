@@ -3325,6 +3325,51 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </Card>
       ) : null}
 
+      {/* Round 6.2.137 — Membership free PS/LD waiver (persisted price_breakdown) */}
+      {(() => {
+        const membershipLines = (booking.priceBreakdown ?? []).filter(
+          (line) => typeof line.key === 'string' && line.key.startsWith('membership_'),
+        );
+        if (membershipLines.length === 0) return null;
+        const original = booking.originalAmountValue
+          ?? membershipLines.reduce((sum, line) => sum + Math.abs(Number(line.subtotal) || 0), 0);
+        const final = booking.finalAmountValue
+          ?? (booking.totalPrice != null ? Number(booking.totalPrice) : Math.max(0, original - membershipLines.reduce((s, l) => s + Math.abs(Number(l.subtotal) || 0), 0)));
+        return (
+          <Card className="p-6 border-indigo-200 bg-indigo-50/40" data-testid="membership-benefit-pricing-card">
+            <div className="flex items-center gap-2 mb-4">
+              <Gem className="w-5 h-5 text-indigo-700" />
+              <h3 className="text-sm uppercase tracking-wide text-indigo-800">Membership Benefit Applied</h3>
+            </div>
+            <div className="bg-white border border-indigo-100 rounded-lg divide-y divide-gray-100">
+              <div className="flex items-center justify-between px-5 py-3">
+                <span className="text-sm text-gray-600">Base Service Amount</span>
+                <span className="text-sm font-medium text-gray-800">HK${original.toLocaleString()}</span>
+              </div>
+              {membershipLines.map((line) => (
+                <div key={line.key} className="flex items-center justify-between px-5 py-3 bg-indigo-50/60">
+                  <div className="flex items-center gap-2">
+                    <Gem className="w-4 h-4 text-indigo-600" />
+                    <span className="text-sm text-indigo-800">{line.label || line.key}</span>
+                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Waived</span>
+                  </div>
+                  <span className="text-sm font-medium text-indigo-700">
+                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-5 py-4 bg-indigo-50">
+                <span className="font-semibold text-gray-900">Total Payable</span>
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 line-through">HK${original.toLocaleString()}</p>
+                  <p className="text-xl font-semibold text-indigo-700">HK${final.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
+
       {/* 12. Service Items */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
@@ -4215,7 +4260,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         * the detail page (sourced from
         * `POST /api/bookings/price-preview`). Both the page
         * AND the invoice call the same endpoint, per the
-        * "make them call the same endpoint first" directive. */}
+        * "make them call the same endpoint first" directive.
+        *
+        * Round 6.2.137 — prefer committed total_price +
+        * price_breakdown (membership waiver included) over a
+        * live preview that may still be loading / missing
+        * account_id. */}
       <BookingInvoiceDialog
         open={showInvoice}
         onClose={() => setShowInvoice(false)}
@@ -4224,8 +4274,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         voucherCount={voucherCount}
         voucherTotal={voucherTotal}
         voucherUnitValue={voucherUnitValue}
-        livePreviewTotal={livePreviewTotal}
-        breakdown={livePreviewBreakdown}
+        livePreviewTotal={
+          booking.totalPrice != null
+            ? Number(booking.totalPrice)
+            : livePreviewTotal
+        }
+        breakdown={
+          (booking.priceBreakdown && booking.priceBreakdown.length > 0)
+            ? booking.priceBreakdown
+            : livePreviewBreakdown
+        }
         serviceSubtotal={serviceSubtotal}
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
