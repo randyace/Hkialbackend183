@@ -328,6 +328,12 @@ export interface BookingFormData {
    * The wrapper reads it for `advanced_details.account.accountDiscountPct`.
    */
   accountDiscountPct?: number;
+  /**
+   * Round 6.2.139 — use free LD entry / free PS upgrade credits.
+   * Default true when eligible. false = charge without burning that credit.
+   */
+  useMembershipLdFree?: boolean;
+  useMembershipPsFree?: boolean;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -507,6 +513,9 @@ export interface CreateBookingProps {
     // `advanced_details.account.accountDiscountPct` (see the
     // `handleSubmit` wrapper for the 2 emit sites).
     accountDiscountPct: number | undefined;
+    // Round 6.2.139 — staff opt-in for free LD / free PS credits.
+    useMembershipLdFree: boolean;
+    useMembershipPsFree: boolean;
   }) => void;
   /**
    * 2026-06-08 round 6.2.8 — bookable items price map sourced from
@@ -1030,6 +1039,9 @@ export function CreateBooking({
   // tier/agency rate but always overridable (e.g. ad-hoc promotion).
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
+  // Round 6.2.139 — default ON (auto-apply free credits when eligible).
+  const [useMembershipLdFree, setUseMembershipLdFree] = useState(true);
+  const [useMembershipPsFree, setUseMembershipPsFree] = useState(true);
 
   // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
   // load Membership Tier from the account. Individual members do NOT
@@ -1041,9 +1053,14 @@ export function CreateBooking({
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
       setAccountDiscountPct('');
+      // Reset opt-in toggles when account changes (default apply).
+      setUseMembershipLdFree(true);
+      setUseMembershipPsFree(true);
     } else {
       setMembershipTier('');
       setAccountDiscountPct('');
+      setUseMembershipLdFree(true);
+      setUseMembershipPsFree(true);
     }
   }, [selectedAccount]);
 
@@ -1328,6 +1345,9 @@ export function CreateBooking({
       // wire = "no override"); a number 0-100 → preserved
       // verbatim (the wrapper passes it through).
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
+      // Round 6.2.139 — membership free-credit opt-in for live preview.
+      useMembershipLdFree,
+      useMembershipPsFree,
     });
   }, [
     hasLimousine,
@@ -1354,6 +1374,8 @@ export function CreateBooking({
     // (the wrapper's `usePricePreview` depends on
     // `input.accountDiscountPct`).
     accountDiscountPct,
+    useMembershipLdFree,
+    useMembershipPsFree,
   ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
@@ -1750,6 +1772,9 @@ export function CreateBooking({
       // 2026-06-09 — staff override of the auto-derived account discount.
       // `''` (untouched) = no override → wrapper falls back to tier/agency default.
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
+      // Round 6.2.139 — free membership credit opt-in (default true).
+      useMembershipLdFree,
+      useMembershipPsFree,
     };
     onSubmit?.(formData);
   };
@@ -1995,8 +2020,36 @@ export function CreateBooking({
                     </p>
                   </div>
                 </div>
+                <div className="mt-3 space-y-2">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      data-testid="use-membership-ld-free"
+                      checked={useMembershipLdFree}
+                      onChange={(e) => setUseMembershipLdFree(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
+                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base unit when credit remains (or Unlimited).</span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      data-testid="use-membership-ps-free"
+                      checked={useMembershipPsFree}
+                      onChange={(e) => setUseMembershipPsFree(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
+                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base.</span>
+                    </span>
+                  </label>
+                </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Pure LD: 1 free LD entry when available. Free PS upgrade (dual-quota): uses 1 LD entry ticket + 1 free PS upgrade voucher; otherwise 40% off PS base. No tier % discount.
+                  Uncheck to keep the credit unused for this booking. No tier % discount.
                 </p>
               </div>
             )}

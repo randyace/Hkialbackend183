@@ -346,6 +346,14 @@ export interface BookingFormData {
   specialRequests?: string;
   membershipTier?: EditMembershipTier;
   accountDiscountPct?: number;
+  /**
+   * Round 6.2.139 — opt-in for free LD entry / free PS upgrade on edit reprice.
+   */
+  useMembershipLdFree?: boolean;
+  useMembershipPsFree?: boolean;
+  /** Display-only remaining quotas from the account (edit membership card). */
+  ldEntriesRemaining?: number | null;
+  psFreeUpgradesRemaining?: number | null;
   // 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) — FK to
   // `promo_codes.id` (top-level column on `bookings`, NOT
   // the legacy `advanced_details.account.promoApplied` nested
