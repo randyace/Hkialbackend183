@@ -49,6 +49,11 @@ import type {
   EditNonFlyingGuest,
 } from './BookingEditView';
 import { computeVisitTimeRange } from './BookingEditView';
+import {
+  formatGuestDisplayName,
+  resolveSuggestionGuest,
+} from '../../../../../services/guestMergeService';
+import { MergeReviewModal } from '../../../../common/MergeReviewModal';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -106,7 +111,7 @@ export interface UpdateStatusPayload {
 }
 import {
   HISTORICAL_GUESTS, DETAIL_AGENCY_DATA, EXPLICIT_BOOKING_OVERRIDES,
-  MERGE_FIXED_FIELDS, emptyPassenger, MONTHS,
+  emptyPassenger, MONTHS,
   isPassengerFilled, buildInitialPassengers,
   emptyNonFlyingGuest, buildInitialNonFlyingGuests,
   generateMockBooking,
@@ -326,6 +331,43 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // the token is persisted (the wrapper has just done a
   // login round-trip on its own path).
   authToken?: string;
+  /**
+   * CRM Identity Resolution — pending soft-merge suggestions from
+   * `GET /api/bookings/{id}/merge-suggestions`. When non-empty, the
+   * Figma "Similar Profile Detected" banner is shown.
+   */
+  pendingSuggestions?: Array<{
+    id: string;
+    new_guest_id: string;
+    existing_guest_id: string;
+    match_score: number;
+    status: string;
+    existing_guest?: {
+      id: string;
+      title?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      passport_prefix?: string | null;
+      dob?: string | null;
+      food_allergies?: unknown;
+      dietary_requirements?: unknown;
+    } | null;
+    new_guest?: {
+      id: string;
+      title?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      passport_prefix?: string | null;
+      dob?: string | null;
+      food_allergies?: unknown;
+      dietary_requirements?: unknown;
+    } | null;
+  }>;
+  /** Runs `POST /api/guests/{guestId}/trigger-match` (sync demo scan). */
+  onRunIdentityCheck?: () => void | Promise<void>;
+  isRunningIdentityCheck?: boolean;
+  /** Guest profile UUID used by Run Identity Check. */
+  identityGuestId?: string | null;
   // 2026-06-23 (round 6.2.49 follow-up #3) — parent-delegated
   // invoice handlers. The current figma-ui dialog is still
   // self-contained (it uses `apiBaseUrl`/`authToken`/`onInvoiceSent`),
@@ -418,7 +460,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   bookableItemPrices?: Record<string, number>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
@@ -1487,27 +1529,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [showSimilarBanner, setShowSimilarBanner] = useState(true);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
   const [mergeComplete, setMergeComplete] = useState(false);
-  // mergeChecked: set of differing field labels the user wants to pull from the similar profile
-  // Checked = overwrite this field with the similar profile's value; Unchecked = no action
-  const [mergeChecked, setMergeChecked] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (pendingSuggestions.length > 0) {
+      setShowSimilarBanner(true);
+      setMergeComplete(false);
+    }
+  }, [pendingSuggestions]);
 
   const openMergeDialog = () => {
-    setMergeChecked(new Set()); // nothing checked by default — no action
     setShowMergeDialog(true);
   };
-
-  const toggleMergeField = (label: string) => {
-    setMergeChecked(prev => {
-      const next = new Set(prev);
-      if (next.has(label)) next.delete(label); else next.add(label);
-      return next;
-    });
-  };
-
-  const toggleAllMergeFields = (mergeableLabels: string[], checkAll: boolean) => {
-    setMergeChecked(checkAll ? new Set(mergeableLabels) : new Set());
-  };
-  // ────────────��───────────────────────────────────────────────────
+  // ───────────────────────────────────────────────────────────────────────────
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
@@ -1756,81 +1789,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </div>
       )}
 
-      {/* 5.5 Similar Profile Detected */}
+      {/* 5.5 Similar Profile Detected — Figma Soft Merge banner */}
       {(() => {
-        // 2026-06-09 — Hide the Similar Profile Detected banner + merge
-        // dialog for the demo. The feature is not in scope for this
-        // round. To bring it back, change `true` to `false` below.
-        // The state setters (showSimilarBanner, showMergeDialog, etc.)
-        // and the openMergeDialog handler are kept intact so the
-        // flip-back is a one-token change.
-        if (true) return null;
-        const p = passengers[0];
-        if (!p || !isPassengerFilled(p) || !showSimilarBanner || mergeComplete) return null;
-        const fullName = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ');
-        const dob = [p.birthdayDay, p.birthdayMonth, p.birthdayYear].filter(Boolean).join(' ');
-        const currentProfile = {
-          accountNo: booking.accountNo,
-          title: p.title,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          gender: (p.title === 'Mrs' || p.title === 'Miss') ? 'Female' : 'Male',
-          dateOfBirth: dob,
-          passportNo: p.travelDocNo || '—',
-          email: `${p.firstName.toLowerCase()}.${p.lastName.toLowerCase()}@email.com`,
-          phone: '+852 9111 0001',
-          nationality: 'British',
-          membershipType: booking.accountType === 'Individual' ? 'Gold' : 'N/A',
-          totalVisits: String(bookingId % 15 + 12),
-          lastVisit: '2026-02-14',
-          foodAllergies: p.foodAllergies || '—',
-          dietaryRequirements: 'Low Sodium',
-          createdDate: '2024-01-15',
-          bookingNo: booking.bookingNo,
-          preferences: 'Window seat, extra pillow, champagne on arrival',
-          remarks: 'Requires quiet suite; do not disturb before 09:00.',
-        };
-        const similarProfile = {
-          accountNo: 'ACC-2023-0047',
-          title: p.title,
-          firstName: p.firstName,
-          lastName: p.lastName,
-          gender: (p.title === 'Mrs' || p.title === 'Miss') ? 'Female' : 'Male',
-          dateOfBirth: dob,
-          passportNo: p.travelDocNo || '—',
-          email: `${p.firstName.toLowerCase()}.${p.lastName.toLowerCase()}.hkg@gmail.com`,
-          phone: '+852 9872 3341',
-          nationality: 'British',
-          membershipType: 'None',
-          totalVisits: '8',
-          lastVisit: '2023-11-20',
-          foodAllergies: p.foodAllergies?.split(',')[0]?.trim() || '—',
-          dietaryRequirements: 'None',
-          createdDate: '2023-04-10',
-          bookingNo: 'A-20231120-000047',
-          preferences: 'Aisle seat preferred, warm towel service',
-          remarks: 'First-time Premiere Suite guest. Noted language preference: Cantonese.',
-        };
-        const compareRows: { label: string; curr: string; sim: string; isMatch: boolean }[] = [
-          // ── Fixed fields first — Account No. always row 1 ──────────────────
-          { label: 'Account No.',          curr: currentProfile.accountNo,         sim: similarProfile.accountNo,         isMatch: false },
-          { label: 'Full Name',            curr: `${currentProfile.title} ${currentProfile.firstName} ${currentProfile.lastName}`, sim: `${similarProfile.title} ${similarProfile.firstName} ${similarProfile.lastName}`, isMatch: true },
-          { label: 'Gender',               curr: currentProfile.gender,            sim: similarProfile.gender,            isMatch: currentProfile.gender === similarProfile.gender },
-          { label: 'Date of Birth',        curr: currentProfile.dateOfBirth,       sim: similarProfile.dateOfBirth,       isMatch: currentProfile.dateOfBirth === similarProfile.dateOfBirth },
-          { label: 'Passport No.',         curr: currentProfile.passportNo,        sim: similarProfile.passportNo,        isMatch: currentProfile.passportNo === similarProfile.passportNo },
-          { label: 'Membership',           curr: currentProfile.membershipType,    sim: similarProfile.membershipType,    isMatch: currentProfile.membershipType === similarProfile.membershipType },
-          { label: 'Total Visits',         curr: currentProfile.totalVisits,       sim: similarProfile.totalVisits,       isMatch: false },
-          { label: 'Last Visit',           curr: currentProfile.lastVisit,         sim: similarProfile.lastVisit,         isMatch: false },
-          { label: 'Created Date',         curr: currentProfile.createdDate,       sim: similarProfile.createdDate,       isMatch: false },
-          // ── Mergeable fields below ──────────────────────────────────────────
-          { label: 'Email',                curr: currentProfile.email,             sim: similarProfile.email,             isMatch: false },
-          { label: 'Phone',                curr: currentProfile.phone,             sim: similarProfile.phone,             isMatch: false },
-          { label: 'Food Allergies',       curr: currentProfile.foodAllergies,     sim: similarProfile.foodAllergies,     isMatch: currentProfile.foodAllergies === similarProfile.foodAllergies },
-          { label: 'Dietary Requirements', curr: currentProfile.dietaryRequirements, sim: similarProfile.dietaryRequirements, isMatch: currentProfile.dietaryRequirements === similarProfile.dietaryRequirements },
-          { label: 'Preferences',          curr: currentProfile.preferences,         sim: similarProfile.preferences,         isMatch: currentProfile.preferences === similarProfile.preferences },
-          { label: 'Remarks',              curr: currentProfile.remarks,             sim: similarProfile.remarks,             isMatch: currentProfile.remarks === similarProfile.remarks },
-        ];
-        const matchCount = compareRows.filter(r => r.isMatch).length;
+        if (!pendingSuggestions.length || !showSimilarBanner || mergeComplete) return null;
+
+        const primarySuggestion = pendingSuggestions[0];
+        const newGuest = resolveSuggestionGuest(primarySuggestion, 'new');
+        const fullName = formatGuestDisplayName(newGuest);
+        const matchScoreLabel = pendingSuggestions.length > 1
+          ? `${pendingSuggestions.length} Similar Profiles`
+          : (typeof primarySuggestion.match_score === 'number'
+            ? `${primarySuggestion.match_score}% Match Score`
+            : 'Similar Profile');
 
         return (
           <>
@@ -1843,11 +1813,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="text-sm font-semibold text-amber-900">Similar Profile Detected</h3>
                     <Badge className="bg-amber-200 text-amber-800 border border-amber-300 text-xs px-2 py-0.5">
-                      {matchCount} Matching Fields
+                      {matchScoreLabel}
                     </Badge>
                   </div>
                   <p className="text-sm text-amber-800">
-                    A profile matching <strong>{fullName}</strong> — same name, date of birth, gender and passport number — was found in a previous booking (<span className="font-mono text-xs bg-amber-100 px-1 rounded">{similarProfile.bookingNo}</span>). Do you want to review those profiles?
+                    {pendingSuggestions.length > 1 ? (
+                      <>
+                        <strong>{pendingSuggestions.length}</strong> profiles matching <strong>{fullName}</strong> were found. Do you want to review those profiles?
+                      </>
+                    ) : (
+                      <>
+                        A profile matching <strong>{fullName}</strong> — same name, date of birth, gender and passport number — was found in a previous booking. Do you want to review those profiles?
+                      </>
+                    )}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5" onClick={() => openMergeDialog()}>
@@ -1863,338 +1841,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </div>
             </Card>
 
-            {/* Profile Merge Comparison Dialog */}
-            <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
-              <DialogContent className="min-w-[1200px] max-w-[1200px] max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <GitMerge className="w-5 h-5 text-amber-600" />
-                    Compare & Merge Profiles
-                  </DialogTitle>
-                  <DialogDescription>
-                    Fields marked with a <span className="inline-flex items-center gap-1 font-medium text-gray-600"><svg className="w-3.5 h-3.5 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> lock</span> are identity fields and cannot be merged. Tick the checkbox next to <strong>Email</strong>, <strong>Phone</strong>, <strong>Food Allergies</strong>, <strong>Dietary Requirements</strong>, <strong>Preferences</strong>, or <strong>Remarks</strong> to overwrite them with the similar profile's value.
-                  </DialogDescription>
-                </DialogHeader>
-
-                {/* Match Summary Bar */}
-                {(() => {
-                  // Only non-fixed differing rows are mergeable (can have checkboxes)
-                  const mergeableLabels = compareRows
-                    .filter(r => !r.isMatch && !MERGE_FIXED_FIELDS.has(r.label))
-                    .map(r => r.label);
-                  const mergeableDifferingCount = mergeableLabels.length;
-                  const checkedCount = mergeableLabels.filter(l => mergeChecked.has(l)).length;
-                  const allChecked   = mergeableLabels.length > 0 && checkedCount === mergeableLabels.length;
-                  return (
-                    <div className="flex items-center gap-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg flex-wrap">
-                      <div className="flex items-center gap-1.5 text-green-700">
-                        <CheckCheck className="w-4 h-4" />
-                        <span className="text-sm font-medium">{matchCount} fields identical</span>
-                      </div>
-                      <span className="text-gray-300">|</span>
-                      <div className="flex items-center gap-1.5 text-orange-600">
-                        <AlertTriangle className="w-4 h-4" />
-                        <span className="text-sm font-medium">{mergeableDifferingCount} fields differ</span>
-                      </div>
-                      <span className="text-gray-300">|</span>
-                      <div className="flex items-center gap-1.5 text-blue-700">
-                        <span className="text-sm font-medium">{checkedCount} field{checkedCount !== 1 ? 's' : ''} selected to overwrite</span>
-                      </div>
-
-                    </div>
-                  );
-                })()}
-
-                {/* ── Identity Profile Cards (fixed fields, side-by-side) ── */}
-                {(() => {
-                  const fixedRows = compareRows.filter(r => MERGE_FIXED_FIELDS.has(r.label));
-                  return (
-                    <div className="rounded-xl border border-gray-200 overflow-hidden">
-                      {/* Card header row */}
-                      <div className="grid grid-cols-2">
-                        <div className="px-5 py-3 bg-blue-600 flex items-center gap-2 border-r border-blue-500">
-                          <User className="w-4 h-4 text-white shrink-0" />
-                          <div>
-                            <p className="text-white text-xs font-semibold">Current Booking Guest</p>
-                            <p className="text-blue-200 text-xs">{currentProfile.accountNo}</p>
-                          </div>
-                        </div>
-                        <div className="px-5 py-3 bg-amber-500 flex items-center gap-2">
-                          <History className="w-4 h-4 text-white shrink-0" />
-                          <div>
-                            <p className="text-white text-xs font-semibold">Similar Profile (Old Booking)</p>
-                            <p className="text-amber-100 text-xs">{similarProfile.bookingNo} · {similarProfile.accountNo}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Fixed fields grid — two columns side by side */}
-                      <div className="grid grid-cols-2 divide-x divide-gray-200">
-                        {/* Current profile column */}
-                        <div className="bg-blue-50/30 p-5 grid grid-cols-[150px_1fr] gap-x-3 gap-y-3 content-start">
-                          {fixedRows.map(row => (
-                            <div key={`curr-${row.label}`} className="contents">
-                              <span className="text-xs text-gray-500 font-medium flex items-center gap-1 self-start pt-0.5">
-                                
-                                {row.label}
-                              </span>
-                              <span className={`text-sm font-medium break-all ${row.isMatch ? 'text-gray-800' : 'text-blue-800'}`}>
-                                {row.curr || '—'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Similar profile column */}
-                        <div className="bg-amber-50/30 p-5 grid grid-cols-[150px_1fr] gap-x-3 gap-y-3 content-start">
-                          {fixedRows.map(row => (
-                            <div key={`sim-${row.label}`} className="contents">
-                              <span className="text-xs text-gray-500 font-medium flex items-center gap-1 self-start pt-0.5">
-                                
-                                {row.label}
-                              </span>
-                              <span className={`text-sm font-medium break-all ${row.isMatch ? 'text-gray-800' : 'text-amber-800'}`}>
-                                {row.sim || '—'}
-                                {!row.isMatch && (
-                                  null
-                                )}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Footer note */}
-                      
-                    </div>
-                  );
-                })()}
-
-                {/* ── Mergeable fields table ── */}
-                <div className="rounded-lg border border-gray-200 overflow-hidden text-sm">
-                  {/* Header row */}
-                  {(() => {
-                    const mergeableLabels = compareRows
-                      .filter(r => !r.isMatch && !MERGE_FIXED_FIELDS.has(r.label))
-                      .map(r => r.label);
-                    const checkedCount = mergeableLabels.filter(l => mergeChecked.has(l)).length;
-                    const allChecked   = mergeableLabels.length > 0 && checkedCount === mergeableLabels.length;
-                    const someChecked  = checkedCount > 0 && !allChecked;
-                    return (
-                  <div className="grid grid-cols-[44px_180px_1fr_1fr] bg-gray-100 border-b border-gray-200">
-                    <div
-                      className="px-3 py-3 border-r border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                      onClick={() => toggleAllMergeFields(mergeableLabels, !allChecked)}
-                      title={allChecked ? 'Deselect all mergeable fields' : 'Select all mergeable fields'}
-                    >
-                      <span
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                          allChecked
-                            ? 'bg-amber-500 border-amber-500'
-                            : someChecked
-                            ? 'bg-amber-200 border-amber-400'
-                            : 'bg-white border-gray-300 hover:border-amber-400'
-                        }`}
-                      >
-                        {allChecked && (
-                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
-                          </svg>
-                        )}
-                        {someChecked && (
-                          <span className="w-2 h-0.5 bg-amber-600 rounded-full block" />
-                        )}
-                      </span>
-                    </div>
-                    <div className="px-4 py-3 border-r border-gray-200 flex items-center">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Mergeable Field</span>
-                    </div>
-                    <div className="px-4 py-3 border-r border-blue-300 bg-blue-600 flex items-center gap-2">
-                      <User className="w-4 h-4 text-white shrink-0" />
-                      <p className="text-white text-xs font-semibold">Current Guest</p>
-                    </div>
-                    <div className="px-4 py-3 bg-amber-500 flex items-center gap-2">
-                      <History className="w-4 h-4 text-white shrink-0" />
-                      <p className="text-white text-xs font-semibold">Similar Profile</p>
-                    </div>
-                  </div>
-                    );
-                  })()}
-
-                  {/* Only mergeable (non-fixed) rows */}
-                  {compareRows.filter(r => !MERGE_FIXED_FIELDS.has(r.label)).map((row, idx, arr) => {
-                    const isLast    = idx === arr.length - 1;
-                    const borderB   = isLast ? '' : 'border-b border-gray-100';
-                    const isChecked = mergeChecked.has(row.label);
-
-                    // ── Matching mergeable field ──────────────────────────────────────
-                    if (row.isMatch) {
-                      return (
-                        <div key={row.label} className={`grid grid-cols-[44px_180px_1fr_1fr] ${borderB} bg-green-50`}>
-                          <div className="border-r border-gray-200 flex items-center justify-center">
-                            <CheckCheck className="w-4 h-4 text-green-500" />
-                          </div>
-                          <div className="px-4 py-3 border-r border-gray-200 flex items-center">
-                            <span className="text-xs text-gray-600 font-medium">{row.label}</span>
-                          </div>
-                          <div className="px-4 py-3 border-r border-gray-100 flex items-center gap-2">
-                            <span className="text-sm text-green-800 font-medium break-all">{row.curr || '—'}</span>
-                          </div>
-                          <div className="px-4 py-3 flex items-center gap-2">
-                            <span className="text-sm text-green-800 font-medium break-all">{row.sim || '—'}</span>
-                            <span className="ml-auto text-xs bg-green-200 text-green-800 px-2 py-0.5 rounded-full whitespace-nowrap">Same</span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // ── Differing mergeable field: checkbox to opt-in ────────────────
-                    return (
-                      <div
-                        key={row.label}
-                        className={`grid grid-cols-[44px_180px_1fr_1fr] ${borderB} ${isChecked ? 'bg-amber-50/60' : 'bg-white'} transition-colors`}
-                      >
-                        {/* Checkbox */}
-                        <div
-                          className="border-r border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-50"
-                          onClick={() => toggleMergeField(row.label)}
-                        >
-                          <span
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                              isChecked
-                                ? 'bg-amber-500 border-amber-500'
-                                : 'bg-white border-gray-300 hover:border-amber-400'
-                            }`}
-                          >
-                            {isChecked && (
-                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
-                              </svg>
-                            )}
-                          </span>
-                        </div>
-
-                        {/* Field label */}
-                        <div
-                          className="px-4 py-3 border-r border-gray-200 flex flex-col justify-center cursor-pointer"
-                          onClick={() => toggleMergeField(row.label)}
-                        >
-                          <span className="text-xs text-gray-700 font-medium">{row.label}</span>
-                          <span className={`text-xs mt-0.5 ${isChecked ? 'text-amber-600 font-medium' : 'text-gray-400'}`}>
-                            {isChecked ? 'Will be overwritten' : 'No action'}
-                          </span>
-                        </div>
-
-                        {/* Current value — dimmed when checked */}
-                        <div className={`px-4 py-3 border-r border-gray-100 flex items-start gap-2 ${isChecked ? 'opacity-50' : ''}`}>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm text-gray-700 break-all">{row.curr || '—'}</span>
-                            {isChecked && (
-                              <span className="block text-xs text-gray-400 mt-0.5 line-through">{row.curr || '—'}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Similar value — highlighted when checked */}
-                        <div
-                          className={`px-4 py-3 flex items-start gap-2 cursor-pointer transition-colors ${
-                            isChecked ? 'bg-amber-100/70' : 'hover:bg-gray-50'
-                          }`}
-                          onClick={() => toggleMergeField(row.label)}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className={`text-sm break-all font-medium ${isChecked ? 'text-amber-800' : 'text-gray-600'}`}>
-                              {row.sim || '—'}
-                            </span>
-                            {isChecked && (
-                              <span className="block text-xs text-amber-600 mt-0.5">← Will replace current value</span>
-                            )}
-                          </div>
-                          {isChecked && <CheckCheck className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Legend */}
-                <div className="flex items-center gap-6 text-xs text-gray-500 px-1 flex-wrap">
-                  
-                  <span className="flex items-center gap-1.5">
-                    <CheckCheck className="w-3.5 h-3.5 text-green-500" />
-                    Same in both profiles (no action needed)
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded border-2 border-gray-300 bg-white inline-block" />
-                    Unticked — keep current value, no action
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-4 h-4 rounded border-2 border-amber-500 bg-amber-500 inline-flex items-center justify-center">
-                      <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5" />
-                      </svg>
-                    </span>
-                    Ticked — overwrite with similar profile's value
-                  </span>
-                </div>
-
-                {/* Selection summary */}
-                {(() => {
-                  const checkedCount    = mergeChecked.size;
-                  const mergeableCount  = compareRows.filter(r => !r.isMatch && !MERGE_FIXED_FIELDS.has(r.label)).length;
-                  const fixedCount      = compareRows.filter(r => MERGE_FIXED_FIELDS.has(r.label)).length;
-                  const noActionCount   = mergeableCount - checkedCount;
-                  return (
-                    <div className="flex items-center gap-3 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm flex-wrap">
-                      <span className="text-gray-500">Merge summary:</span>
-                      <span className="text-green-700 font-medium">{matchCount} identical (auto-kept)</span>
-                      <span className="text-gray-400">·</span>
-                      
-                      
-                      <span className="text-amber-700 font-medium">{checkedCount} field{checkedCount !== 1 ? 's' : ''} to overwrite</span>
-                      <span className="text-gray-400">·</span>
-                      <span className="text-gray-500">{noActionCount} mergeable field{noActionCount !== 1 ? 's' : ''} unchanged</span>
-                    </div>
-                  );
-                })()}
-
-                {/* Footer Actions */}
-                <div className="flex items-center justify-between pt-3 border-t gap-4">
-                  <p className="text-xs text-gray-500">
-                    The merged profile will be saved under <span className="font-mono">{booking.accountNo}</span>. Only ticked fields will be overwritten.
-                  </p>
-                  <div className="flex gap-3 shrink-0">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setShowMergeDialog(false);
-                        setShowSimilarBanner(false);
-                      }}
-                    >
-                      <X className="w-4 h-4 mr-1.5" />
-                      Ignore
-                    </Button>
-                    <Button
-                      className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white gap-2"
-                      onClick={() => {
-                        setShowMergeDialog(false);
-                        setMergeComplete(true);
-                        setShowSimilarBanner(false);
-                        const count = mergeChecked.size;
-                        toast.success('Profiles merged successfully!', {
-                          description: count > 0
-                            ? `${fullName}'s profile updated under ${booking.accountNo}. ${count} field${count !== 1 ? 's' : ''} overwritten from the similar profile.`
-                            : `Profiles linked under ${booking.accountNo}. No fields were overwritten.`,
-                        });
-                      }}
-                    >
-                      <GitMerge className="w-4 h-4" />
-                      Confirm Merge
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <MergeReviewModal
+              isOpen={showMergeDialog}
+              onClose={() => setShowMergeDialog(false)}
+              pendingSuggestions={pendingSuggestions}
+              accountNo={booking.accountNo}
+              accountType={booking.accountType}
+              membershipType={(booking as { membershipType?: string }).membershipType}
+              bookingNo={booking.bookingNo}
+              onIgnore={() => {
+                setShowMergeDialog(false);
+                setShowSimilarBanner(false);
+              }}
+              onConfirmMerge={() => {
+                setShowMergeDialog(false);
+                setMergeComplete(true);
+                setShowSimilarBanner(false);
+              }}
+            />
           </>
         );
       })()}
@@ -2244,7 +1908,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="grid grid-cols-3 gap-6">
           <div>
             <label className="text-sm text-gray-600">Guest Name</label>
-            <p className="text-lg">{booking.guestName}</p>
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              <p className="text-lg">{booking.guestName}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-50"
+                disabled={isRunningIdentityCheck || !identityGuestId || !onRunIdentityCheck}
+                onClick={() => { void onRunIdentityCheck?.(); }}
+                title={!identityGuestId ? 'No guest profile linked to this booking' : 'Run Identity Check'}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRunningIdentityCheck ? 'animate-spin' : ''}`} />
+                {isRunningIdentityCheck ? 'Scanning…' : 'Run Identity Check'}
+              </Button>
+            </div>
           </div>
           <div>
             <label className="text-sm text-gray-600">User ID</label>
