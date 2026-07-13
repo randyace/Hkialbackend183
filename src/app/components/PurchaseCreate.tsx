@@ -232,6 +232,11 @@ export interface PurchaseCreateProps {
   // input from the Corporate form. Default true keeps the figma Make
   // base compatible; the production admin wrapper passes false.
   showVipAccounts?: boolean;
+  // 2026-07-12 round 6.2.134 — when provided, parent owns account
+  // search (GET /accounts?search=…). Local name filter is skipped so
+  // older accounts outside the initial page (e.g. YUEN SSKY) appear.
+  onAccountSearch?: (query: string) => void;
+  isAccountSearching?: boolean;
 }
 
 export function PurchaseCreate({
@@ -242,6 +247,8 @@ export function PurchaseCreate({
   onSubmit,
   onBack,
   showVipAccounts = true,
+  onAccountSearch,
+  isAccountSearching = false,
 }: PurchaseCreateProps = {}) {
   const availablePackages  = packagesProp?.length  ? packagesProp  : GRADING_PACKAGES;
   const availableBundles   = sessionBundlesProp?.length ? sessionBundlesProp : SESSION_BUNDLES;
@@ -299,11 +306,18 @@ export function PurchaseCreate({
     // 2026-07-05 round 6.2.106 — 'all' removed from catFilter union (T3-A);
     // per-category match only. The dead `catFilter === 'all'` branch was
     // dropped here because TypeScript flags the comparison as noOverlap.
-    const matchCat    = a.purchaseCategory === catFilter;
-    const matchSearch = !acctSearch ||
-      a.primaryName.toLowerCase().includes(acctSearch.toLowerCase()) ||
-      a.accountNumber.toLowerCase().includes(acctSearch.toLowerCase()) ||
-      a.email.toLowerCase().includes(acctSearch.toLowerCase());
+    const matchCat = a.purchaseCategory === catFilter;
+    // 2026-07-12 round 6.2.134 — when parent owns search via onAccountSearch,
+    // skip local name filter (accounts prop is already the API result page).
+    // Standalone figma Make path keeps client-side filter; tokenize so
+    // "ssky yuen" matches reversed "YUEN SSKY".
+    if (onAccountSearch) return matchCat;
+    const tokens = acctSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const matchSearch = tokens.length === 0 || tokens.every(t =>
+      a.primaryName.toLowerCase().includes(t) ||
+      a.accountNumber.toLowerCase().includes(t) ||
+      a.email.toLowerCase().includes(t),
+    );
     return matchCat && matchSearch;
   });
 
@@ -524,9 +538,18 @@ export function PurchaseCreate({
               <Input
                 placeholder="Search by name, account number or email..."
                 value={acctSearch}
-                onChange={e => setAcctSearch(e.target.value)}
+                onChange={e => {
+                  const value = e.target.value;
+                  setAcctSearch(value);
+                  onAccountSearch?.(value);
+                }}
                 className="pl-9"
               />
+              {isAccountSearching && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+                  Searching…
+                </span>
+              )}
             </div>
 
             {/* Account list */}
