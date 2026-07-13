@@ -384,6 +384,11 @@ export interface CreateBookingProps {
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
     ps_free_upgrades_remaining?: number | null;
+    // Round 6.2.143 — TravelAgency / Corporate money credit balance
+    // (accounts.credit_balance). Shown on Agency create-booking so
+    // staff can see remaining OnCredit headroom before submit.
+    // Spend still happens at admin Confirm (Q-SP1=B), not at create.
+    credit_balance?: number | string | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
     // array (HasMany) — usually `[{ agency_code, agency_name,
@@ -1888,6 +1893,30 @@ export function CreateBooking({
                     <p className="text-sm text-green-700 mt-0.5">
                       <strong>{selectedAgency.name}</strong> ({selectedAgency.code}) — <strong>{selectedAgency.discountRate}%</strong> off
                       {selectedAgency.paymentMethod ? <> · Payment: <strong>{selectedAgency.paymentMethod}</strong></> : null}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {/* Round 6.2.143 — surface remaining agent account credit so
+                  staff know OnCredit headroom. Balance is topped up via
+                  /purchase Agency contract (Paid-at-create / sendInvoice)
+                  and decremented when the booking is Confirmed/Approved. */}
+              {selectedAccount && (selectedAccount.credit_balance != null && selectedAccount.credit_balance !== '') && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3">
+                  <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
+                    <p className="text-sm text-purple-700 mt-0.5">
+                      Available:{' '}
+                      <strong>
+                        HKD {Number(selectedAccount.credit_balance).toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                      {paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice' ? (
+                        <> · Payment mode uses credit on <strong>Confirm</strong> (not at create)</>
+                      ) : null}
                     </p>
                   </div>
                 </div>

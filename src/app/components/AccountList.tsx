@@ -42,6 +42,15 @@ interface Account {
   status: 'Active' | 'Inactive' | 'Suspended';
   createdDate: string;
   creditBalance?: number;
+  // 2026-07-13 round 6.2.143 — Individual membership free-entry
+  // quotas. Surfaced via the wrapper's parent-repo `AccountList.tsx`
+  // mapper (which reads `ld_entries_remaining` and
+  // `ps_free_upgrades_remaining` from `GET /api/accounts`). Displayed
+  // only for `type === 'Individual'` rows in the "Quota / Credit"
+  // column. `ldEntriesRemaining === -1` means unlimited (per
+  // `hkial-react/src/types/index.ts:48`).
+  ldEntriesRemaining?: number | null;
+  psFreeUpgradesRemaining?: number | null;
   membershipType?: 'Platinum' | 'Gold' | 'Sapphire' | 'Diamond';
   membershipExpiry?: string;
 }
@@ -310,7 +319,7 @@ export function AccountList({
                 <TableHead>Phone</TableHead>
                 <TableHead>Grouping</TableHead>
                 <TableHead>Payment</TableHead>
-                <TableHead>Credit Balance</TableHead>
+                <TableHead>Quota / Credit</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -355,10 +364,31 @@ export function AccountList({
                   <TableCell>{account.internalGrouping}</TableCell>
                   <TableCell>{account.paymentMethod}</TableCell>
                   <TableCell>
-                    {account.creditBalance !== undefined ? (
-                      <span className="text-green-600">HK${account.creditBalance.toLocaleString()}</span>
+                    {account.type === 'Individual' ? (
+                      // Round 6.2.143 — Individual: show free-entry quotas.
+                      // `-1` means unlimited LD (per types/index.ts:48).
+                      // Hide zero-PS rows so the column doesn't show
+                      // "0 PS" for tiers that don't include PS upgrades.
+                      (() => {
+                        const ld = account.ldEntriesRemaining;
+                        const ps = account.psFreeUpgradesRemaining;
+                        const ldLabel = ld === -1
+                          ? 'Unlimited LD'
+                          : (ld == null ? '0 LD' : `${ld} LD`);
+                        const psLabel = ps == null ? '' : `${ps} PS`;
+                        return (
+                          <span className="text-sm text-amber-700" data-testid="row-quota-credit">
+                            {[ldLabel, psLabel].filter(Boolean).join(' / ') || <span className="text-gray-400">—</span>}
+                          </span>
+                        );
+                      })()
+                    ) : account.creditBalance !== undefined ? (
+                      // Corporate / TravelAgency: HK$ credit balance
+                      // (decimal:2 HKD stored on accounts.credit_balance,
+                      // surfaced via the wrapper mapper).
+                      <span className="text-green-600" data-testid="row-quota-credit">HK${account.creditBalance.toLocaleString()}</span>
                     ) : (
-                      <span className="text-gray-400">—</span>
+                      <span className="text-gray-400" data-testid="row-quota-credit">—</span>
                     )}
                   </TableCell>
                   <TableCell>{getStatusBadge(account.status)}</TableCell>
