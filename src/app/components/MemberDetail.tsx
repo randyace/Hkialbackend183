@@ -136,6 +136,12 @@ export interface Member {
   createdDate: string;
   totalBookings: number;
   totalSpent: string;
+  // 2026-07-13 — credit balance (Corporate / TravelAgency HKD) + free-entry
+  // quotas (Individual-only). Surfaced on the Member Summary Card under the
+  // status/account-type badges so staff see balances without a separate top card.
+  creditBalance?: number;
+  ldEntriesRemaining?: number | null;
+  psFreeUpgradesRemaining?: number | null;
   appearance: { ethnicity: string; age: string; height: string; hairColor: string; glasses: string; };
   workInfo: { industry: string; company: string; position: string; previousWork: string; };
   observations: { handedness: string; writingHand: string; preferredLanguage: string; interests: string; };
@@ -175,8 +181,13 @@ export interface MemberDetailProps {
   member?: Member | null;
   onBack: () => void;
   onEdit?: () => void;
-  /** Called with the full updated Member when the user saves in Edit mode */
-  onSave?: (member: Member) => void;
+  /**
+   * Called with the full updated Member when the user saves in Edit mode.
+   * Round 6.2.145 — may return a Promise; the view awaits it, only exits
+   * edit mode on success, and does NOT toast success itself when a
+   * container-owned onSave is provided (container owns API toasts).
+   */
+  onSave?: (member: Member) => void | Promise<void>;
   onUpgrade?: (packageId: string) => void;
   isLoading?: boolean;
 
@@ -629,11 +640,14 @@ export function MemberDetail({
     return colors[category] || 'bg-gray-100 text-gray-700';
   };
 
-  const handleSave = () => {
+  // Round 6.2.145 — await container onSave so failed PUTs keep edit mode
+  // and do not show a false-success toast. Demo mode (no onSave) still
+  // toasts locally so standalone figma-ui preview stays usable.
+  const handleSave = async () => {
     const updated: Member = {
       ...memberData,
       ...basicForm,
-      name: `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`,
+      name: `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`.trim(),
       paymentMethod: accountForm.paymentMethod as Member['paymentMethod'],
       internalGrouping: accountForm.internalGrouping,
       companyCode: accountForm.companyCode,
@@ -641,9 +655,16 @@ export function MemberDetail({
       workInfo: workForm,
       observations: observationsForm,
     };
-    onSave?.(updated);
-    toast.success('Member details updated successfully');
-    setIsEditing(false);
+    try {
+      if (onSave) {
+        await onSave(updated);
+      } else {
+        toast.success('Member details updated successfully');
+      }
+      setIsEditing(false);
+    } catch {
+      // Container toasts the error; stay in edit mode with form values.
+    }
   };
 
   const handleCancel = () => {
@@ -702,17 +723,17 @@ export function MemberDetail({
         <div className="flex gap-2">
           {isEditing ? (
             <>
-              <Button variant="outline" onClick={handleCancel}>
+              <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
                 <X className="w-4 h-4 mr-2" />
                 Cancel
               </Button>
-              <Button onClick={handleSave}>
+              <Button onClick={() => { void handleSave(); }} disabled={isLoading}>
                 <Save className="w-4 h-4 mr-2" />
-                Save Changes
+                {isLoading ? 'Saving…' : 'Save Changes'}
               </Button>
             </>
           ) : (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button onClick={() => setIsEditing(true)} disabled={isLoading}>
               <Edit2 className="w-4 h-4 mr-2" />
               Edit Profile
             </Button>
@@ -754,6 +775,64 @@ export function MemberDetail({
                     {memberData.membershipType} Member
                   </Badge>
                 )}
+              </div>
+              {/* Account Quotas & Credit — under status / account-type badges */}
+              <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
+                <h3 className="text-sm font-semibold text-[#0f2942] mb-2">
+                  Account Quotas &amp; Credit
+                </h3>
+                <div className="grid grid-cols-3 gap-4 text-sm" data-testid="member-quota-credit-card">
+                  <div>
+                    <span className="text-gray-600">Credit Balance</span>
+                    <p
+                      className="font-semibold text-[#0f2942]"
+                      data-testid="member-credit-balance"
+                    >
+                      {memberData.creditBalance == null ? (
+                        <span className="text-gray-400">—</span>
+                      ) : (
+                        <span className="text-green-700">
+                          HK${memberData.creditBalance.toLocaleString(undefined, {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Free LD Entries</span>
+                    <p
+                      className="font-semibold text-[#0f2942]"
+                      data-testid="member-ld-remaining"
+                    >
+                      {memberData.accountType === 'Individual' ? (
+                        memberData.ldEntriesRemaining === -1
+                          ? <span className="text-amber-700">Unlimited</span>
+                          : (memberData.ldEntriesRemaining == null
+                              ? <span className="text-gray-400">—</span>
+                              : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Free PS Upgrades</span>
+                    <p
+                      className="font-semibold text-[#0f2942]"
+                      data-testid="member-ps-remaining"
+                    >
+                      {memberData.accountType === 'Individual' ? (
+                        memberData.psFreeUpgradesRemaining == null
+                          ? <span className="text-gray-400">—</span>
+                          : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
