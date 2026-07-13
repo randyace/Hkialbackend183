@@ -279,7 +279,7 @@ export function GradingPackages({
               </div>
 
               {/* Pricing & Credits */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-price" className="mb-[10px] block">Price (HKD)</Label>
                   <Input
@@ -289,6 +289,19 @@ export function GradingPackages({
                     value={editingPackage.price}
                     onChange={(e) =>
                       setEditingPackage({ ...editingPackage, price: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
+                  <Input
+                    id="edit-validity"
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={editingPackage.validityMonths}
+                    onChange={(e) =>
+                      setEditingPackage({ ...editingPackage, validityMonths: Number(e.target.value) })
                     }
                   />
                 </div>
@@ -303,19 +316,6 @@ export function GradingPackages({
                     value={editingPackage.bookingCredits}
                     onChange={(e) =>
                       setEditingPackage({ ...editingPackage, bookingCredits: Number(e.target.value) })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
-                  <Input
-                    id="edit-validity"
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={editingPackage.validityMonths}
-                    onChange={(e) =>
-                      setEditingPackage({ ...editingPackage, validityMonths: Number(e.target.value) })
                     }
                   />
                 </div>
