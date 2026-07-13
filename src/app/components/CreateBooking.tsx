@@ -12,7 +12,9 @@ import { Badge } from './ui/badge';
 // 2026-06-12 (round 6.2.39, M11 fix) — import the shared
 // catalog of add-on services. The pre-6.2.39 hardcoded
 // CREATE_ADDON_SERVICES (4 items) is replaced by this import.
-import { CATALOG_ADDONS, CATALOG_ADDON_MAP } from './addons';
+// CATALOG_ADDON_MAP was never exported from addons.tsx (dead import
+// residual from 6.2.39). Only CATALOG_ADDONS is the shared catalog.
+import { CATALOG_ADDONS } from './addons';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
@@ -64,9 +66,17 @@ const MONTHS = [
   'July','August','September','October','November','December',
 ];
 
-const MEMBERSHIP_DISCOUNT: Record<string, number> = {
-  Gold: 5, Platinum: 8, Diamond: 12, Sapphire: 15,
-};
+// Round 6.2.136 — Individual membership has NO tier % discount.
+// Benefits are free LD entries + free PS upgrades (see accounts.ld_entries_remaining
+// / ps_free_upgrades_remaining). The old MEMBERSHIP_DISCOUNT map
+// (Gold 5 / Platinum 8 / Diamond 12 / Sapphire 15) was mock UI data and
+// incorrectly auto-filled Account Discount. Removed.
+
+function formatMembershipQuota(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  if (value === -1) return 'Unlimited';
+  return String(value);
+}
 
 // Auto-generate a booking number preview
 const now = new Date();
@@ -318,6 +328,12 @@ export interface BookingFormData {
    * The wrapper reads it for `advanced_details.account.accountDiscountPct`.
    */
   accountDiscountPct?: number;
+  /**
+   * Round 6.2.139 — use free LD entry / free PS upgrade credits.
+   * Default true when eligible. false = charge without burning that credit.
+   */
+  useMembershipLdFree?: boolean;
+  useMembershipPsFree?: boolean;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -364,6 +380,15 @@ export interface CreateBookingProps {
     phone: string;
     membership_type?: string;
     company_name?: string;
+    // Round 6.2.136 — Individual membership quotas (from Account.show).
+    // null = not initialised / not a member; -1 LD = unlimited.
+    ld_entries_remaining?: number | null;
+    ps_free_upgrades_remaining?: number | null;
+    // Round 6.2.143 — TravelAgency / Corporate money credit balance
+    // (accounts.credit_balance). Shown on Agency create-booking so
+    // staff can see remaining OnCredit headroom before submit.
+    // Spend still happens at admin Confirm (Q-SP1=B), not at create.
+    credit_balance?: number | string | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
     // array (HasMany) — usually `[{ agency_code, agency_name,
@@ -493,6 +518,9 @@ export interface CreateBookingProps {
     // `advanced_details.account.accountDiscountPct` (see the
     // `handleSubmit` wrapper for the 2 emit sites).
     accountDiscountPct: number | undefined;
+    // Round 6.2.139 — staff opt-in for free LD / free PS credits.
+    useMembershipLdFree: boolean;
+    useMembershipPsFree: boolean;
   }) => void;
   /**
    * 2026-06-08 round 6.2.8 — bookable items price map sourced from
@@ -1016,36 +1044,28 @@ export function CreateBooking({
   // tier/agency rate but always overridable (e.g. ad-hoc promotion).
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
+  // Round 6.2.139 — default ON (auto-apply free credits when eligible).
+  const [useMembershipLdFree, setUseMembershipLdFree] = useState(true);
+  const [useMembershipPsFree, setUseMembershipPsFree] = useState(true);
 
-  // 2026-06-09 round 6.2.28 — when an account is selected, auto-load
-  // the Account Discount input with the tier/agency default rate.
-  // The staff can still type a different value to override (e.g.
-  // ad-hoc promotion), and clearing the account resets the input
-  // back to `''` (= fall back to tier/agency default, no override).
-  //
-  //   Gold      →  5%
-  //   Platinum  →  8%
-  //   Diamond   → 12%
-  //   Sapphire  → 15%
-  //
-  // Agency type already has its own rate from `selectedAgency`
-  // (set when the agency is picked). The Membership Tier
-  // Select is also disabled when an account is present so
-  // staff can't ad-hoc change it; the Account Discount input
-  // stays editable for the override case.
+  // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
+  // load Membership Tier from the account. Individual members do NOT
+  // get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
+  // Account Discount stays blank for Individual (staff override only);
+  // Agency default still comes from selectedAgency.discountRate in the
+  // placeholder below. Free LD / PS upgrade quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
-      // 2026-06-09 round 6.2.28 — auto-load the discount
-      // input with the tier's rate. `MEMBERSHIP_DISCOUNT`
-      // returns 0 for any tier not in the map (e.g. legacy
-      // "None" or empty string), so we only set the input
-      // when there's a positive rate to surface.
-      const tierRate = MEMBERSHIP_DISCOUNT[selectedAccount.membership_type as MembershipTier] ?? 0;
-      setAccountDiscountPct(tierRate > 0 ? tierRate : '');
+      setAccountDiscountPct('');
+      // Reset opt-in toggles when account changes (default apply).
+      setUseMembershipLdFree(true);
+      setUseMembershipPsFree(true);
     } else {
       setMembershipTier('');
       setAccountDiscountPct('');
+      setUseMembershipLdFree(true);
+      setUseMembershipPsFree(true);
     }
   }, [selectedAccount]);
 
@@ -1330,6 +1350,9 @@ export function CreateBooking({
       // wire = "no override"); a number 0-100 → preserved
       // verbatim (the wrapper passes it through).
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
+      // Round 6.2.139 — membership free-credit opt-in for live preview.
+      useMembershipLdFree,
+      useMembershipPsFree,
     });
   }, [
     hasLimousine,
@@ -1356,6 +1379,8 @@ export function CreateBooking({
     // (the wrapper's `usePricePreview` depends on
     // `input.accountDiscountPct`).
     accountDiscountPct,
+    useMembershipLdFree,
+    useMembershipPsFree,
   ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
@@ -1752,6 +1777,9 @@ export function CreateBooking({
       // 2026-06-09 — staff override of the auto-derived account discount.
       // `''` (untouched) = no override → wrapper falls back to tier/agency default.
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
+      // Round 6.2.139 — free membership credit opt-in (default true).
+      useMembershipLdFree,
+      useMembershipPsFree,
     };
     onSubmit?.(formData);
   };
@@ -1869,6 +1897,30 @@ export function CreateBooking({
                   </div>
                 </div>
               )}
+              {/* Round 6.2.143 — surface remaining agent account credit so
+                  staff know OnCredit headroom. Balance is topped up via
+                  /purchase Agency contract (Paid-at-create / sendInvoice)
+                  and decremented when the booking is Confirmed/Approved. */}
+              {selectedAccount && (selectedAccount.credit_balance != null && selectedAccount.credit_balance !== '') && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3">
+                  <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
+                    <p className="text-sm text-purple-700 mt-0.5">
+                      Available:{' '}
+                      <strong>
+                        HKD {Number(selectedAccount.credit_balance).toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                      {paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice' ? (
+                        <> · Payment mode uses credit on <strong>Confirm</strong> (not at create)</>
+                      ) : null}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1974,14 +2026,60 @@ export function CreateBooking({
                   <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
                   <SelectContent>
                     {(['Gold', 'Platinum', 'Diamond', 'Sapphire'] as MembershipTier[]).map(t => (
-                      <SelectItem key={t} value={t}>
-                        <span className="flex items-center gap-2">
-                          {t}{MEMBERSHIP_DISCOUNT[t] > 0 && <Badge className="bg-indigo-100 text-indigo-700 text-xs">{MEMBERSHIP_DISCOUNT[t]}% disc.</Badge>}
-                        </span>
-                      </SelectItem>
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {accountType === 'Individual' && selectedAccount && (
+              <div className="col-span-2 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+                <p className="text-sm font-medium text-[#0f2942] mb-2">Membership benefits</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600">Free LD entries left</span>
+                    <p className="font-semibold text-[#0f2942]" data-testid="membership-ld-remaining">
+                      {formatMembershipQuota(selectedAccount.ld_entries_remaining)}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Free PS upgrades left</span>
+                    <p className="font-semibold text-[#0f2942]" data-testid="membership-ps-remaining">
+                      {formatMembershipQuota(selectedAccount.ps_free_upgrades_remaining)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      data-testid="use-membership-ld-free"
+                      checked={useMembershipLdFree}
+                      onChange={(e) => setUseMembershipLdFree(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
+                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base unit when credit remains (or Unlimited).</span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      data-testid="use-membership-ps-free"
+                      checked={useMembershipPsFree}
+                      onChange={(e) => setUseMembershipPsFree(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
+                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base.</span>
+                    </span>
+                  </label>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Uncheck to keep the credit unused for this booking. No tier % discount.
+                </p>
               </div>
             )}
             <div>
@@ -2018,14 +2116,17 @@ export function CreateBooking({
                     const n = Number(raw);
                     if (Number.isFinite(n)) setAccountDiscountPct(Math.max(0, Math.min(100, n)));
                   }}
-                  placeholder={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '0'}
+                  placeholder={selectedAgency ? `${selectedAgency.discountRate}% (Agency Default)` : '0'}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 <span className="text-sm text-gray-500">%</span>
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                Default {selectedAgency ? `${selectedAgency.discountRate}% (Agency)` : membershipTier && MEMBERSHIP_DISCOUNT[membershipTier] > 0 ? `${MEMBERSHIP_DISCOUNT[membershipTier]}% (${membershipTier} Member)` : '—'}
-                {accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}
+                {selectedAgency
+                  ? <>Default {selectedAgency.discountRate}% (Agency){accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}</>
+                  : accountType === 'Individual'
+                    ? <>Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %</>
+                    : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
             <div>

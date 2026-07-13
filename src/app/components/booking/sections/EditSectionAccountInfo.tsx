@@ -176,6 +176,61 @@ export function EditSectionAccountInfo({
           />
         </div>
       </div>
+
+      {/* Round 6.2.139 — free LD / free PS credit opt-in on edit reprice */}
+      {(formData.membershipTier || formData.ldEntriesRemaining != null || formData.psFreeUpgradesRemaining != null) && (
+        <div className="mt-4 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+          <p className="text-sm font-medium text-[#0f2942] mb-2">Membership free credits</p>
+          <div className="grid grid-cols-2 gap-3 text-sm mb-3">
+            <div>
+              <span className="text-gray-600">Free LD entries left</span>
+              <p className="font-semibold text-[#0f2942]" data-testid="edit-membership-ld-remaining">
+                {formatQuota(formData.ldEntriesRemaining)}
+              </p>
+            </div>
+            <div>
+              <span className="text-gray-600">Free PS upgrades left</span>
+              <p className="font-semibold text-[#0f2942]" data-testid="edit-membership-ps-remaining">
+                {formatQuota(formData.psFreeUpgradesRemaining)}
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                data-testid="edit-use-membership-ld-free"
+                checked={formData.useMembershipLdFree !== false}
+                onChange={(e) => onFormChange({ useMembershipLdFree: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
+                <span className="block text-xs text-gray-500">Uncheck to keep LD credit unused on this booking (reprice / save).</span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                data-testid="edit-use-membership-ps-free"
+                checked={formData.useMembershipPsFree !== false}
+                onChange={(e) => onFormChange({ useMembershipPsFree: e.target.checked })}
+              />
+              <span>
+                <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
+                <span className="block text-xs text-gray-500">Off → paid 40% off PS base (no free-upgrade burn).</span>
+              </span>
+            </label>
+          </div>
+        </div>
+      )}
     </Card>
   );
+}
+
+function formatQuota(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  if (value === -1) return 'Unlimited';
+  return String(value);
 }

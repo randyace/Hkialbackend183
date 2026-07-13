@@ -47,6 +47,8 @@ export interface GradingPackage {
   price:          number;
   currency:       string;
   bookingCredits: number;
+  /** Free Premiere Suite upgrades included with the package */
+  psFreeUpgrades: number;
   validityMonths: number;
   description:    string;
   benefits:       PackageBenefit[];
@@ -211,7 +213,7 @@ export function GradingPackages({
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <CreditCard className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                   <p className="text-sm text-gray-900">{pkg.bookingCredits === -1 ? '∞' : pkg.bookingCredits}</p>
-                  <p className="text-xs text-gray-500">Entries/yr</p>
+                  <p className="text-xs text-gray-500">Entries</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <Clock className="w-4 h-4 text-gray-500 mx-auto mb-1" />
@@ -277,7 +279,7 @@ export function GradingPackages({
               </div>
 
               {/* Pricing & Credits */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="edit-price" className="mb-[10px] block">Price (HKD)</Label>
                   <Input
@@ -291,8 +293,21 @@ export function GradingPackages({
                   />
                 </div>
                 <div>
+                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
+                  <Input
+                    id="edit-validity"
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={editingPackage.validityMonths}
+                    onChange={(e) =>
+                      setEditingPackage({ ...editingPackage, validityMonths: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div>
                   <Label htmlFor="edit-credits" className="mb-[10px] block">
-                    Lounge Deluxe Entries/Year (-1 = Unlimited)
+                    Lounge Deluxe Entries (-1 = Unlimited)
                   </Label>
                   <Input
                     id="edit-credits"
@@ -305,15 +320,14 @@ export function GradingPackages({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
+                  <Label htmlFor="edit-ps-upgrades" className="mb-[10px] block">Free Premiere Suite Upgrades</Label>
                   <Input
-                    id="edit-validity"
+                    id="edit-ps-upgrades"
                     type="number"
-                    min={1}
-                    max={60}
-                    value={editingPackage.validityMonths}
+                    min={0}
+                    value={editingPackage.psFreeUpgrades}
                     onChange={(e) =>
-                      setEditingPackage({ ...editingPackage, validityMonths: Number(e.target.value) })
+                      setEditingPackage({ ...editingPackage, psFreeUpgrades: Number(e.target.value) })
                     }
                   />
                 </div>

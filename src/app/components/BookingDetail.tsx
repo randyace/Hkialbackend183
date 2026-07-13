@@ -48,6 +48,13 @@ import type {
   EditPassenger,
   EditNonFlyingGuest,
 } from './BookingEditView';
+// 2026-07-09 (round 6.2.129, M11 residual) — single source of truth
+// for persistable add-on keys. Pre-6.2.129 this page kept a 22-item
+// drifted list (names that did not match bookable_items.name_en)
+// that AddonsSyncService silently dropped. Create / Edit dialog /
+// EditSectionAddons already import CATALOG_ADDONS; this closes the
+// last admin surface still hardcoding its own list.
+import { CATALOG_ADDONS } from './addons';
 import { computeVisitTimeRange } from './BookingEditView';
 import {
   formatGuestDisplayName,
@@ -724,43 +731,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   // ── Add New Item (add-on services) ─────────────────────────────────────────
+  // 2026-07-09 (round 6.2.129, M11 residual) — derive from shared
+  // CATALOG_ADDONS only (4 persistable catalog keys). Pre-6.2.129
+  // this was a 22-item hard-coded list with names that did not
+  // match bookable_items.name_en → AddonsSyncService silent drop.
   type AddonService = string;
-  const addonServices: { key: AddonService; icon: ReactNode; desc: string; defaultPrice: string }[] = [
-    { key: 'Lounge Extension',              icon: <Clock className="w-5 h-5" />,         desc: 'Extend lounge access time',              defaultPrice: '500.00'  },
-    // 2026-06-16 (round 6.2.43 follow-up): catalog key
-    // renamed 'Limousine Service' -> 'Limousine Transfer' to
-    // match the wire-shape name used by the BookingEditDialog
-    // catalog (BookingEditDialog.tsx:189 CATALOG_ADDONS) and
-    // buildAddonsItems. The detail page's own catalog had
-    // drifted from the rest of the system; this aligns it.
-    // Display label (the {key} shown in dropdowns) becomes
-    // 'Limousine Transfer'; the `desc` field stays as the
-    // human-readable description.
-    { key: 'Limousine Transfer',            icon: <Car className="w-5 h-5" />,           desc: 'Private car transfer service',           defaultPrice: '800.00'  },
-    { key: 'Wheelchair Assistance',         icon: <Accessibility className="w-5 h-5" />, desc: 'Mobility & accessibility support',       defaultPrice: '0.00'    },
-    { key: 'Security Escort Service',       icon: <ShieldCheck className="w-5 h-5" />,   desc: 'Dedicated security escort',              defaultPrice: '1200.00' },
-    { key: 'Meet & Greet Service',          icon: <User className="w-5 h-5" />,          desc: 'Dedicated greeter at arrival gate',      defaultPrice: '600.00'  },
-    { key: 'Fast Track Immigration',        icon: <Plane className="w-5 h-5" />,         desc: 'Priority immigration clearance',         defaultPrice: '400.00'  },
-    { key: 'Buggy Transfer Service',        icon: <Car className="w-5 h-5" />,           desc: 'Electric buggy within terminal',         defaultPrice: '0.00'    },
-    { key: 'Baggage Handling',              icon: <ShoppingBag className="w-5 h-5" />,   desc: 'Assisted luggage service',               defaultPrice: '150.00'  },
-    { key: 'Porter Service',                icon: <ShoppingBag className="w-5 h-5" />,   desc: 'On-demand porter assistance',            defaultPrice: '100.00'  },
-    { key: 'Shower Service',                icon: <Building2 className="w-5 h-5" />,     desc: 'Private shower with amenities',          defaultPrice: '200.00'  },
-    { key: 'Day Room (4 hrs)',              icon: <Building2 className="w-5 h-5" />,     desc: 'Private suite day-use booking',          defaultPrice: '1800.00' },
-    { key: 'Day Room Extension (per hr)',   icon: <Clock className="w-5 h-5" />,         desc: 'Hourly extension of day room',           defaultPrice: '450.00'  },
-    { key: 'VIP Escort (Airside)',          icon: <ShieldCheck className="w-5 h-5" />,   desc: 'Escorted airside access with staff',     defaultPrice: '1500.00' },
-    { key: 'Printing Service',              icon: <FileText className="w-5 h-5" />,      desc: 'Document printing (per page)',           defaultPrice: '20.00'   },
-    { key: 'Flight Rebooking Assistance',   icon: <Plane className="w-5 h-5" />,         desc: 'Staff-assisted flight rebooking',        defaultPrice: '0.00'    },
-    { key: 'Lounge Access – Extra Adult',   icon: <User className="w-5 h-5" />,          desc: 'Additional adult lounge entry',          defaultPrice: '350.00'  },
-    { key: 'Lounge Access – Extra Child',   icon: <User className="w-5 h-5" />,          desc: 'Additional child entry (2–11 yrs)',      defaultPrice: '180.00'  },
-    { key: 'SIM Card Arrangement',          icon: <Phone className="w-5 h-5" />,         desc: 'Local SIM card for guest',               defaultPrice: '80.00'   },
-    { key: 'Currency Exchange Assistance',  icon: <DollarSign className="w-5 h-5" />,    desc: 'Guided to best exchange counter',        defaultPrice: '0.00'    },
-    { key: 'Special Meal Request',          icon: <Tag className="w-5 h-5" />,           desc: 'Dietary or custom meal arrangement',     defaultPrice: '0.00'    },
-    { key: 'Flower / Gift Arrangement',     icon: <Tag className="w-5 h-5" />,           desc: 'In-lounge gift or floral setup',         defaultPrice: '500.00'  },
-    { key: 'Birthday / Celebration Setup',  icon: <Tag className="w-5 h-5" />,           desc: 'Cake, décor & personalised message',     defaultPrice: '800.00'  },
-    { key: 'Video Conference Room',         icon: <MessageSquare className="w-5 h-5" />, desc: 'Private VC-equipped meeting room',       defaultPrice: '1200.00' },
-    { key: 'Private Dining Room',           icon: <Building2 className="w-5 h-5" />,     desc: 'Exclusive dining space (up to 8 pax)',   defaultPrice: '2500.00' },
-    { key: 'Smoking Room Access',           icon: <Building2 className="w-5 h-5" />,     desc: 'Designated smoking area access',         defaultPrice: '0.00'    },
-  ];
+  const addonServices: { key: AddonService; icon: ReactNode; desc: string; defaultPrice: string }[] =
+    CATALOG_ADDONS.map((a) => ({
+      key: a.key,
+      icon: a.icon,
+      desc: a.desc,
+      defaultPrice: a.defaultPrice.toFixed(2),
+    }));
   const [selectedAddon, setSelectedAddon] = useState<AddonService | null>(null);
   const [addonQty, setAddonQty]           = useState(1);
   const [addonUnitPrice, setAddonUnitPrice] = useState('');
@@ -1601,8 +1583,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <span className="font-mono">{booking.promoCode.code}</span>
                 {booking.promoCode.discountType === 'percentage'
                   ? <span className="ml-1">−{booking.promoCode.discountValue}%</span>
-                  : Number(booking.promoCode.discountValue) === 0
-                    ? <span className="ml-1">Free bookings</span>
+                  : (booking.promoCode.freeSessions != null && booking.promoCode.freeSessions > 0)
+                      || Number(booking.promoCode.discountValue) === 0
+                    ? <span className="ml-1">
+                        Free lounge · −{booking.promoCode.freeSessions ?? 1} LD fee
+                        {(booking.promoCode.freeSessions ?? 1) !== 1 ? 's' : ''}
+                      </span>
                     : null}
               </Badge>
             )}
@@ -3017,6 +3003,51 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </Card>
       ) : null}
 
+      {/* Round 6.2.137 — Membership free PS/LD waiver (persisted price_breakdown) */}
+      {(() => {
+        const membershipLines = (booking.priceBreakdown ?? []).filter(
+          (line) => typeof line.key === 'string' && line.key.startsWith('membership_'),
+        );
+        if (membershipLines.length === 0) return null;
+        const original = booking.originalAmountValue
+          ?? membershipLines.reduce((sum, line) => sum + Math.abs(Number(line.subtotal) || 0), 0);
+        const final = booking.finalAmountValue
+          ?? (booking.totalPrice != null ? Number(booking.totalPrice) : Math.max(0, original - membershipLines.reduce((s, l) => s + Math.abs(Number(l.subtotal) || 0), 0)));
+        return (
+          <Card className="p-6 border-indigo-200 bg-indigo-50/40" data-testid="membership-benefit-pricing-card">
+            <div className="flex items-center gap-2 mb-4">
+              <Gem className="w-5 h-5 text-indigo-700" />
+              <h3 className="text-sm uppercase tracking-wide text-indigo-800">Membership Benefit Applied</h3>
+            </div>
+            <div className="bg-white border border-indigo-100 rounded-lg divide-y divide-gray-100">
+              <div className="flex items-center justify-between px-5 py-3">
+                <span className="text-sm text-gray-600">Base Service Amount</span>
+                <span className="text-sm font-medium text-gray-800">HK${original.toLocaleString()}</span>
+              </div>
+              {membershipLines.map((line) => (
+                <div key={line.key} className="flex items-center justify-between px-5 py-3 bg-indigo-50/60">
+                  <div className="flex items-center gap-2">
+                    <Gem className="w-4 h-4 text-indigo-600" />
+                    <span className="text-sm text-indigo-800">{line.label || line.key}</span>
+                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Waived</span>
+                  </div>
+                  <span className="text-sm font-medium text-indigo-700">
+                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between px-5 py-4 bg-indigo-50">
+                <span className="font-semibold text-gray-900">Total Payable</span>
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 line-through">HK${original.toLocaleString()}</p>
+                  <p className="text-xl font-semibold text-indigo-700">HK${final.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        );
+      })()}
+
       {/* 12. Service Items */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
@@ -3824,12 +3855,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <div className="flex items-center gap-2">
               <Tag className="w-3.5 h-3.5 text-indigo-600" />
               <span className="text-sm text-indigo-800 font-medium">
-                Promo Discount ({booking.promoCode.code})
+                {booking.promoCode.discountType === 'percentage'
+                  ? `Promo Discount (${booking.promoCode.code})`
+                  : `Promo free lounge (${booking.promoCode.code})`}
               </span>
               <span className="text-xs text-indigo-600">
                 {booking.promoCode.discountType === 'percentage'
                   ? `${booking.promoCode.discountValue}% off`
-                  : 'Free bookings'}
+                  : `Deduction of ${booking.promoCode.freeSessions ?? 1} LD fee${(booking.promoCode.freeSessions ?? 1) !== 1 ? 's' : ''}`}
               </span>
             </div>
             <span className="text-sm font-medium text-indigo-700">
@@ -3905,7 +3938,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         * the detail page (sourced from
         * `POST /api/bookings/price-preview`). Both the page
         * AND the invoice call the same endpoint, per the
-        * "make them call the same endpoint first" directive. */}
+        * "make them call the same endpoint first" directive.
+        *
+        * Round 6.2.137 — prefer committed total_price +
+        * price_breakdown (membership waiver included) over a
+        * live preview that may still be loading / missing
+        * account_id. */}
       <BookingInvoiceDialog
         open={showInvoice}
         onClose={() => setShowInvoice(false)}
@@ -3914,8 +3952,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         voucherCount={voucherCount}
         voucherTotal={voucherTotal}
         voucherUnitValue={voucherUnitValue}
-        livePreviewTotal={livePreviewTotal}
-        breakdown={livePreviewBreakdown}
+        livePreviewTotal={
+          booking.totalPrice != null
+            ? Number(booking.totalPrice)
+            : livePreviewTotal
+        }
+        breakdown={
+          (booking.priceBreakdown && booking.priceBreakdown.length > 0)
+            ? booking.priceBreakdown
+            : livePreviewBreakdown
+        }
         serviceSubtotal={serviceSubtotal}
         amountDueAfterVouchers={amountDueAfterVouchers}
         getStatusColor={getStatusColor}
