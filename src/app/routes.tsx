@@ -28,6 +28,8 @@ import { POSBookingDetail } from './components/POSBookingDetail';
 import { KitchenDisplay } from './components/KitchenDisplay';
 import { LoungeLayout } from './components/LoungeLayout';
 import { SystemUsers } from './components/SystemUsers';
+import { SystemUserEdit } from './components/SystemUserEdit';
+import { RolePermissionMatrixPage } from './components/RolePermissionMatrixPage';
 import { AuditLogs } from './components/AuditLogs';
 import { PromoCodeList } from './components/PromoCodeList';
 import { PromoCodeEdit } from './components/PromoCodeEdit';
@@ -263,6 +265,22 @@ function BookableItemCreatePage() {
   return <BookableItemEdit itemId={null} onBack={() => navigate('/items')} />;
 }
 
+function SystemUserCreatePage() {
+  const navigate = useNavigate();
+  return <SystemUserEdit userId={null} onBack={() => navigate('/system-users')} />;
+}
+
+function SystemUserEditPage() {
+  const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+  return (
+    <SystemUserEdit
+      userId={userId ? parseInt(userId, 10) : null}
+      onBack={() => navigate('/system-users')}
+    />
+  );
+}
+
 function POSFloorPlanPage() {
   const navigate = useNavigate();
   return (
@@ -488,6 +506,10 @@ export const router = createBrowserRouter([
 
       // System Users & Audit Logs
       { path: 'system-users', Component: SystemUsers },
+      { path: 'system-users/create', Component: SystemUserCreatePage },
+      { path: 'system-users/permission-matrix', Component: RolePermissionMatrixPage },
+      { path: 'system-users/role-permissions', Component: RolePermissionMatrixPage },
+      { path: 'system-users/:userId/edit', Component: SystemUserEditPage },
       { path: 'audit-logs',   Component: AuditLogs },
 
       // CRM

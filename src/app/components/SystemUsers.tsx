@@ -1,26 +1,19 @@
 /**
- * SystemUsers.tsx — Pure presentational component.
+ * SystemUsers.tsx — Pure presentational list component.
  *
  * Rules:
  *  - Zero business state (users[] comes entirely from props)
- *  - Filter / pagination / dialog form state are pure UI state — allowed
- *  - All CRUD mutations reported via typed callbacks
+ *  - Filter / pagination are pure UI state — allowed
+ *  - Create / edit navigation reported via typed callbacks (no modal)
  *  - Default props fall back to mockSystemUsersData (fixture pattern)
  *  - Backend contract aligned: roles/status/permissions match the Laravel API
  */
 
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from './ui/dialog';
 import {
   Select,
   SelectContent,
@@ -74,45 +67,23 @@ export interface PermissionOption {
 export interface SystemUsersProps {
   /** Full list of system users to display */
   users?: SystemUser[];
-  /** Permission checkboxes shown in the user form (defaults to a sensible fallback list) */
-  availablePermissions?: PermissionOption[];
   /** Map from backend role value to display label */
   roleLabels?: Record<SystemUserRole, string>;
-  /** Roles that may be selected in the create/edit form. Defaults to Staff/Supervisor. */
-  editableRoles?: SystemUserRole[];
   /** Whether data is being fetched */
   isLoading?: boolean;
   /** Permission flags controlling which actions are surfaced */
   canCreate?: boolean;
   canUpdate?: boolean;
   canDelete?: boolean;
-  /** Called when the Create User form is submitted */
-  onCreateUser?: (data: SystemUserFormData) => void;
-  /** Called when the Edit User form is submitted */
-  onUpdateUser?: (id: number, data: SystemUserFormData) => void;
+  /** Navigate to create page */
+  onCreateUser?: () => void;
+  /** Navigate to edit page */
+  onEditUser?: (id: number) => void;
   /** Called when the Delete button is clicked */
   onDeleteUser?: (id: number) => void;
-  /** Called when the Manage Permissions (key) button is clicked */
+  /** Navigate to edit permissions (defaults to edit page) */
   onManagePermissions?: (id: number) => void;
 }
-
-// ─── Static display config (mirrors the backend RBAC permission slugs) ─────────
-
-const ALL_PERMISSIONS: PermissionOption[] = [
-  { value: 'bookings.view', label: 'View Bookings' },
-  { value: 'bookings.create', label: 'Create Bookings' },
-  { value: 'bookings.update', label: 'Update Bookings' },
-  { value: 'bookings.delete', label: 'Delete Bookings' },
-  { value: 'bookings.approve', label: 'Approve Bookings' },
-  { value: 'bookings.schedules.view', label: 'View Booking Schedules' },
-  { value: 'bookings.settings.view', label: 'View Booking Settings' },
-  { value: 'bookings.settings.update', label: 'Update Booking Settings' },
-  { value: 'system_users.view', label: 'View System Users' },
-  { value: 'system_users.create', label: 'Create System Users' },
-  { value: 'system_users.update', label: 'Update System Users' },
-  { value: 'system_users.delete', label: 'Delete System Users' },
-  { value: 'audit_logs.view', label: 'View Audit Logs' },
-];
 
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
   Administrator: 'System Admin',
@@ -120,8 +91,6 @@ const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
   Staff: 'Staff',
   Viewer: 'Viewer',
 };
-
-// ─── Role / status colour helpers (pure functions — no state) ─────────────────
 
 function getRoleColor(role: SystemUserRole): string {
   switch (role) {
@@ -136,8 +105,6 @@ function getStatusColor(status: SystemUserStatus): string {
   return status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 }
 
-// ─── Pagination helper (pure function) ────────────────────────────────────────
-
 function buildPageList(currentPage: number, totalPages: number): number[] {
   if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -147,24 +114,18 @@ function buildPageList(currentPage: number, totalPages: number): number[] {
   return [1, -1, currentPage - 1, currentPage, currentPage + 1, -2, totalPages];
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export function SystemUsers({
   users               = mockSystemUsersData.users ?? [],
-  availablePermissions = ALL_PERMISSIONS,
   roleLabels          = DEFAULT_ROLE_LABELS,
-  editableRoles       = ['Staff', 'Supervisor'],
   isLoading           = false,
   canCreate           = true,
   canUpdate           = true,
   canDelete           = true,
   onCreateUser        = () => {},
-  onUpdateUser        = () => {},
+  onEditUser          = () => {},
   onDeleteUser        = () => {},
   onManagePermissions = () => {},
 }: SystemUsersProps) {
-
-  // ── Pure UI state ──────────────────────────────────────────────────────────
   const [searchTerm,  setSearchTerm]  = useState('');
   const [roleFilter,  setRoleFilter]  = useState('all');
   const [statusFilter,setStatusFilter]= useState('all');
@@ -172,19 +133,6 @@ export function SystemUsers({
   const [endDate,     setEndDate]     = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  // Dialog UI state
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingUser,  setEditingUser]  = useState<SystemUser | null>(null);
-  const [formName,       setFormName]       = useState('');
-  const [formEmail,      setFormEmail]      = useState('');
-  const [formRole,       setFormRole]       = useState<SystemUserRole>('Staff');
-  const [formDepartment, setFormDepartment] = useState('IT Department');
-  const [formPermissions,setFormPermissions]= useState<string[]>([]);
-  const [formStatus,     setFormStatus]     = useState<SystemUserStatus>('Active');
-  const [formPassword,   setFormPassword]   = useState('');
-
-  // ── Derived display data (pure computation, no side-effects) ──────────────
 
   const allRoleEntries = Object.entries(roleLabels) as [SystemUserRole, string][];
 
@@ -206,57 +154,6 @@ export function SystemUsers({
   const startIndex     = (currentPage - 1) * itemsPerPage;
   const paginatedUsers = filteredUsers.slice(startIndex, startIndex + itemsPerPage);
 
-  // ── Dialog helpers ─────────────────────────────────────────────────────────
-
-  const openCreateDialog = () => {
-    setEditingUser(null);
-    setFormName('');
-    setFormEmail('');
-    setFormRole('Staff');
-    setFormDepartment('IT Department');
-    setFormPermissions([]);
-    setFormStatus('Active');
-    setFormPassword('');
-    setIsDialogOpen(true);
-  };
-
-  const openEditDialog = (user: SystemUser) => {
-    setEditingUser(user);
-    setFormName(user.name);
-    setFormEmail(user.email);
-    setFormRole(user.role);
-    setFormDepartment(user.department);
-    setFormPermissions(user.permissions);
-    setFormStatus(user.status);
-    setFormPassword('');
-    setIsDialogOpen(true);
-  };
-
-  const togglePermission = (perm: string) => {
-    setFormPermissions(prev =>
-      prev.includes(perm) ? prev.filter(p => p !== perm) : [...prev, perm],
-    );
-  };
-
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData: SystemUserFormData = {
-      name:        formName,
-      email:       formEmail,
-      role:        formRole,
-      department:  formDepartment,
-      permissions: formPermissions,
-      status:      formStatus,
-      password:    formPassword || undefined,
-    };
-    if (editingUser) {
-      onUpdateUser(editingUser.id, formData);
-    } else {
-      onCreateUser(formData);
-    }
-    setIsDialogOpen(false);
-  };
-
   const clearFilters = () => {
     setStartDate('');
     setEndDate('');
@@ -265,13 +162,6 @@ export function SystemUsers({
     setSearchTerm('');
     setCurrentPage(1);
   };
-
-  // Roles shown in the form: editable defaults plus the user's current role when editing
-  const formRoleOptions: SystemUserRole[] = editingUser && !editableRoles.includes(editingUser.role)
-    ? [...editableRoles, editingUser.role]
-    : editableRoles;
-
-  // ── Pagination renderer ────────────────────────────────────────────────────
 
   const renderPagination = () => {
     const pages = buildPageList(currentPage, totalPages);
@@ -312,25 +202,21 @@ export function SystemUsers({
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
-
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1>System Users Management</h1>
           <p className="text-gray-600">Manage staff accounts, roles, and permissions</p>
         </div>
         {canCreate && (
-          <Button onClick={openCreateDialog}>
+          <Button onClick={onCreateUser}>
             <Plus className="w-4 h-4 mr-2" />
             Add New User
           </Button>
         )}
       </div>
 
-      {/* Filters */}
       <Card className="p-4">
         <div className="space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
@@ -367,7 +253,6 @@ export function SystemUsers({
             </Select>
           </div>
 
-          {/* Date Range */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
@@ -400,7 +285,6 @@ export function SystemUsers({
         </div>
       </Card>
 
-      {/* Users Table */}
       <Card>
         <div className="p-4 border-b flex items-center justify-between">
           <div className="text-sm text-gray-500">
@@ -439,7 +323,7 @@ export function SystemUsers({
                         <button
                           type="button"
                           className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                          onClick={() => canUpdate && openEditDialog(user)}
+                          onClick={() => canUpdate && onEditUser(user.id)}
                         >
                           {user.name}
                         </button>
@@ -460,7 +344,7 @@ export function SystemUsers({
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openEditDialog(user)}
+                            onClick={() => onEditUser(user.id)}
                             className="h-8 w-8 p-0"
                             title="Edit User"
                           >
@@ -504,138 +388,6 @@ export function SystemUsers({
           </div>
         )}
       </Card>
-
-      {/* Create / Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="min-w-[1200px] max-w-[1200px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingUser ? 'Edit System User' : 'Create New System User'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingUser
-                ? 'Edit the details of an existing system user.'
-                : 'Create a new system user with the following details.'}
-            </DialogDescription>
-            </DialogHeader>
-
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="su-full-name" className="mb-[10px] block text-sm text-gray-700">Full Name</label>
-                <input
-                  id="su-full-name"
-                  type="text"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., Wong Chi Ming"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="su-email" className="mb-[10px] block text-sm text-gray-700">Email Address</label>
-                <input
-                  id="su-email"
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="email@hkial.com"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-[10px] block text-sm text-gray-700">Role</label>
-                <select
-                  value={formRole}
-                  onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  {formRoleOptions.map((role) => (
-                    <option key={role} value={role}>{roleLabels[role]}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-[10px] block text-sm text-gray-700">Department</label>
-                <select
-                  value={formDepartment}
-                  onChange={(e) => setFormDepartment(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="IT Department">IT Department</option>
-                  <option value="Lounge Operations">Lounge Operations</option>
-                  <option value="Guest Services">Guest Services</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Management">Management</option>
-                  <option value="Security">Security</option>
-                  <option value="Housekeeping">Housekeeping</option>
-                  <option value="F&B Services">F&amp;B Services</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-[10px] block text-sm text-gray-700">Permissions</label>
-              <div className="grid grid-cols-2 gap-3 p-4 border border-gray-300 rounded-md max-h-48 overflow-y-auto">
-                {availablePermissions.map((permission) => (
-                  <label key={permission.value} className="flex items-center gap-2 cursor-pointer mb-[10px]">
-                    <input
-                      type="checkbox"
-                      className="rounded"
-                      checked={formPermissions.includes(permission.value)}
-                      onChange={() => togglePermission(permission.value)}
-                    />
-                    <span className="text-sm">{permission.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-[10px] block text-sm text-gray-700">Status</label>
-                <select
-                  value={formStatus}
-                  onChange={(e) => setFormStatus(e.target.value as SystemUserStatus)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="su-password" className="mb-[10px] block text-sm text-gray-700">
-                  Password {editingUser && '(leave blank to keep current)'}
-                </label>
-                <input
-                  id="su-password"
-                  type="password"
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder={editingUser ? '••••••••' : 'Minimum 8 characters'}
-                  required={!editingUser}
-                  minLength={editingUser ? undefined : 8}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-3 justify-end pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {editingUser ? 'Update User' : 'Create User'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -169,6 +169,7 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     icon: <Settings className="w-5 h-5" />,
     submenu: [
       { id: 'manage-system-users', label: 'Manage System Users', path: '/system-users' },
+      { id: 'role-permissions', label: 'Role Permissions', path: '/system-users/role-permissions' },
       { id: 'audit-logs',          label: 'Audit Logs',          path: '/audit-logs' },
     ],
   },

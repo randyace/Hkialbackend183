@@ -4,18 +4,9 @@
  * Fixture data for SystemUsers.tsx.
  * This file is the ONLY place SystemUsers mock data lives.
  * Import `mockSystemUsersData` and spread it as default props during development.
- *
- * Smart Container usage:
- *   <SystemUsers users={apiUsers} onCreateUser={handleCreate} onUpdateUser={handleUpdate} />
- *
- * Standalone / Storybook usage:
- *   import { mockSystemUsersData } from './__fixtures__/SystemUsers.mocks';
- *   <SystemUsers {...mockSystemUsersData} />
  */
 
-import type { SystemUser, SystemUserFormData, SystemUsersProps } from '../SystemUsers';
-
-// ─── Generator (deterministic, no randomness) ─────────────────────────────────
+import type { SystemUser, SystemUsersProps } from '../SystemUsers';
 
 const FIRST_NAMES  = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
 const LAST_NAMES   = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
@@ -65,12 +56,10 @@ function generateMockUsers(): SystemUser[] {
 
 export const mockUsers: SystemUser[] = generateMockUsers();
 
-// ─── Aggregated mock prop object ──────────────────────────────────────────────
-
 export const mockSystemUsersData: SystemUsersProps = {
   users: mockUsers,
-  onCreateUser:        (data: SystemUserFormData) => console.log('[mock] onCreateUser', data),
-  onUpdateUser:        (id: number, data: SystemUserFormData) => console.log('[mock] onUpdateUser', id, data),
+  onCreateUser:        () => console.log('[mock] onCreateUser'),
+  onEditUser:          (id: number) => console.log('[mock] onEditUser', id),
   onDeleteUser:        (id: number) => console.log('[mock] onDeleteUser', id),
   onManagePermissions: (id: number) => console.log('[mock] onManagePermissions', id),
 };
