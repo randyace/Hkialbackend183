@@ -14,7 +14,7 @@
 import React, { useState } from 'react';
 import {
   ChevronDown, LayoutDashboard, Users, Calendar, Package,
-  Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature, DollarSign,
+  Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature, DollarSign, UserCog,
 } from 'lucide-react';
 import logoImage from 'figma:asset/5314118f44483d10b69aeb99485c2f5942c726a2.png';
 import {
@@ -58,6 +58,8 @@ export interface SidebarProps {
   onNavigate?: (path: string) => void;
   /** Called when Logout is clicked */
   onLogout?: () => void;
+  /** Called when "My Account" is clicked (self name / password) */
+  onEditProfile?: () => void;
   /** Full menu structure — if omitted, falls back to MOCK_MENU_ITEMS */
   menuItems?: SidebarMenuItem[];
 }
@@ -207,6 +209,7 @@ export function Sidebar({
   user,
   onNavigate     = () => {},
   onLogout       = () => {},
+  onEditProfile,
   menuItems,
 }: SidebarProps) {
   // Use prop-supplied menu items; fall back to mock for standalone demo
@@ -337,6 +340,12 @@ export function Sidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
+            {onEditProfile && (
+              <DropdownMenuItem onClick={onEditProfile}>
+                <UserCog className="mr-2 h-4 w-4" />
+                <span>My Account</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Logout</span>

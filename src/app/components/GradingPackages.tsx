@@ -161,20 +161,6 @@ export function GradingPackages({
         </p>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {packages.map((pkg) => (
-          <Card key={pkg.id} className={`p-4 border-2 ${pkg.borderColor} ${pkg.bgColor}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className={pkg.color}>{TIER_META[pkg.tier].icon}</span>
-              <span className={`text-xs px-2 py-1 rounded-full ${pkg.badgeBg}`}>{pkg.tier}</span>
-            </div>
-            <p className="text-2xl text-gray-900">{pkg.memberCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Active Members</p>
-          </Card>
-        ))}
-      </div>
-
       {/* Package Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {packages.map((pkg) => (
