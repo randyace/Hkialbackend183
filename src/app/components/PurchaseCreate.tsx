@@ -64,6 +64,17 @@ export interface AccountOption {
   currentTier?: TierOrNone;
   currentCredits?: number;
   currentSessions?: number;
+  // 2026-07-14 round 6.2.147 — HKD credit balance for Corporate/Agency.
+  // `currentSessions` was historically populated from `acc.credit_balance`
+  // for Corp/Agency, rendering e.g. "7777.00 sessions" on the New Contract
+  // picker. The "X sessions" label was inherited from the MOCK_ACCOUNTS
+  // where Corp accounts had real session counts (5, 18, 12, 7), but the
+  // real backend has no session-count column for Corp/Agency — only HKD
+  // `credit_balance`. Mirrors the M51 pattern (round 6.2.143 — AccountList,
+  // MemberDetail, CreateBooking all show HKD for Corp/Agency). Picker,
+  // form summary "Current sessions", and form summary "X → Y after invoice"
+  // now read this field for Corp/Agency and render HKD to 2 dp en-HK locale.
+  creditBalanceHKD?: number;
   contactPerson?: string;
 }
 
@@ -608,7 +619,12 @@ export function PurchaseCreate({
                           <p className="text-xs text-gray-400">{(a.currentCredits ?? 0) === -1 ? 'Unlimited' : `${a.currentCredits ?? 0} credits`}</p>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400">{a.currentSessions ?? 0} sessions</p>
+                        // 2026-07-14 round 6.2.147 — H3 smell fix. For Corp/Agency,
+                        // `currentSessions` is undefined (no backend session-count
+                        // column). Render the HKD credit balance (M51 pattern).
+                        <p className="text-xs text-gray-400">
+                          HKD {(a.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -981,9 +997,14 @@ export function PurchaseCreate({
                         <TierBadge tier={selectedAccount.currentTier ?? 'None'} />
                       </div>
                     ) : (
+                      // 2026-07-14 round 6.2.147 — H3 smell fix. For Corp/Agency,
+                      // show HKD credit balance (M51 pattern) instead of bogus
+                      // "Current sessions" derived from `credit_balance`.
                       <div className="flex items-center justify-between mt-2 px-1">
-                        <span className="text-xs text-gray-400">Current sessions</span>
-                        <span className="text-xs text-gray-600">{selectedAccount.currentSessions ?? 0}</span>
+                        <span className="text-xs text-gray-400">Credit balance</span>
+                        <span className="text-xs text-gray-600">
+                          HKD {(selectedAccount.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       </div>
                     )}
                   </div>
