@@ -274,8 +274,16 @@ export interface MemberDetailProps {
   spouseForm?: Spouse;
   onSpouseDialogOpen?: () => void;
   onSpouseDialogClose?: () => void;
+  /** Container-owned add/edit spouse persist (PUT profile_spouse). */
+  onAddSpouse?: (spouse: Spouse) => void | Promise<void>;
   onRemoveSpouseOpen?: () => void;
   onRemoveSpouseClose?: () => void;
+  /**
+   * Container-owned remove-spouse persist. When provided, the confirm button
+   * calls this instead of only clearing demo mock state. May return a Promise;
+   * the dialog closes after success. Container owns API toasts.
+   */
+  onRemoveSpouse?: () => void | Promise<void>;
   onSpouseFormChange?: (form: Spouse) => void;
 
   // ── Security action dialog state & callbacks ─────────────────────────────
@@ -465,6 +473,7 @@ export function MemberDetail({
   onAddSpouse,
   onRemoveSpouseOpen,
   onRemoveSpouseClose,
+  onRemoveSpouse,
   onSpouseFormChange,
 
   // ── Security dialog state ─────────────────────────────────────────────────
@@ -591,7 +600,7 @@ export function MemberDetail({
   const displaySpouseDietaryReqs      = spouseDietaryRequirementsProp.length > 0 ? spouseDietaryRequirementsProp : [];
   const displayLoginHistory           = loginHistoryProp.length > 0           ? loginHistoryProp           : [];
   // Spouse: undefined = not passed (use mock); null = explicitly no spouse
-  const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : null;
+  const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : mockSpouse;
 
   // Security: undefined = not passed → use mock state
   const activeIsAccountLocked         = isAccountLockedProp       ?? mockIsAccountLocked;
@@ -2873,8 +2882,21 @@ export function MemberDetail({
             <Button variant="outline" onClick={() => { onRemoveSpouseClose?.(); setMockIsRemoveSpouseOpen(false); }}>Cancel</Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setMockSpouse(null); // demo fallback
+              onClick={async () => {
+                // Container-owned path: parent PUTs profile_spouse:null and
+                // owns success/error toasts. Demo path only clears mock state.
+                if (onRemoveSpouse) {
+                  try {
+                    await onRemoveSpouse();
+                    setMockSpouse(null);
+                    onRemoveSpouseClose?.();
+                    setMockIsRemoveSpouseOpen(false);
+                  } catch {
+                    // Stay open on failure; container already toasted the error.
+                  }
+                  return;
+                }
+                setMockSpouse(null);
                 toast.success('Spouse removed from this customer\'s profile.');
                 onRemoveSpouseClose?.();
                 setMockIsRemoveSpouseOpen(false);
