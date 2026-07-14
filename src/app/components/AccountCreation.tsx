@@ -263,6 +263,9 @@ export function AccountCreation({
       ...(accountType === 'corporate'
         ? {
             companyId: selectedCompanyId,
+            // Seed internal_grouping from the selected company name so
+            // Member Detail shows a real group (not blank / mock list).
+            internalGrouping: companySearch.trim() || undefined,
             contacts: corporateForms.map(f => ({
               title: f.title,
               firstName: f.firstName,
@@ -273,6 +276,12 @@ export function AccountCreation({
               paymentMethod: f.paymentMethod,
               remarks: f.remarks,
             })),
+          }
+        : accountType === 'travel-agency'
+        ? {
+            ...formData,
+            agencyId: selectedAgencyId,
+            internalGrouping: agencySearch.trim() || undefined,
           }
         : {
             ...formData,

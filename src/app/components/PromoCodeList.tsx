@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -266,15 +266,35 @@ const UsageBar = ({ batch }: { batch: PromoCode }) => {
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function PromoCodeList({ codes: codesProp = [], isLoading, onCreate, onEdit, onDelete }: PromoCodeListProps) {
-  const batches = codesProp.length > 0 ? codesProp : MOCK_CODES;
+export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, onDelete }: PromoCodeListProps) {
+  // Only fall back to MOCK_CODES for standalone figma Make (prop omitted).
+  // When the container passes `codes` (even `[]` while loading), never flash
+  // mock rows — that was the user-visible "flashing mock data" bug.
+  const batches = codesProp !== undefined ? codesProp : MOCK_CODES;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | CodeType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterCompany, setFilterCompany] = useState<'all' | string>('all');
-  const [expandedCompanies, setExpandedCompanies] = useState<Set<number>>(
-    new Set(Array.from(new Set(MOCK_CODES.map((b) => b.companyId))))
-  );
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<number>>(() => {
+    const ids = Array.from(new Set(batches.map((b) => b.companyId)));
+    return new Set(ids);
+  });
+
+  // Expand new company groups when real API data arrives (after loading).
+  useEffect(() => {
+    if (batches.length === 0) return;
+    setExpandedCompanies((prev) => {
+      const next = new Set(prev);
+      let changed = false;
+      for (const b of batches) {
+        if (!next.has(b.companyId)) {
+          next.add(b.companyId);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [batches]);
 
   const toggleCompany = (companyId: number) => {
     const next = new Set(expandedCompanies);

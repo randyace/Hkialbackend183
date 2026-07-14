@@ -78,17 +78,41 @@ export interface AuditLogsProps {
   audits?: AuditLog[];
   isLoading?: boolean;
   onFilter?: (module: string, status: string) => void;
+  /** Controlled date filters (container wires these to the API). */
+  startDate?: string;
+  endDate?: string;
+  onStartDateChange?: (value: string) => void;
+  onEndDateChange?: (value: string) => void;
 }
 
-export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}) {
-  const logs: AuditLog[] = auditsProp?.length ? auditsProp : MOCK_AUDIT_LOGS;
+export function AuditLogs({
+  audits: auditsProp,
+  isLoading,
+  startDate: startDateProp,
+  endDate: endDateProp,
+  onStartDateChange,
+  onEndDateChange,
+}: AuditLogsProps = {}) {
+  // Only fall back to MOCK when the prop is omitted (standalone figma Make).
+  // An empty array from the container must not flash mock rows.
+  const logs: AuditLog[] = auditsProp !== undefined ? auditsProp : MOCK_AUDIT_LOGS;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [actionFilter, setActionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [localStartDate, setLocalStartDate] = useState('');
+  const [localEndDate, setLocalEndDate] = useState('');
+  const startDate = startDateProp ?? localStartDate;
+  const endDate = endDateProp ?? localEndDate;
+  const setStartDate = (v: string) => {
+    if (onStartDateChange) onStartDateChange(v);
+    else setLocalStartDate(v);
+  };
+  const setEndDate = (v: string) => {
+    if (onEndDateChange) onEndDateChange(v);
+    else setLocalEndDate(v);
+  };
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -113,8 +137,11 @@ export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}
       const matchesModule = moduleFilter === 'all' || log.module === moduleFilter;
       const matchesAction = actionFilter === 'all' || log.action === actionFilter;
       const matchesStatus = statusFilter === 'all' || log.status === statusFilter;
-      const matchesStart = !startDate || new Date(log.timestamp) >= new Date(startDate + 'T00:00:00');
-      const matchesEnd = !endDate || new Date(log.timestamp) <= new Date(endDate + 'T23:59:59');
+      // Parse timestamps that are already "YYYY-MM-DD HH:mm:ss" (container)
+      // or ISO. Avoid Date(localeString) which is Invalid Date in many browsers.
+      const ts = Date.parse(log.timestamp.includes('T') ? log.timestamp : log.timestamp.replace(' ', 'T'));
+      const matchesStart = !startDate || (!Number.isNaN(ts) && ts >= Date.parse(startDate + 'T00:00:00'));
+      const matchesEnd = !endDate || (!Number.isNaN(ts) && ts <= Date.parse(endDate + 'T23:59:59'));
       return matchesSearch && matchesModule && matchesAction && matchesStatus && matchesStart && matchesEnd;
     });
 
@@ -136,6 +163,9 @@ export function AuditLogs({ audits: auditsProp, isLoading }: AuditLogsProps = {}
     setEndDate('');
     setCurrentPage(1);
   };
+
+  // When server-side date filters change, reset to page 1.
+  // (Local module/action/status already reset page in their onChange handlers.)
 
   return (
     <div className="p-6 space-y-6">

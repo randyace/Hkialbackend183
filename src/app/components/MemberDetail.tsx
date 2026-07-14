@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { ArrowLeft, Edit2, Save, X, Plus, Trash2, User, Mail, Phone, Building2, CreditCard, Calendar, FileText, AlertCircle, Clock, History, Utensils, Key, DollarSign, Heart, UserX, Shield, ShieldAlert, ShieldCheck, Lock, LockOpen, LogOut, RefreshCw, Smartphone, Monitor, CheckCircle2, XCircle, Activity } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
@@ -297,6 +298,8 @@ export interface MemberDetailProps {
   onHideResetPwConfirm?: () => void;
   onShowForceLogoutConfirm?: () => void;
   onHideForceLogoutConfirm?: () => void;
+  /** Called when staff confirms "Sign Out All Sessions". Container owns the API call. */
+  onForceLogout?: () => void | Promise<void>;
   onShowReset2FAConfirm?: () => void;
   onHideReset2FAConfirm?: () => void;
 }
@@ -487,6 +490,7 @@ export function MemberDetail({
   onHideResetPwConfirm,
   onShowForceLogoutConfirm,
   onHideForceLogoutConfirm,
+  onForceLogout,
   onShowReset2FAConfirm,
   onHideReset2FAConfirm,
 }: MemberDetailProps) {
@@ -976,39 +980,19 @@ export function MemberDetail({
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label>Internal Grouping</label>
-                <select
+                {/* Free-text: Corporate / Agency / Individual groups are free-form
+                    on the API (internal_grouping string). The previous hard-coded
+                    mock list (HSBC, EGL Tours, …) could not display or save real
+                    company/agency names for newly created Corporate/Agent accounts. */}
+                <Input
+                  type="text"
                   value={accountForm.internalGrouping}
                   onChange={e => setAccountForm(f => ({ ...f, internalGrouping: e.target.value }))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
-                >
-                  <option value="">Not set</option>
-                  <optgroup label="Corporate Groups">
-                    <option value="HSBC">HSBC</option>
-                    <option value="Cathay Pacific">Cathay Pacific</option>
-                    <option value="Standard Chartered">Standard Chartered</option>
-                    <option value="Bank of China">Bank of China</option>
-                    <option value="Swire Group">Swire Group</option>
-                    <option value="Henderson Land">Henderson Land</option>
-                    <option value="Sun Hung Kai Properties">Sun Hung Kai Properties</option>
-                  </optgroup>
-                  <optgroup label="Agency Groups">
-                    <option value="EGL Tours">EGL Tours</option>
-                    <option value="Wing On Travel">Wing On Travel</option>
-                    <option value="Hong Thai Travel">Hong Thai Travel</option>
-                    <option value="TravelExpert">TravelExpert</option>
-                    <option value="Goldjoy Travel">Goldjoy Travel</option>
-                    <option value="Zuji Travel">Zuji Travel</option>
-                  </optgroup>
-                  <optgroup label="Individual VIP Groups">
-                    <option value="Priority Club">Priority Club</option>
-                    <option value="Executive Circle">Executive Circle</option>
-                    <option value="Platinum Members">Platinum Members</option>
-                    <option value="Diamond Elite">Diamond Elite</option>
-                    <option value="President's Club">President's Club</option>
-                    <option value="Chairman's Circle">Chairman's Circle</option>
-                  </optgroup>
-                </select>
+                  placeholder="e.g. company or agency name"
+                  className="w-full disabled:bg-gray-50"
+                  autoComplete="off"
+                />
               </div>
               <div>
                 <label>Payment Method</label>
@@ -2151,10 +2135,18 @@ export function MemberDetail({
             <Button variant="outline" onClick={() => { onHideForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(false); }}>Cancel</Button>
             <Button
               className="bg-orange-600 hover:bg-orange-700"
-              onClick={() => {
-                onHideForceLogoutConfirm?.();
-                setMockShowForceLogoutConfirm(false);
-                toast.success('All sessions terminated. Customer has been signed out from all devices.');
+              onClick={async () => {
+                try {
+                  if (onForceLogout) {
+                    await onForceLogout();
+                  } else {
+                    // Standalone figma Make path — mock-only success toast.
+                    toast.success('All sessions terminated. Customer has been signed out from all devices.');
+                  }
+                } finally {
+                  onHideForceLogoutConfirm?.();
+                  setMockShowForceLogoutConfirm(false);
+                }
               }}
             >
               <LogOut className="w-4 h-4 mr-2" />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -226,7 +226,7 @@ export interface PurchaseCreateProps {
     // parent wrapper (it owns the apiClient). The wrapper receives
     // the raw `File` and uploads it before posting the purchase.
     paymentProofFile?: File | null,
-  ) => void;
+  ) => void | Promise<void>;
   onBack?: () => void;
   // 2026-06-30 (round 6.2.74) — hide the "VIP Accounts to Create"
   // input from the Corporate form. Default true keeps the figma Make
@@ -328,8 +328,16 @@ export function PurchaseCreate({
 
   // ── Confirm handler ──────────────────────────────────────────────────────────
 
-  const handleConfirm = () => {
+  // 2026-07-14 — re-entrancy guard: rapid double/triple clicks on
+  // "Confirm Purchase" previously fired multiple createPurchase calls
+  // and created duplicate contracts. Lock until the parent async
+  // onSubmit settles (or fails).
+  const submittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
     if (!selectedAccount) return;
+    if (submittingRef.current || isSubmitting) return;
     
     // For Individual: need selectedPackage
     if (isIndividual && !selectedPackage) return;
@@ -339,6 +347,9 @@ export function PurchaseCreate({
     
     // For Travel Agency: need credit balance and price
     if (isTravelAgency && (!creditBalance || !totalPrice)) return;
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
     
     const newId      = Math.max(...INITIAL_RECORDS.map(r => r.id), 0) + 1;
     const today      = localDateStr();
@@ -447,29 +458,34 @@ export function PurchaseCreate({
       };
     }
 
-    onSubmit?.({
-      purchaseRef: record.purchaseRef,
-      purchaseDate: record.purchaseDate,
-      purchaseCategory: record.purchaseCategory,
-      accountNumber: record.accountNumber,
-      primaryName: record.primaryName,
-      primaryEmail: record.primaryEmail,
-      previousTier: record.previousTier,
-      newTier: record.newTier,
-      creditsAdded: record.creditsAdded,
-      totalCreditsAfter: record.totalCreditsAfter,
-      bundleLabel: record.bundleLabel,
-      sessionsAdded: record.sessionsAdded,
-      totalSessionsAfter: record.totalSessionsAfter,
-      packagePrice: record.packagePrice,
-      paymentMethod: record.paymentMethod,
-      transactionRef: record.transactionRef,
-      processedBy: record.processedBy,
-      notes: record.notes,
-      expiryDate: record.expiryDate,
-      status: record.status,
-      invoiceSentDate: record.invoiceSentDate,
-    }, paymentProofFile);
+    try {
+      await onSubmit?.({
+        purchaseRef: record.purchaseRef,
+        purchaseDate: record.purchaseDate,
+        purchaseCategory: record.purchaseCategory,
+        accountNumber: record.accountNumber,
+        primaryName: record.primaryName,
+        primaryEmail: record.primaryEmail,
+        previousTier: record.previousTier,
+        newTier: record.newTier,
+        creditsAdded: record.creditsAdded,
+        totalCreditsAfter: record.totalCreditsAfter,
+        bundleLabel: record.bundleLabel,
+        sessionsAdded: record.sessionsAdded,
+        totalSessionsAfter: record.totalSessionsAfter,
+        packagePrice: record.packagePrice,
+        paymentMethod: record.paymentMethod,
+        transactionRef: record.transactionRef,
+        processedBy: record.processedBy,
+        notes: record.notes,
+        expiryDate: record.expiryDate,
+        status: record.status,
+        invoiceSentDate: record.invoiceSentDate,
+      }, paymentProofFile);
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -918,11 +934,11 @@ export function PurchaseCreate({
             </Button>
             <Button
               className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!canConfirm}
+              disabled={!canConfirm || isSubmitting}
               onClick={handleConfirm}
             >
               <CheckCircle className="w-4 h-4 mr-2" />
-              Confirm Purchase
+              {isSubmitting ? 'Saving…' : 'Confirm Purchase'}
             </Button>
           </div>
         </div>
