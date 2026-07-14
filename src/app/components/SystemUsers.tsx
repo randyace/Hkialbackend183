@@ -203,29 +203,29 @@ export function SystemUsers({
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex min-h-full w-full flex-col gap-6 p-6">
+      <div className="flex shrink-0 items-center justify-between gap-4">
         <div>
-          <h1>System Users Management</h1>
-          <p className="text-gray-600">Manage staff accounts, roles, and permissions</p>
+          <h1 className="text-2xl font-semibold text-gray-900">System Users Management</h1>
+          <p className="mt-1 text-sm text-gray-600">Manage staff accounts, roles, and permissions</p>
         </div>
         {canCreate && (
-          <Button onClick={onCreateUser}>
+          <Button onClick={onCreateUser} className="shrink-0">
             <Plus className="w-4 h-4 mr-2" />
             Add New User
           </Button>
         )}
       </div>
 
-      <Card className="p-4">
+      <Card className="w-full shrink-0 gap-0 p-4">
         <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <div className="flex flex-col gap-4 md:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search by name, email, or role..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
+                className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -253,7 +253,7 @@ export function SystemUsers({
             </Select>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col gap-4 md:flex-row">
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
               <div className="relative">
@@ -261,9 +261,9 @@ export function SystemUsers({
                   type="date"
                   value={startDate}
                   onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  className="w-full rounded-md border border-gray-300 px-4 py-2"
                 />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="flex-1">
@@ -273,9 +273,9 @@ export function SystemUsers({
                   type="date"
                   value={endDate}
                   onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  className="w-full rounded-md border border-gray-300 px-4 py-2"
                 />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="flex items-end">
@@ -285,61 +285,78 @@ export function SystemUsers({
         </div>
       </Card>
 
-      <Card>
-        <div className="p-4 border-b flex items-center justify-between">
+      {/* Fills remaining viewport height; page scrolls — no nested table scroll frame */}
+      <Card className="flex w-full flex-1 flex-col gap-0">
+        <div className="flex shrink-0 flex-col justify-between gap-3 border-b p-4 sm:flex-row sm:items-center">
           <div className="text-sm text-gray-500">
             Showing {isLoading ? '…' : `${startIndex + 1}–${Math.min(startIndex + itemsPerPage, filteredUsers.length)} of ${filteredUsers.length} users`}
           </div>
           <div>{renderPagination()}</div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full">
           {isLoading ? (
             <div className="flex items-center justify-center p-12">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
               <span className="ml-2 text-gray-500">Loading users…</span>
             </div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+            <table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[5%]" />
+                <col className="w-[16%]" />
+                <col className="w-[22%]" />
+                <col className="w-[12%]" />
+                <col className="w-[14%]" />
+                <col className="w-[9%]" />
+                <col className="w-[14%]" />
+                <col className="w-[8%]" />
+              </colgroup>
+              <thead className="border-b bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Department</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Last Login</th>
-                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">ID</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Name</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Email</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Role</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Department</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Last Login</th>
+                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-gray-500">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {paginatedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{user.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-gray-400" />
+                    <td className="px-4 py-3 text-sm">{user.id}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Shield className="h-4 w-4 shrink-0 text-gray-400" />
                         <button
                           type="button"
-                          className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          className="truncate text-left text-sm text-blue-600 hover:text-blue-800 hover:underline"
                           onClick={() => canUpdate && onEditUser(user.id)}
                         >
                           {user.name}
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="truncate px-4 py-3 text-sm text-gray-600" title={user.email}>
+                      {user.email}
+                    </td>
+                    <td className="px-4 py-3">
                       <Badge className={getRoleColor(user.role)}>{roleLabels[user.role]}</Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{user.department}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="truncate px-4 py-3 text-sm" title={user.department}>
+                      {user.department}
+                    </td>
+                    <td className="px-4 py-3">
                       <Badge className={getStatusColor(user.status)}>{user.status}</Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{user.lastLogin}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="truncate px-4 py-3 text-sm text-gray-600" title={user.lastLogin}>
+                      {user.lastLogin}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center justify-end gap-1">
                         {canUpdate && (
                           <Button
                             variant="ghost"
@@ -356,7 +373,7 @@ export function SystemUsers({
                             variant="ghost"
                             size="sm"
                             onClick={() => onManagePermissions(user.id)}
-                            className="h-8 w-8 p-0 text-purple-600 hover:text-purple-800 hover:bg-purple-50"
+                            className="h-8 w-8 p-0 text-purple-600 hover:bg-purple-50 hover:text-purple-800"
                             title="Manage Permissions"
                           >
                             <Key className="h-4 w-4" />
@@ -367,7 +384,7 @@ export function SystemUsers({
                             variant="ghost"
                             size="sm"
                             onClick={() => onDeleteUser(user.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-800"
                             title="Delete User"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -383,7 +400,7 @@ export function SystemUsers({
         </div>
 
         {filteredUsers.length > 0 && !isLoading && (
-          <div className="p-4 border-t flex justify-end">
+          <div className="mt-auto flex shrink-0 justify-end border-t p-4">
             {renderPagination()}
           </div>
         )}
