@@ -251,8 +251,12 @@ export function Sidebar({
             <div key={item.id}>
               {item.submenu ? (
                 <>
-                  <button
-                    onClick={() => toggleMenu(item.id)}
+                  <a
+                    href={`#${item.id}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleMenu(item.id);
+                    }}
                     className="flex items-center justify-between w-full p-3 rounded hover:bg-gray-700/50 transition-colors text-white"
                   >
                     <div className="flex items-center gap-3">
@@ -272,29 +276,37 @@ export function Sidebar({
                         }`}
                       />
                     </div>
-                  </button>
+                  </a>
 
                   {openMenus.includes(item.id) && (
                     <div className="ml-11 mt-1 space-y-1">
                       {item.submenu.map(subItem => (
-                        <button
+                        <a
                           key={subItem.id}
-                          onClick={() => onNavigate(subItem.path)}
-                          className={`w-full text-left p-2 rounded text-sm transition-colors ${
+                          href={subItem.path}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onNavigate(subItem.path);
+                          }}
+                          className={`block w-full text-left p-2 rounded text-sm transition-colors ${
                             isActive(subItem.path)
                               ? 'bg-blue-600 text-white'
                               : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                           }`}
                         >
                           {subItem.label}
-                        </button>
+                        </a>
                       ))}
                     </div>
                   )}
                 </>
               ) : (
-                <button
-                  onClick={() => item.path && onNavigate(item.path)}
+                <a
+                  href={item.path ?? '#'}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (item.path) onNavigate(item.path);
+                  }}
                   className={`flex items-center gap-3 w-full p-3 rounded transition-colors ${
                     item.path && isActive(item.path)
                       ? 'bg-blue-600 text-white'
@@ -303,7 +315,7 @@ export function Sidebar({
                 >
                   {item.icon}
                   <span>{item.label}</span>
-                </button>
+                </a>
               )}
             </div>
           ))}
