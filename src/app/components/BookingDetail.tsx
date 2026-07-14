@@ -370,11 +370,16 @@ export interface BookingDetailFullProps extends BookingDetailProps {
       dietary_requirements?: unknown;
     } | null;
   }>;
-  /** Runs `POST /api/guests/{guestId}/trigger-match` (sync demo scan). */
-  onRunIdentityCheck?: () => void | Promise<void>;
+  /** Runs `POST /api/guests/{guestId}/trigger-match` with guest_profiles UUID (not ACC-…). */
+  onRunIdentityCheck?: (guestProfileId: string) => void | Promise<void>;
   isRunningIdentityCheck?: boolean;
   /** Guest profile UUID used by Run Identity Check. */
   identityGuestId?: string | null;
+  /**
+   * Called after a successful profile merge confirm so the wrapper can
+   * refresh booking details + pending merge suggestions.
+   */
+  onMergeComplete?: () => void | Promise<void>;
   // 2026-06-23 (round 6.2.49 follow-up #3) — parent-delegated
   // invoice handlers. The current figma-ui dialog is still
   // self-contained (it uses `apiBaseUrl`/`authToken`/`onInvoiceSent`),
@@ -467,7 +472,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   bookableItemPrices?: Record<string, number>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const [showInvoice, setShowInvoice] = useState(false);
 
@@ -1839,10 +1844,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 setShowMergeDialog(false);
                 setShowSimilarBanner(false);
               }}
-              onConfirmMerge={() => {
+              onMergeComplete={async () => {
                 setShowMergeDialog(false);
                 setMergeComplete(true);
                 setShowSimilarBanner(false);
+                await onMergeComplete?.();
               }}
             />
           </>
@@ -1902,8 +1908,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 size="sm"
                 className="gap-1.5 border-amber-300 text-amber-800 hover:bg-amber-50"
                 disabled={isRunningIdentityCheck || !identityGuestId || !onRunIdentityCheck}
-                onClick={() => { void onRunIdentityCheck?.(); }}
-                title={!identityGuestId ? 'No guest profile linked to this booking' : 'Run Identity Check'}
+                onClick={() => {
+                  // Pass guest_profiles UUID only — never booking.accountNo (ACC-…).
+                  if (!identityGuestId) {
+                    return;
+                  }
+                  void onRunIdentityCheck?.(identityGuestId);
+                }}
+                title={!identityGuestId ? 'Guest ID missing' : (isRunningIdentityCheck ? 'Scanning…' : 'Run Identity Check')}
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isRunningIdentityCheck ? 'animate-spin' : ''}`} />
                 {isRunningIdentityCheck ? 'Scanning…' : 'Run Identity Check'}
