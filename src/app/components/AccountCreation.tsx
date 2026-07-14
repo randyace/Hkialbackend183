@@ -400,10 +400,12 @@ export function AccountCreation({
                       <Select value={subForm.title} onValueChange={v => updateCorporateForm(subForm.id, 'title', v)}>
                         <SelectTrigger id={`title-${subForm.id}`}><SelectValue placeholder="Select title" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="mr">Mr.</SelectItem>
-                          <SelectItem value="mrs">Mrs.</SelectItem>
-                          <SelectItem value="ms">Ms.</SelectItem>
-                          <SelectItem value="dr">Dr.</SelectItem>
+                          <SelectItem value="Mr.">Mr.</SelectItem>
+                          <SelectItem value="Mrs.">Mrs.</SelectItem>
+                          <SelectItem value="Ms.">Ms.</SelectItem>
+                          <SelectItem value="Miss">Miss</SelectItem>
+                          <SelectItem value="Dr.">Dr.</SelectItem>
+                          <SelectItem value="Prof.">Prof.</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -542,10 +544,12 @@ export function AccountCreation({
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
                         <SelectTrigger id="title"><SelectValue placeholder="Select title" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="mr">Mr.</SelectItem>
-                          <SelectItem value="mrs">Mrs.</SelectItem>
-                          <SelectItem value="ms">Ms.</SelectItem>
-                          <SelectItem value="dr">Dr.</SelectItem>
+                          <SelectItem value="Mr.">Mr.</SelectItem>
+                          <SelectItem value="Mrs.">Mrs.</SelectItem>
+                          <SelectItem value="Ms.">Ms.</SelectItem>
+                          <SelectItem value="Miss">Miss</SelectItem>
+                          <SelectItem value="Dr.">Dr.</SelectItem>
+                          <SelectItem value="Prof.">Prof.</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -634,10 +638,12 @@ export function AccountCreation({
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
                         <SelectTrigger id="title"><SelectValue placeholder="Select title" /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="mr">Mr.</SelectItem>
-                          <SelectItem value="mrs">Mrs.</SelectItem>
-                          <SelectItem value="ms">Ms.</SelectItem>
-                          <SelectItem value="dr">Dr.</SelectItem>
+                          <SelectItem value="Mr.">Mr.</SelectItem>
+                          <SelectItem value="Mrs.">Mrs.</SelectItem>
+                          <SelectItem value="Ms.">Ms.</SelectItem>
+                          <SelectItem value="Miss">Miss</SelectItem>
+                          <SelectItem value="Dr.">Dr.</SelectItem>
+                          <SelectItem value="Prof.">Prof.</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
