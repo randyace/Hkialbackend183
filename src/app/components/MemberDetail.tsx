@@ -113,6 +113,15 @@ function Time5MinSelect({
 // ── MOCK constant (isolated — container replaces via props) ───────────────────
 const MOCK_ACCOUNT_NUMBER = 'ACC-2024-1001';
 
+// Site-wide person title list — keep in sync with parent memberDetailMappers.ts
+// and CreateBooking passenger titles (Mr/Mrs/Ms/Miss/Dr/Prof, with trailing dots
+// for account profile storage).
+const PERSON_TITLES = ['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Prof.'] as const;
+
+// Payment methods: Individual is restricted to upfront variants only.
+const INDIVIDUAL_PAYMENT_METHODS = ['Upfront', 'Net Upfront'] as const;
+const ALL_PAYMENT_METHODS = ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase'] as const;
+
 // ── Member shape ──────────────────────────────────────────────────────────────
 export interface Member {
   accountNumber: string;
@@ -873,13 +882,21 @@ export function MemberDetail({
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label>Title</label>
-                <input
-                  type="text"
+                <select
                   value={basicForm.title}
                   onChange={e => setBasicForm(f => ({ ...f, title: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
-                />
+                >
+                  <option value="">Select title</option>
+                  {PERSON_TITLES.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  {/* Preserve legacy free-text titles so display is never blank */}
+                  {basicForm.title && !(PERSON_TITLES as readonly string[]).includes(basicForm.title) && (
+                    <option value={basicForm.title}>{basicForm.title}</option>
+                  )}
+                </select>
               </div>
               <div>
                 <label>First Name</label>
@@ -992,10 +1009,22 @@ export function MemberDetail({
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
-                  <option value="Upfront">Upfront</option>
-                  <option value="Net Upfront">Net Upfront</option>
-                  <option value="On-Credit">On-Credit</option>
-                  <option value="Bulk Purchase">Bulk Purchase</option>
+                  <option value="">Not set</option>
+                  {(memberData.accountType === 'Individual'
+                    ? INDIVIDUAL_PAYMENT_METHODS
+                    : ALL_PAYMENT_METHODS
+                  ).map(pm => (
+                    <option key={pm} value={pm}>{pm}</option>
+                  ))}
+                  {/* Show legacy value if outside the allowed set (e.g. old On-Credit on Individual) so staff can see and change it */}
+                  {accountForm.paymentMethod &&
+                    !(
+                      memberData.accountType === 'Individual'
+                        ? (INDIVIDUAL_PAYMENT_METHODS as readonly string[])
+                        : (ALL_PAYMENT_METHODS as readonly string[])
+                    ).includes(accountForm.paymentMethod) && (
+                      <option value={accountForm.paymentMethod}>{accountForm.paymentMethod}</option>
+                    )}
                 </select>
               </div>
               <div>
@@ -1016,7 +1045,8 @@ export function MemberDetail({
                     <label>Membership Number</label>
                     <input
                       type="text"
-                      defaultValue={memberData.membershipNumber}
+                      value={memberData.membershipNumber || ''}
+                      readOnly
                       disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
                     />
@@ -1025,7 +1055,8 @@ export function MemberDetail({
                     <label>Membership Type</label>
                     <input
                       type="text"
-                      defaultValue={memberData.membershipType}
+                      value={memberData.membershipType || ''}
+                      readOnly
                       disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
                     />
@@ -1034,7 +1065,10 @@ export function MemberDetail({
                     <label>Membership Expiry</label>
                     <input
                       type="date"
-                      defaultValue={memberData.membershipExpiry}
+                      // Container already normalizes ISO datetime → YYYY-MM-DD;
+                      // defensive slice here covers demo/mock paths.
+                      value={(memberData.membershipExpiry || '').slice(0, 10)}
+                      readOnly
                       disabled
                       className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
                     />
@@ -1971,38 +2005,46 @@ export function MemberDetail({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {displayLoginHistory.map(entry => (
-                    <tr key={entry.id} className={`hover:bg-gray-50 ${entry.status === 'Locked Out' ? 'bg-red-50/60' : ''}`}>
-                      <td className="px-4 py-3 whitespace-nowrap text-gray-700 font-mono text-xs">{entry.datetime}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          {entry.deviceType === 'mobile'
-                            ? <Smartphone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                            : <Monitor className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
-                          <span className="text-xs text-gray-600">{entry.device}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-gray-500">{entry.ip}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{entry.location}</td>
-                      <td className="px-4 py-3 text-center">
-                        {entry.status === 'Success' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
-                            <CheckCircle2 className="w-3 h-3" /> Success
-                          </span>
-                        )}
-                        {entry.status === 'Failed' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700">
-                            <XCircle className="w-3 h-3" /> Failed
-                          </span>
-                        )}
-                        {entry.status === 'Locked Out' && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
-                            <Lock className="w-3 h-3" /> Locked Out
-                          </span>
-                        )}
+                  {displayLoginHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                        No login activity recorded yet.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    displayLoginHistory.map(entry => (
+                      <tr key={entry.id} className={`hover:bg-gray-50 ${entry.status === 'Locked Out' ? 'bg-red-50/60' : ''}`}>
+                        <td className="px-4 py-3 whitespace-nowrap text-gray-700 font-mono text-xs">{entry.datetime}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {entry.deviceType === 'mobile'
+                              ? <Smartphone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                              : <Monitor className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
+                            <span className="text-xs text-gray-600">{entry.device}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap font-mono text-xs text-gray-500">{entry.ip}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">{entry.location}</td>
+                        <td className="px-4 py-3 text-center">
+                          {entry.status === 'Success' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
+                              <CheckCircle2 className="w-3 h-3" /> Success
+                            </span>
+                          )}
+                          {entry.status === 'Failed' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700">
+                              <XCircle className="w-3 h-3" /> Failed
+                            </span>
+                          )}
+                          {entry.status === 'Locked Out' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
+                              <Lock className="w-3 h-3" /> Locked Out
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2704,7 +2746,7 @@ export function MemberDetail({
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, title: e.target.value }); setMockSpouseForm(f => ({ ...f, title: e.target.value })); }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
-                  {['Mr.', 'Mrs.', 'Ms.', 'Miss', 'Dr.', 'Prof.'].map(t => (
+                  {PERSON_TITLES.map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
