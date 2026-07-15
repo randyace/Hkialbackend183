@@ -13,9 +13,12 @@ import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
 // ─── Types ────────────────────────────────────────────────────────────────────
 // 2026-07-02 — wrapper-supplied contract shape. Mirrors the PurchaseRecord
 // fields the dropdown renders (id, primaryName, purchaseRef, packagePrice,
-// sessionsAdded, purchaseCategory). When the production wrapper passes a
-// populated array, we use it; otherwise we fall back to INITIAL_RECORDS so
-// figma Make export still works with no wrapper.
+// sessionsAdded, purchaseCategory). When the production wrapper passes the
+// prop (even an empty array), we use it and never fall back to mock
+// INITIAL_RECORDS. Empty list = "No available contracts found" (e.g. all
+// Corporate contracts already have a non-pending promo batch via
+// promo_generated_at). INITIAL_RECORDS is only for figma Make when the
+// prop is omitted entirely.
 //
 // `value` is a wrapper-supplied, globally-unique string used as the Radix
 // SelectItem's `value` prop. Radix internally clones each item and uses the
@@ -50,10 +53,14 @@ export interface ContractOption {
 
 // ─── Get available contracts ──────────────────────────────────────────────────
 function getAvailableContracts(prop?: ContractOption[]): ContractOption[] {
-  if (prop && prop.length > 0) {
+  // 2026-07-15 — When the production wrapper supplies the prop, honour it
+  // even when empty. Previously `prop.length > 0` let an empty real list
+  // (all contracts already generated promo / non-pending) fall through to
+  // INITIAL_RECORDS, resurfacing Cathay/HSBC/Jardine mock rows in prod.
+  if (prop !== undefined) {
     return prop.filter(c => c.purchaseCategory === 'Corporate' || c.purchaseCategory === 'Agency');
   }
-  // figma Make fallback — mock records when no wrapper is present
+  // figma Make fallback — mock records only when no wrapper prop is present
   return INITIAL_RECORDS
     .filter(r => r.purchaseCategory === 'Corporate' || r.purchaseCategory === 'Agency')
     .map(r => ({
@@ -117,8 +124,9 @@ export interface PromoCodeEditProps {
   onBack?: () => void;
   onNavigateToCodesPage?: (data: GeneratedCodesData) => void;
   // 2026-07-02 — wrapper fetches real contracts (Corporate purchases +
-  // TravelAgency contracts) and passes them down. View falls back to
-  // INITIAL_RECORDS when prop is missing (figma Make export case).
+  // TravelAgency contracts) and passes them down. When provided (including
+  // `[]`), mock INITIAL_RECORDS must not appear. INITIAL_RECORDS is only
+  // for figma Make when this prop is omitted.
   availableContracts?: ContractOption[];
 }
 
