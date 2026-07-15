@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
-import { usePermission } from '../../../../../hooks/usePermission';
+import { useAuthContextOptional } from '../../../../../providers/AuthProvider';
+import { hasPermission } from '../../../../../lib/permissions';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
 // The standalone edit page (`/bookings/:id/edit`) is now the
@@ -476,8 +477,9 @@ export interface BookingDetailFullProps extends BookingDetailProps {
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
-  const { hasPermission } = usePermission();
-  const canMergeProfiles = hasPermission(PERMISSIONS.MERGE_PROFILES);
+  const auth = useAuthContextOptional();
+  const user = auth?.user ?? null;
+  const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
