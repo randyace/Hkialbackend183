@@ -145,7 +145,20 @@ interface PendingBooking {
     hasLimousine?: boolean;
     hasShopping?: boolean;
     specialRequests?: string;
+    guestName?: string;
+    contactPerson?: {
+      name?: string;
+      email?: string;
+      phone?: string;
+    };
   };
+  /** Authoritative CR diff rows (wrapper maps from open_change_request.diff). */
+  changeRows?: Array<{
+    field: string;
+    label: string;
+    from: string;
+    to: string;
+  }>;
 }
 
 // ── Supplementary Mock Data ───────────────────────────────────────────────────
@@ -567,79 +580,150 @@ export function BookingReviewPage({
             </div>
           )}
 
-          {/* ── Edit Request — Changes Panel ── */}
-          {booking.requestType === 'Edit Booking Request' && booking.originalData && reviewMode === 'view' && (
+          {/* ── Edit Request — Changes Panel ──
+              Prefer changeRows (from API CR.diff, including nested advanced_details).
+              Fall back to originalData field-by-field for older mocks. */}
+          {booking.requestType === 'Edit Booking Request'
+            && reviewMode === 'view'
+            && ((booking.changeRows?.length ?? 0) > 0 || !!booking.originalData) && (
             <Card className="p-6 border-2 border-blue-300 bg-blue-50">
               <div className="flex items-center gap-2 mb-4">
                 <FileEdit className="w-5 h-5 text-blue-700" />
                 <h2 className="text-lg font-medium text-blue-900">Changes Requested</h2>
               </div>
+              {booking.changeRows && booking.changeRows.length > 0 ? (
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">Original</p>
                   <div className="space-y-3">
-                    {booking.originalData.suite && booking.originalData.suite !== booking.suite && (
+                    {booking.changeRows.map((row) => (
+                      <div key={`from-${row.field}-${row.label}`}>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{row.label}</p>
+                        <p className="line-through text-red-600 font-medium break-words">{row.from}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">Changed To</p>
+                  <div className="space-y-3">
+                    {booking.changeRows.map((row) => (
+                      <div key={`to-${row.field}-${row.label}`}>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{row.label}</p>
+                        <p className="text-green-700 font-medium break-words">{row.to}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              ) : (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">Original</p>
+                  <div className="space-y-3">
+                    {booking.originalData?.guestName !== undefined && booking.originalData.guestName !== booking.guestName && (
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Guest Name</p><p className="line-through text-red-600 font-medium">{booking.originalData.guestName}</p></div>
+                    )}
+                    {booking.originalData?.contactPerson && (
+                      (booking.originalData.contactPerson.name ?? '') !== (booking.contactPerson?.name ?? '')
+                      || (booking.originalData.contactPerson.email ?? '') !== (booking.contactPerson?.email ?? '')
+                      || (booking.originalData.contactPerson.phone ?? '') !== (booking.contactPerson?.phone ?? '')
+                    ) && (
+                      <div>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Contact Person</p>
+                        <p className="line-through text-red-600 font-medium">
+                          {[booking.originalData.contactPerson.name, booking.originalData.contactPerson.email, booking.originalData.contactPerson.phone]
+                            .filter(Boolean)
+                            .join(' · ') || '(none)'}
+                        </p>
+                      </div>
+                    )}
+                    {booking.originalData?.flightType && booking.originalData.flightType !== booking.flightType && (
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Type</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightType}</p></div>
+                    )}
+                    {booking.originalData?.suite && booking.originalData.suite !== booking.suite && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Suite</p><p className="line-through text-red-600 font-medium">{booking.originalData.suite}</p></div>
                     )}
-                    {booking.originalData.dateTime && booking.originalData.dateTime !== booking.dateTime && (
+                    {booking.originalData?.dateTime && booking.originalData.dateTime !== booking.dateTime && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Visit Date/Time</p><p className="line-through text-red-600 font-medium">{booking.originalData.dateTime}</p></div>
                     )}
-                    {booking.originalData.flightNo && booking.originalData.flightNo !== booking.flightNo && (
+                    {booking.originalData?.flightNo && booking.originalData.flightNo !== booking.flightNo && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight No.</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightNo}</p></div>
                     )}
-                    {booking.originalData.flightTime && booking.originalData.flightTime !== booking.flightTime && (
+                    {booking.originalData?.flightTime && booking.originalData.flightTime !== booking.flightTime && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Time</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightTime}</p></div>
                     )}
-                    {booking.originalData.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
+                    {booking.originalData?.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Number of Guests</p><p className="line-through text-red-600 font-medium">{booking.originalData.numberOfGuests} pax</p></div>
                     )}
-                    {booking.originalData.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
+                    {booking.originalData?.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Non-flying Guests</p><p className="line-through text-red-600 font-medium">{booking.originalData.nonFlyingGuests}</p></div>
                     )}
-                    {booking.originalData.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
+                    {booking.originalData?.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Limousine Service</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasLimousine ? 'Yes' : 'No'}</p></div>
                     )}
-                    {booking.originalData.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
+                    {booking.originalData?.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Shopping Service</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasShopping ? 'Yes' : 'No'}</p></div>
                     )}
-                    {booking.originalData.specialRequests !== booking.specialRequests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Special Request</p><p className="line-through text-red-600 text-sm">{booking.originalData.specialRequests || '(none)'}</p></div>
+                    {booking.originalData?.specialRequests !== booking.specialRequests && (
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Special Request</p><p className="line-through text-red-600 text-sm">{booking.originalData?.specialRequests || '(none)'}</p></div>
                     )}
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">Changed To</p>
                   <div className="space-y-3">
-                    {booking.originalData.suite && booking.originalData.suite !== booking.suite && (
+                    {booking.originalData?.guestName !== undefined && booking.originalData.guestName !== booking.guestName && (
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Guest Name</p><p className="text-green-700 font-medium">{booking.guestName}</p></div>
+                    )}
+                    {booking.originalData?.contactPerson && (
+                      (booking.originalData.contactPerson.name ?? '') !== (booking.contactPerson?.name ?? '')
+                      || (booking.originalData.contactPerson.email ?? '') !== (booking.contactPerson?.email ?? '')
+                      || (booking.originalData.contactPerson.phone ?? '') !== (booking.contactPerson?.phone ?? '')
+                    ) && (
+                      <div>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Contact Person</p>
+                        <p className="text-green-700 font-medium">
+                          {[booking.contactPerson?.name, booking.contactPerson?.email, booking.contactPerson?.phone]
+                            .filter(Boolean)
+                            .join(' · ') || '(none)'}
+                        </p>
+                      </div>
+                    )}
+                    {booking.originalData?.flightType && booking.originalData.flightType !== booking.flightType && (
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Type</p><p className="text-green-700 font-medium">{booking.flightType}</p></div>
+                    )}
+                    {booking.originalData?.suite && booking.originalData.suite !== booking.suite && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Suite</p><p className="text-green-700 font-medium">{booking.suite}</p></div>
                     )}
-                    {booking.originalData.dateTime && booking.originalData.dateTime !== booking.dateTime && (
+                    {booking.originalData?.dateTime && booking.originalData.dateTime !== booking.dateTime && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Visit Date/Time</p><p className="text-green-700 font-medium">{booking.dateTime}</p></div>
                     )}
-                    {booking.originalData.flightNo && booking.originalData.flightNo !== booking.flightNo && (
+                    {booking.originalData?.flightNo && booking.originalData.flightNo !== booking.flightNo && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight No.</p><p className="text-green-700 font-medium">{booking.flightNo}</p></div>
                     )}
-                    {booking.originalData.flightTime && booking.originalData.flightTime !== booking.flightTime && (
+                    {booking.originalData?.flightTime && booking.originalData.flightTime !== booking.flightTime && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Time</p><p className="text-green-700 font-medium">{booking.flightTime}</p></div>
                     )}
-                    {booking.originalData.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
+                    {booking.originalData?.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Number of Guests</p><p className="text-green-700 font-medium">{booking.numberOfGuests} pax</p></div>
                     )}
-                    {booking.originalData.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
+                    {booking.originalData?.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Non-flying Guests</p><p className="text-green-700 font-medium">{booking.nonFlyingGuests}</p></div>
                     )}
-                    {booking.originalData.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
+                    {booking.originalData?.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Limousine Service</p><p className="text-green-700 font-medium">{booking.hasLimousine ? 'Yes' : 'No'}</p></div>
                     )}
-                    {booking.originalData.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
+                    {booking.originalData?.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Shopping Service</p><p className="text-green-700 font-medium">{booking.hasShopping ? 'Yes' : 'No'}</p></div>
                     )}
-                    {booking.originalData.specialRequests !== booking.specialRequests && (
+                    {booking.originalData?.specialRequests !== booking.specialRequests && (
                       <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Special Request</p><p className="text-green-700 font-medium text-sm">{booking.specialRequests || '(none)'}</p></div>
                     )}
                   </div>
                 </div>
               </div>
+              )}
             </Card>
           )}
 

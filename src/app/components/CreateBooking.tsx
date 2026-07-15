@@ -1675,6 +1675,20 @@ export function CreateBooking({
   const psGuestsNoSuite   = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
   const ldNonFlyingOver   = nonFlyingLD > 3;
   const ldNoAdult         = (assignedLoungeIds.length > 0 || vipLD > 0 || nonFlyingLD > 0) && ldAdults < 1;
+  // 2026-07-16 — booking must have at least one flying guest
+  // (VIP under PS and/or LD). Pre-this-fix 0 PS + 0 LD
+  // (vipPS=0, vipLD=0) passed validation because per-kind
+  // adult checks only fire when that product is already in
+  // play (`numPremiereSuites > 0` / lounge context). Empty
+  // product bookings were submittable from admin Create.
+  const noFlyingGuest     = vipPS + vipLD < 1;
+
+  const bookingGuestErrors: string[] = [];
+  if (noFlyingGuest) {
+    bookingGuestErrors.push(
+      'At least 1 flying guest (VIP passenger) is required. Set VIP Passengers under Premiere Suite and/or Lounge Deluxe.',
+    );
+  }
 
   const psErrors: string[] = [];
   if (psGuestsNoSuite) psErrors.push('Quantity of Premiere Suite must be at least 1 when guests are assigned to it.');
@@ -1685,7 +1699,7 @@ export function CreateBooking({
   if (ldNoAdult)       ldErrors.push('At least 1 Adult passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingOver) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
 
-  const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
+  const hasGuestErrors = bookingGuestErrors.length > 0 || psErrors.length > 0 || ldErrors.length > 0;
 
   const focusField = (fieldId: string) => {
     const el = document.getElementById(fieldId);
@@ -1827,8 +1841,8 @@ export function CreateBooking({
 
     if (hasGuestErrors) {
       setFieldErrors({});
-      const allGuest = [...psErrors, ...ldErrors];
-      const scrollId = psErrors.length > 0
+      const allGuest = [...bookingGuestErrors, ...psErrors, ...ldErrors];
+      const scrollId = (bookingGuestErrors.length > 0 || psErrors.length > 0)
         ? 'create-premiere-suite-section'
         : 'create-lounge-deluxe-section';
       toast.error(allGuest[0] ?? 'Please fix the guest detail errors before submitting.', {
@@ -2632,7 +2646,7 @@ export function CreateBooking({
           </div>
 
           {/* Premiere Suite — physical suite checkboxes (CIP 1-6, Function Room) */}
-          <div id="create-premiere-suite-section" className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+          <div id="create-premiere-suite-section" className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-800">Part 1 — Premiere Suite</h4>
@@ -2644,6 +2658,15 @@ export function CreateBooking({
                 </span>
               )}
             </div>
+            {bookingGuestErrors.length > 0 && (
+              <div className="mb-3 space-y-1" data-testid="create-booking-no-flying-guest-error">
+                {bookingGuestErrors.map((err, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-red-700 bg-red-100 border border-red-200 rounded px-3 py-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>{err}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-6">
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Premiere Suite</label>
@@ -2656,8 +2679,8 @@ export function CreateBooking({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipPS}
                   onChange={e => openDeleteDialog('PS', Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoAdult ? 'border-red-400 bg-red-50' : ''}`} />
-                {psNoAdult && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
+                {(psNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
               </div>
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>
@@ -2737,7 +2760,7 @@ export function CreateBooking({
           </div>
 
           {/* Lounge Deluxe — physical lobby checkboxes (Lobby 1-8) */}
-          <div id="create-lounge-deluxe-section" className={`border rounded-lg p-4 ${ldErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+          <div id="create-lounge-deluxe-section" className={`border rounded-lg p-4 ${ldErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
@@ -2752,8 +2775,8 @@ export function CreateBooking({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipLD}
                   onChange={e => openDeleteDialog('LD', Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoAdult ? 'border-red-400 bg-red-50' : ''}`} />
-                {ldNoAdult && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
+                {(ldNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
               </div>
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>

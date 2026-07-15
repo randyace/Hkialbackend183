@@ -26,6 +26,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 interface Booking {
   id: number;
@@ -898,10 +903,23 @@ export function BookingManagement({
                           </span>
                         ) : null}
                         {booking.membershipBenefitLabel ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs">
-                            <Gem className="w-3 h-3" />
-                            {booking.membershipBenefitLabel}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="inline-flex items-center justify-center rounded bg-indigo-100 text-indigo-700 p-1 cursor-help"
+                                aria-label={booking.membershipBenefitLabel}
+                              >
+                                <Gem className="w-3 h-3" aria-hidden />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              sideOffset={6}
+                              className="max-w-xs text-left leading-snug"
+                            >
+                              {booking.membershipBenefitLabel}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : null}
                         {booking.agencyName && (
                           <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
