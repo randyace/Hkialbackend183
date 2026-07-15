@@ -10,7 +10,7 @@ import type { RolePermissionModule, RoleOption } from './RolePermissionMatrix';
 const DEMO_ROLES: RoleOption[] = [
   { id: 1, name: 'Supervisor' },
   { id: 2, name: 'Staff' },
-  { id: 3, name: 'Viewer' },
+  { id: 3, name: 'Administrator' },
   { id: 4, name: 'Super Admin' },
 ];
 

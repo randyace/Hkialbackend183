@@ -361,15 +361,17 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteCompany?.(company.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                        title="Delete Company"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {onDeleteCompany && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteCompany(company.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          title="Delete Company"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

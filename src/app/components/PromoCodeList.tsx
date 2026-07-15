@@ -651,15 +651,17 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                     <Edit className="w-3 h-3 mr-1" />
                                     Edit
                                   </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
-                                    onClick={(e) => { e.stopPropagation(); onDelete?.(batch.id); }}
-                                    title="Delete batch"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
+                                  {onDelete && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
+                                      onClick={(e) => { e.stopPropagation(); onDelete(batch.id); }}
+                                      title="Delete batch"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>

@@ -10,7 +10,7 @@ import type { SystemUser, SystemUsersProps } from '../SystemUsers';
 
 const FIRST_NAMES  = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
 const LAST_NAMES   = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
-const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Staff', 'Staff', 'Staff', 'Viewer'];
+const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Staff', 'Staff', 'Staff', 'Staff'];
 const DEPARTMENTS  = ['IT Department', 'Lounge Operations', 'Guest Services', 'Finance', 'Management', 'Security', 'Housekeeping', 'F&B Services'];
 const STATUSES: SystemUser['status'][]  = ['Active', 'Active', 'Active', 'Active', 'Inactive'];
 
@@ -33,8 +33,6 @@ function generateMockUsers(): SystemUser[] {
       permissions = ['bookings.view'];
     } else if (role === 'Supervisor') {
       permissions = ['bookings.view', 'bookings.approve', 'bookings.update', 'audit_logs.view'];
-    } else if (role === 'Viewer') {
-      permissions = ['bookings.view'];
     } else {
       permissions = ['bookings.view', 'bookings.create', 'bookings.update'];
     }

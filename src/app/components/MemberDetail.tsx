@@ -1932,6 +1932,7 @@ export function MemberDetail({
               </div>
 
               {/* Force Sign Out */}
+              {onForceLogout && (
               <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                 <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
                   <LogOut className="w-5 h-5 text-orange-600" />
@@ -1952,6 +1953,7 @@ export function MemberDetail({
                   </Button>
                 </div>
               </div>
+              )}
 
               {/* Reset 2FA */}
               <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">

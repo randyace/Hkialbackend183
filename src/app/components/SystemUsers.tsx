@@ -34,7 +34,7 @@ import { mockSystemUsersData } from './__fixtures__/SystemUsers.mocks';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-export type SystemUserRole   = 'Administrator' | 'Supervisor' | 'Staff' | 'Viewer';
+export type SystemUserRole   = 'Administrator' | 'Supervisor' | 'Staff' | 'Super Admin';
 export type SystemUserStatus = 'Active' | 'Inactive';
 
 export interface SystemUser {
@@ -86,10 +86,10 @@ export interface SystemUsersProps {
 }
 
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
-  Administrator: 'System Admin',
+  Administrator: 'Administrator',
   Supervisor: 'Supervisor',
   Staff: 'Staff',
-  Viewer: 'Viewer',
+  'Super Admin': 'Super Admin',
 };
 
 function getRoleColor(role: SystemUserRole): string {
@@ -97,7 +97,7 @@ function getRoleColor(role: SystemUserRole): string {
     case 'Administrator': return 'bg-purple-100 text-purple-700';
     case 'Supervisor':    return 'bg-green-100 text-green-700';
     case 'Staff':         return 'bg-gray-100 text-gray-700';
-    case 'Viewer':        return 'bg-blue-100 text-blue-700';
+    case 'Super Admin':   return 'bg-indigo-100 text-indigo-700';
   }
 }
 

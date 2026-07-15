@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
+import { PERMISSIONS } from '../../../../../config/permissions';
+import { usePermission } from '../../../../../hooks/usePermission';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
 // The standalone edit page (`/bookings/:id/edit`) is now the
@@ -474,6 +476,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
+  const { hasPermission } = usePermission();
+  const canMergeProfiles = hasPermission(PERMISSIONS.MERGE_PROFILES);
   const [showInvoice, setShowInvoice] = useState(false);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
@@ -926,6 +930,93 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [refundAmount,     setRefundAmount]     = useState('');
   const [refundReason,     setRefundReason]     = useState('');
+
+  // Actions card config array. Cancel Booking is a status change
+  // (→ Cancelled), not a delete — always available when the booking
+  // is not already Cancelled/Rejected.
+  type BookingActionItem = {
+    key: string;
+    label: string;
+    icon: ReactNode;
+    disabled?: boolean;
+    className?: string;
+    onClick?: () => void;
+  };
+
+  const actionItems: BookingActionItem[] = [
+    ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
+      ? [{
+          key: 'generate-payment-link',
+          label: 'Generate Payment Link',
+          icon: <CreditCard className="w-4 h-4 mr-2" />,
+          disabled: true,
+        }]
+      : []),
+    ...(booking.paymentStatus === 'Payment Link Sent'
+      ? [{
+          key: 'send-payment-reminder',
+          label: 'Send Payment Reminder',
+          icon: <Mail className="w-4 h-4 mr-2" />,
+        }]
+      : []),
+    ...(booking.paymentStatus === 'Overdue'
+      ? [{
+          key: 'reactivate',
+          label: 'Re-activate Booking',
+          icon: <RotateCcw className="w-4 h-4 mr-2" />,
+        }]
+      : []),
+    ...(booking.status === 'Confirmed'
+      ? [{
+          key: 'generate-qr',
+          label: 'Generate QR Code',
+          icon: <Download className="w-4 h-4 mr-2" />,
+        }]
+      : []),
+    {
+      key: 'share',
+      label: 'Share with Partners',
+      icon: <Mail className="w-4 h-4 mr-2" />,
+      disabled: true,
+    },
+    ...(booking.status === 'Cancelled' &&
+    (booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Payment Link Sent') &&
+    booking.paymentStatus !== 'Refunded'
+      ? [{
+          key: 'process-refund',
+          label: 'Process Refund',
+          icon: <DollarSign className="w-4 h-4 mr-2" />,
+          className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
+        }]
+      : []),
+    ...(isConfirmedAndPaid
+      ? [{
+          key: 'refund',
+          label: 'Refund',
+          icon: <RefreshCw className="w-4 h-4 mr-2" />,
+          className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200',
+          onClick: () => {
+            setRefundAmount('');
+            setRefundReason('');
+            setShowRefundDialog(true);
+          },
+        }]
+      : []),
+    ...(booking.status !== 'Cancelled' && booking.status !== 'Rejected'
+      ? [{
+          key: 'cancel',
+          label: 'Cancel Booking',
+          icon: <Trash2 className="w-4 h-4 mr-2" />,
+          className: 'text-red-600 hover:text-red-700 hover:bg-red-50',
+          onClick: () => {
+            onUpdateStatus?.({
+              status: 'Cancelled',
+              paymentStatus: booking.paymentStatus,
+            });
+          },
+        }]
+      : []),
+  ];
   const handleProcessRefund = () => {
     const amt = parseFloat(refundAmount.replace(/[^0-9.]/g, ''));
     if (!amt || amt <= 0) { toast.error('Please enter a valid refund amount.'); return; }
@@ -1621,100 +1712,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       <Card className="p-6">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Actions</h3>
         <div className="flex flex-wrap gap-2">
-          {/* Review Actions */}
-
-          {/* Approval Actions — removed, use /bookings/review/:id for approval */}
-
-          {/* Payment Actions */}
-          {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-            <Button variant="outline" disabled>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Generate Payment Link
-            </Button>
-          )}
-
-          {booking.paymentStatus === 'Payment Link Sent' && (
-            <Button variant="outline">
-              <Mail className="w-4 h-4 mr-2" />
-              Send Payment Reminder
-            </Button>
-          )}
-
-          {booking.paymentStatus === 'Overdue' && (
-            <Button variant="outline">
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Re-activate Booking
-            </Button>
-          )}
-
-          {/* Common Actions */}
-          {booking.status === 'Confirmed' && (
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Generate QR Code
-            </Button>
-          )}
-
-          <Button variant="outline" disabled>
-            <Mail className="w-4 h-4 mr-2" />
-            Share with Partners
-          </Button>
-
-          {/* 2026-06-27 — Movement Log + Guests Searcher buttons hidden
-              per Sky directive. The dialogs + handlers are still wired
-              so the button can be restored by uncommenting if needed. */}
-          {false && (
-            <Button variant="outline" onClick={() => setIsMovementLogOpen(true)}>
-              <History className="w-4 h-4 mr-2" />
-              Movement Log
-            </Button>
-          )}
-
-          {false && (
-            <Button variant="outline" disabled onClick={() => { setCustomerSearchQuery(''); setIsCustomerSearchOpen(true); }}>
-              <Users className="w-4 h-4 mr-2" />
-              Guests Searcher
-            </Button>
-          )}
-
-          {/* Refund Action for Cancelled bookings with Paid status */}
-          {booking.status === 'Cancelled' && 
-           (booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Payment Link Sent') && 
-           booking.paymentStatus !== 'Refunded' && (
-            <Button variant="outline" className="text-purple-600 hover:text-purple-700 hover:bg-purple-50">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Process Refund
-            </Button>
-          )}
-
-          {/* Refund Action for Confirmed + Paid bookings */}
-          {isConfirmedAndPaid && (
+          {actionItems.map((action) => (
             <Button
+              key={action.key}
               variant="outline"
-              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200"
-              onClick={() => { setRefundAmount(''); setRefundReason(''); setShowRefundDialog(true); }}
+              disabled={action.disabled}
+              className={action.className}
+              onClick={action.onClick}
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refund
+              {action.icon}
+              {action.label}
             </Button>
-          )}
-
-          {/* Cancel Booking — last in the actions list (2026-06-18) */}
-          {booking.status !== 'Cancelled' && booking.status !== 'Rejected' && (
-            <Button
-              variant="outline"
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={() => {
-                onUpdateStatus?.({
-                  status: 'Cancelled',
-                  paymentStatus: booking.paymentStatus,
-                });
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Cancel Booking
-            </Button>
-          )}
+          ))}
         </div>
       </Card>
 
@@ -1782,7 +1791,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 5.5 Similar Profile Detected — Figma Soft Merge banner */}
       {(() => {
-        if (!pendingSuggestions.length || !showSimilarBanner || mergeComplete) return null;
+        if (!canMergeProfiles || !pendingSuggestions.length || !showSimilarBanner || mergeComplete) return null;
 
         const primarySuggestion = pendingSuggestions[0];
         const newGuest = resolveSuggestionGuest(primarySuggestion, 'new');

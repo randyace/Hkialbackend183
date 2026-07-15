@@ -74,10 +74,10 @@ const ALL_PERMISSIONS: PermissionOption[] = [
 ];
 
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
-  Administrator: 'System Admin',
+  Administrator: 'Administrator',
   Supervisor: 'Supervisor',
   Staff: 'Staff',
-  Viewer: 'Viewer',
+  'Super Admin': 'Super Admin',
 };
 
 const DEFAULT_FORM: SystemUserFormData = {
@@ -146,7 +146,7 @@ export function SystemUserEdit({
   spatieRoles = [],
   loadRolePermissions,
   roleLabels = DEFAULT_ROLE_LABELS,
-  editableRoles = ['Staff', 'Supervisor'],
+  editableRoles = ['Staff', 'Supervisor', 'Administrator', 'Super Admin'],
   initialTab = 'profile',
   onBack = () => {},
   onSave = () => {},

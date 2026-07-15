@@ -381,9 +381,11 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                         <Button type="button" size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEdit(agency); }}>
                           <Edit2 className="w-4 h-4" />
                         </Button>
-                        <Button type="button" size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(agency.id); }}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {onDelete && (
+                          <Button type="button" size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDelete(agency.id); }}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

@@ -113,15 +113,17 @@ export function PosMenuCategories({
                           <Edit2 className="w-3.5 h-3.5" />
                           Edit
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onDeleteCategory?.(category.id)}
-                          className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete
-                        </Button>
+                        {onDeleteCategory && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onDeleteCategory(category.id)}
+                            className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

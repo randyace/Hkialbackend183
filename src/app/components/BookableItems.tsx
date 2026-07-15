@@ -493,15 +493,17 @@ export function BookableItems({ items: itemsProp, onEditItem, onDeleteItem, onCr
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDeleteItem?.(item.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                        title="Delete Item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {onDeleteItem && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteItem(item.id)}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                          title="Delete Item"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
