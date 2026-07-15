@@ -782,6 +782,7 @@ export function BalanceTracker({
               />
             </div>
 
+            {/* Credit / session totals are ledger-owned — display only; only expiry is editable. */}
             {editingContract?.accountType === 'Agency' ? (
               <>
                 <div>
@@ -789,7 +790,9 @@ export function BalanceTracker({
                   <Input
                     type="number"
                     value={editForm.creditLimit}
-                    onChange={(e) => setEditForm({ ...editForm, creditLimit: Number(e.target.value) })}
+                    disabled
+                    readOnly
+                    className="bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -797,7 +800,9 @@ export function BalanceTracker({
                   <Input
                     type="number"
                     value={editForm.creditUsed}
-                    onChange={(e) => setEditForm({ ...editForm, creditUsed: Number(e.target.value) })}
+                    disabled
+                    readOnly
+                    className="bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
                 </div>
               </>
@@ -808,7 +813,9 @@ export function BalanceTracker({
                   <Input
                     type="number"
                     value={editForm.sessionsTotal}
-                    onChange={(e) => setEditForm({ ...editForm, sessionsTotal: Number(e.target.value) })}
+                    disabled
+                    readOnly
+                    className="bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -816,7 +823,9 @@ export function BalanceTracker({
                   <Input
                     type="number"
                     value={editForm.sessionsUsed}
-                    onChange={(e) => setEditForm({ ...editForm, sessionsUsed: Number(e.target.value) })}
+                    disabled
+                    readOnly
+                    className="bg-gray-100 text-gray-600 cursor-not-allowed"
                   />
                 </div>
               </>

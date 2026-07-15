@@ -38,6 +38,14 @@ export interface ContractOption {
   // so the wrapper can pass it as the `company_id` field on the batch
   // API without sending the wrong id.
   companyId?: number;
+  // 2026-07-15 — Corporate contract promo intent from Purchase Create.
+  // Autoloaded into Title / Prefix / Quantity when the contract is selected.
+  promoCodeName?: string;
+  promoCodeQuantity?: number;
+  // 2026-07-15 — Contract validity window. Prefills promo start/end so the
+  // batch stays in sync with the Corporate order expiry.
+  startDate?: string;
+  endDate?: string;
 }
 
 // ─── Get available contracts ──────────────────────────────────────────────────
@@ -183,22 +191,43 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     }
   }, [initialData]);
 
-  // ── When contract changes, auto-fill prefix + code count + promotion name ───
-  // 2026-07-02 — previously only auto-filled `prefix` and `codeCount`
-  // (when sessionsAdded was available). Now also fills `titleEn` with a
-  // sensible default derived from the contract's primaryName so the
-  // user doesn't have to retype it. Skips auto-fill on titleEn if the
-  // user already typed something — we only seed when empty.
+  // ── When contract changes, auto-fill code name + prefix + quantity + dates ─
+  // 2026-07-15 — Corporate contracts carry promo_code_name / quantity from
+  // Purchase Create. Prefer those over company-name initials so staff do not
+  // retype SUMMER2026 / 100. Title = code name; prefix = cleaned code name
+  // (fallback: generateShortCode(primaryName)); quantity = promo qty.
+  // Start/end dates come from the contract validity window so promo expiry
+  // stays aligned with the Corporate order (and later contract edits sync
+  // end_date on the API side).
   const handleContractChange = (val: string) => {
     const contract = availableContracts.find(c => c.value === val);
-    if (contract) {
-      setSelectedContractId(contract.id);
-      setPrefix(generateShortCode(contract.primaryName));
-      if (contract.sessionsAdded) setCodeCount(contract.sessionsAdded);
-      if (!titleEn.trim()) {
-        setTitleEn(`${contract.primaryName} Promo Codes`);
-      }
+    if (!contract) return;
+
+    setSelectedContractId(contract.id);
+
+    const rawName = (contract.promoCodeName ?? '').trim();
+    const cleanedPrefix = rawName
+      ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      : generateShortCode(contract.primaryName);
+    setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
+
+    const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
+    if (qty != null && Number(qty) > 0) {
+      setCodeCount(Math.max(1, Math.min(10000, Number(qty))));
     }
+
+    // Code name → Title (English). Always overwrite when the contract has a
+    // name so the intended code name wins over a previous selection.
+    if (rawName) {
+      setTitleEn(rawName);
+    } else if (!titleEn.trim()) {
+      setTitleEn(`${contract.primaryName} Promo Codes`);
+    }
+
+    // Prefill validity from contract dates (YYYY-MM-DD).
+    const toDateOnly = (d?: string) => (d ? String(d).split('T')[0] : '');
+    if (contract.startDate) setStartDate(toDateOnly(contract.startDate));
+    if (contract.endDate) setEndDate(toDateOnly(contract.endDate));
   };
 
   // ── Submit ───────────────────────────────────────────────────────────────
@@ -345,7 +374,13 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                       {availableContracts.length === 0 ? (
                         <div className="px-3 py-6 text-center text-sm text-gray-500">No available contracts found.</div>
                       ) : (
-                        availableContracts.map(c => (
+                        availableContracts.map(c => {
+                          // Prefer contract promo name as prefix label; fall back to company initials.
+                          const prefixLabel = (c.promoCodeName ?? '')
+                            .toUpperCase()
+                            .replace(/[^A-Z0-9]/g, '') || generateShortCode(c.primaryName);
+                          const qty = c.promoCodeQuantity ?? c.sessionsAdded ?? 0;
+                          return (
                           // 2026-07-02 — key/value uses c.value (a globally-unique
                           // string like "Corporate-1" or "Agency-1") so Radix's
                           // internal clone layer doesn't trip on the duplicate
@@ -355,23 +390,30 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                             <div className="flex flex-col gap-1 py-1">
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-gray-900">{c.primaryName}</span>
-                                <Badge variant="outline" className="text-xs font-mono">[{generateShortCode(c.primaryName)}]</Badge>
+                                <Badge variant="outline" className="text-xs font-mono">[{prefixLabel}]</Badge>
                               </div>
                               <div className="text-xs text-gray-500 space-x-3">
                                 <span>Contract: {c.purchaseRef}</span>
                                 <span>•</span>
                                 <span>HKD {c.packagePrice.toLocaleString()}</span>
                                 <span>•</span>
-                                <span>Qty: {c.sessionsAdded ?? 0}</span>
+                                <span>Qty: {qty}</span>
+                                {c.promoCodeName ? (
+                                  <>
+                                    <span>•</span>
+                                    <span>Name: {c.promoCodeName}</span>
+                                  </>
+                                ) : null}
                               </div>
                             </div>
                           </SelectItem>
-                        ))
+                          );
+                        })
                       )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Optionally select a contract. If selected, the prefix and quantity will be auto-filled.
+                    Only contracts that have not yet generated a promo batch. Selecting one auto-fills code name, prefix, quantity, and contract end date.
                   </p>
                 </>
               )}

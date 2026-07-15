@@ -37,7 +37,7 @@ function TypeBadge({ type }: { type: CodeType }) {
 }
 
 // ── Batch-level usage data ────────────────────────────────────────────────────
-interface PromoBatchUsage {
+export interface PromoBatchUsage {
   id: number;
   batchRef: string;
   companyName: string;
@@ -59,7 +59,7 @@ interface PromoBatchUsage {
 }
 
 // ── Transaction record ────────────────────────────────────────────────────────
-interface PromoTransaction {
+export interface PromoTransaction {
   id: number;
   batchRef: string;
   companyName: string;
@@ -292,13 +292,32 @@ const MOCK_TRANSACTIONS: PromoTransaction[] = generateTransactions();
 // ── Main Component ─────────────────────────────────────────────────────────────
 export interface PromoCodeUsageProps {
   batchUsage?: PromoBatchUsage[];
+  /**
+   * Real promo-code redemptions (bookings with promo_code_id).
+   * Same mock-flash rule as batchUsage / PromoCodeList: when the
+   * container passes an array (even `[]`), never fall back to mocks.
+   * Omit only for standalone Figma Make.
+   */
+  transactions?: PromoTransaction[];
   isLoading?: boolean;
   onViewBatch?: (batchId: number) => void;
   onExport?: () => void;
 }
 
-export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBatch, onExport }: PromoCodeUsageProps = {}) {
-  const batchData: PromoBatchUsage[] = batchUsageProp?.length ? batchUsageProp : MOCK_BATCH_USAGE;
+export function PromoCodeUsage({
+  batchUsage: batchUsageProp,
+  transactions: transactionsProp,
+  isLoading,
+  onViewBatch,
+  onExport,
+}: PromoCodeUsageProps = {}) {
+  // Only fall back to MOCK_* for standalone Figma Make (prop omitted).
+  // When the container passes data (even `[]` while loading), never flash
+  // mock rows — same fix as PromoCodeList "flashing mock data" bug.
+  const batchData: PromoBatchUsage[] =
+    batchUsageProp !== undefined ? batchUsageProp : MOCK_BATCH_USAGE;
+  const txnData: PromoTransaction[] =
+    transactionsProp !== undefined ? transactionsProp : MOCK_TRANSACTIONS;
   const [activeTab, setActiveTab] = useState<'batches' | 'transactions'>('batches');
 
   // ── Batch tab state ────────────────────────────────────────────────────────
@@ -336,7 +355,7 @@ export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBa
   const paginated  = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   // ── Transaction filtering ──────────────────────────────────────────────────
-  const filteredTxns = MOCK_TRANSACTIONS.filter(t => {
+  const filteredTxns = txnData.filter(t => {
     const q = txnSearch.toLowerCase();
     const matchSearch = !txnSearch
       || t.uniqueCode.toLowerCase().includes(q)
@@ -700,7 +719,7 @@ export function PromoCodeUsage({ batchUsage: batchUsageProp, isLoading, onViewBa
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
-                    {MOCK_BATCH_USAGE.map(b => (
+                    {batchData.map(b => (
                       <SelectItem key={b.batchRef} value={b.batchRef}>{b.batchRef} — {b.companyName}</SelectItem>
                     ))}
                   </SelectContent>
