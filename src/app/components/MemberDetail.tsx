@@ -335,6 +335,10 @@ export interface MovementLog {
   orderNo: string;                   // 5. Order No. (Booking No.)
   deptDate?: string;                 // 6. Dept Date (Departure bookings)
   arrDate?: string;                  // 7. Arr Date (Arrival bookings)
+  movementDate?: string;             // Movement date (generic log)
+  timeIn?: string;                   // Time in
+  timeOut?: string;                  // Time out
+  location?: string;                 // Location / venue
   flightNo: string;                  // 8. Flight No.
   flightTime: string;                // 9. Flight Time
   destinationOrigin: string;         // 10. Destination / Origin
@@ -2375,26 +2379,103 @@ export function MemberDetail({
 
       {/* Add Movement Dialog */}
       <Dialog open={activeIsAddMovementOpen} onOpenChange={open => { if (!open) { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); } }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        {/* sm:max-w-* required — DialogContent base includes sm:max-w-lg */}
+        <DialogContent className="sm:max-w-4xl w-[min(900px,96vw)] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-blue-600" />
               Add Movement Record
             </DialogTitle>
-            <DialogDescription>Fill in the movement details. Fields marked * are required; all others are optional.</DialogDescription>
+            <DialogDescription>
+              Fill in the movement details. Staff is recorded automatically from your login.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 pt-1">
 
+            {/* Row 1 — Context */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking</label>
+                <input
+                  type="text"
+                  placeholder="e.g. A-20260308-000012"
+                  value={movementFormProp.orderNo || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, orderNo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. CX880"
+                  value={movementFormProp.flightNo || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, flightNo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase"
+                />
+              </div>
+            </div>
+
+            {/* Row 2 — Time & Location */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement Date</label>
+                <input
+                  type="date"
+                  value={movementFormProp.movementDate || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, movementDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time In</label>
+                <Time5MinSelect
+                  value={movementFormProp.timeIn || ''}
+                  onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeIn: v })}
+                  wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                  testId="memberdetail-timeIn"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Out</label>
+                <Time5MinSelect
+                  value={movementFormProp.timeOut || ''}
+                  onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeOut: v })}
+                  wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                  testId="memberdetail-timeOut"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Location</label>
+                <input
+                  type="text"
+                  value={movementFormProp.location || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, location: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Row 3 — Remarks */}
+            <div>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
+              <Textarea
+                rows={3}
+                className="text-sm"
+                value={movementFormProp.remarks || ''}
+                onChange={e => onMovementFormChange?.({ ...movementFormProp, remarks: e.target.value })}
+              />
+            </div>
+
             {/* ── Section A: Assignment ───────────────────────────────── */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Assignment</h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
                   <input
                   type="text"
-                  placeholder="Staff name"
                   value={movementFormProp.movementInCharge || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, movementInCharge: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2404,7 +2485,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
                   <input
                   type="text"
-                  placeholder="Staff name(s)"
                   value={movementFormProp.cicSupport || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, cicSupport: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2414,7 +2494,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Driver</label>
                   <input
                   type="text"
-                  placeholder="Driver name"
                   value={movementFormProp.driver || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, driver: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2426,17 +2505,7 @@ export function MemberDetail({
             {/* ── Section B: Booking Reference ───────────────────────── */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Booking Reference</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3 md:col-span-1">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Order No. (Booking No.) <span className="text-red-500">*</span></label>
-                  <input
-                  type="text"
-                  placeholder="e.g. A-20260308-000012"
-                  value={movementFormProp.orderNo || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, orderNo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
-                />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
                   <input
@@ -2456,19 +2525,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight No. <span className="text-red-500">*</span></label>
-                  <input
-                  type="text"
-                  placeholder="e.g. CX880"
-                  value={movementFormProp.flightNo || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, flightNo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase"
-                />
-                </div>
-                <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  {/* 2026-07-07 (round 6.2.122) — Safari/Firefox timepicker
-                      fix (sibling finding from M35). */}
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time</label>
                   <Time5MinSelect
                     value={movementFormProp.flightTime || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, flightTime: v })}
@@ -2477,7 +2534,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin</label>
                   <input
                   type="text"
                   placeholder="IATA code, e.g. LHR"
@@ -2493,12 +2550,11 @@ export function MemberDetail({
             {/* ── Section C: Lounge & Guest Details ──────────────────── */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge &amp; Guest Details</h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>
                   <input
                   type="text"
-                  placeholder="e.g. VIP Suite A"
                   value={movementFormProp.lobbySuite || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, lobbySuite: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2509,7 +2565,6 @@ export function MemberDetail({
                   <input
                   type="number"
                   min={1}
-                  placeholder="0"
                   value={movementFormProp.noOfPax || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, noOfPax: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2520,7 +2575,6 @@ export function MemberDetail({
                   <input
                   type="number"
                   min={0}
-                  placeholder="0"
                   value={movementFormProp.noOfCIBaggage || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, noOfCIBaggage: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2530,7 +2584,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Title</label>
                   <input
                   type="text"
-                  placeholder="Mr. / Mrs. / Ms."
                   value={movementFormProp.title || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, title: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2540,7 +2593,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>First Name</label>
                   <input
                   type="text"
-                  placeholder="First name"
                   value={movementFormProp.firstName || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, firstName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2550,7 +2602,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Last Name</label>
                   <input
                   type="text"
-                  placeholder="Last name"
                   value={movementFormProp.lastName || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, lastName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2560,21 +2611,10 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
                   <input
                   type="text"
-                  placeholder="e.g. United Kingdom"
                   value={movementFormProp.nationality || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, nationality: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
-                  <Textarea
-                  placeholder="General remarks for this movement..."
-                  rows={2}
-                  className="text-sm"
-                  value={movementFormProp.remarks || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, remarks: e.target.value })}
-                  />
                 </div>
               </div>
             </div>
@@ -2582,7 +2622,7 @@ export function MemberDetail({
             {/* ── Section D: Movement Times ───────────────────────────── */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Movement Times</h4>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
                   <Time5MinSelect
@@ -2650,7 +2690,6 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
                   <input
                   type="text"
-                  placeholder="e.g. 1h 30m"
                   value={movementFormProp.totalProcessingTime || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, totalProcessingTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
@@ -2659,7 +2698,6 @@ export function MemberDetail({
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks for Admin Issue</label>
                   <Textarea
-                  placeholder="Admin issue details..."
                   rows={2}
                   className="text-sm"
                   value={movementFormProp.remarksAdminIssue || ''}

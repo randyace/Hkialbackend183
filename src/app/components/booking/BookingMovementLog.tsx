@@ -4,88 +4,6 @@ import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
 
-// ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
-
-/**
- * Two-column HH:MM time picker with a fixed 5-minute step on the minute
- * column. Built from native `<select>` elements so the browser renders ONLY
- * the options we provide — Chrome/Safari's native `<input type="time">`
- * picker ignores `step={300}` and still shows all 60 minutes, and Safari /
- * Firefox also have edge cases with the native picker's `min` / `max`
- * enforcement. See round 6.2.121 handoff for the customer-side pattern
- * this was lifted from (frontend/.../NewBooking.tsx:375).
- *
- * Movement Log has NO `min`/`max` constraints on these time fields
- * (no 3h rule here) — just the 5-min step + cross-browser UX consistency.
- */
-const TIME5MIN_HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
-const TIME5MIN_MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
-
-const TIME5MIN_SELECT_CLS =
-  'flex-1 min-w-0 bg-transparent border-0 outline-none text-sm cursor-pointer appearance-none text-center px-2 py-0';
-
-function Time5MinSelect({
-  value,
-  onChange,
-  required,
-  wrapperClassName,
-  wrapperStyle,
-  testId,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-  required?: boolean;
-  wrapperClassName?: string;
-  wrapperStyle?: React.CSSProperties;
-  testId?: string;
-}) {
-  let safeH = '';
-  let safeM = '';
-  if (value && value.includes(':')) {
-    const [hStr = '', mStr = ''] = value.split(':');
-    const hNum = Number(hStr);
-    const mNum = Number(mStr);
-    if (Number.isFinite(hNum) && Number.isFinite(mNum)) {
-      safeH = hStr.padStart(2, '0');
-      safeM = mStr.padStart(2, '0').slice(0, 2);
-    }
-  }
-  return (
-    <div
-      className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
-      style={wrapperStyle}
-      data-testid={testId}
-      data-hkial-time-5min-select
-    >
-      <select
-        aria-label="Hour"
-        value={safeH}
-        onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
-        required={required}
-        className={TIME5MIN_SELECT_CLS}
-      >
-        <option value="" disabled hidden>HH</option>
-        {TIME5MIN_HOURS.map((hh) => (
-          <option key={hh} value={hh}>{hh}</option>
-        ))}
-      </select>
-      <span className="opacity-60 text-sm select-none">:</span>
-      <select
-        aria-label="Minute"
-        value={safeM}
-        onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
-        required={required}
-        className={TIME5MIN_SELECT_CLS}
-      >
-        <option value="" disabled hidden>MM</option>
-        {TIME5MIN_MINUTES.map((mm) => (
-          <option key={mm} value={mm}>{mm}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 // 2026-06-18 (round 6.2.48) — prop-driven Movement Log dialog.
 // Pre-refactor: this component used a hard-coded `INITIAL_MOVEMENTS`
 // mock array + local-only state, with Add/Delete buttons firing
@@ -93,6 +11,11 @@ function Time5MinSelect({
 // passes real movements + CRUD callbacks; the component is a
 // pure presentational shell that wires the figma-ui Dialog + table
 // to those callbacks. The `INITIAL_MOVEMENTS` constant is gone.
+//
+// 2026-07-16 — Add Movement form moved to parent-owned
+// `SharedMovementLogModal` (Booking Detail + Customer Detail share
+// the same grid modal). This table dialog only opens that modal
+// via `onOpenAddMovement`.
 
 export interface MovementEntry {
   id: number;
@@ -103,6 +26,10 @@ export interface MovementEntry {
   orderNo: string;
   deptDate?: string;
   arrDate?: string;
+  movementDate?: string;
+  timeIn?: string;
+  timeOut?: string;
+  location?: string;
   flightNo: string;
   flightTime: string;
   destinationOrigin: string;
@@ -126,6 +53,8 @@ export interface MovementEntry {
 }
 
 interface LogBooking {
+  id?: number;
+  accountId?: number;
   bookingNo: string;
   flightNo: string;
   flightTime: string;
@@ -138,11 +67,7 @@ interface LogBooking {
   numberOfLuggage?: number;
 }
 
-// `form` is intentionally `Partial<MovementEntry>` — entries are
-// log-style observations, staff fill only what they observe. The
-// only required fields per the backend validator are `orderNo`,
-// `flightNo`, `flightTime`, `destinationOrigin`, but the UI does
-// not enforce that here (server-side validator does).
+// Kept for parent wrapper / BookingDetail type imports.
 export type MovementForm = Partial<MovementEntry>;
 
 interface BookingMovementLogProps {
@@ -151,7 +76,12 @@ interface BookingMovementLogProps {
   booking: LogBooking;
   /** Real movement entries from `GET /api/bookings/{id}/movements`. */
   movements?: MovementEntry[];
-  /** Called with the captured form state when the user clicks "Add Movement". */
+  /**
+   * Opens the shared Add Movement modal (parent owns SharedMovementLogModal).
+   * Required for Add — the form UI lives outside this table dialog.
+   */
+  onOpenAddMovement?: () => void;
+  /** @deprecated Prefer onOpenAddMovement + SharedMovementLogModal. */
   onAddMovement?: (form: MovementForm) => Promise<void>;
   /** Called when the user clicks the per-row delete button (manual entries only). */
   onDeleteMovement?: (id: number) => Promise<void>;
@@ -161,41 +91,12 @@ interface BookingMovementLogProps {
   isDeletingMovement?: boolean;
 }
 
-const EMPTY_FORM: MovementForm = {
-  movementInCharge: '',
-  cicSupport: '',
-  driver: '',
-  orderNo: '',
-  deptDate: '',
-  arrDate: '',
-  flightNo: '',
-  flightTime: '',
-  destinationOrigin: '',
-  lobbySuite: '',
-  noOfPax: undefined,
-  title: '',
-  firstName: '',
-  lastName: '',
-  noOfCIBaggage: undefined,
-  remarks: '',
-  nationality: '',
-  arrTimeNonFlyingGuests: '',
-  timeMetVIPAtGate: '',
-  timeBackToHKIAL: '',
-  baggageRetrievalStart: '',
-  baggageRetrievalEnd: '',
-  baggageArrivalAtHKIAL: '',
-  timeLeftHKIAL: '',
-  totalProcessingTime: '',
-  remarksAdminIssue: '',
-};
-
 export function BookingMovementLog({
   open,
   onClose,
   booking,
   movements: movementsProp = [],
-  onAddMovement,
+  onOpenAddMovement,
   onDeleteMovement,
   isAddingMovement = false,
   isDeletingMovement = false,
@@ -209,46 +110,8 @@ export function BookingMovementLog({
     setBookingMovements(movementsProp);
   }, [movementsProp]);
 
-  const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
-  const [form, setForm] = useState<MovementForm>(EMPTY_FORM);
-
   const dash = <span className="text-gray-300">—</span>;
   const cell = 'px-3 py-2.5 whitespace-nowrap align-middle';
-
-  const resetForm = () => setForm(EMPTY_FORM);
-
-  const openAddDialog = () => {
-    // Pre-fill booking-reference fields from the parent booking.
-    setForm({
-      ...EMPTY_FORM,
-      orderNo: booking.bookingNo,
-      arrDate: booking.flightType === 'Arrival' ? (booking.arrivalDate ?? '') : '',
-      deptDate: booking.flightType === 'Departure' ? (booking.arrivalDate ?? '') : '',
-      flightNo: booking.flightNo ?? '',
-      flightTime: booking.flightTime ?? '',
-      destinationOrigin: booking.flightOrigin ?? booking.flightDestination ?? '',
-      lobbySuite: booking.suite ?? '',
-      noOfPax: booking.numberOfGuests,
-      noOfCIBaggage: booking.numberOfLuggage,
-    });
-    setIsAddMovementOpen(true);
-  };
-
-  const handleSubmitAdd = async () => {
-    if (!onAddMovement) {
-      toast.error('Add Movement is not wired — please configure the parent wrapper.');
-      return;
-    }
-    try {
-      await onAddMovement(form);
-      toast.success('Movement record added successfully.');
-      setIsAddMovementOpen(false);
-      resetForm();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add movement record.';
-      toast.error(message);
-    }
-  };
 
   const handleDelete = async (id: number) => {
     if (!onDeleteMovement) {
@@ -267,300 +130,135 @@ export function BookingMovementLog({
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[96vw] w-[96vw] min-w-[1000px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Movement Log — {booking.bookingNo}
-            </DialogTitle>
-            <DialogDescription>
-              Full movement details for this booking. Booking reference fields are pre-filled from the booking record.
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-[96vw] w-[96vw] min-w-[1000px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="w-5 h-5 text-blue-600" />
+            Movement Log — {booking.bookingNo}
+          </DialogTitle>
+          <DialogDescription>
+            Full movement details for this booking. Booking reference fields are pre-filled from the booking record.
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="flex items-center justify-between mt-2 mb-3">
-            <div className="flex items-center gap-3 text-xs text-gray-500">
-              <p>{bookingMovements.length} record{bookingMovements.length !== 1 ? 's' : ''}</p>
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking ref columns</span>
-              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200"></span> Time columns</span>
-            </div>
-            <Button size="sm" onClick={openAddDialog} disabled={!onAddMovement || isAddingMovement}>
-              <Plus className="w-4 h-4 mr-1.5" />Add Movement
-            </Button>
+        <div className="flex items-center justify-between mt-2 mb-3">
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            <p>{bookingMovements.length} record{bookingMovements.length !== 1 ? 's' : ''}</p>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking ref columns</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200"></span> Time columns</span>
           </div>
+          <Button
+            size="sm"
+            onClick={() => onOpenAddMovement?.()}
+            disabled={!onOpenAddMovement || isAddingMovement}
+          >
+            <Plus className="w-4 h-4 mr-1.5" />Add Movement
+          </Button>
+        </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
-              <thead>
-                <tr className="bg-[#0f2942] text-white">
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
-                  <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                  <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+        <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
+            <thead>
+              <tr className="bg-[#0f2942] text-white">
+                <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
+                <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {bookingMovements.length === 0 ? (
+                <tr>
+                  <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
+                    No movement records yet. Click &quot;Add Movement&quot; to create the first entry.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-100">
-                {bookingMovements.length === 0 ? (
-                  <tr>
-                    <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
-                      No movement records yet. Click "Add Movement" to create the first entry.
+              ) : bookingMovements.map((m, idx) => {
+                const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
+                // `source='qr_scan'` entries are READ-ONLY on the
+                // backend (audit trail). The UI reflects that by
+                // disabling the delete button. Manual entries can
+                // be deleted.
+                const canDelete = m.source !== 'qr_scan' && !!onDeleteMovement;
+                return (
+                  <tr key={m.id} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
+                    <td className={`${cell} sticky left-0 z-10 ${rowBg} border-r border-gray-200 text-center`}>
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
+                    </td>
+                    <td className={cell}>{m.movementInCharge || dash}</td>
+                    <td className={cell}>{m.cicSupport || dash}</td>
+                    <td className={cell}>{m.driver || dash}</td>
+                    <td className={`${cell} bg-blue-50/30`}><span className="font-mono text-[11px] text-blue-800">{m.orderNo}</span></td>
+                    <td className={`${cell} bg-blue-50/30`}>{m.deptDate || dash}</td>
+                    <td className={`${cell} bg-blue-50/30`}>{m.arrDate || dash}</td>
+                    <td className={`${cell} bg-blue-50/30 font-medium`}>{m.flightNo}</td>
+                    <td className={`${cell} bg-blue-50/30`}>{m.flightTime}</td>
+                    <td className={`${cell} bg-blue-50/30`}>
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px]">{m.destinationOrigin}</span>
+                    </td>
+                    <td className={cell}>{m.lobbySuite || dash}</td>
+                    <td className={`${cell} text-center`}>{m.noOfPax ?? dash}</td>
+                    <td className={cell}>{m.title || dash}</td>
+                    <td className={cell}>{m.firstName || dash}</td>
+                    <td className={cell}>{m.lastName || dash}</td>
+                    <td className={`${cell} text-center`}>{m.noOfCIBaggage ?? dash}</td>
+                    <td className={`${cell} max-w-[140px]`}><span className="block truncate" title={m.remarks}>{m.remarks || dash}</span></td>
+                    <td className={cell}>{m.nationality || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.arrTimeNonFlyingGuests || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.timeMetVIPAtGate || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.timeBackToHKIAL || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalStart || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalEnd || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.baggageArrivalAtHKIAL || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>{m.timeLeftHKIAL || dash}</td>
+                    <td className={`${cell} bg-teal-50/30`}>
+                      {m.totalProcessingTime
+                        ? <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px]">{m.totalProcessingTime}</span>
+                        : dash}
+                    </td>
+                    <td className={`${cell} max-w-[140px]`}>
+                      <span className="block truncate text-orange-700" title={m.remarksAdminIssue}>{m.remarksAdminIssue || dash}</span>
+                    </td>
+                    <td className={`${cell} text-center sticky right-0 z-10 ${rowBg} border-l border-gray-200`}>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                        onClick={() => handleDelete(m.id)}
+                        disabled={!canDelete || isDeletingMovement}
+                        title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Delete this entry'}>
+                        {isDeletingMovement ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </Button>
                     </td>
                   </tr>
-                ) : bookingMovements.map((m, idx) => {
-                  const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
-                  // `source='qr_scan'` entries are READ-ONLY on the
-                  // backend (audit trail). The UI reflects that by
-                  // disabling the delete button. Manual entries can
-                  // be deleted.
-                  const canDelete = m.source !== 'qr_scan' && !!onDeleteMovement;
-                  return (
-                    <tr key={m.id} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
-                      <td className={`${cell} sticky left-0 z-10 ${rowBg} border-r border-gray-200 text-center`}>
-                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
-                      </td>
-                      <td className={cell}>{m.movementInCharge || dash}</td>
-                      <td className={cell}>{m.cicSupport || dash}</td>
-                      <td className={cell}>{m.driver || dash}</td>
-                      <td className={`${cell} bg-blue-50/30`}><span className="font-mono text-[11px] text-blue-800">{m.orderNo}</span></td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.deptDate || dash}</td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.arrDate || dash}</td>
-                      <td className={`${cell} bg-blue-50/30 font-medium`}>{m.flightNo}</td>
-                      <td className={`${cell} bg-blue-50/30`}>{m.flightTime}</td>
-                      <td className={`${cell} bg-blue-50/30`}>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px]">{m.destinationOrigin}</span>
-                      </td>
-                      <td className={cell}>{m.lobbySuite || dash}</td>
-                      <td className={`${cell} text-center`}>{m.noOfPax ?? dash}</td>
-                      <td className={cell}>{m.title || dash}</td>
-                      <td className={cell}>{m.firstName || dash}</td>
-                      <td className={cell}>{m.lastName || dash}</td>
-                      <td className={`${cell} text-center`}>{m.noOfCIBaggage ?? dash}</td>
-                      <td className={`${cell} max-w-[140px]`}><span className="block truncate" title={m.remarks}>{m.remarks || dash}</span></td>
-                      <td className={cell}>{m.nationality || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.arrTimeNonFlyingGuests || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeMetVIPAtGate || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeBackToHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalStart || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageRetrievalEnd || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.baggageArrivalAtHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>{m.timeLeftHKIAL || dash}</td>
-                      <td className={`${cell} bg-teal-50/30`}>
-                        {m.totalProcessingTime
-                          ? <span className="px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 text-[10px]">{m.totalProcessingTime}</span>
-                          : dash}
-                      </td>
-                      <td className={`${cell} max-w-[140px]`}>
-                        <span className="block truncate text-orange-700" title={m.remarksAdminIssue}>{m.remarksAdminIssue || dash}</span>
-                      </td>
-                      <td className={`${cell} text-center sticky right-0 z-10 ${rowBg} border-l border-gray-200`}>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                          onClick={() => handleDelete(m.id)}
-                          disabled={!canDelete || isDeletingMovement}
-                          title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Delete this entry'}>
-                          {isDeletingMovement ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Movement Sub-Dialog */}
-      <Dialog open={isAddMovementOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsAddMovementOpen(open); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />Add Movement Record
-            </DialogTitle>
-            <DialogDescription>
-              Fields marked * are required. Booking reference fields are pre-filled from the booking — edit if needed.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-5 pt-1">
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Assignment</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
-                  <input type="text" placeholder="Staff name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.movementInCharge ?? ''} onChange={e => setForm(f => ({ ...f, movementInCharge: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
-                  <input type="text" placeholder="Staff name(s)" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.cicSupport ?? ''} onChange={e => setForm(f => ({ ...f, cicSupport: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Driver</label>
-                  <input type="text" placeholder="Driver name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.driver ?? ''} onChange={e => setForm(f => ({ ...f, driver: e.target.value }))} /></div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">
-                Booking Reference <span className="ml-2 normal-case text-blue-500">(pre-filled from booking)</span>
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3 md:col-span-1">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Order No. (Booking No.) <span className="text-red-500">*</span></label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono bg-blue-50"
-                    value={form.orderNo ?? ''} onChange={e => setForm(f => ({ ...f, orderNo: e.target.value }))} />
-                </div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50"
-                    value={form.deptDate ?? ''} onChange={e => setForm(f => ({ ...f, deptDate: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arr Date</label>
-                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50"
-                    value={form.arrDate ?? ''} onChange={e => setForm(f => ({ ...f, arrDate: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight No. <span className="text-red-500">*</span></label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50"
-                    value={form.flightNo ?? ''} onChange={e => setForm(f => ({ ...f, flightNo: e.target.value.toUpperCase() }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time <span className="text-red-500">*</span></label>
-                  {/* 2026-07-07 (round 6.2.122) — Safari/Firefox
-                      timepicker fix (sibling finding from M35).
-                      See round 6.2.121 handoff for the 3 CreateBooking
-                      ports this pattern matches. */}
-                  <Time5MinSelect
-                    value={form.flightTime ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, flightTime: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-blue-50 focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-flightTime"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin <span className="text-red-500">*</span></label>
-                  <input type="text" placeholder="IATA code" maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase bg-blue-50"
-                    value={form.destinationOrigin ?? ''} onChange={e => setForm(f => ({ ...f, destinationOrigin: e.target.value.toUpperCase() }))} /></div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge &amp; Guest Details</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>
-                  <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.lobbySuite ?? ''} onChange={e => setForm(f => ({ ...f, lobbySuite: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Pax</label>
-                  <input type="number" min={1} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.noOfPax ?? ''} onChange={e => setForm(f => ({ ...f, noOfPax: e.target.value === '' ? undefined : Number(e.target.value) }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of C/I Baggage</label>
-                  <input type="number" min={0} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.noOfCIBaggage ?? ''} onChange={e => setForm(f => ({ ...f, noOfCIBaggage: e.target.value === '' ? undefined : Number(e.target.value) }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Title</label>
-                  <input type="text" placeholder="Mr. / Mrs. / Ms." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.title ?? ''} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>First Name</label>
-                  <input type="text" placeholder="First name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.firstName ?? ''} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Last Name</label>
-                  <input type="text" placeholder="Last name" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.lastName ?? ''} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
-                  <input type="text" placeholder="e.g. United Kingdom" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.nationality ?? ''} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} /></div>
-                <div className="col-span-2"><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
-                  <textarea rows={2} placeholder="General remarks..." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none"
-                    value={form.remarks ?? ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Movement Times</h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
-                  <Time5MinSelect
-                    value={form.arrTimeNonFlyingGuests ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, arrTimeNonFlyingGuests: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-arrTimeNonFlyingGuests"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
-                  <Time5MinSelect
-                    value={form.timeMetVIPAtGate ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, timeMetVIPAtGate: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-timeMetVIPAtGate"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
-                  <Time5MinSelect
-                    value={form.timeBackToHKIAL ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, timeBackToHKIAL: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-timeBackToHKIAL"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
-                  <Time5MinSelect
-                    value={form.baggageRetrievalStart ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, baggageRetrievalStart: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-baggageRetrievalStart"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
-                  <Time5MinSelect
-                    value={form.baggageRetrievalEnd ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, baggageRetrievalEnd: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-baggageRetrievalEnd"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
-                  <Time5MinSelect
-                    value={form.baggageArrivalAtHKIAL ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, baggageArrivalAtHKIAL: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-baggageArrivalAtHKIAL"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
-                  <Time5MinSelect
-                    value={form.timeLeftHKIAL ?? ''}
-                    onChange={(v) => setForm(f => ({ ...f, timeLeftHKIAL: v }))}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
-                    testId="movement-timeLeftHKIAL"
-                  /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
-                  <input type="text" placeholder="e.g. 1h 30m" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    value={form.totalProcessingTime ?? ''} onChange={e => setForm(f => ({ ...f, totalProcessingTime: e.target.value }))} /></div>
-                <div><label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks for Admin Issue</label>
-                  <textarea rows={2} placeholder="Admin issue details..." className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none"
-                    value={form.remarksAdminIssue ?? ''} onChange={e => setForm(f => ({ ...f, remarksAdminIssue: e.target.value }))} /></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4 pt-2 border-t">
-            <Button variant="outline" onClick={() => { setIsAddMovementOpen(false); resetForm(); }} disabled={isAddingMovement}>Cancel</Button>
-            <Button onClick={handleSubmitAdd} disabled={isAddingMovement}>
-              {isAddingMovement
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</>
-                : <><Plus className="w-4 h-4 mr-2" />Add Movement</>}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -399,6 +399,9 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // the dialog renders its built-in empty state and the Add
   // button is disabled.
   movements?: MovementEntry[];
+  /** Opens SharedMovementLogModal owned by the parent wrapper. */
+  onOpenAddMovement?: () => void;
+  /** @deprecated Prefer onOpenAddMovement + SharedMovementLogModal. */
   onAddMovement?: (form: MovementForm) => Promise<void>;
   onDeleteMovement?: (id: number) => Promise<void>;
   isAddingMovement?: boolean;
@@ -477,7 +480,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   catalogAddonSlot?: React.ReactNode;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
@@ -491,8 +494,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   //  that were not yet pruned from the file after sub-component extraction.)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [bookingMovements, setBookingMovements] = useState<never[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
   // Edit-dialog stubs (block moved to BookingEditDialog.tsx)
   interface _EditLimoStop { id: number; type: 'Pick-up' | 'Destination'; location: string; }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1035,6 +1036,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       label: 'Share with Partners',
       icon: <Mail className="w-4 h-4 mr-2" />,
       disabled: true,
+    },
+    {
+      key: 'movement-log',
+      label: 'Movement Log',
+      icon: <History className="w-4 h-4 mr-2" />,
+      onClick: () => setIsMovementLogOpen(true),
+      testId: 'actions-movement-log',
     },
     ...(booking.status === 'Cancelled' &&
     (booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Payment Link Sent') &&
@@ -4458,6 +4466,36 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         open={isCustomerProfileOpen}
         onClose={() => setIsCustomerProfileOpen(false)}
         customer={selectedCustomer}
+      />
+
+      {/* ── Movement Log Dialog ───────────────────────────────────────────── */}
+      <BookingMovementLog
+        open={isMovementLogOpen}
+        onClose={() => setIsMovementLogOpen(false)}
+        booking={{
+          id: bookingId,
+          accountId: booking.accountId,
+          bookingNo: booking.bookingNo,
+          flightNo: booking.flightNo ?? '',
+          flightTime: booking.flightTime ?? '',
+          flightType: booking.flightType,
+          arrivalDate: booking.arrivalDate,
+          flightOrigin: booking.flightOrigin,
+          flightDestination: booking.flightDestination,
+          suite: booking.suite ?? '',
+          numberOfGuests: booking.numberOfGuests,
+          numberOfLuggage: booking.numberOfLuggage,
+        }}
+        movements={movements}
+        onOpenAddMovement={() => {
+          // Close the table dialog first so SharedMovementLogModal is not
+          // trapped under the Movement Log Dialog (both use z-50).
+          setIsMovementLogOpen(false);
+          onOpenAddMovement?.();
+        }}
+        onDeleteMovement={onDeleteMovement}
+        isAddingMovement={isAddingMovement}
+        isDeletingMovement={isDeletingMovement}
       />
 
     </div>
