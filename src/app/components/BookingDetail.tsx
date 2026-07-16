@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
 // The standalone edit page (`/bookings/:id/edit`) is now the
@@ -109,7 +109,7 @@ export type BookingStatusValue =
   | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
   | 'Rejected' | 'Cancelled' | 'No-show';
 export type PaymentStatusValue =
-  | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+  | 'Not Required' | 'Pending' | 'Invoice Sent' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
 export interface UpdateStatusPayload {
   status: BookingStatusValue;
@@ -1589,6 +1589,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     const colors: Record<string, string> = {
       'Not Required': 'bg-gray-100 text-gray-600',
       'Pending': 'bg-yellow-100 text-yellow-700',
+      'Invoice Sent': 'bg-amber-100 text-amber-700',
       'Payment Link Sent': 'bg-blue-100 text-blue-700',
       'Paid': 'bg-green-100 text-green-700',
       'Overdue': 'bg-red-100 text-red-700',
@@ -1668,11 +1669,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
           {/* Approval Actions — removed, use /bookings/review/:id for approval */}
 
-          {/* Payment Actions */}
-          {booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront' && (
-            <Button variant="outline" disabled>
-              <CreditCard className="w-4 h-4 mr-2" />
-              Generate Payment Link
+          {/* Payment / Invoice Actions */}
+          {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
+           booking.paymentStatus !== 'Paid' &&
+           booking.paymentStatus !== 'Refunded' && (
+            <Button variant="outline" onClick={() => setShowInvoice(true)} data-testid="actions-generate-invoice">
+              <FileText className="w-4 h-4 mr-2" />
+              Generate Invoice
             </Button>
           )}
 
@@ -3959,6 +3962,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             >
               <option value="Not Required">Not Required</option>
               <option value="Pending">Pending</option>
+              <option value="Invoice Sent">Invoice Sent</option>
               <option value="Payment Link Sent">Payment Link Sent</option>
               <option value="Paid">Paid</option>
               <option value="Overdue">Overdue</option>

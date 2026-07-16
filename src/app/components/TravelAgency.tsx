@@ -291,15 +291,23 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 </tr>
               ) : paginatedAgencies.map((agency) => {
                 // accounts.credit_balance (wallet) + accounts.credit_limit (overdraft cap)
-                // = OnCredit available to spend. Bar tracks overdraft facility usage only.
+                // = OnCredit available to spend.
+                // Bar: when overdraft exists, show overdraft usage; when only
+                // prepaid wallet, show remaining wallet as a full/empty cue via
+                // available (balance is the remaining prepaid credit after spends).
                 const balance = Number(agency.creditBalance) || 0;
                 const overdraftLimit = Math.max(0, Number(agency.creditLimit) || 0);
                 const availableToSpend = balance + overdraftLimit;
                 const overdraftUsed = Math.max(0, -balance);
+                // Prepaid remaining fill: when no overdraft facility, treat a
+                // positive balance as "remaining credit" (bar full when wallet
+                // has funds). Overdraft path still tracks facility usage %.
                 const overdraftPct =
                   overdraftLimit > 0
                     ? Math.min(100, (overdraftUsed / overdraftLimit) * 100)
                     : 0;
+                const walletRemainingPct = balance > 0 ? 100 : 0;
+                const barPct = overdraftLimit > 0 ? overdraftPct : walletRemainingPct;
                 const overdraftPctLabel =
                   overdraftLimit > 0
                     ? ((overdraftUsed / overdraftLimit) * 100).toFixed(1)
@@ -309,19 +317,21 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 const availableClass =
                   availableToSpend <= 0
                     ? 'font-semibold text-red-600'
-                    : availableToSpend < overdraftLimit * 0.2
+                    : availableToSpend < Math.max(overdraftLimit, balance) * 0.2
                       ? 'font-semibold text-amber-600'
                       : 'font-semibold text-green-600';
                 const barClass =
-                  overdraftPct >= 100
-                    ? 'bg-red-600'
-                    : overdraftPct > 80
-                      ? 'bg-red-500'
-                      : overdraftPct > 60
-                        ? 'bg-orange-500'
-                        : overdraftUsed > 0
-                          ? 'bg-amber-500'
-                          : 'bg-green-500';
+                  overdraftLimit > 0
+                    ? (overdraftPct >= 100
+                      ? 'bg-red-600'
+                      : overdraftPct > 80
+                        ? 'bg-red-500'
+                        : overdraftPct > 60
+                          ? 'bg-orange-500'
+                          : overdraftUsed > 0
+                            ? 'bg-amber-500'
+                            : 'bg-green-500')
+                    : (balance > 0 ? 'bg-green-500' : 'bg-red-500');
                 return (
                   <tr key={agency.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
@@ -381,23 +391,30 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                           <span>Overdraft limit:</span>
                           <span className="font-medium text-gray-800">HKD {money(overdraftLimit)}</span>
                         </div>
-                        {overdraftLimit > 0 ? (
-                          <>
-                            <div className="w-full bg-gray-200 rounded-full h-2 mt-2" title={`Overdraft used HKD ${money(overdraftUsed)} of ${money(overdraftLimit)}`}>
-                              <div
-                                className={`h-2 rounded-full transition-all ${barClass}`}
-                                style={{ width: `${overdraftPct}%` }}
-                              />
-                            </div>
-                            <p className={`text-xs text-right ${overdraftUsed > 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                              {overdraftUsed > 0
-                                ? `Overdraft ${money(overdraftUsed)} / ${money(overdraftLimit)} (${overdraftPctLabel}%)`
-                                : 'Overdraft unused'}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-xs text-gray-500 mt-1">No overdraft facility</p>
-                        )}
+                        <div
+                          className="w-full bg-gray-200 rounded-full h-2 mt-2"
+                          title={
+                            overdraftLimit > 0
+                              ? `Overdraft used HKD ${money(overdraftUsed)} of ${money(overdraftLimit)}`
+                              : `Wallet remaining HKD ${money(Math.max(0, balance))}`
+                          }
+                        >
+                          <div
+                            className={`h-2 rounded-full transition-all ${barClass}`}
+                            style={{
+                              width: `${overdraftLimit > 0 ? barPct : (balance > 0 ? 100 : 0)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className={`text-xs text-right ${overdraftUsed > 0 || balance <= 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {overdraftLimit > 0
+                            ? (overdraftUsed > 0
+                              ? `Overdraft ${money(overdraftUsed)} / ${money(overdraftLimit)} (${overdraftPctLabel}%)`
+                              : 'Overdraft unused')
+                            : (balance > 0
+                              ? `Wallet HKD ${money(balance)} remaining`
+                              : 'No credit remaining')}
+                        </p>
                       </div>
                     </td>
                     <td className="px-4 py-4">

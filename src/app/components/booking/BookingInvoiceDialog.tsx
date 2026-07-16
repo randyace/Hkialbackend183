@@ -22,6 +22,8 @@ interface InvoiceBooking {
   paymentMode?: string;
   paymentStatus: string;
   bookingType: string;
+  /** Required for Send Invoice gate — Approved/Confirmed after double approval. */
+  status?: string;
 }
 
 // 2026-06-17 (round 6.2.47) — breakdown line item shape
@@ -544,21 +546,15 @@ export function BookingInvoiceDialog({
           </div>
 
           {/* 2026-06-27 — Send Invoice + Send Payment Link merged
-            into a single button per Sky directive. The single
-            click fires BOTH the send-invoice POST and the
-            send-payment-link POST (sequential, awaiting each)
-            so the customer receives one invoice email with the
-            PDF and a separate payment-link email. Visibility is
+            into a single button per Sky directive. Visibility is
             gated on supervisor approval (status must be
-            'Approved' or 'Confirmed' — the same gate the QR
-            scanner uses for entry permission per
-            `QREntryScanner.tsx`). OnCredit + Paid bookings
-            still hide the button (payment-link doesn't apply to
-            credit accounts, and Paid bookings don't need a new
-            invoice / link). */}
+            'Approved' or 'Confirmed'). Paid / Refunded hide the
+            button. Invoice Sent / Payment Link Sent still allow
+            re-send after an edited booking is re-approved (fresh
+            invoice snapshot for the new total). */}
           {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
            booking.paymentStatus !== 'Paid' &&
-           booking.paymentStatus !== 'PaymentLinkPaid' && (
+           booking.paymentStatus !== 'Refunded' && (
             <div className="pt-4 border-t">
               <Button
                 className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"

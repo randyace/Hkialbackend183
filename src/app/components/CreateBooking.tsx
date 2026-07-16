@@ -1054,9 +1054,9 @@ export function CreateBooking({
   // tier/agency rate but always overridable (e.g. ad-hoc promotion).
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
-  // Round 6.2.139 — default ON (auto-apply free credits when eligible).
-  const [useMembershipLdFree, setUseMembershipLdFree] = useState(true);
-  const [useMembershipPsFree, setUseMembershipPsFree] = useState(true);
+  // Round 6.2.139 — default OFF (staff must opt in to free credits).
+  const [useMembershipLdFree, setUseMembershipLdFree] = useState(false);
+  const [useMembershipPsFree, setUseMembershipPsFree] = useState(false);
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -1070,14 +1070,14 @@ export function CreateBooking({
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
       setAccountDiscountPct('');
-      // Reset opt-in toggles when account changes (default apply).
-      setUseMembershipLdFree(true);
-      setUseMembershipPsFree(true);
+      // Reset opt-in toggles when account changes (default unchecked).
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
     } else {
       setMembershipTier('');
       setAccountDiscountPct('');
-      setUseMembershipLdFree(true);
-      setUseMembershipPsFree(true);
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
     }
   }, [selectedAccount]);
 
