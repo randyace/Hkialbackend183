@@ -35,7 +35,7 @@
  *    on submit.
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Search, X, Plus, CheckCircle, Car, Accessibility, Clock,
   AlertCircle, Minus,
@@ -55,38 +55,35 @@ export interface EditSectionAddonsProps {
    * (matches Create's behavior at line 2706-2716).
    */
   bookableItemPrices?: Record<string, number>;
+  /** 2026-07-16 — Lane B catalog picker (wrapper-owned). */
+  catalogAddonSlot?: ReactNode;
 }
 
 export function EditSectionAddons({
   formData,
   onFormChange,
   bookableItemPrices,
+  catalogAddonSlot,
 }: EditSectionAddonsProps) {
   // Local search state (mirrors Create's `addonSearch` /
   // `showAddonDropdown` pattern at CreateBooking.tsx:2781-2853).
   const [addonSearch, setAddonSearch] = useState('');
   const [showAddonDropdown, setShowAddonDropdown] = useState(false);
 
-  // 6-keyed map mirroring CreateBooking.tsx:2719-2727.
-  // Source of truth: the 6 booleans + `hasLoungeExtension`
-  // on `formData`. The dropdown rows call `toggleByKey` to
-  // flip the matching boolean.
+  // Lane A specials only (CATALOG_ADDONS). Shopping / Private Sales
+  // live in Lane B "Other add-on services" (catalogAddonSlot).
   const KEYED_BOOLEANS: Record<string, boolean> = {
     'Limousine Transfer': formData.hasLimousine,
-    'In-lounge Personal Shopping Assistance': formData.hasShopping,
     'Wheelchair Assistance': formData.hasWheelchair,
     'Security Escort Service': formData.hasSecurity,
-    'Private Sales': formData.hasPrivateSales,
     'Lounge Extension': formData.hasLoungeExtension,
   };
 
   const toggleByKey = (key: string, val: boolean) => {
-    if      (key === 'Limousine Transfer')                        onFormChange({ hasLimousine: val });
-    else if (key === 'In-lounge Personal Shopping Assistance')    onFormChange({ hasShopping: val });
-    else if (key === 'Wheelchair Assistance')                    onFormChange({ hasWheelchair: val });
-    else if (key === 'Security Escort Service')                  onFormChange({ hasSecurity: val });
-    else if (key === 'Private Sales')                            onFormChange({ hasPrivateSales: val });
-    else if (key === 'Lounge Extension')                         onFormChange({ hasLoungeExtension: val });
+    if (key === 'Limousine Transfer') onFormChange({ hasLimousine: val });
+    else if (key === 'Wheelchair Assistance') onFormChange({ hasWheelchair: val });
+    else if (key === 'Security Escort Service') onFormChange({ hasSecurity: val });
+    else if (key === 'Lounge Extension') onFormChange({ hasLoungeExtension: val });
   };
 
   // selectedKeys derived from booleans (mirrors Create line 2737-2739).
@@ -296,6 +293,8 @@ export function EditSectionAddons({
           Wheelchair Assistance is on — set the recipient in the <strong className="ml-1">Wheelchair Recipient</strong> section below.
         </div>
       )}
+
+      {catalogAddonSlot}
 
       {/* isAdHoc — legacy booking-mode flag, NOT a catalog addon. */}
       <div className="mt-4 pt-4 border-t border-gray-200">

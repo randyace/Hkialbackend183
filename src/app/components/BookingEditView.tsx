@@ -341,6 +341,8 @@ export interface BookingFormData {
   limoStops: EditLimoStop[];
   wheelchairPassenger: string;
   selectedAddonKeys: string[];
+  /** 2026-07-16 — Lane B catalog picks (qty-only). */
+  catalogAddonSelections?: Array<{ name: string; quantity: number }>;
   assignedStaffIds: number[];
   paymentMode: EditPaymentMode;
   specialRequests?: string;
@@ -458,6 +460,7 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   limoStops:        [{ id: 1, type: 'Pick-up', location: 'HKG Terminal 1' }],
   wheelchairPassenger: '',
   selectedAddonKeys: [],
+  catalogAddonSelections: [],
   assignedStaffIds: [],
   paymentMode:      'Upfront',
   specialRequests:  '',

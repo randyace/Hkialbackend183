@@ -542,6 +542,12 @@ export interface CreateBookingProps {
    * "(coming soon)" in the key).
    */
   bookableItemPrices?: Record<string, number>;
+  /**
+   * 2026-07-16 — Lane B "Other add-on services" slot owned by the
+   * wrapper (CatalogAddonPicker). Rendered after Lane A specials
+   * inside the Add-on Services card.
+   */
+  catalogAddonSlot?: React.ReactNode;
 }
 
 // 2026-06-23 — phone-region code typeahead + number filter, shared
@@ -1027,6 +1033,7 @@ export function CreateBooking({
   // hardcoded list of common region codes so the form is still
   // usable in offline mocks (see `displayRegionCodes`).
   regionCodes = [],
+  catalogAddonSlot,
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -3515,6 +3522,9 @@ export function CreateBooking({
                     </p>
                   </div>
                 )}
+
+                {/* 2026-07-16 — Lane B catalog slot (wrapper-owned picker) */}
+                {catalogAddonSlot}
 
               </div>
             );
