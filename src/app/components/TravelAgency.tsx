@@ -62,9 +62,11 @@ export interface TravelAgencyProps {
   onDelete?: (id: number) => void;
   /** True while create/update mutation is in flight */
   isSubmitting?: boolean;
+  /** Field-level validation errors keyed by snake_case API field name */
+  fieldErrors?: Record<string, string>;
 }
 
-export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete, isLoading = false, isSubmitting = false }: TravelAgencyProps = {}) {
+export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete, isLoading = false, isSubmitting = false, fieldErrors = {} }: TravelAgencyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -177,9 +179,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <Card className="p-4 bg-orange-50 border-orange-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-orange-700">Credit Outstanding</p>
+              <p className="text-sm text-orange-700">Overdraft In Use</p>
               <p className="text-2xl text-orange-900">
-                HKD {agencies.reduce((sum, a) => sum + (a.creditLimit - a.creditBalance), 0).toLocaleString()}
+                HKD {agencies.reduce((sum, a) => sum + Math.max(0, -a.creditBalance), 0).toLocaleString()}
               </p>
             </div>
             <DollarSign className="w-8 h-8 text-orange-600" />
@@ -288,8 +290,48 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   </td>
                 </tr>
               ) : paginatedAgencies.map((agency) => {
-                const creditUsed = agency.creditLimit > 0 ? agency.creditLimit - agency.creditBalance : 0;
-                const creditUtilization = agency.creditLimit > 0 ? (creditUsed / agency.creditLimit * 100).toFixed(1) : '0';
+                // accounts.credit_balance (wallet) + accounts.credit_limit (overdraft cap)
+                // = OnCredit available to spend.
+                // Bar: when overdraft exists, show overdraft usage; when only
+                // prepaid wallet, show remaining wallet as a full/empty cue via
+                // available (balance is the remaining prepaid credit after spends).
+                const balance = Number(agency.creditBalance) || 0;
+                const overdraftLimit = Math.max(0, Number(agency.creditLimit) || 0);
+                const availableToSpend = balance + overdraftLimit;
+                const overdraftUsed = Math.max(0, -balance);
+                // Prepaid remaining fill: when no overdraft facility, treat a
+                // positive balance as "remaining credit" (bar full when wallet
+                // has funds). Overdraft path still tracks facility usage %.
+                const overdraftPct =
+                  overdraftLimit > 0
+                    ? Math.min(100, (overdraftUsed / overdraftLimit) * 100)
+                    : 0;
+                const walletRemainingPct = balance > 0 ? 100 : 0;
+                const barPct = overdraftLimit > 0 ? overdraftPct : walletRemainingPct;
+                const overdraftPctLabel =
+                  overdraftLimit > 0
+                    ? ((overdraftUsed / overdraftLimit) * 100).toFixed(1)
+                    : '0';
+                const money = (n: number) =>
+                  n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                const availableClass =
+                  availableToSpend <= 0
+                    ? 'font-semibold text-red-600'
+                    : availableToSpend < Math.max(overdraftLimit, balance) * 0.2
+                      ? 'font-semibold text-amber-600'
+                      : 'font-semibold text-green-600';
+                const barClass =
+                  overdraftLimit > 0
+                    ? (overdraftPct >= 100
+                      ? 'bg-red-600'
+                      : overdraftPct > 80
+                        ? 'bg-red-500'
+                        : overdraftPct > 60
+                          ? 'bg-orange-500'
+                          : overdraftUsed > 0
+                            ? 'bg-amber-500'
+                            : 'bg-green-500')
+                    : (balance > 0 ? 'bg-green-500' : 'bg-red-500');
                 return (
                   <tr key={agency.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
@@ -331,28 +373,48 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                       <p className="text-xs text-gray-600 mt-2">Discount: {agency.discountRate}%</p>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="space-y-1">
+                      <div className="space-y-1 min-w-[160px]">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Limit:</span>
-                          <span className="font-semibold">HKD {agency.creditLimit.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Available:</span>
-                          <span className={agency.creditBalance < agency.creditLimit * 0.2 ? 'font-semibold text-red-600' : 'font-semibold text-green-600'}>
-                            HKD {agency.creditBalance.toLocaleString()}
+                          <span className="text-gray-600">Available to spend:</span>
+                          <span className={availableClass}>
+                            HKD {money(availableToSpend)}
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
-                          <div 
-                            className={`h-2 rounded-full ${
-                              Number(creditUtilization) > 80 ? 'bg-red-500' : 
-                              Number(creditUtilization) > 60 ? 'bg-orange-500' : 
-                              'bg-green-500'
-                            }`}
-                            style={{ width: `${creditUtilization}%` }}
-                          ></div>
+                        <div className="flex items-center justify-between text-xs text-gray-600">
+                          <span>Balance:</span>
+                          <span className={balance < 0 ? 'font-medium text-red-600' : 'font-medium text-gray-800'}>
+                            HKD {money(balance)}
+                            {balance < 0 ? ' (overdrawn)' : ''}
+                          </span>
                         </div>
-                        <p className="text-xs text-gray-500 text-right">{creditUtilization}% utilized</p>
+                        <div className="flex items-center justify-between text-xs text-gray-600">
+                          <span>Overdraft limit:</span>
+                          <span className="font-medium text-gray-800">HKD {money(overdraftLimit)}</span>
+                        </div>
+                        <div
+                          className="w-full bg-gray-200 rounded-full h-2 mt-2"
+                          title={
+                            overdraftLimit > 0
+                              ? `Overdraft used HKD ${money(overdraftUsed)} of ${money(overdraftLimit)}`
+                              : `Wallet remaining HKD ${money(Math.max(0, balance))}`
+                          }
+                        >
+                          <div
+                            className={`h-2 rounded-full transition-all ${barClass}`}
+                            style={{
+                              width: `${overdraftLimit > 0 ? barPct : (balance > 0 ? 100 : 0)}%`,
+                            }}
+                          />
+                        </div>
+                        <p className={`text-xs text-right ${overdraftUsed > 0 || balance <= 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {overdraftLimit > 0
+                            ? (overdraftUsed > 0
+                              ? `Overdraft ${money(overdraftUsed)} / ${money(overdraftLimit)} (${overdraftPctLabel}%)`
+                              : 'Overdraft unused')
+                            : (balance > 0
+                              ? `Wallet HKD ${money(balance)} remaining`
+                              : 'No credit remaining')}
+                        </p>
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -451,6 +513,17 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {Object.keys(fieldErrors).length > 0 && (
+              <div
+                className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 space-y-1"
+                role="alert"
+                data-testid="agency-form-validation-banner"
+              >
+                {Object.values(fieldErrors).map((msg, i) => (
+                  <p key={`${i}-${msg}`}>{msg}</p>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Agency Name</Label>
@@ -458,7 +531,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   placeholder="Enter agency name"
                   value={formDataProp?.agency_name ?? ''}
                   onChange={e => onFormChange?.('agency_name', e.target.value)}
+                  aria-invalid={!!fieldErrors.agency_name}
+                  style={fieldErrors.agency_name ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                {fieldErrors.agency_name && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.agency_name}</p>
+                )}
               </div>
               <div>
                 <Label className="mb-2">Agency Code</Label>
@@ -466,7 +544,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   placeholder="TA-XXX-001"
                   value={formDataProp?.agency_code ?? ''}
                   onChange={e => onFormChange?.('agency_code', e.target.value)}
+                  aria-invalid={!!fieldErrors.agency_code}
+                  style={fieldErrors.agency_code ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                {fieldErrors.agency_code && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.agency_code}</p>
+                )}
               </div>
             </div>
 
@@ -477,7 +560,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   placeholder="Enter contact name"
                   value={formDataProp?.contact_person ?? ''}
                   onChange={e => onFormChange?.('contact_person', e.target.value)}
+                  aria-invalid={!!fieldErrors.contact_person}
+                  style={fieldErrors.contact_person ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                {fieldErrors.contact_person && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_person}</p>
+                )}
               </div>
               <div>
                 <Label className="mb-2">Phone Number</Label>
@@ -485,7 +573,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   placeholder="+852 XXXX XXXX"
                   value={formDataProp?.contact_phone ?? ''}
                   onChange={e => onFormChange?.('contact_phone', e.target.value)}
+                  aria-invalid={!!fieldErrors.contact_phone}
+                  style={fieldErrors.contact_phone ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                {fieldErrors.contact_phone && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_phone}</p>
+                )}
               </div>
             </div>
 
@@ -496,7 +589,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 placeholder="contact@agency.com"
                 value={formDataProp?.contact_email ?? ''}
                 onChange={e => onFormChange?.('contact_email', e.target.value)}
+                aria-invalid={!!fieldErrors.contact_email}
+                style={fieldErrors.contact_email ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
               />
+              {fieldErrors.contact_email && (
+                <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_email}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -523,19 +621,32 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   max="30"
                   value={formDataProp?.discount_rate ?? '10'}
                   onChange={e => onFormChange?.('discount_rate', e.target.value)}
+                  aria-invalid={!!fieldErrors.discount_rate}
+                  style={fieldErrors.discount_rate ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                {fieldErrors.discount_rate && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.discount_rate}</p>
+                )}
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Credit Limit (HKD)</Label>
+                <Label className="mb-2">Overdraft Limit (HKD)</Label>
                 <Input
                   type="number"
                   placeholder="100000"
                   value={formDataProp?.credit_limit ?? ''}
                   onChange={e => onFormChange?.('credit_limit', e.target.value)}
+                  aria-invalid={!!fieldErrors.credit_limit}
+                  style={fieldErrors.credit_limit ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
+                <p className="mt-1 text-xs text-gray-500">
+                  Max amount the agency may overdraw on On-Credit (available = balance + this limit).
+                </p>
+                {fieldErrors.credit_limit && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.credit_limit}</p>
+                )}
               </div>
               <div>
                 <Label className="mb-2">Status</Label>
@@ -550,7 +661,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   })()}
                   onValueChange={v => onFormChange?.('status', v)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger
+                    aria-invalid={!!fieldErrors.status}
+                    style={fieldErrors.status ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -558,6 +672,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                     <SelectItem value="Inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+                {fieldErrors.status && (
+                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.status}</p>
+                )}
               </div>
             </div>
 

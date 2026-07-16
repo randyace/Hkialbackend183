@@ -26,6 +26,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from './ui/tooltip';
 
 interface Booking {
   id: number;
@@ -69,6 +74,12 @@ interface Booking {
   premiereSuites?: number;
   loungeDeluxeVip?: number;
   loungeDeluxeNonFlying?: number;
+  /**
+   * 2026-07-15 PR7 — request-type badge under booking no. (New / Edit / Cancel).
+   * Set by the parent wrapper from open_change_request / pending ladder status.
+   * Optional so mock data and standalone previews stay valid.
+   */
+  requestType?: 'New' | 'Edit' | 'Cancel';
 }
 
 // Travel Agency master data with default discount rates
@@ -312,6 +323,9 @@ export interface BookingManagementProps {
   onStatusFilterChange?: (value: string) => void;
   onPaymentStatusFilterChange?: (value: string) => void;
   onBookingCategoryFilterChange?: (value: string) => void;
+  /** 2026-07-15 PR7 — filter by request type badge (New / Edit / Cancel). */
+  requestTypeFilter?: string;
+  onRequestTypeFilterChange?: (value: string) => void;
   onDateFromChange?: (value: string) => void;
   onDateToChange?: (value: string) => void;
   onPageChange?: (page: number) => void;
@@ -335,6 +349,7 @@ export function BookingManagement({
   statusFilter: statusFilterProp,
   paymentStatusFilter: paymentStatusFilterProp,
   bookingCategoryFilter: bookingCategoryFilterProp,
+  requestTypeFilter: requestTypeFilterProp,
   dateFrom: dateFromProp,
   dateTo: dateToProp,
   currentPage: currentPageProp,
@@ -354,6 +369,7 @@ export function BookingManagement({
   onStatusFilterChange,
   onPaymentStatusFilterChange,
   onBookingCategoryFilterChange,
+  onRequestTypeFilterChange,
   onDateFromChange,
   onDateToChange,
   onPageChange,
@@ -369,6 +385,7 @@ export function BookingManagement({
   const [internalStatusFilter, setInternalStatusFilter] = useState('all');
   const [internalPaymentStatusFilter, setInternalPaymentStatusFilter] = useState('all');
   const [internalBookingCategoryFilter, setInternalBookingCategoryFilter] = useState('all');
+  const [internalRequestTypeFilter, setInternalRequestTypeFilter] = useState('all');
   const [internalDateFrom, setInternalDateFrom] = useState('');
   const [internalDateTo, setInternalDateTo] = useState('');
   const [internalCurrentPage, setInternalCurrentPage] = useState(1);
@@ -377,6 +394,7 @@ export function BookingManagement({
   const searchTerm = searchTermProp ?? internalSearchTerm;
   const statusFilter = statusFilterProp ?? internalStatusFilter;
   const paymentStatusFilter = paymentStatusFilterProp ?? internalPaymentStatusFilter;
+  const requestTypeFilter = requestTypeFilterProp ?? internalRequestTypeFilter;
   const bookingCategoryFilter = bookingCategoryFilterProp ?? internalBookingCategoryFilter;
   const dateFrom = dateFromProp ?? internalDateFrom;
   const dateTo = dateToProp ?? internalDateTo;
@@ -389,6 +407,7 @@ export function BookingManagement({
   const setStatusFilter = onStatusFilterChange ?? setInternalStatusFilter;
   const setPaymentStatusFilter = onPaymentStatusFilterChange ?? setInternalPaymentStatusFilter;
   const setBookingCategoryFilter = onBookingCategoryFilterChange ?? setInternalBookingCategoryFilter;
+  const setRequestTypeFilter = onRequestTypeFilterChange ?? setInternalRequestTypeFilter;
   const setDateFrom = onDateFromChange ?? setInternalDateFrom;
   const setDateTo = onDateToChange ?? setInternalDateTo;
   const setCurrentPage = onPageChange ?? setInternalCurrentPage;
@@ -473,7 +492,10 @@ export function BookingManagement({
     }
     
     const matchesDateRange = !dateFrom || !dateTo || (new Date(booking.dateTime.split(' ')[0]) >= new Date(dateFrom) && new Date(booking.dateTime.split(' ')[0]) <= new Date(dateTo));
-    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesBookingCategory && matchesDateRange;
+    // PR7 — request type badge filter (New / Edit / Cancel open requests)
+    const matchesRequestType =
+      requestTypeFilter === 'all' || booking.requestType === requestTypeFilter;
+    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesBookingCategory && matchesDateRange && matchesRequestType;
   }).sort((a, b) => b.id - a.id);
 
   const localTotalPages = Math.ceil(filteredBookings.length / itemsPerPage);
@@ -678,6 +700,17 @@ export function BookingManagement({
                 <SelectItem value="AA Booking">AA Booking</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
+              <SelectTrigger className="w-full md:w-48" data-testid="request-type-filter">
+                <SelectValue placeholder="Request Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Request Types</SelectItem>
+                <SelectItem value="New">New</SelectItem>
+                <SelectItem value="Edit">Edit</SelectItem>
+                <SelectItem value="Cancel">Cancel</SelectItem>
+              </SelectContent>
+            </Select>
             <div className="flex-1 relative">
               <Calendar className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
@@ -740,6 +773,23 @@ export function BookingManagement({
                       )}
                       <div>
                         <div className="font-mono text-xs font-medium text-gray-900">{booking.bookingNo}</div>
+                        {/* PR7 — New / Edit / Cancel request-type badge (matches approval queue) */}
+                        {booking.requestType && (
+                          <div className="mt-1">
+                            <span
+                              data-testid={`request-type-badge-${booking.id}`}
+                              className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${
+                                booking.requestType === 'New'
+                                  ? 'bg-green-100 text-green-800 border-green-200'
+                                  : booking.requestType === 'Edit'
+                                    ? 'bg-orange-100 text-orange-800 border-orange-200'
+                                    : 'bg-red-100 text-red-800 border-red-200'
+                              }`}
+                            >
+                              {booking.requestType}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1.5 mt-1">
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${getFlightTypeColor(booking.flightType)}`}>
                             {booking.flightType}
@@ -853,10 +903,23 @@ export function BookingManagement({
                           </span>
                         ) : null}
                         {booking.membershipBenefitLabel ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs">
-                            <Gem className="w-3 h-3" />
-                            {booking.membershipBenefitLabel}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="inline-flex items-center justify-center rounded bg-indigo-100 text-indigo-700 p-1 cursor-help"
+                                aria-label={booking.membershipBenefitLabel}
+                              >
+                                <Gem className="w-3 h-3" aria-hidden />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              sideOffset={6}
+                              className="max-w-xs text-left leading-snug"
+                            >
+                              {booking.membershipBenefitLabel}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : null}
                         {booking.agencyName && (
                           <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">

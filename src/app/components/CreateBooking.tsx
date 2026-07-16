@@ -126,6 +126,7 @@ function Time5MinSelect({
   wrapperClassName,
   wrapperStyle,
   testId,
+  id,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -133,6 +134,7 @@ function Time5MinSelect({
   wrapperClassName?: string;
   wrapperStyle?: React.CSSProperties;
   testId?: string;
+  id?: string;
 }) {
   // Parse `HH:MM` defensively (mirrors the parent-tree Time5MinSelect).
   // Empty / malformed → both columns empty so the disabled `HH`/`MM`
@@ -150,6 +152,7 @@ function Time5MinSelect({
   }
   return (
     <div
+      id={id}
       className={`flex items-center gap-2 ${wrapperClassName ?? ''}`}
       style={wrapperStyle}
       data-testid={testId}
@@ -539,6 +542,12 @@ export interface CreateBookingProps {
    * "(coming soon)" in the key).
    */
   bookableItemPrices?: Record<string, number>;
+  /**
+   * 2026-07-16 — Lane B "Other add-on services" slot owned by the
+   * wrapper (CatalogAddonPicker). Rendered after Lane A specials
+   * inside the Add-on Services card.
+   */
+  catalogAddonSlot?: React.ReactNode;
 }
 
 // 2026-06-23 — phone-region code typeahead + number filter, shared
@@ -1024,6 +1033,7 @@ export function CreateBooking({
   // hardcoded list of common region codes so the form is still
   // usable in offline mocks (see `displayRegionCodes`).
   regionCodes = [],
+  catalogAddonSlot,
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -1044,9 +1054,11 @@ export function CreateBooking({
   // tier/agency rate but always overridable (e.g. ad-hoc promotion).
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
-  // Round 6.2.139 — default ON (auto-apply free credits when eligible).
-  const [useMembershipLdFree, setUseMembershipLdFree] = useState(true);
-  const [useMembershipPsFree, setUseMembershipPsFree] = useState(true);
+  // Round 6.2.139 — default OFF (staff must opt in to free credits).
+  const [useMembershipLdFree, setUseMembershipLdFree] = useState(false);
+  const [useMembershipPsFree, setUseMembershipPsFree] = useState(false);
+  // Submit validation: field key → message for red borders + helper text.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
   // load Membership Tier from the account. Individual members do NOT
@@ -1058,14 +1070,14 @@ export function CreateBooking({
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
       setAccountDiscountPct('');
-      // Reset opt-in toggles when account changes (default apply).
-      setUseMembershipLdFree(true);
-      setUseMembershipPsFree(true);
+      // Reset opt-in toggles when account changes (default unchecked).
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
     } else {
       setMembershipTier('');
       setAccountDiscountPct('');
-      setUseMembershipLdFree(true);
-      setUseMembershipPsFree(true);
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
     }
   }, [selectedAccount]);
 
@@ -1670,6 +1682,20 @@ export function CreateBooking({
   const psGuestsNoSuite   = (vipPS > 0 || nonFlyingPS > 0) && numPremiereSuites === 0;
   const ldNonFlyingOver   = nonFlyingLD > 3;
   const ldNoAdult         = (assignedLoungeIds.length > 0 || vipLD > 0 || nonFlyingLD > 0) && ldAdults < 1;
+  // 2026-07-16 — booking must have at least one flying guest
+  // (VIP under PS and/or LD). Pre-this-fix 0 PS + 0 LD
+  // (vipPS=0, vipLD=0) passed validation because per-kind
+  // adult checks only fire when that product is already in
+  // play (`numPremiereSuites > 0` / lounge context). Empty
+  // product bookings were submittable from admin Create.
+  const noFlyingGuest     = vipPS + vipLD < 1;
+
+  const bookingGuestErrors: string[] = [];
+  if (noFlyingGuest) {
+    bookingGuestErrors.push(
+      'At least 1 flying guest (VIP passenger) is required. Set VIP Passengers under Premiere Suite and/or Lounge Deluxe.',
+    );
+  }
 
   const psErrors: string[] = [];
   if (psGuestsNoSuite) psErrors.push('Quantity of Premiere Suite must be at least 1 when guests are assigned to it.');
@@ -1680,35 +1706,164 @@ export function CreateBooking({
   if (ldNoAdult)       ldErrors.push('At least 1 Adult passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingOver) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
 
-  const hasGuestErrors = psErrors.length > 0 || ldErrors.length > 0;
+  const hasGuestErrors = bookingGuestErrors.length > 0 || psErrors.length > 0 || ldErrors.length > 0;
 
+  const focusField = (fieldId: string) => {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const focusable = (
+      el.matches('input, select, button, textarea')
+        ? el
+        : el.querySelector('input, select, button, textarea')
+    ) as HTMLElement | null;
+    focusable?.focus?.();
+  };
 
   // ─── Submit ───────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountType)            { toast.error('Please select an account type.');       return; }
-    if (!visitDate || !visitTime){ toast.error('Please enter the visit date and time.'); return; }
-    if (!flightNo)               { toast.error('Please enter the flight number.');       return; }
-    if (!flightTime)             { toast.error('Please enter the flight time.');         return; }
+
+    type FieldIssue = { fieldId: string; key: string; label: string; message: string };
+    const issues: FieldIssue[] = [];
+
+    if (!accountType) {
+      issues.push({
+        fieldId: 'create-account-type',
+        key: 'accountType',
+        label: 'Account Type',
+        message: 'Please select an account type.',
+      });
+    }
+    if (!accountNumber.trim()) {
+      issues.push({
+        fieldId: 'create-account-number',
+        key: 'accountNumber',
+        label: 'Account Number',
+        message: 'Please enter the account number.',
+      });
+    }
+    if (accountType === 'Agency' && !paymentMode) {
+      issues.push({
+        fieldId: 'create-payment-mode',
+        key: 'paymentMode',
+        label: 'Payment Mode',
+        message: 'Please select the payment mode for agency booking.',
+      });
+    }
+    if (!visitDate) {
+      issues.push({
+        fieldId: 'create-visit-date',
+        key: 'visitDate',
+        label: 'Visit Date',
+        message: 'Please enter the visit date.',
+      });
+    }
+    if (!visitTime) {
+      issues.push({
+        fieldId: 'create-visit-time',
+        key: 'visitTime',
+        label: 'Visit Time',
+        message: 'Please enter the visit time.',
+      });
+    }
+    if (!flightNo) {
+      issues.push({
+        fieldId: 'create-flight-no',
+        key: 'flightNo',
+        label: 'Flight Number',
+        message: 'Please enter the flight number.',
+      });
+    }
+    if (!flightTime) {
+      issues.push({
+        fieldId: 'create-flightTime',
+        key: 'flightTime',
+        label: 'Flight Time',
+        message: 'Please enter the flight time.',
+      });
+    }
     // 2026-06-08 — Transit 2nd-leg pre-checks. The backend's
     // TransitLegsRule is the source of truth; these are UX guards
     // that prevent the user from submitting a clearly invalid
-    // Transit payload. We do NOT block on the 6h gap here because
-    // the inline `transitGapError` already disables the button
-    // (transitGapError !== null → form has the alert role rendered
-    // and submit is disabled — see the bottom-of-form Submit button
-    // below for the disabled-when-gap-error binding).
+    // Transit payload.
     if (flightType === 'Transit') {
-      if (!leg2ArrivalDate)   { toast.error('Please enter the 2nd leg arrival date and time.'); return; }
-      if (!leg2FlightNo)      { toast.error('Please enter the 2nd leg flight number.');        return; }
-      if (!leg2FlightTime)    { toast.error('Please enter the 2nd leg flight time.');          return; }
-      if (!leg2FlightClass)   { toast.error('Please select the 2nd leg flight class.');        return; }
-      if (transitGapError)    { toast.error(transitGapError); return; }
+      if (!leg2ArrivalDate) {
+        issues.push({
+          fieldId: 'create-leg2-arrivalDate',
+          key: 'leg2ArrivalDate',
+          label: '2nd Leg Arrival Date & Time',
+          message: 'Please enter the 2nd leg arrival date and time.',
+        });
+      }
+      if (!leg2FlightNo) {
+        issues.push({
+          fieldId: 'create-leg2-flightNo',
+          key: 'leg2FlightNo',
+          label: '2nd Leg Flight Number',
+          message: 'Please enter the 2nd leg flight number.',
+        });
+      }
+      if (!leg2FlightTime) {
+        issues.push({
+          fieldId: 'create-leg2-flightTime',
+          key: 'leg2FlightTime',
+          label: '2nd Leg Flight Time',
+          message: 'Please enter the 2nd leg flight time.',
+        });
+      }
+      if (!leg2FlightClass) {
+        issues.push({
+          fieldId: 'create-leg2-flightClass',
+          key: 'leg2FlightClass',
+          label: '2nd Leg Flight Class',
+          message: 'Please select the 2nd leg flight class.',
+        });
+      }
+      if (transitGapError) {
+        issues.push({
+          fieldId: 'create-leg2-arrivalDate',
+          key: 'transitGap',
+          label: 'Transit Gap',
+          message: transitGapError,
+        });
+      }
     }
-    if (hasGuestErrors)          { toast.error('Please fix the guest detail errors before submitting.'); return; }
+
+    if (issues.length > 0) {
+      const nextErrors: Record<string, string> = {};
+      for (const issue of issues) nextErrors[issue.key] = issue.message;
+      setFieldErrors(nextErrors);
+      const labels = issues.map((i) => i.label);
+      const sample = labels.slice(0, 5).join(', ');
+      toast.error(
+        `Please complete ${issues.length} required field${issues.length === 1 ? '' : 's'}`,
+        {
+          description: sample + (labels.length > 5 ? ` · …and ${labels.length - 5} more` : ''),
+        },
+      );
+      focusField(issues[0].fieldId);
+      return;
+    }
+
+    if (hasGuestErrors) {
+      setFieldErrors({});
+      const allGuest = [...bookingGuestErrors, ...psErrors, ...ldErrors];
+      const scrollId = (bookingGuestErrors.length > 0 || psErrors.length > 0)
+        ? 'create-premiere-suite-section'
+        : 'create-lounge-deluxe-section';
+      toast.error(allGuest[0] ?? 'Please fix the guest detail errors before submitting.', {
+        description: allGuest.length > 1
+          ? allGuest.slice(1, 3).join('\n') + (allGuest.length > 3 ? `\n…and ${allGuest.length - 3} more` : '')
+          : undefined,
+      });
+      focusField(scrollId);
+      return;
+    }
     // Premiere Suite: cap assigned suites to numPremiereSuites.
     if (numPremiereSuites > 0 && assignedSuiteIds.length > numPremiereSuites) {
       toast.error(`Premiere Suite assignments (${assignedSuiteIds.length}) cannot exceed Quantity of Premiere Suite (${numPremiereSuites}).`);
+      focusField('create-premiere-suite-section');
       return;
     }
     // 2026-06-28 (round 6.2.74) — Lounge Deluxe: cap assigned lounges
@@ -1718,8 +1873,11 @@ export function CreateBooking({
     // (e.g., legacy autofill, paste, etc.).
     if (vipLD > 0 && assignedLoungeIds.length > vipLD) {
       toast.error(`Lounge Deluxe assignments (${assignedLoungeIds.length}) cannot exceed Quantity of VIP Passengers (LD) (${vipLD}).`);
+      focusField('create-lounge-deluxe-section');
       return;
     }
+
+    setFieldErrors({});
     const formData: BookingFormData = {
       accountType,
       accountNumber,
@@ -1845,13 +2003,13 @@ export function CreateBooking({
           </p>
 
           {/* Account Type */}
-          <div className="mb-6">
+          <div className="mb-6" id="create-account-type">
             <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Type <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-3 gap-4">
               {(['Individual', 'Corporate', 'Agency'] as const).map(type => (
                 <button key={type} type="button"
-                  onClick={() => { setAccountType(type); setSelectedAgencyCode(''); setMembershipTier(''); setCompanyName(''); setPaymentMode(''); }}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center ${accountType === type ? 'border-[#0f2942] bg-[#0f2942]/5 text-[#0f2942]' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
+                  onClick={() => { setAccountType(type); setSelectedAgencyCode(''); setMembershipTier(''); setCompanyName(''); setPaymentMode(''); setFieldErrors((prev) => { const n = { ...prev }; delete n.accountType; return n; }); }}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all text-center ${accountType === type ? 'border-[#0f2942] bg-[#0f2942]/5 text-[#0f2942]' : fieldErrors.accountType ? 'border-red-400 bg-red-50 text-gray-600' : 'border-gray-200 hover:border-gray-300 text-gray-600'}`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm ${accountType === type ? 'bg-[#0f2942] text-white' : 'bg-gray-100 text-gray-500'}`}>
                     {type === 'Individual' && <User className="w-5 h-5" />}
@@ -1863,6 +2021,11 @@ export function CreateBooking({
                 </button>
               ))}
             </div>
+            {fieldErrors.accountType && (
+              <p className="text-xs text-red-600 mt-2 flex items-center gap-1" role="alert">
+                <AlertCircle className="w-3 h-3" />{fieldErrors.accountType}
+              </p>
+            )}
           </div>
 
           {/* Travel Agency (read-only — 2026-06-14 round 6.2.37) */}
@@ -1931,11 +2094,12 @@ export function CreateBooking({
               {accountSearchResults !== undefined ? (
                 <div className="relative">
                   <input type="text"
+                    id="create-account-number"
                     value={accountNumber}
-                    onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); }}
+                    onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); setFieldErrors((prev) => { if (!prev.accountNumber) return prev; const n = { ...prev }; delete n.accountNumber; return n; }); }}
                     onFocus={() => { onAccountSearch?.(accountNumber); setShowAccountDropdown(true); }}
                     placeholder="Search account number or name…"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.accountNumber ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
                   {showAccountDropdown && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
                       {accountSearchLoading ? (
@@ -1955,9 +2119,15 @@ export function CreateBooking({
                   )}
                 </div>
               ) : (
-                <input type="text" value={accountNumber} onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); }}
+                <input type="text" id="create-account-number" value={accountNumber}
+                  onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); setFieldErrors((prev) => { if (!prev.accountNumber) return prev; const n = { ...prev }; delete n.accountNumber; return n; }); }}
                   placeholder="e.g. ACC-2024-0012"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.accountNumber ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+              )}
+              {fieldErrors.accountNumber && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                  <AlertCircle className="w-3 h-3" />{fieldErrors.accountNumber}
+                </p>
               )}
             </div>
             <div>
@@ -2082,16 +2252,21 @@ export function CreateBooking({
                 </p>
               </div>
             )}
-            <div>
+            <div id="create-payment-mode">
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Payment Mode <span className="text-red-500">*</span></label>
-              <Select value={paymentMode} onValueChange={v => setPaymentMode(v as PaymentMode)}>
-                <SelectTrigger><SelectValue placeholder="Select payment mode" /></SelectTrigger>
+              <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setFieldErrors((prev) => { if (!prev.paymentMode) return prev; const n = { ...prev }; delete n.paymentMode; return n; }); }}>
+                <SelectTrigger className={fieldErrors.paymentMode ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select payment mode" /></SelectTrigger>
                 <SelectContent>
                   {paymentModeOptions().map(m => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.paymentMode && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                  <AlertCircle className="w-3 h-3" />{fieldErrors.paymentMode}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking Channel</label>
@@ -2195,10 +2370,16 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number <span className="text-red-500">*</span></label>
               <div className="relative">
                 <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" value={flightNo} onChange={e => setFlightNo(e.target.value.toUpperCase())}
+                <input type="text" id="create-flight-no" value={flightNo}
+                  onChange={e => { setFlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.flightNo) return prev; const n = { ...prev }; delete n.flightNo; return n; }); }}
                   placeholder="e.g. CX880"
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.flightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
               </div>
+              {fieldErrors.flightNo && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                  <AlertCircle className="w-3 h-3" />{fieldErrors.flightNo}
+                </p>
+              )}
             </div>
 
             {/* Flight Time */}
@@ -2214,11 +2395,17 @@ export function CreateBooking({
                   Step is now hard-coded to 5 minutes via 12 fixed
                   minute options (00, 05, 10, … 55). */}
               <Time5MinSelect
+                id="create-flightTime"
                 value={flightTime}
-                onChange={setFlightTime}
-                wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                onChange={(v) => { setFlightTime(v); setFieldErrors((prev) => { if (!prev.flightTime) return prev; const n = { ...prev }; delete n.flightTime; return n; }); }}
+                wrapperClassName={`w-full px-3 py-2 border rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300 ${fieldErrors.flightTime ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                 testId="create-flightTime"
               />
+              {fieldErrors.flightTime && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                  <AlertCircle className="w-3 h-3" />{fieldErrors.flightTime}
+                </p>
+              )}
             </div>
 
             {/* Origin */}
@@ -2301,10 +2488,18 @@ export function CreateBooking({
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date &amp; Time <span className="text-red-500">*</span></label>
                   <input
+                    id="create-leg2-arrivalDate"
                     type="datetime-local"
                     value={leg2ArrivalDate}
                     onChange={e => {
                       setLeg2ArrivalDate(e.target.value);
+                      setFieldErrors((prev) => {
+                        if (!prev.leg2ArrivalDate && !prev.transitGap) return prev;
+                        const n = { ...prev };
+                        delete n.leg2ArrivalDate;
+                        delete n.transitGap;
+                        return n;
+                      });
                       // 2026-06-08 — recompute gap error on change
                       // (live UX pre-check; backend is the source of truth).
                       if (flightType !== 'Transit') { setTransitGapError(null); return; }
@@ -2324,23 +2519,34 @@ export function CreateBooking({
                         setTransitGapError(null);
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.leg2ArrivalDate || fieldErrors.transitGap ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     data-testid="leg2-arrivalDate"
                   />
+                  {(fieldErrors.leg2ArrivalDate || fieldErrors.transitGap) && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                      <AlertCircle className="w-3 h-3" />{fieldErrors.leg2ArrivalDate || fieldErrors.transitGap}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Number <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
+                      id="create-leg2-flightNo"
                       type="text"
                       value={leg2FlightNo}
-                      onChange={e => setLeg2FlightNo(e.target.value.toUpperCase())}
+                      onChange={e => { setLeg2FlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.leg2FlightNo) return prev; const n = { ...prev }; delete n.leg2FlightNo; return n; }); }}
                       placeholder="e.g. CX889"
                       data-testid="leg2-flightNo"
-                      className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.leg2FlightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
                   </div>
+                  {fieldErrors.leg2FlightNo && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                      <AlertCircle className="w-3 h-3" />{fieldErrors.leg2FlightNo}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
@@ -2352,16 +2558,22 @@ export function CreateBooking({
                       Playwright e2e selectors that grep for it keep
                       working. */}
                   <Time5MinSelect
+                    id="create-leg2-flightTime"
                     value={leg2FlightTime}
-                    onChange={setLeg2FlightTime}
-                    wrapperClassName="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                    onChange={(v) => { setLeg2FlightTime(v); setFieldErrors((prev) => { if (!prev.leg2FlightTime) return prev; const n = { ...prev }; delete n.leg2FlightTime; return n; }); }}
+                    wrapperClassName={`w-full px-3 py-2 border rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300 ${fieldErrors.leg2FlightTime ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     testId="leg2-flightTime"
                   />
+                  {fieldErrors.leg2FlightTime && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                      <AlertCircle className="w-3 h-3" />{fieldErrors.leg2FlightTime}
+                    </p>
+                  )}
                 </div>
-                <div>
+                <div id="create-leg2-flightClass">
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Class <span className="text-red-500">*</span></label>
-                  <Select value={leg2FlightClass} onValueChange={v => setLeg2FlightClass(v as FlightClass)}>
-                    <SelectTrigger data-testid="leg2-flightClass"><SelectValue placeholder="Select class" /></SelectTrigger>
+                  <Select value={leg2FlightClass} onValueChange={v => { setLeg2FlightClass(v as FlightClass); setFieldErrors((prev) => { if (!prev.leg2FlightClass) return prev; const n = { ...prev }; delete n.leg2FlightClass; return n; }); }}>
+                    <SelectTrigger data-testid="leg2-flightClass" className={fieldErrors.leg2FlightClass ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select class" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Economy Class">Economy Class</SelectItem>
                       <SelectItem value="Business Class">Business Class</SelectItem>
@@ -2370,6 +2582,11 @@ export function CreateBooking({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  {fieldErrors.leg2FlightClass && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                      <AlertCircle className="w-3 h-3" />{fieldErrors.leg2FlightClass}
+                    </p>
+                  )}
                 </div>
               </div>
               {transitGapError && (
@@ -2392,8 +2609,14 @@ export function CreateBooking({
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-              <input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)}
-                className={dateInputClassName(visitDate)} />
+              <input type="date" id="create-visit-date" value={visitDate}
+                onChange={e => { setVisitDate(e.target.value); setFieldErrors((prev) => { if (!prev.visitDate) return prev; const n = { ...prev }; delete n.visitDate; return n; }); }}
+                className={`${dateInputClassName(visitDate)}${fieldErrors.visitDate ? ' border-red-400 bg-red-50' : ''}`} />
+              {fieldErrors.visitDate && (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
+                  <AlertCircle className="w-3 h-3" />{fieldErrors.visitDate}
+                </p>
+              )}
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
@@ -2411,25 +2634,26 @@ export function CreateBooking({
                   need to update to `querySelector('[data-testid="create-visit-time"]')`.
                   (No figma-ui tests target that testId today.) */}
               <Time5MinSelect
+                id="create-visit-time"
                 value={visitTime}
-                onChange={setVisitTime}
+                onChange={(v) => { setVisitTime(v); setFieldErrors((prev) => { if (!prev.visitTime) return prev; const n = { ...prev }; delete n.visitTime; return n; }); }}
                 required
                 wrapperClassName={`w-full px-3 py-2 border rounded-md text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
-                  visitTimeRangeError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                  visitTimeRangeError || fieldErrors.visitTime ? 'border-red-400 bg-red-50' : 'border-gray-300'
                 }`}
                 testId="create-visit-time"
               />
-              {visitTimeRangeError && (
+              {(visitTimeRangeError || fieldErrors.visitTime) && (
                 <p className="text-xs text-red-600 mt-1 flex items-start gap-1" data-testid="create-visit-time-error" role="alert">
                   <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                  <span>{visitTimeRangeError}</span>
+                  <span>{visitTimeRangeError || fieldErrors.visitTime}</span>
                 </p>
               )}
             </div>
           </div>
 
           {/* Premiere Suite — physical suite checkboxes (CIP 1-6, Function Room) */}
-          <div className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+          <div id="create-premiere-suite-section" className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-800">Part 1 — Premiere Suite</h4>
@@ -2441,6 +2665,15 @@ export function CreateBooking({
                 </span>
               )}
             </div>
+            {bookingGuestErrors.length > 0 && (
+              <div className="mb-3 space-y-1" data-testid="create-booking-no-flying-guest-error">
+                {bookingGuestErrors.map((err, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm text-red-700 bg-red-100 border border-red-200 rounded px-3 py-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" /><span>{err}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-6">
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Premiere Suite</label>
@@ -2453,8 +2686,8 @@ export function CreateBooking({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipPS}
                   onChange={e => openDeleteDialog('PS', Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoAdult ? 'border-red-400 bg-red-50' : ''}`} />
-                {psNoAdult && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
+                {(psNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
               </div>
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>
@@ -2534,7 +2767,7 @@ export function CreateBooking({
           </div>
 
           {/* Lounge Deluxe — physical lobby checkboxes (Lobby 1-8) */}
-          <div className={`border rounded-lg p-4 ${ldErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+          <div id="create-lounge-deluxe-section" className={`border rounded-lg p-4 ${ldErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
@@ -2549,8 +2782,8 @@ export function CreateBooking({
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
                 <input type="number" min={0} value={vipLD}
                   onChange={e => openDeleteDialog('LD', Math.max(0, parseInt(e.target.value) || 0))}
-                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoAdult ? 'border-red-400 bg-red-50' : ''}`} />
-                {ldNoAdult && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                  className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
+                {(ldNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
               </div>
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>
@@ -3289,6 +3522,9 @@ export function CreateBooking({
                     </p>
                   </div>
                 )}
+
+                {/* 2026-07-16 — Lane B catalog slot (wrapper-owned picker) */}
+                {catalogAddonSlot}
 
               </div>
             );

@@ -220,9 +220,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
 
     const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
-    if (qty != null && Number(qty) > 0) {
-      setCodeCount(Math.max(1, Math.min(10000, Number(qty))));
-    }
+    setCodeCount(Math.max(1, Math.min(10000, Number(qty) > 0 ? Number(qty) : 1)));
 
     // Code name → Title (English). Always overwrite when the contract has a
     // name so the intended code name wins over a previous selection.
@@ -243,6 +241,10 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     e.preventDefault();
 
     const contract = selectedContract;
+    if (!isEditMode && (!contract || selectedContractId == null)) {
+      toast.error('Please select a contract');
+      return;
+    }
     const isCorporateOrTA = contract &&
       (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Agency');
 
@@ -352,7 +354,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
             <div>
               <label className="block text-sm" style={{ marginBottom: 10 }}>
                 <Receipt className="inline w-4 h-4 mr-1 text-gray-500" />
-                Select Contract (Optional)
+                Select Contract *
               </label>
               {isEditMode ? (
                 <div className="flex flex-col gap-2 px-3 py-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -365,7 +367,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                     <div className="text-xs text-gray-500 pl-6 space-y-0.5">
                       <div>Contract ID: {selectedContract.purchaseRef}</div>
                       <div>Price: HKD {selectedContract.packagePrice.toLocaleString()}</div>
-                      <div>Quantity: {selectedContract.sessionsAdded ?? 0}</div>
+                      <div>Quantity: {selectedContract.promoCodeQuantity ?? selectedContract.sessionsAdded ?? 0}</div>
                     </div>
                   )}
                 </div>
@@ -374,9 +376,10 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   <Select
                     value={availableContracts.find(c => c.id === selectedContractId)?.value ?? ''}
                     onValueChange={handleContractChange}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a contract (optional)…" />
+                      <SelectValue placeholder="Select a contract…" />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
                       {availableContracts.length === 0 ? (
@@ -421,7 +424,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Only contracts that have not yet generated a promo batch. Selecting one auto-fills code name, prefix, quantity, and contract end date.
+                    A contract is required. Selecting one auto-fills code name, prefix, quantity (locked), and contract dates.
                   </p>
                 </>
               )}
@@ -455,12 +458,15 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   max={10000}
                   value={codeCount}
                   onChange={(e) => setCodeCount(Math.max(1, Math.min(10000, Number(e.target.value))))}
-                  placeholder="e.g. 100"
+                  placeholder="Select a contract first"
                   className="bg-white"
                   required
-                  disabled={isEditMode}
+                  disabled
+                  readOnly
                 />
-                <p className="text-xs text-blue-700 mt-1">Number of unique codes (1 – 10,000)</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Locked to the selected contract quantity (not editable)
+                </p>
               </div>
             </div>
           </div>

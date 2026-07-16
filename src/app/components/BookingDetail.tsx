@@ -112,7 +112,7 @@ export type BookingStatusValue =
   | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
   | 'Rejected' | 'Cancelled' | 'No-show';
 export type PaymentStatusValue =
-  | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+  | 'Not Required' | 'Pending' | 'Invoice Sent' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
 export interface UpdateStatusPayload {
   status: BookingStatusValue;
@@ -473,9 +473,11 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // Optional — falls back to defaultPrice when missing (mirrors
   // Create's behavior at CreateBooking.tsx:2706-2716).
   bookableItemPrices?: Record<string, number>;
+  /** 2026-07-16 — Lane B catalog picker slot. */
+  catalogAddonSlot?: React.ReactNode;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
@@ -794,7 +796,48 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       toast.error('Please enter the passenger name.');
       return;
     }
-    toast.success(`"${selectedAddon}" added to booking!`);
+
+    // Persist into lifted edit formData so multiple add-ons can be
+    // stacked (pre-fix only toasted and reset — the 2nd pick
+    // replaced the 1st and nothing reached Save All Changes).
+    if (formData && onFormChange) {
+      if (selectedAddon === 'Limousine Transfer') {
+        onFormChange({
+          hasLimousine: true,
+          limoStops: limoStops.map((s) => ({
+            id: s.id,
+            type: s.type,
+            location: s.location,
+          })),
+        });
+      } else if (selectedAddon === 'Wheelchair Assistance') {
+        onFormChange({
+          hasWheelchair: true,
+          wheelchairPassenger: wheelchairPassenger.trim(),
+        });
+      } else if (selectedAddon === 'Security Escort Service') {
+        onFormChange({ hasSecurity: true });
+      } else if (selectedAddon === 'Lounge Extension') {
+        onFormChange({
+          hasLoungeExtension: true,
+          loungeExtensionQty: Math.max(1, Math.min(6, addonQty || 1)),
+        });
+      } else {
+        // Lane B / unexpected catalog name — qty-only selection.
+        const prev = formData.catalogAddonSelections ?? [];
+        const without = prev.filter((s) => s.name !== selectedAddon);
+        onFormChange({
+          catalogAddonSelections: [
+            ...without,
+            { name: selectedAddon, quantity: Math.max(1, addonQty || 1) },
+          ],
+        });
+      }
+      toast.success(`"${selectedAddon}" added. Click Save All Changes below to persist.`);
+    } else {
+      toast.success(`"${selectedAddon}" added to booking!`);
+    }
+
     setSelectedAddon(null);
     setAddonQty(1);
     setAddonUnitPrice('');
@@ -943,9 +986,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     disabled?: boolean;
     className?: string;
     onClick?: () => void;
+    testId?: string;
   };
 
   const actionItems: BookingActionItem[] = [
+    ...((booking.status === 'Approved' || booking.status === 'Confirmed') &&
+    booking.paymentStatus !== 'Paid' &&
+    booking.paymentStatus !== 'Refunded'
+      ? [{
+          key: 'generate-invoice',
+          label: 'Generate Invoice',
+          icon: <FileText className="w-4 h-4 mr-2" />,
+          onClick: () => setShowInvoice(true),
+          testId: 'actions-generate-invoice',
+        }]
+      : []),
     ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
       ? [{
           key: 'generate-payment-link',
@@ -1639,6 +1694,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     const colors: Record<string, string> = {
       'Not Required': 'bg-gray-100 text-gray-600',
       'Pending': 'bg-yellow-100 text-yellow-700',
+      'Invoice Sent': 'bg-amber-100 text-amber-700',
       'Payment Link Sent': 'bg-blue-100 text-blue-700',
       'Paid': 'bg-green-100 text-green-700',
       'Overdue': 'bg-red-100 text-red-700',
@@ -1721,6 +1777,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               disabled={action.disabled}
               className={action.className}
               onClick={action.onClick}
+              data-testid={action.testId}
             >
               {action.icon}
               {action.label}
@@ -3447,7 +3504,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {/* Step 1 — Service search */}
               <tr className="bg-green-50/30">
                 <td colSpan={5} className="px-4 pt-3 pb-2">
-                  <p className="text-xs text-gray-500 mb-2">Search and select an add-on service:</p>
+                  <p className="text-xs text-gray-500 mb-2">
+                    Search and select an add-on, then click Add Item. You can add multiple
+                    services one at a time — remember to Save All Changes below.
+                  </p>
                   <div className="relative">
                     {/* Search input */}
                     <div className="relative">
@@ -3924,6 +3984,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             >
               <option value="Not Required">Not Required</option>
               <option value="Pending">Pending</option>
+              <option value="Invoice Sent">Invoice Sent</option>
               <option value="Payment Link Sent">Payment Link Sent</option>
               <option value="Paid">Paid</option>
               <option value="Overdue">Overdue</option>
@@ -4162,7 +4223,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               Extension qty stepper + isAdHoc standalone toggle. Replaces
               the pre-6.2.75 split between EditSectionBooleanAddons +
               EditSectionAddons. */}
-          <EditSectionAddons formData={formData} onFormChange={onFormChange} bookableItemPrices={bookableItemPrices} />
+          <EditSectionAddons
+            formData={formData}
+            onFormChange={onFormChange}
+            bookableItemPrices={bookableItemPrices}
+            catalogAddonSlot={catalogAddonSlot}
+          />
 
           {/* 7. In-Charge Staff multi-select */}
           <EditSectionStaff
