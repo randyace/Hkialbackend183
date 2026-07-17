@@ -394,10 +394,10 @@ export interface CreateBookingProps {
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
     ps_free_upgrades_remaining?: number | null;
-    // Round 6.2.143 — TravelAgency / Corporate money credit balance
+    // Round 6.2.143 / 2026-07-17 — TravelAgency / Corporate money credit balance
     // (accounts.credit_balance). Shown on Agency create-booking so
     // staff can see remaining OnCredit headroom before submit.
-    // Spend still happens at admin Confirm (Q-SP1=B), not at create.
+    // Agency OnCredit spend now fires at booking create (not only Confirm).
     credit_balance?: number | string | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
@@ -1107,26 +1107,34 @@ export function CreateBooking({
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
-  // load Membership Tier from the account. Individual members do NOT
-  // get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
-  // Account Discount stays blank for Individual (staff override only);
-  // Agency default still comes from selectedAgency.discountRate in the
-  // placeholder below. Free LD / PS upgrade quotas render separately.
+  // 2026-06-09 round 6.2.28 / 6.2.136 / 2026-07-17 — when an account is
+  // selected, load Membership Tier from the account. Individual members
+  // do NOT get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
+  // Account Discount stays blank for Individual (staff override only).
+  // Agency: auto-fill Account Discount from travel_agencies.discount_rate
+  // (spec §9 — Agency default). Free LD / PS quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
-      setAccountDiscountPct('');
-      // Reset opt-in toggles when account changes (default unchecked).
-      setUseMembershipLdFree(false);
-      setUseMembershipPsFree(false);
     } else {
       setMembershipTier('');
-      setAccountDiscountPct('');
-      setUseMembershipLdFree(false);
-      setUseMembershipPsFree(false);
     }
-  }, [selectedAccount]);
+    setUseMembershipLdFree(false);
+    setUseMembershipPsFree(false);
+
+    const isAgencyAccount =
+      selectedAccount?.type === 'TravelAgency'
+      || selectedAccount?.type === 'Agency'
+      || accountType === 'Agency';
+    const agencyRate = Number(
+      selectedAccount?.travel_agency?.[0]?.discount_rate ?? NaN,
+    );
+    if (isAgencyAccount && Number.isFinite(agencyRate) && agencyRate > 0) {
+      setAccountDiscountPct(Math.max(0, Math.min(100, Math.round(agencyRate))));
+    } else {
+      setAccountDiscountPct('');
+    }
+  }, [selectedAccount, accountType]);
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
@@ -1613,14 +1621,27 @@ export function CreateBooking({
         name: (rawSelectedAgency as any).agency_name ?? (rawSelectedAgency as any).name,
         code: (rawSelectedAgency as any).agency_code ?? (rawSelectedAgency as any).code,
         discountRate: Number((rawSelectedAgency as any).discount_rate ?? (rawSelectedAgency as any).discountRate ?? 0),
-        paymentMethod: (rawSelectedAgency as any).payment_method ?? (rawSelectedAgency as any).paymentMethod,
+        // travel_agencies has no payment_method column — Agency bookings
+        // always default to On-Credit (credit balance). Mock list may still
+        // carry paymentMethod for standalone demos.
+        paymentMethod: ((rawSelectedAgency as any).payment_method
+          ?? (rawSelectedAgency as any).paymentMethod
+          ?? 'On-Credit') as PaymentMode,
       }
     : null;
 
-  // Reset payment mode when agency selected
+  // Agency: always default Payment Mode to On-Credit when the linked
+  // agency (or Agency account type) is in play. travel_agencies rows do
+  // not persist payment_method, so never leave paymentMode blank / undefined.
   useEffect(() => {
-    if (selectedAgency) setPaymentMode(selectedAgency.paymentMethod as PaymentMode);
-  }, [selectedAgencyCode]);
+    const isAgency =
+      accountType === 'Agency'
+      || selectedAccount?.type === 'TravelAgency'
+      || selectedAccount?.type === 'Agency';
+    if (isAgency && (selectedAgencyCode || selectedAccount?.travel_agency?.[0])) {
+      setPaymentMode('On-Credit');
+    }
+  }, [selectedAgencyCode, selectedAccount, accountType]);
 
   // ─── Passenger handlers ──────────────────────────────────────────────────────
   const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string) =>
