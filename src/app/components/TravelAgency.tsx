@@ -600,7 +600,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label className="mb-2">Payment Method</Label>
-                <Select value={formDataProp?.payment_method ?? 'Upfront'} onValueChange={v => onFormChange?.('payment_method', v)}>
+                <Select value={formDataProp?.payment_method ?? 'On-Credit'} onValueChange={v => onFormChange?.('payment_method', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
