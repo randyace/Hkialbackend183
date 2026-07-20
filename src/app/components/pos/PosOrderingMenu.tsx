@@ -4,7 +4,6 @@ import {
   PosCategoryTabs,
   resolveCategoryIdForTab,
   type PosCategoryOption,
-  type PosOrderingCategoryTab,
 } from './PosCategoryTabs';
 import { MenuCard, type MenuCardItem } from './MenuCard';
 
@@ -32,7 +31,7 @@ export function PosOrderingMenu({
   onSearchChange,
   onAddToCart,
 }: PosOrderingMenuProps) {
-  const [selectedTab, setSelectedTab] = useState<PosOrderingCategoryTab | string>('All');
+  const [selectedTab, setSelectedTab] = useState<string>('All');
   const [internalSearch, setInternalSearch] = useState('');
   const searchQuery = controlledSearch ?? internalSearch;
 
