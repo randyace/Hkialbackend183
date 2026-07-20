@@ -8,6 +8,7 @@ import { Textarea } from './ui/textarea';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
 import { Building2, Plane, X, UserPlus } from 'lucide-react';
+import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
@@ -164,7 +165,7 @@ export interface AccountCreationProps {
 
 export function AccountCreation({
   type,
-  countries,
+  countries: _countries,
   regionCodes: regionCodesProp,
   companySearchResults = [],
   agencySearchResults = [],
@@ -176,7 +177,7 @@ export function AccountCreation({
   fieldErrors = {},
 }: AccountCreationProps = {}) {
   const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
-  const displayCountries = countries && countries.length > 0 ? countries : null;
+  void _countries; // nationality uses NationalityTypeahead (local ISO list); prop kept for wrapper compat
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>(
     type === 'corporate' ? 'corporate' : type === 'travel-agency' ? 'travel-agency' : 'individual'
   );
@@ -604,29 +605,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
-                      {displayCountries ? (
-                        <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
-                          <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                          <SelectContent>
-                            {displayCountries.map(c => (
-                              <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
-                          <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hk">Hong Kong</SelectItem>
-                            <SelectItem value="cn">China</SelectItem>
-                            <SelectItem value="us">United States</SelectItem>
-                            <SelectItem value="uk">United Kingdom</SelectItem>
-                            <SelectItem value="jp">Japan</SelectItem>
-                            <SelectItem value="kr">South Korea</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <NationalityTypeahead
+                        id="nationality"
+                        value={formData.nationality}
+                        onChange={(code) => setFormData({ ...formData, nationality: code })}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
@@ -698,29 +681,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
-                      {displayCountries ? (
-                        <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
-                          <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                          <SelectContent>
-                            {displayCountries.map(c => (
-                              <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Select value={formData.nationality} onValueChange={v => setFormData({...formData, nationality: v})}>
-                          <SelectTrigger id="nationality"><SelectValue placeholder="Select nationality" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hk">Hong Kong</SelectItem>
-                            <SelectItem value="cn">China</SelectItem>
-                            <SelectItem value="us">United States</SelectItem>
-                            <SelectItem value="uk">United Kingdom</SelectItem>
-                            <SelectItem value="jp">Japan</SelectItem>
-                            <SelectItem value="kr">South Korea</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
+                      <NationalityTypeahead
+                        id="nationality"
+                        value={formData.nationality}
+                        onChange={(code) => setFormData({ ...formData, nationality: code })}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>

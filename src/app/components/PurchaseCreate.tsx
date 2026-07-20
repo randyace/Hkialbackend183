@@ -747,7 +747,7 @@ export function PurchaseCreate({
                   )}
                   <div>
                     <Label htmlFor="totalPrice" className="mb-[10px] block">
-                      Total Price (HKD) <span className="text-red-500">*</span>
+                      Billing Amount (HKD) <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening:
                         (a) hide native number-input spinner (Tailwind arbitrary
@@ -809,7 +809,7 @@ export function PurchaseCreate({
                   </div>
                   <div>
                     <Label htmlFor="totalPriceTA" className="mb-[10px] block">
-                      Total Price (HKD) <span className="text-red-500">*</span>
+                      Billing Amount (HKD) <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening (Travel
                         Agency branch; mirrors the Corporate branch above). See

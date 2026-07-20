@@ -37,6 +37,7 @@ import { toast } from 'sonner@2.0.3';
 // computes the valid visitTime range + an error message; reused by
 // EditSectionFlight in the admin edit page.
 import { computeVisitTimeRange } from './BookingEditView';
+import { NationalityTypeahead, isValidCountryCode } from '../../../../../components/NationalityTypeahead';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -228,6 +229,8 @@ interface PassengerDetail {
   // allergy even when the customer provided it on the
   // customer-side newbooking flow.
   foodAllergies: string;
+  /** ISO 3166-1 alpha-2 (mandatory). */
+  nationality: string;
 }
 
 interface NonFlyingGuest {
@@ -237,6 +240,8 @@ interface NonFlyingGuest {
   ageGroup: AgeGroup;
   // 2026-06-25 — round 6.2.63 (bug 3): same as PassengerDetail.
   foodAllergies: string;
+  /** ISO 3166-1 alpha-2 (mandatory). */
+  nationality: string;
 }
 
 interface LimoStop {
@@ -249,11 +254,13 @@ const emptyPassenger = (): PassengerDetail => ({
   title: '', firstName: '', lastName: '', travelDocNo: '',
   membershipNo: '', ageGroup: '', birthdayDay: '', birthdayMonth: '', birthdayYear: '',
   foodAllergies: '',
+  nationality: '',
 });
 
 const emptyNonFlying = (): NonFlyingGuest => ({
   title: '', firstName: '', lastName: '', ageGroup: '',
   foodAllergies: '',
+  nationality: '',
 });
 
 const isPassengerFilled = (p: PassengerDetail) =>
@@ -387,10 +394,10 @@ export interface CreateBookingProps {
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
     ps_free_upgrades_remaining?: number | null;
-    // Round 6.2.143 — TravelAgency / Corporate money credit balance
+    // Round 6.2.143 / 2026-07-17 — TravelAgency / Corporate money credit balance
     // (accounts.credit_balance). Shown on Agency create-booking so
     // staff can see remaining OnCredit headroom before submit.
-    // Spend still happens at admin Confirm (Q-SP1=B), not at create.
+    // Agency OnCredit spend now fires at booking create (not only Confirm).
     credit_balance?: number | string | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
@@ -408,7 +415,31 @@ export interface CreateBookingProps {
       payment_method?: string;
     }>;
   } | null;
-  onApplyPromo?: (code: string) => void;
+  /**
+   * Validate + apply a promo code via the parent (API).
+   * When provided, the view is controlled: parent owns `promoApplied` /
+   * `promoError` and the Apply button only forwards the typed code.
+   * Without this prop the view keeps a local mock apply path.
+   */
+  onApplyPromo?: (code: string) => void | Promise<void>;
+  /** Clear the applied promo (wrapper-owned when `onApplyPromo` is set). */
+  onClearPromo?: () => void;
+  /**
+   * Wrapper-owned applied promo. Used when `onApplyPromo` is provided.
+   * `benefit` is the secondary line (e.g. "15% off" or "Free lounge · …").
+   */
+  promoApplied?: {
+    code: string;
+    label: string;
+    discountPct: number;
+    benefit?: string;
+    promoType?: string;
+    freeSessions?: number | null;
+  } | null;
+  /** Wrapper-owned validate error string. */
+  promoError?: string;
+  /** Disable Apply while the wrapper's validate request is in flight. */
+  promoValidating?: boolean;
   selectedAddonKeys?: string[];
   // Round 6.2.30 (2026-06-10) — server-fetched booking no
   // preview. The wrapper fetches this on mount and on
@@ -989,6 +1020,10 @@ export function CreateBooking({
   setShowGuestDropdown,
   selectedAccount = null,
   onApplyPromo,
+  onClearPromo,
+  promoApplied: promoAppliedProp,
+  promoError: promoErrorProp,
+  promoValidating = false,
   selectedAddonKeys = [],
   // Round 6.2.30 (2026-06-10) — server-fetched booking no
   // preview. Default `''` so the chip renders an em-dash
@@ -1046,8 +1081,20 @@ export function CreateBooking({
   const [paymentMode, setPaymentMode] = useState<PaymentMode | ''>('');
   const [bookingChannel, setBookingChannel] = useState<'Online' | 'Email/Call to HKIAL'>('Email/Call to HKIAL');
   const [promoInput, setPromoInput] = useState('');
-  const [promoApplied, setPromoApplied] = useState<{ code: string; label: string; discountPct: number } | null>(null);
-  const [promoError, setPromoError] = useState('');
+  // Local promo state is only used when the wrapper does not provide
+  // `onApplyPromo` (standalone / mock). Production admin CreateBooking
+  // always passes onApplyPromo + controlled promoApplied/promoError so
+  // validate → promo_code_id lives in the wrapper (round 6.2.148).
+  const [localPromoApplied, setLocalPromoApplied] = useState<{
+    code: string;
+    label: string;
+    discountPct: number;
+    benefit?: string;
+  } | null>(null);
+  const [localPromoError, setLocalPromoError] = useState('');
+  const isPromoControlled = typeof onApplyPromo === 'function';
+  const promoApplied = isPromoControlled ? (promoAppliedProp ?? null) : localPromoApplied;
+  const promoError = isPromoControlled ? (promoErrorProp ?? '') : localPromoError;
   const [accountRemark, setAccountRemark] = useState('');
   const [isAdHoc, setIsAdHoc] = useState(false);
   // 2026-06-09 — Account Discount is staff-editable, defaulting to the
@@ -1060,26 +1107,34 @@ export function CreateBooking({
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // 2026-06-09 round 6.2.28 / 6.2.136 — when an account is selected,
-  // load Membership Tier from the account. Individual members do NOT
-  // get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
-  // Account Discount stays blank for Individual (staff override only);
-  // Agency default still comes from selectedAgency.discountRate in the
-  // placeholder below. Free LD / PS upgrade quotas render separately.
+  // 2026-06-09 round 6.2.28 / 6.2.136 / 2026-07-17 — when an account is
+  // selected, load Membership Tier from the account. Individual members
+  // do NOT get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
+  // Account Discount stays blank for Individual (staff override only).
+  // Agency: auto-fill Account Discount from travel_agencies.discount_rate
+  // (spec §9 — Agency default). Free LD / PS quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
       setMembershipTier(selectedAccount.membership_type as MembershipTier);
-      setAccountDiscountPct('');
-      // Reset opt-in toggles when account changes (default unchecked).
-      setUseMembershipLdFree(false);
-      setUseMembershipPsFree(false);
     } else {
       setMembershipTier('');
-      setAccountDiscountPct('');
-      setUseMembershipLdFree(false);
-      setUseMembershipPsFree(false);
     }
-  }, [selectedAccount]);
+    setUseMembershipLdFree(false);
+    setUseMembershipPsFree(false);
+
+    const isAgencyAccount =
+      selectedAccount?.type === 'TravelAgency'
+      || selectedAccount?.type === 'Agency'
+      || accountType === 'Agency';
+    const agencyRate = Number(
+      selectedAccount?.travel_agency?.[0]?.discount_rate ?? NaN,
+    );
+    if (isAgencyAccount && Number.isFinite(agencyRate) && agencyRate > 0) {
+      setAccountDiscountPct(Math.max(0, Math.min(100, Math.round(agencyRate))));
+    } else {
+      setAccountDiscountPct('');
+    }
+  }, [selectedAccount, accountType]);
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
@@ -1566,14 +1621,27 @@ export function CreateBooking({
         name: (rawSelectedAgency as any).agency_name ?? (rawSelectedAgency as any).name,
         code: (rawSelectedAgency as any).agency_code ?? (rawSelectedAgency as any).code,
         discountRate: Number((rawSelectedAgency as any).discount_rate ?? (rawSelectedAgency as any).discountRate ?? 0),
-        paymentMethod: (rawSelectedAgency as any).payment_method ?? (rawSelectedAgency as any).paymentMethod,
+        // travel_agencies has no payment_method column — Agency bookings
+        // always default to On-Credit (credit balance). Mock list may still
+        // carry paymentMethod for standalone demos.
+        paymentMethod: ((rawSelectedAgency as any).payment_method
+          ?? (rawSelectedAgency as any).paymentMethod
+          ?? 'On-Credit') as PaymentMode,
       }
     : null;
 
-  // Reset payment mode when agency selected
+  // Agency: always default Payment Mode to On-Credit when the linked
+  // agency (or Agency account type) is in play. travel_agencies rows do
+  // not persist payment_method, so never leave paymentMode blank / undefined.
   useEffect(() => {
-    if (selectedAgency) setPaymentMode(selectedAgency.paymentMethod as PaymentMode);
-  }, [selectedAgencyCode]);
+    const isAgency =
+      accountType === 'Agency'
+      || selectedAccount?.type === 'TravelAgency'
+      || selectedAccount?.type === 'Agency';
+    if (isAgency && (selectedAgencyCode || selectedAccount?.travel_agency?.[0])) {
+      setPaymentMode('On-Credit');
+    }
+  }, [selectedAgencyCode, selectedAccount, accountType]);
 
   // ─── Passenger handlers ──────────────────────────────────────────────────────
   const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string) =>
@@ -1623,11 +1691,39 @@ export function CreateBooking({
     setLimoStops(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
 
   // ─── Promo handlers ───────────────────────────────────────────────────────────
+  // Controlled path: forward code to wrapper (API validate + set promoApplied).
+  // Uncontrolled path: local mock apply for standalone figma previews.
   const handleApplyPromo = () => {
     const code = promoInput.trim().toUpperCase();
-    if (!code) { setPromoError('Please enter a promo or redemption code.'); return; }
-    onApplyPromo?.(code);
+    if (!code) {
+      if (isPromoControlled) {
+        void onApplyPromo?.('');
+      } else {
+        setLocalPromoError('Please enter a promo or redemption code.');
+      }
+      return;
+    }
+    if (isPromoControlled) {
+      void onApplyPromo?.(code);
+      return;
+    }
+    setLocalPromoApplied({
+      code,
+      label: code,
+      discountPct: 10,
+      benefit: '10% off',
+    });
+    setLocalPromoError('');
+    setPromoInput('');
   };
+
+  // Clear input after a successful controlled apply so re-open of the
+  // entry field starts blank if the user later removes the code.
+  useEffect(() => {
+    if (isPromoControlled && promoApplied) {
+      setPromoInput('');
+    }
+  }, [isPromoControlled, promoApplied]);
 
   // ─── Validation ──────────────────────────────────────────────────────────────
   // Round 6.2.31 (2026-06-10) — capacity chip now matches the
@@ -1705,6 +1801,18 @@ export function CreateBooking({
   const ldErrors: string[] = [];
   if (ldNoAdult)       ldErrors.push('At least 1 Adult passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingOver) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
+
+  // 2026-07-17 — nationality (ISO alpha-2) required on every configured guest row.
+  const configuredVip = passengers.slice(0, vipPS + vipLD);
+  const configuredNfg = nonFlyingGuests.slice(0, nonFlyingPS + nonFlyingLD);
+  const vipMissingNationality = configuredVip.some((p) => !isValidCountryCode(p.nationality));
+  const nfgMissingNationality = configuredNfg.some((g) => !isValidCountryCode(g.nationality));
+  if (vipMissingNationality) {
+    bookingGuestErrors.push('Nationality is required for each VIP Passenger (select from the country list).');
+  }
+  if (nfgMissingNationality) {
+    bookingGuestErrors.push('Nationality is required for each Non-Flying Guest (select from the country list).');
+  }
 
   const hasGuestErrors = bookingGuestErrors.length > 0 || psErrors.length > 0 || ldErrors.length > 0;
 
@@ -3056,7 +3164,17 @@ export function CreateBooking({
                           </div>
                         </div>
                       </div>
-                      {/* Row 3: Food Allergies — full width */}
+                      {/* Row 3: Nationality (ISO alpha-2) */}
+                      <div>
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <NationalityTypeahead
+                          id={`create-vip-nationality-${idx}`}
+                          value={p.nationality}
+                          required
+                          onChange={(code) => updatePassenger(idx, 'nationality', code)}
+                        />
+                      </div>
+                      {/* Row 4: Food Allergies — full width */}
                       {/* 2026-06-25 — round 6.2.63 (bug 3): surface
                         the food-allergies input on the CREATE
                         form (the edit form at BookingDetail.tsx
@@ -3159,6 +3277,15 @@ export function CreateBooking({
                             <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                           </select>
                         </div>
+                      </div>
+                      <div className="mt-4">
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <NationalityTypeahead
+                          id={`create-nfg-nationality-${idx}`}
+                          value={g.nationality}
+                          required
+                          onChange={(code) => updateNonFlying(idx, 'nationality', code)}
+                        />
                       </div>
                       {/* 2026-06-25 — round 6.2.63 (bug 3):
                         food-allergies input on the NFG card,
@@ -3543,21 +3670,59 @@ export function CreateBooking({
                 <Tag className="w-5 h-5 text-green-600" />
                 <div>
                   <p className="text-sm font-semibold text-green-800">{promoApplied.code}</p>
-                  <p className="text-xs text-green-600">{promoApplied.label} — {promoApplied.benefit} off</p>
+                  <p className="text-xs text-green-600">
+                    {promoApplied.benefit
+                      ?? (promoApplied.promoType === 'Free bookings'
+                        ? `Free lounge · deduction of ${promoApplied.freeSessions ?? 1} LD fee${(promoApplied.freeSessions ?? 1) !== 1 ? 's' : ''}`
+                        : `${promoApplied.discountPct}% off`)}
+                  </p>
                 </div>
               </div>
-              <Button type="button" variant="ghost" size="sm" className="text-green-700 hover:text-red-600"
-                onClick={() => { setPromoApplied(null); toast.info('Promotion code removed.'); }}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-green-700 hover:text-red-600"
+                onClick={() => {
+                  if (isPromoControlled) {
+                    onClearPromo?.();
+                  } else {
+                    setLocalPromoApplied(null);
+                  }
+                  toast.info('Promotion code removed.');
+                }}
+              >
                 <X className="w-4 h-4" />
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
               <div className="flex gap-3">
-                <input type="text" value={promoInput} onChange={e => { setPromoInput(e.target.value.toUpperCase()); setPromoError(''); }}
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={e => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    if (!isPromoControlled) setLocalPromoError('');
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyPromo();
+                    }
+                  }}
                   placeholder="e.g. SUMMER2024"
-                  className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`} />
-                <Button type="button" variant="outline" onClick={handleApplyPromo}>Apply</Button>
+                  disabled={promoValidating}
+                  className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleApplyPromo}
+                  disabled={promoValidating}
+                >
+                  {promoValidating ? 'Checking…' : 'Apply'}
+                </Button>
               </div>
               {promoError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{promoError}</p>}
             </div>

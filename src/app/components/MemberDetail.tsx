@@ -20,6 +20,8 @@ import {
   TabsList,
   TabsTrigger,
 } from './ui/tabs';
+import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import { countryNameFor } from '../../../../../utils/countries';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -167,7 +169,7 @@ const MOCK_MEMBER: Member = {
   lastName: 'Smith',
   email: 'john.smith@email.com',
   phone: '+852 9876 5432',
-  nationality: 'United Kingdom',
+  nationality: 'GB',
   passportNumber: 'UK123456789',
   internalGrouping: 'HSBC',
   paymentMethod: 'On-Credit',
@@ -574,7 +576,7 @@ export function MemberDetail({
     lastName: 'Smith',
     email: 'amanda.smith@email.com',
     phone: '+852 9876 1111',
-    nationality: 'United Kingdom',
+    nationality: 'GB',
     passportFirst4: 'UK78',
     linkedAccountNo: '',
   });
@@ -957,12 +959,12 @@ export function MemberDetail({
               </div>
               <div>
                 <label>Nationality</label>
-                <input
-                  type="text"
+                <NationalityTypeahead
+                  id="member-detail-nationality"
                   value={basicForm.nationality}
-                  onChange={e => setBasicForm(f => ({ ...f, nationality: e.target.value }))}
+                  onChange={(code) => setBasicForm(f => ({ ...f, nationality: code }))}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 pl-9 pr-8 bg-white"
                 />
               </div>
               <div>
@@ -1162,7 +1164,9 @@ export function MemberDetail({
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Nationality</label>
-                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.nationality || '—'}</p>
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                    {displaySpouse.nationality ? countryNameFor(displaySpouse.nationality) : '—'}
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First 4 Digits of Passport</label>
@@ -2609,12 +2613,12 @@ export function MemberDetail({
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
-                  <input
-                  type="text"
-                  value={movementFormProp.nationality || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, nationality: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <NationalityTypeahead
+                    id="member-detail-movement-nationality"
+                    value={movementFormProp.nationality || ''}
+                    onChange={(code) => onMovementFormChange?.({ ...movementFormProp, nationality: code })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pl-9 pr-8 bg-white"
+                  />
                 </div>
               </div>
             </div>
@@ -2842,12 +2846,14 @@ export function MemberDetail({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality</label>
-                <input
-                  type="text"
+                <NationalityTypeahead
+                  id="member-detail-spouse-nationality"
                   value={activeSpouseForm.nationality}
-                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, nationality: e.target.value }); setMockSpouseForm(f => ({ ...f, nationality: e.target.value })); }}
-                  placeholder="e.g., United Kingdom"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  onChange={(code) => {
+                    onSpouseFormChange?.({ ...activeSpouseForm, nationality: code });
+                    setMockSpouseForm(f => ({ ...f, nationality: code }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm pl-9 pr-8 bg-white"
                 />
               </div>
               <div>
