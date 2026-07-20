@@ -1,16 +1,15 @@
-/** Fixed POS ordering tab labels — layout is built for these exact names. */
-export const POS_ORDERING_CATEGORY_TABS = [
-  'All',
-  'Coffee',
-  'Tea',
-  'Beverages',
-  'Breakfast',
-  'Main Course',
-  'Appetizer',
-  'Dessert',
-] as const;
+import { useMemo } from 'react';
 
-export type PosOrderingCategoryTab = (typeof POS_ORDERING_CATEGORY_TABS)[number];
+/** Fallback for Figma standalone preview when no categories prop is provided. */
+export const MOCK_POS_CATEGORIES: PosCategoryOption[] = [
+  { id: 1, name: 'Coffee' },
+  { id: 2, name: 'Tea' },
+  { id: 3, name: 'Beverages' },
+  { id: 4, name: 'Breakfast' },
+  { id: 5, name: 'Main Course' },
+  { id: 6, name: 'Appetizer' },
+  { id: 7, name: 'Dessert' },
+];
 
 export interface PosCategoryOption {
   id: number;
@@ -18,17 +17,28 @@ export interface PosCategoryOption {
 }
 
 export interface PosCategoryTabsProps {
-  categories: PosCategoryOption[];
-  selectedTab: PosOrderingCategoryTab | string;
-  onSelectTab: (tabName: PosOrderingCategoryTab | string) => void;
+  /** Active menu categories from the API (id + name, already sort-ordered). */
+  categories?: PosCategoryOption[];
+  selectedTab: string;
+  onSelectTab: (tabName: string) => void;
 }
 
-export function PosCategoryTabs({ categories, selectedTab, onSelectTab }: PosCategoryTabsProps) {
+export function PosCategoryTabs({
+  categories,
+  selectedTab,
+  onSelectTab,
+}: PosCategoryTabsProps) {
+  const displayCategories = categories ?? MOCK_POS_CATEGORIES;
+
+  const tabNames = useMemo(
+    () => ['All', ...displayCategories.map((category) => category.name)],
+    [displayCategories],
+  );
+
   return (
     <div className="flex gap-2 overflow-x-auto pb-2">
-      {POS_ORDERING_CATEGORY_TABS.map((tabName) => {
+      {tabNames.map((tabName) => {
         const isActive = selectedTab === tabName;
-        const categoryExists = tabName === 'All' || categories.some((c) => c.name === tabName);
 
         return (
           <button
@@ -39,7 +49,7 @@ export function PosCategoryTabs({ categories, selectedTab, onSelectTab }: PosCat
               isActive
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            } ${!categoryExists && tabName !== 'All' ? 'opacity-60' : ''}`}
+            }`}
           >
             {tabName}
           </button>
