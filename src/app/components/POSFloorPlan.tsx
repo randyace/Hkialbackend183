@@ -62,7 +62,8 @@ function getMatchingBookings(excludeNos: Set<string>): MatchingBooking[] {
     if (excludeNos.has(b.bookingNo)) return false;
     const start = posTimeToMins(b.startTime);
     const end   = posTimeToMins(b.endTime);
-    return start <= demoNow + 60 && end >= demoNow - 30;
+    // Reserved buffer: historically 30 minutes; widen to 3 hours.
+    return start <= demoNow + 60 && end >= demoNow - 180;
   }).map(b => ({ ...b, hasPreOrder: !!getPreOrder(b.bookingNo) }));
 }
 
