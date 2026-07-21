@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { X, Plane, Clock, User, ShoppingCart, Search, Plus, Minus, AlertTriangle, Heart, CalendarDays, Users, CheckCheck } from 'lucide-react';
 import { getPreOrder, clearPreOrder, PreOrderEntry } from './preOrderStore';
 import { toast } from 'sonner';
+import { isWithinPosReserveWindow } from '../../../../../lib/pos/posReserveWindow';
 
 // ── Module-level: bookings that could match an available/reserved suite ────────
 interface MatchingBooking {
@@ -50,9 +51,11 @@ const RESERVED_BOOKING_009: MatchingBooking = {
   numberOfGuests: 2, status: 'Confirmed', hasPreOrder: false,
 };
 
-function posTimeToMins(t: string) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
+function flightTypeFromBookingNo(bookingNo: string): 'Arrival' | 'Departure' | 'Transit' {
+  const prefix = bookingNo.split('-')[0];
+  if (prefix === 'D') return 'Departure';
+  if (prefix === 'T') return 'Transit';
+  return 'Arrival';
 }
 
 /** Returns time-matching bookings, minus any already reserved for a specific suite. */
@@ -60,10 +63,12 @@ function getMatchingBookings(excludeNos: Set<string>): MatchingBooking[] {
   const demoNow = 14 * 60; // fixed demo time: 14:00
   return TODAY_BOOKINGS.filter(b => {
     if (excludeNos.has(b.bookingNo)) return false;
-    const start = posTimeToMins(b.startTime);
-    const end   = posTimeToMins(b.endTime);
-    // Reserved buffer: historically 30 minutes; widen to 3 hours.
-    return start <= demoNow + 60 && end >= demoNow - 180;
+    // Demo matching follows the same Arrival / Departure reserve window as POS.
+    return isWithinPosReserveWindow({
+      flightType: flightTypeFromBookingNo(b.bookingNo),
+      flightTime: b.flightTime,
+      nowMinutes: demoNow,
+    });
   }).map(b => ({ ...b, hasPreOrder: !!getPreOrder(b.bookingNo) }));
 }
 
