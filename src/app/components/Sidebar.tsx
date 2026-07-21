@@ -241,15 +241,15 @@ export function Sidebar({
     ?? displayUser.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="w-80 bg-[#0f2942] text-white flex flex-col h-full">
+    <div className="w-80 bg-[#0f2942] text-white flex flex-col h-full min-h-0">
 
       {/* Logo */}
-      <div className="p-6 border-b border-gray-700">
+      <div className="p-6 border-b border-gray-700 shrink-0">
         <img src={logoImage} alt="HKIA VIP Lounge" className="h-10" />
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 overflow-y-auto">
+      <nav className="flex-1 min-h-0 p-4 overflow-y-auto overscroll-y-contain">
         <div className="space-y-1">
           {displayMenuItems.map(item => (
             <div key={item.id}>
@@ -327,7 +327,7 @@ export function Sidebar({
       </nav>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-gray-700">
+      <div className="p-4 border-t border-gray-700 shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-3 w-full hover:bg-gray-700/50 p-2 rounded transition-colors">
