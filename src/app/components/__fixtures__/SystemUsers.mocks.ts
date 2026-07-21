@@ -8,6 +8,13 @@
 
 import type { SystemUser, SystemUsersProps } from '../SystemUsers';
 
+
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+
+
 const FIRST_NAMES  = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
 const LAST_NAMES   = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
 const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Staff', 'Staff', 'Staff', 'Staff'];
@@ -44,8 +51,8 @@ function generateMockUsers(): SystemUser[] {
       role,
       department,
       status,
-      lastLogin:   `${lastLoginDate.toISOString().split('T')[0]} ${String(lastLoginHour).padStart(2, '0')}:${String(lastLoginMin).padStart(2, '0')}`,
-      createdDate: createdDate.toISOString().split('T')[0],
+      lastLogin:   `${ymdLocal(lastLoginDate)} ${String(lastLoginHour).padStart(2, '0')}:${String(lastLoginMin).padStart(2, '0')}`,
+      createdDate: ymdLocal(createdDate),
       permissions,
     });
   }

@@ -7,6 +7,10 @@
  * is only used during design review / development.
  */
 
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ── Core booking interface ────────────────────────────────────────────────────
 
 export interface Booking {
@@ -476,9 +480,9 @@ export const generateMockBooking = (id: number): Booking => {
     guestName: names[i % names.length],
     accountNo: `ACC-20${23 + (i % 2)}-${String(1000 + i).slice(-4)}`,
     suite: suites[i % suites.length],
-    dateTime: `${date.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
+    dateTime: `${ymdLocal(date)} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
     flightType: i % 2 === 0 ? 'Departure' : 'Arrival',
-    arrivalDate: (() => { const d = new Date(date); d.setDate(d.getDate() + (i % 2 === 0 ? 0 : 1)); return d.toISOString().split('T')[0]; })(),
+    arrivalDate: (() => { const d = new Date(date); d.setDate(d.getDate() + (i % 2 === 0 ? 0 : 1)); return ymdLocal(d); })(),
     flightNo: `${airlines[i % airlines.length]}${String(100 + i * 17).slice(-3)}`,
     flightTime: `${String(hour + 3).padStart(2, '0')}:${i % 2 === 0 ? '45' : '15'}`,
     flightOrigin: i % 2 === 0 ? origins[i % origins.length] : undefined,

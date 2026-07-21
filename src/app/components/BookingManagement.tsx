@@ -27,10 +27,17 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import {
+
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
+
+
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 
 interface Booking {
   id: number;
@@ -117,7 +124,7 @@ const generateMockBookings = (): Booking[] => {
     // Booking number prefix based on flight type
     const prefix = flightType === 'Arrival' ? 'A' : flightType === 'Departure' ? 'D' : 'T';
     // Middle part: yyyymmdd
-    const dateStr = date.toISOString().split('T')[0].replace(/-/g, '');
+    const dateStr = ymdLocal(date).replace(/-/g, '');
     const bookingNo = `${prefix}-${dateStr}-${String(i + 1).padStart(6, '0')}`;
 
     // Booking category based on account type
@@ -207,7 +214,7 @@ const generateMockBookings = (): Booking[] => {
       guestName: names[i % names.length],
       accountNo: `ACC-20${23 + (i % 2)}-${String(1000 + i).slice(-4)}`,
       suite: suites[i % suites.length],
-      dateTime: `${date.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
+      dateTime: `${ymdLocal(date)} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
       flightNo: `${airlines[i % airlines.length]}${String(100 + i * 17).slice(-3)}`,
       flightTime: `${String(hour + 3).padStart(2, '0')}:${i % 2 === 0 ? '45' : '15'}`,
       flightOrigin,

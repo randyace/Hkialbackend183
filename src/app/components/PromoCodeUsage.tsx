@@ -26,6 +26,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+// INV-X18: product calendar day is HKT.
+const localDateStr = (d: Date = new Date()): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(d);
+
+
 type CodeType = 'Free bookings';
 
 function TypeBadge({ type }: { type: CodeType }) {
@@ -400,7 +405,7 @@ export function PromoCodeUsage({
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `promo-batch-usage-${new Date().toISOString().split('T')[0]}.csv`;
+    a.href = url; a.download = `promo-batch-usage-${localDateStr()}.csv`;
     a.click(); URL.revokeObjectURL(url);
     toast.success(`Excel downloaded — ${filtered.length} records exported.`);
   };
@@ -418,7 +423,7 @@ export function PromoCodeUsage({
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `promo-transactions-${new Date().toISOString().split('T')[0]}.csv`;
+    a.href = url; a.download = `promo-transactions-${localDateStr()}.csv`;
     a.click(); URL.revokeObjectURL(url);
     toast.success(`Transaction log downloaded — ${filteredTxns.length} records exported.`);
   };

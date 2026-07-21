@@ -29,6 +29,13 @@ import React from 'react';
 import { SupervisingApprovalReview } from './SupervisingApprovalReview';
 import type { SupervisingBooking, InvoiceLineItem } from './SupervisingApprovalReview';
 
+
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type SupervisingStatus = {
@@ -197,7 +204,7 @@ const generateBookings = (): SupervisingBooking[] => {
       agencyName,
       agencyDiscountRate,
       suite,
-      dateTime:   `${date.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
+      dateTime:   `${ymdLocal(date)} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
       flightNo:   `${airline}${String(flightNum).slice(-3)}`,
       flightTime: `${String(hour + 3).padStart(2, '0')}:${i % 2 === 0 ? '45' : '15'}`,
       flightType: i % 2 === 0 ? 'Arrival' : 'Departure',

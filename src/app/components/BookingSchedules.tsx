@@ -71,12 +71,18 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
 }
 function addDays(iso: string, n: number) {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
+  // Pure calendar math on Y-m-d — never toISOString() (UTC drift).
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + n, 12));
+  const y = dt.getUTCFullYear();
+  const mo = String(dt.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(dt.getUTCDate()).padStart(2, '0');
+  return `${y}-${mo}-${d}`;
 }
 function todayISO() {
-  return '2026-03-07'; // system date for this demo
+  // INV-X18: product "today" is HKT (wrapper live path also uses hktTodayYmd).
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date());
 }
 
 // ── Types ────────────────────────────────────────────────────────────────────

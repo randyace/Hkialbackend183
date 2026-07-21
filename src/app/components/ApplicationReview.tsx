@@ -109,7 +109,9 @@ export function ApplicationReview({
   const handleReview = (app: Application) => {
     setSelectedApp(app);
     // Generate account number
-    const date = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+    // INV-X18: HKT calendar day for generated account slug (yy-mm-dd → yymmdd).
+    const hkt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(new Date());
+    const date = hkt.slice(2).replace(/-/g, '');
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     setAccountNumber(`ACC-${date}-${random}`);
   };
