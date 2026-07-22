@@ -4,11 +4,14 @@ import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 
+export type PosPrinterRole = 'kitchen' | 'receipt' | 'both';
+
 export interface PosPrinterFormData {
   name: string;
   host: string;
   port: number;
   beepCount: number;
+  role: PosPrinterRole;
   isActive: boolean;
 }
 
@@ -28,6 +31,7 @@ const defaultFormData: PosPrinterFormData = {
   host: '',
   port: 9100,
   beepCount: 1,
+  role: 'both',
   isActive: true,
 };
 
@@ -165,6 +169,28 @@ export function PosPrinterEdit({
               />
             </label>
           </div>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Role</span>
+            <select
+              value={formData.role}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  role: e.target.value as PosPrinterRole,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            >
+              <option value="both">Kitchen + Receipt</option>
+              <option value="kitchen">Kitchen tickets only</option>
+              <option value="receipt">Guest receipts only</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Kitchen routing still uses each menu item&apos;s assigned printer. Receipt jobs go to
+              printers with role Receipt or Both.
+            </p>
+          </label>
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
