@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Printer } from 'lucide-react';
 
 export interface PosPrinterRow {
   id: number;
@@ -10,23 +10,28 @@ export interface PosPrinterRow {
   host: string;
   port: number;
   beepCount: number;
+  role?: 'kitchen' | 'receipt' | 'both';
   isActive: boolean;
 }
 
 export interface PosPrintersViewProps {
   printers: PosPrinterRow[];
   isLoading?: boolean;
+  testingPrinterId?: number | null;
   onCreatePrinter?: () => void;
   onEditPrinter?: (id: number) => void;
   onDeletePrinter?: (id: number) => void;
+  onTestPrint?: (id: number) => void;
 }
 
 export function PosPrinters({
   printers,
   isLoading = false,
+  testingPrinterId = null,
   onCreatePrinter,
   onEditPrinter,
   onDeletePrinter,
+  onTestPrint,
 }: PosPrintersViewProps) {
   const [search, setSearch] = useState('');
 
@@ -75,6 +80,7 @@ export function PosPrinters({
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Host IP</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Port</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Beep Count</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">Role</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
               </tr>
@@ -82,13 +88,13 @@ export function PosPrinters({
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
                     Loading printers...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
                     No printers found.
                   </td>
                 </tr>
@@ -100,6 +106,7 @@ export function PosPrinters({
                     <td className="px-4 py-3 text-gray-700 font-mono text-xs">{printer.host}</td>
                     <td className="px-4 py-3 text-gray-700">{printer.port}</td>
                     <td className="px-4 py-3 text-gray-700">{printer.beepCount}</td>
+                    <td className="px-4 py-3 text-gray-700 capitalize">{printer.role ?? 'both'}</td>
                     <td className="px-4 py-3">
                       <Badge
                         className={
@@ -113,6 +120,18 @@ export function PosPrinters({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
+                        {onTestPrint && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!printer.isActive || testingPrinterId === printer.id}
+                            onClick={() => onTestPrint(printer.id)}
+                            className="gap-1"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            {testingPrinterId === printer.id ? 'Sending…' : 'Test print'}
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

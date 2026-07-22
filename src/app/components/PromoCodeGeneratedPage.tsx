@@ -9,6 +9,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
+// INV-X18: product calendar day is HKT.
+const localDateStr = (d: Date = new Date()): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(d);
+
+
 // ── QR Code renderer (canvas-based, no external lib needed via DOM API) ────────
 async function renderQRToCanvas(text: string, size = 200): Promise<HTMLCanvasElement> {
   const QRCode = (await import('qrcode')).default;
@@ -137,7 +142,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `promo-codes-${prefix}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `promo-codes-${prefix}-${localDateStr()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setCsvLoading(false);
@@ -204,7 +209,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
         doc.text(usedAt ? `USED: ${usedAt}` : `#${i + 1} — Available`, x + cellW / 2, y + qrSize + 8, { align: 'center' });
         doc.setTextColor(30, 30, 30);
       }
-      doc.save(`promo-codes-${prefix}-${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`promo-codes-${prefix}-${localDateStr()}.pdf`);
       toast.success(`PDF downloaded with ${codes.length} QR codes!`);
     } catch (err) {
       console.error(err);
@@ -252,7 +257,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `promo-qrcodes-${prefix}-${new Date().toISOString().split('T')[0]}.zip`;
+      a.download = `promo-qrcodes-${prefix}-${localDateStr()}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success(`ZIP downloaded with ${codes.length} QR PNG files!`);

@@ -327,7 +327,13 @@ export function BookingReviewPage({
   const numberOfLuggage = 1 + (id % 3);
   const arrivalDate    = booking.flightType === 'Arrival'
     ? booking.dateTime.split(' ')[0]
-    : (() => { const d = new Date(booking.dateTime.split(' ')[0]); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })();
+    : (() => {
+        // Pure calendar +1 on Kind W date prefix (INV-X18) — never toISOString().
+        const m = booking.dateTime.split(' ')[0].match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (!m) return booking.dateTime.split(' ')[0];
+        const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + 1, 12));
+        return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}-${String(dt.getUTCDate()).padStart(2, '0')}`;
+      })();
 
   // Premiere Suite + Lounge Deluxe breakdown
   // 2026-06-15 — round 6.2.42 (bug "review page shows wrong per-suite

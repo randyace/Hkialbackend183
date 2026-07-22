@@ -35,6 +35,13 @@ import { toast } from 'sonner@2.0.3';
 import React from 'react';
 import { BookingReviewPage } from './BookingReviewPage';
 
+
+function ymdLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface PendingBooking {
@@ -179,7 +186,7 @@ const generatePendingBookings = (): PendingBooking[] => {
       membershipTier,
       companyName,
       suite: suites[idx % suites.length],
-      dateTime: `${date.toISOString().split('T')[0]} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
+      dateTime: `${ymdLocal(date)} ${String(hour).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
       flightNo: `${airline}${String(flightNum).slice(-3)}`,
       flightTime: `${String(hour + 3).padStart(2, '0')}:${i % 2 === 0 ? '45' : '15'}`,
       flightOrigin: i % 2 === 0 ? origins[idx % origins.length] : undefined,
@@ -201,7 +208,7 @@ const generatePendingBookings = (): PendingBooking[] => {
       specialRequests: SPECIAL_REQUESTS[idx % SPECIAL_REQUESTS.length] || undefined,
       originalData: i % 3 === 0 ? {
         suite: suites[(idx + 1) % suites.length],
-        dateTime: `${date.toISOString().split('T')[0]} ${String(hour - 1).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`,
+        dateTime: `${ymdLocal(date)} ${String(hour - 1).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`,
         flightNo: `${airline}${String(flightNum + 50).slice(-3)}`,
         flightTime: `${String(hour + 2).padStart(2, '0')}:${i % 2 === 0 ? '30' : '00'}`,
         flightOrigin: i % 2 === 0 ? origins[(idx + 1) % origins.length] : undefined,

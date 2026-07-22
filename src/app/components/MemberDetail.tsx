@@ -30,8 +30,9 @@ import { countryNameFor } from '../../../../../utils/countries';
 // by Sky 2026-07-07 against admin CreateBooking). This helper uses
 // LOCAL components (`getFullYear` / `getMonth` / `getDate`) so the
 // returned YYYY-MM-DD string matches the user's wall-clock day.
+// INV-X18: product calendar day is HKT (not browser-local / UTC).
 const localDateStr = (d: Date = new Date()): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Hong_Kong' }).format(d);
 
 // ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
 
