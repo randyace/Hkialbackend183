@@ -2339,7 +2339,7 @@ export function CreateBooking({
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base unit when credit remains (or Unlimited).</span>
+                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD).</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -2352,7 +2352,7 @@ export function CreateBooking({
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base.</span>
+                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base only if LD credit is checked.</span>
                     </span>
                   </label>
                 </div>
