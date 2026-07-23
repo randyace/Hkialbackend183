@@ -38,6 +38,7 @@ import { toast } from 'sonner@2.0.3';
 // EditSectionFlight in the admin edit page.
 import { computeVisitTimeRange } from './BookingEditView';
 import { NationalityTypeahead, isValidCountryCode } from '../../../../../components/NationalityTypeahead';
+import { AirportTypeahead } from '../../../../../components/AirportTypeahead';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -2516,31 +2517,40 @@ export function CreateBooking({
               )}
             </div>
 
-            {/* Origin */}
+            {/* Origin — IATA typeahead (city / code search; stores 3-letter code) */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Origin (IATA)</label>
-              <input type="text" value={flightOrigin} onChange={e => setFlightOrigin(e.target.value.toUpperCase())}
-                placeholder="e.g. LHR" maxLength={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-origin">
+                Origin (IATA)
+              </label>
+              <AirportTypeahead
+                id="create-flight-origin"
+                value={flightOrigin}
+                onChange={setFlightOrigin}
+                placeholder="Search IATA or city (e.g. LHR)"
+                data-testid="create-flight-origin"
+              />
             </div>
           </div>
 
           {/* Row 3 — Destination (optional for Transition) · Luggage · Flight Class */}
           <div className="grid grid-cols-3 gap-6">
 
-            {/* Destination */}
+            {/* Destination — IATA typeahead (city / code search; stores 3-letter code) */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-destination">
                 Destination (IATA)
                 {showTransit && flightType === 'Transit'
                   ? <span className="ml-2 text-xs font-normal text-gray-400">— optional</span>
                   : null
                 }
               </label>
-              <input type="text" value={flightDestination} onChange={e => setFlightDestination(e.target.value.toUpperCase())}
-                placeholder={showTransit && flightType === 'Transit' ? 'May be unknown' : 'e.g. HKG'}
-                maxLength={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
+              <AirportTypeahead
+                id="create-flight-destination"
+                value={flightDestination}
+                onChange={setFlightDestination}
+                placeholder={showTransit && flightType === 'Transit' ? 'May be unknown' : 'Search IATA or city (e.g. HKG)'}
+                data-testid="create-flight-destination"
+              />
               {showTransit && flightType === 'Transit' && (
                 <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                   <Info className="w-3 h-3 flex-shrink-0" />
