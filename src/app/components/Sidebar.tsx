@@ -51,6 +51,7 @@ export interface SidebarProps {
   /** Current active path — parent passes this, sidebar only renders visual state */
   currentPath?: string;
   /** Badge count shown on "Point of Sales" group */
+  /** Aggregated POS alert count (booking conflicts + overdue order suites). Shown on Point of Sales. */
   overdueOrdersCount?: number;
   /** Logged-in user info */
   user?: SidebarUser;

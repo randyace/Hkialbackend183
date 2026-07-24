@@ -137,6 +137,8 @@ export interface KDSOrderItem {
   notesZh?: string;
   /** True when this specific item has an allergy concern */
   allergyFlag?: boolean;
+  /** True when this item was flagged for expedite / rush */
+  isExpedited?: boolean;
   /** True when kitchen staff have acknowledged / prepared this item */
   done: boolean;
 }
@@ -400,6 +402,8 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
                   : isNew
                   ? 'bg-blue-50 border-blue-200 opacity-70'
                   : 'bg-green-50 border-green-200 opacity-70'
+                : item.isExpedited
+                ? 'bg-red-50 border-2 border-red-500'
                 : item.allergyFlag
                 ? 'bg-orange-50 border-orange-200'
                 : 'bg-gray-50 border-transparent'
@@ -426,6 +430,11 @@ function OrderCard({ order, lang, onToggleItem, onMarkAll }: OrderCardProps) {
                   >
                     {lang === 'zh' ? item.nameZh : item.name}
                   </span>
+                  {item.isExpedited && !item.done && (
+                    <span style={{ fontSize: '0.8em' }} className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 font-bold uppercase tracking-wide text-white animate-pulse">
+                      {t.rush}
+                    </span>
+                  )}
                   {item.allergyFlag && !item.done && (
                     <span style={{ fontSize: '0.85em' }} className="text-orange-600">
                       {t.checkAllergy}

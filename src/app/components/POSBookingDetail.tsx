@@ -1,6 +1,6 @@
-import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -36,6 +36,7 @@ interface OrderItem {
   servedTime?: string;
   cancelledAt?: string | null;
   isNew?: boolean;
+  isExpedited?: boolean;
 }
 
 interface FoodAllergy {
@@ -274,20 +275,40 @@ const MOCK_BOOKING_DETAIL: POSBooking = generateMockBooking('A-202603-000001');
 
 type TicketItemDialog = 'remarks' | 'quantity' | null;
 
+function isOrderItemExpediteStatusEligible(order: OrderItem): boolean {
+  if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served') {
+    return false;
+  }
+  return order.isNew === true || order.status === 'pending' || order.status === 'preparing';
+}
+
+/** Pending/Preparing (or new cart) items that are not already expedited — selectable in batch mode. */
+function isOrderItemExpediteSelectable(order: OrderItem): boolean {
+  return isOrderItemExpediteStatusEligible(order) && !order.isExpedited;
+}
+
 function TicketOrderItemRow({
   order,
   isCancelled,
   statusBadgeClass,
   statusLabel,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
   onCancelOrderItem,
   cancellingOrderItemId,
   onUpdateNewItem,
   onRemoveNewItem,
+  onToggleExpedite,
+  isTogglingExpedite = false,
 }: {
   order: OrderItem;
   isCancelled: boolean;
   statusBadgeClass: string;
   statusLabel: string;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (orderId: string) => void;
   onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
   cancellingOrderItemId?: number | null;
   onUpdateNewItem?: (
@@ -295,6 +316,8 @@ function TicketOrderItemRow({
     payload: { quantity?: number; remarks?: string | null },
   ) => void;
   onRemoveNewItem?: (itemId: string) => void;
+  onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
+  isTogglingExpedite?: boolean;
 }) {
   const { t } = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -303,10 +326,14 @@ function TicketOrderItemRow({
   const [draftQuantity, setDraftQuantity] = useState(String(order.quantity));
   const trimmedRemarks = (order.remarks ?? '').trim();
   const isNewItem = Boolean(order.isNew);
+  const isExpedited = Boolean(order.isExpedited);
   const isSubmittedItem = !isNewItem && !isCancelled && Boolean(order.posOrderItemId);
+  const isStatusEligible = isOrderItemExpediteStatusEligible(order);
+  const canToggleExpedite = isStatusEligible;
   const canOpenMenu =
-    (isNewItem && Boolean(onUpdateNewItem || onRemoveNewItem)) ||
-    (isSubmittedItem && Boolean(onCancelOrderItem));
+    !selectionMode &&
+    ((isNewItem && Boolean(onUpdateNewItem || onRemoveNewItem)) ||
+      (isSubmittedItem && Boolean(onCancelOrderItem)));
   const isCancellingSubmitted =
     isSubmittedItem && cancellingOrderItemId === order.posOrderItemId;
 
@@ -356,9 +383,17 @@ function TicketOrderItemRow({
   const rowBody = (
     <>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold truncate ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-          {order.name}
-        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className={`text-sm font-semibold truncate ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+            {order.name}
+          </p>
+          {isExpedited && !isCancelled ? (
+            <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              <Flame className="h-3 w-3" aria-hidden />
+              {t('pos.expedited', 'Expedited')}
+            </span>
+          ) : null}
+        </div>
         {trimmedRemarks ? (
           <div className="mt-1.5 flex">
             <span
@@ -393,25 +428,78 @@ function TicketOrderItemRow({
     </>
   );
 
+  const borderClass = isCancelled
+    ? 'border-gray-200 bg-gray-50'
+    : isExpedited
+      ? 'border-2 border-red-500 bg-red-50'
+      : 'border-gray-200 bg-white';
+
+  if (selectionMode) {
+    if (!isStatusEligible) {
+      return null;
+    }
+
+    if (isExpedited) {
+      return (
+        <div
+          className={`flex w-full items-center gap-2 rounded-lg border py-2 px-3 text-left opacity-60 ${borderClass}`}
+          aria-disabled="true"
+          title={t('pos.already_expedited', 'Already Expedited')}
+        >
+          <Square className="h-5 w-5 shrink-0 text-gray-300" aria-hidden />
+          {rowBody}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={`flex w-full items-center gap-2 rounded-lg border py-2 px-3 text-left ${borderClass}`}
+        onClick={() => onToggleSelect?.(order.id)}
+      >
+        {isSelected ? (
+          <CheckSquare className="h-5 w-5 shrink-0 text-red-600" />
+        ) : (
+          <Square className="h-5 w-5 shrink-0 text-gray-400" />
+        )}
+        {rowBody}
+      </button>
+    );
+  }
+
   if (!canOpenMenu) {
     return (
-      <div
-        className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${
-          isCancelled ? 'border-gray-200 bg-gray-50' : 'border-gray-200 bg-white'
-        }`}
-      >
+      <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
         {rowBody}
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={() => void onToggleExpedite(order)}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
       </div>
     );
   }
 
   return (
     <>
-      <div
-        className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${
-          isCancelled ? 'border-gray-200 bg-gray-50' : 'border-gray-200 bg-white'
-        }`}
-      >
+      <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
         <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
           <DropdownMenuTrigger asChild>
             <button
@@ -460,6 +548,31 @@ function TicketOrderItemRow({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void onToggleExpedite(order);
+            }}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
 
         {isNewItem && onRemoveNewItem ? (
           <button
@@ -601,6 +714,10 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   onSubmitPendingOrder?: () => void | Promise<void>;
   hasPendingOrderItems?: boolean;
   isSubmittingPendingOrder?: boolean;
+  onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
+  onConfirmBatchExpedite?: (orders: OrderItem[]) => void | Promise<void>;
+  togglingExpediteOrderId?: string | null;
+  isConfirmingBatchExpedite?: boolean;
   menuContent?: ReactNode;
 }
 
@@ -620,8 +737,13 @@ export function POSBookingDetail({
   onSubmitPendingOrder,
   hasPendingOrderItems = false,
   isSubmittingPendingOrder = false,
+  onToggleExpedite,
+  onConfirmBatchExpedite,
+  togglingExpediteOrderId = null,
+  isConfirmingBatchExpedite = false,
   menuContent = null,
 }: POSBookingDetailFullProps) {
+  const { t } = useTranslation();
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const guests = booking.guests?.length > 0 ? booking.guests : booking.guestProfiles;
 
@@ -692,10 +814,47 @@ export function POSBookingDetail({
   const [isContextDetailsOpen, setIsContextDetailsOpen] = useState(false);
   const [isTicketSidebarVisible, setIsTicketSidebarVisible] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<'menu' | 'ticket'>('menu');
+  const [expediteSelectionMode, setExpediteSelectionMode] = useState(false);
+  const [selectedExpediteIds, setSelectedExpediteIds] = useState<Set<string>>(new Set());
   const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
   const ticketItemCount = booking.orders.length;
   const showTicketBottomBarOnMobile = mobilePanel === 'menu';
   const showTicketBottomBarOnDesktop = !isTicketSidebarVisible;
+
+  const expediteEligibleOrders = useMemo(
+    () => booking.orders.filter((order) => isOrderItemExpediteSelectable(order)),
+    [booking.orders],
+  );
+
+  const exitExpediteSelectionMode = () => {
+    setExpediteSelectionMode(false);
+    setSelectedExpediteIds(new Set());
+  };
+
+  const toggleExpediteSelection = (orderId: string) => {
+    setSelectedExpediteIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllPendingForExpedite = () => {
+    setSelectedExpediteIds(new Set(expediteEligibleOrders.map((order) => order.id)));
+  };
+
+  const handleConfirmBatchExpedite = async () => {
+    const selected = expediteEligibleOrders.filter((order) => selectedExpediteIds.has(order.id));
+    if (selected.length === 0 || !onConfirmBatchExpedite) {
+      return;
+    }
+    await onConfirmBatchExpedite(selected);
+    exitExpediteSelectionMode();
+  };
 
   const openTicketPanel = () => {
     setIsTicketSidebarVisible(true);
@@ -719,9 +878,53 @@ export function POSBookingDetail({
             <p className="text-base font-semibold text-yellow-900 leading-tight">{pendingOrders}</p>
           </div>
         </div>
-        <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
-        <p className="text-sm text-gray-600">{booking.memberName}</p>
-        <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
+            <p className="text-sm text-gray-600">{booking.memberName}</p>
+            <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
+          </div>
+          {expediteEligibleOrders.length > 0 && onConfirmBatchExpedite ? (
+            expediteSelectionMode ? (
+              <Button type="button" variant="outline" size="sm" onClick={exitExpediteSelectionMode}>
+                {t('pos.cancel', 'Cancel')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                onClick={() => setExpediteSelectionMode(true)}
+              >
+                <Zap className="mr-1 h-3.5 w-3.5" />
+                {t('pos.batch_expedite', 'Batch Expedite')}
+              </Button>
+            )
+          ) : null}
+        </div>
+        {expediteSelectionMode ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={selectAllPendingForExpedite}>
+              {t('pos.select_all_pending', 'Select All Pending')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={selectedExpediteIds.size === 0 || isConfirmingBatchExpedite}
+              onClick={() => void handleConfirmBatchExpedite()}
+            >
+              {isConfirmingBatchExpedite ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Flame className="mr-1 h-3.5 w-3.5" />
+              )}
+              {t('pos.confirm_expedite', 'Confirm Expedite')}
+              {selectedExpediteIds.size > 0 ? ` (${selectedExpediteIds.size})` : ''}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -738,10 +941,15 @@ export function POSBookingDetail({
                 isCancelled={isCancelled}
                 statusBadgeClass={getOrderStatusColor(order.status)}
                 statusLabel={formatOrderStatusLabel(order.status)}
+                selectionMode={expediteSelectionMode}
+                isSelected={selectedExpediteIds.has(order.id)}
+                onToggleSelect={toggleExpediteSelection}
                 onCancelOrderItem={onCancelOrderItem}
                 cancellingOrderItemId={cancellingOrderItemId}
                 onUpdateNewItem={onUpdateNewItem}
                 onRemoveNewItem={onRemoveNewItem}
+                onToggleExpedite={onToggleExpedite}
+                isTogglingExpedite={togglingExpediteOrderId === order.id}
               />
             );
           })

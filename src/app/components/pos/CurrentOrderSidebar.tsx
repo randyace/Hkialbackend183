@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Pencil } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CheckSquare, Flame, Pencil, Square, Zap } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -27,6 +27,7 @@ export interface OrderCartItem {
   name: string;
   quantity: number;
   remarks: string;
+  isExpedited?: boolean;
 }
 
 export interface CurrentOrderSidebarProps {
@@ -36,6 +37,8 @@ export interface CurrentOrderSidebarProps {
   onQuantityChange: (cartLineId: string, quantity: number) => void;
   onRemarksChange: (cartLineId: string, remarks: string) => void;
   onRemoveItem: (cartLineId: string) => void;
+  onToggleExpedite?: (cartLineId: string) => void;
+  onBatchExpedite?: (cartLineIds: string[]) => void;
   onSubmitOrder: () => void;
 }
 
@@ -43,14 +46,22 @@ type CartItemDialog = 'remarks' | 'quantity' | null;
 
 export function OrderCartItemRow({
   item,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
   onQuantityChange,
   onRemarksChange,
   onRemoveItem,
+  onToggleExpedite,
 }: {
   item: OrderCartItem;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (cartLineId: string) => void;
   onQuantityChange: (cartLineId: string, quantity: number) => void;
   onRemarksChange: (cartLineId: string, remarks: string) => void;
   onRemoveItem: (cartLineId: string) => void;
+  onToggleExpedite?: (cartLineId: string) => void;
 }) {
   const { t } = useTranslation();
   const [openDialog, setOpenDialog] = useState<CartItemDialog>(null);
@@ -58,6 +69,7 @@ export function OrderCartItemRow({
   const [draftRemarks, setDraftRemarks] = useState(item.remarks);
   const [draftQuantity, setDraftQuantity] = useState(String(item.quantity));
   const trimmedRemarks = item.remarks.trim();
+  const isExpedited = Boolean(item.isExpedited);
 
   useEffect(() => {
     if (openDialog === 'remarks') {
@@ -82,57 +94,156 @@ export function OrderCartItemRow({
     setOpenDialog(null);
   };
 
+  const borderClass = isExpedited
+    ? 'border-2 border-red-500 bg-red-50 shadow-sm'
+    : 'border border-gray-200 bg-gray-50 shadow-sm';
+
+  if (selectionMode && isExpedited) {
+    return (
+      <div
+        className={`rounded-lg opacity-60 ${borderClass}`}
+        aria-disabled="true"
+        title={t('pos.already_expedited', 'Already Expedited')}
+      >
+        <div className="flex items-stretch gap-1">
+          <div className="flex items-center px-2 text-gray-300" aria-hidden>
+            <Square className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1 rounded-lg p-3 text-left">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                  <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                    <Flame className="h-3 w-3" aria-hidden />
+                    {t('pos.expedited', 'Expedited')}
+                  </span>
+                </div>
+                {trimmedRemarks ? (
+                  <div className="mt-1.5 flex">
+                    <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                      <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                      <span className="line-clamp-2">{trimmedRemarks}</span>
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+              <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                ×{item.quantity}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
-      <div className="rounded-lg border border-gray-200 bg-gray-50 shadow-sm">
-        <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-          <DropdownMenuTrigger asChild>
+      <div className={`rounded-lg ${borderClass}`}>
+        <div className="flex items-stretch gap-1">
+          {selectionMode ? (
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsDropdownOpen(true);
-              }}
-              className="w-full rounded-lg p-3 text-left transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-              aria-label={t('pos.actions_for', 'Actions for {{name}}', { name: item.name })}
+              className="flex items-center px-2 text-red-600"
+              onClick={() => onToggleSelect?.(item.cartLineId)}
+              aria-label={t('pos.select_item', 'Select {{name}}', { name: item.name })}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                  {trimmedRemarks ? (
-                    <div className="mt-1.5 flex">
-                      <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
-                        <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
-                        <span className="line-clamp-2">{trimmedRemarks}</span>
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-                <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
-                  ×{item.quantity}
-                </span>
-              </div>
+              {isSelected ? (
+                <CheckSquare className="h-5 w-5" />
+              ) : (
+                <Square className="h-5 w-5 text-gray-400" />
+              )}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            className="w-44 z-[100]"
-            style={{ zIndex: 99999 }}
-          >
-            <DropdownMenuItem onSelect={() => setOpenDialog('remarks')}>
-              {t('pos.custom_request', 'Custom Request')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setOpenDialog('quantity')}>
-              {t('pos.change_quantity', 'Change Quantity')}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600"
-              onSelect={() => onRemoveItem(item.cartLineId)}
+          ) : null}
+
+          <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectionMode) {
+                    onToggleSelect?.(item.cartLineId);
+                    return;
+                  }
+                  setIsDropdownOpen(true);
+                }}
+                className="min-w-0 flex-1 rounded-lg p-3 text-left transition-colors hover:bg-gray-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                aria-label={t('pos.actions_for', 'Actions for {{name}}', { name: item.name })}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                      {isExpedited ? (
+                        <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          <Flame className="h-3 w-3" aria-hidden />
+                          {t('pos.expedited', 'Expedited')}
+                        </span>
+                      ) : null}
+                    </div>
+                    {trimmedRemarks ? (
+                      <div className="mt-1.5 flex">
+                        <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                          <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                          <span className="line-clamp-2">{trimmedRemarks}</span>
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                    ×{item.quantity}
+                  </span>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            {!selectionMode ? (
+              <DropdownMenuContent
+                align="start"
+                className="w-44 z-[100]"
+                style={{ zIndex: 99999 }}
+              >
+                <DropdownMenuItem onSelect={() => setOpenDialog('remarks')}>
+                  {t('pos.custom_request', 'Custom Request')}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setOpenDialog('quantity')}>
+                  {t('pos.change_quantity', 'Change Quantity')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600"
+                  onSelect={() => onRemoveItem(item.cartLineId)}
+                >
+                  {t('pos.cancel_item', 'Cancel Item')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            ) : null}
+          </DropdownMenu>
+
+          {!selectionMode && onToggleExpedite ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpedite(item.cartLineId);
+              }}
+              className={`m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors ${
+                isExpedited
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+              }`}
+              aria-pressed={isExpedited}
+              aria-label={
+                isExpedited
+                  ? t('pos.clear_expedite', 'Clear expedite for {{name}}', { name: item.name })
+                  : t('pos.expedite_item', 'Expedite {{name}}', { name: item.name })
+              }
+              title={t('pos.expedite', 'Expedite')}
             >
-              {t('pos.cancel_item', 'Cancel Item')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Zap className="h-4 w-4" fill={isExpedited ? 'currentColor' : 'none'} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <Dialog
@@ -221,15 +332,102 @@ export function CurrentOrderSidebar({
   onQuantityChange,
   onRemarksChange,
   onRemoveItem,
+  onToggleExpedite,
+  onBatchExpedite,
   onSubmitOrder,
 }: CurrentOrderSidebarProps) {
+  const { t } = useTranslation();
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const eligibleIds = useMemo(
+    () => items.filter((item) => !item.isExpedited).map((item) => item.cartLineId),
+    [items],
+  );
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (cartLineId: string) => {
+    setSelectedIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(cartLineId)) {
+        next.delete(cartLineId);
+      } else {
+        next.add(cartLineId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllPending = () => {
+    setSelectedIds(new Set(eligibleIds));
+  };
+
+  const confirmBatchExpedite = () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) {
+      return;
+    }
+    onBatchExpedite?.(ids);
+    exitSelectionMode();
+  };
+
   return (
     <aside className="flex w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-5 py-4">
-        <h2 className="text-lg font-semibold text-gray-900">Current Order</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          {items.length} item{items.length === 1 ? '' : 's'}
-        </p>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Current Order</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {items.length} item{items.length === 1 ? '' : 's'}
+            </p>
+          </div>
+          {items.length > 0 && onBatchExpedite ? (
+            selectionMode ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={exitSelectionMode}
+              >
+                {t('pos.cancel', 'Cancel')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                onClick={() => setSelectionMode(true)}
+              >
+                <Zap className="mr-1 h-3.5 w-3.5" />
+                {t('pos.batch_expedite', 'Batch Expedite')}
+              </Button>
+            )
+          ) : null}
+        </div>
+
+        {selectionMode ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={selectAllPending}>
+              {t('pos.select_all_pending', 'Select All Pending')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={selectedIds.size === 0}
+              onClick={confirmBatchExpedite}
+            >
+              <Flame className="mr-1 h-3.5 w-3.5" />
+              {t('pos.confirm_expedite', 'Confirm Expedite')}
+              {selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -243,9 +441,13 @@ export function CurrentOrderSidebar({
               <li key={item.cartLineId}>
                 <OrderCartItemRow
                   item={item}
+                  selectionMode={selectionMode}
+                  isSelected={selectedIds.has(item.cartLineId)}
+                  onToggleSelect={toggleSelect}
                   onQuantityChange={onQuantityChange}
                   onRemarksChange={onRemarksChange}
                   onRemoveItem={onRemoveItem}
+                  onToggleExpedite={onToggleExpedite}
                 />
               </li>
             ))}
@@ -257,7 +459,7 @@ export function CurrentOrderSidebar({
         <Button
           type="button"
           className="w-full bg-blue-600 text-white hover:bg-blue-700"
-          disabled={items.length === 0 || isSubmitting || !canSubmit}
+          disabled={items.length === 0 || isSubmitting || !canSubmit || selectionMode}
           onClick={onSubmitOrder}
         >
           {isSubmitting ? 'Submitting...' : 'Submit Order'}
