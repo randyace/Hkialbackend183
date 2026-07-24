@@ -587,6 +587,7 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   heldPreorderItems?: Array<{
     name_en?: string | null;
     quantity: number;
+    remarks?: string | null;
   }>;
   onFireHeldPreorders?: () => void;
   isFiringHeldPreorders?: boolean;
@@ -946,15 +947,29 @@ export function POSBookingDetail({
                 Held Pre-orders (Guest not yet arrived / Ready to fire)
               </h3>
               <ul className="mt-2 space-y-1">
-                {heldPreorderItems.map((item, index) => (
-                  <li
-                    key={`${item.name_en ?? 'item'}-${index}`}
-                    className="flex items-center justify-between rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
-                  >
-                    <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
-                    <span className="text-gray-600">x{item.quantity}</span>
-                  </li>
-                ))}
+                {heldPreorderItems.map((item, index) => {
+                  const trimmedRemarks = (item.remarks ?? '').trim();
+
+                  return (
+                    <li
+                      key={`${item.name_en ?? 'item'}-${item.remarks ?? ''}-${index}`}
+                      className="flex items-start justify-between gap-3 rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
+                        {trimmedRemarks ? (
+                          <div className="mt-1.5 flex">
+                            <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                              <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                              <span className="line-clamp-2">{trimmedRemarks}</span>
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-gray-600">x{item.quantity}</span>
+                    </li>
+                  );
+                })}
               </ul>
               <Button
                 type="button"
