@@ -5,7 +5,7 @@ import {
   AlertCircle, Plane, Car, ShoppingBag, Accessibility, ShieldCheck,
   Star, User, Mail, Phone, MessageSquare, Luggage, MapPin,
   X, CreditCard, RotateCcw, ChevronDown, ChevronUp, Clock,
-  Search, FileText, DollarSign, Minus
+  Search, FileText, DollarSign, Minus, Loader2
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -38,6 +38,7 @@ import { toast } from 'sonner@2.0.3';
 // EditSectionFlight in the admin edit page.
 import { computeVisitTimeRange } from './BookingEditView';
 import { NationalityTypeahead, isValidCountryCode } from '../../../../../components/NationalityTypeahead';
+import { AirportTypeahead } from '../../../../../components/AirportTypeahead';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -574,6 +575,22 @@ export interface CreateBookingProps {
    */
   bookableItemPrices?: Record<string, number>;
   /**
+   * 2026-07-23 — FlightAware AeroAPI autofill. Wrapper calls
+   * `GET /api/flights/lookup` and returns mapped fields; the view
+   * applies them to local flight state. Absent = hide Lookup button.
+   */
+  onFlightLookup?: (params: {
+    flightNo: string;
+    flightDate: string;
+    flightType: 'Arrival' | 'Departure' | 'Transit';
+  }) => Promise<{
+    flightNo?: string | null;
+    flightDate?: string | null;
+    flightTime?: string | null;
+    origin?: string | null;
+    destination?: string | null;
+  } | null>;
+  /**
    * 2026-07-16 — Lane B "Other add-on services" slot owned by the
    * wrapper (CatalogAddonPicker). Rendered after Lane A specials
    * inside the Add-on Services card.
@@ -1069,6 +1086,7 @@ export function CreateBooking({
   // usable in offline mocks (see `displayRegionCodes`).
   regionCodes = [],
   catalogAddonSlot,
+  onFlightLookup,
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -1145,6 +1163,7 @@ export function CreateBooking({
   const [flightDestination, setFlightDestination] = useState('');
   const [numberOfLuggage, setNumberOfLuggage] = useState(1);
   const [flightClass, setFlightClass] = useState<FlightClass | ''>('');
+  const [flightLookupLoading, setFlightLookupLoading] = useState(false);
 
   // 2026-06-08 — Transit 2nd leg (I-T2). The 1st leg is the existing
   // flightNo/flightTime/arrivalDate/flightClass above. The 2nd leg is
@@ -2338,7 +2357,7 @@ export function CreateBooking({
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base unit when credit remains (or Unlimited).</span>
+                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD).</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -2351,7 +2370,7 @@ export function CreateBooking({
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base.</span>
+                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base only if LD credit is checked.</span>
                     </span>
                   </label>
                 </div>
@@ -2476,12 +2495,56 @@ export function CreateBooking({
             {/* Flight Number */}
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="text" id="create-flight-no" value={flightNo}
-                  onChange={e => { setFlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.flightNo) return prev; const n = { ...prev }; delete n.flightNo; return n; }); }}
-                  placeholder="e.g. CX880"
-                  className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.flightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" id="create-flight-no" value={flightNo}
+                    onChange={e => { setFlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.flightNo) return prev; const n = { ...prev }; delete n.flightNo; return n; }); }}
+                    placeholder="e.g. CX880"
+                    className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.flightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
+                </div>
+                {onFlightLookup ? (
+                  <button
+                    type="button"
+                    data-testid="create-flight-lookup"
+                    disabled={flightLookupLoading || !flightNo.trim() || !arrivalDate}
+                    title={!arrivalDate ? 'Select flight date first' : 'Lookup flight details'}
+                    onClick={async () => {
+                      if (!onFlightLookup || !flightNo.trim() || !arrivalDate) return;
+                      setFlightLookupLoading(true);
+                      try {
+                        const result = await onFlightLookup({
+                          flightNo: flightNo.trim(),
+                          flightDate: arrivalDate,
+                          flightType,
+                        });
+                        if (!result) return;
+                        if (result.flightNo) setFlightNo(result.flightNo.toUpperCase());
+                        if (result.flightDate) setArrivalDate(result.flightDate);
+                        if (result.flightTime) {
+                          setFlightTime(result.flightTime);
+                          setFieldErrors((prev) => {
+                            if (!prev.flightTime && !prev.flightNo) return prev;
+                            const n = { ...prev };
+                            delete n.flightTime;
+                            delete n.flightNo;
+                            return n;
+                          });
+                        }
+                        if (result.origin) setFlightOrigin(result.origin);
+                        if (result.destination) setFlightDestination(result.destination);
+                      } finally {
+                        setFlightLookupLoading(false);
+                      }
+                    }}
+                    className="shrink-0 px-3 py-2 text-sm font-medium border border-gray-300 rounded-md bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                  >
+                    {flightLookupLoading
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <Search className="w-3.5 h-3.5" />}
+                    Lookup
+                  </button>
+                ) : null}
               </div>
               {fieldErrors.flightNo && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
@@ -2516,31 +2579,40 @@ export function CreateBooking({
               )}
             </div>
 
-            {/* Origin */}
+            {/* Origin — IATA typeahead (city / code search; stores 3-letter code) */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Origin (IATA)</label>
-              <input type="text" value={flightOrigin} onChange={e => setFlightOrigin(e.target.value.toUpperCase())}
-                placeholder="e.g. LHR" maxLength={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-origin">
+                Origin (IATA)
+              </label>
+              <AirportTypeahead
+                id="create-flight-origin"
+                value={flightOrigin}
+                onChange={setFlightOrigin}
+                placeholder="Search IATA or city (e.g. LHR)"
+                data-testid="create-flight-origin"
+              />
             </div>
           </div>
 
           {/* Row 3 — Destination (optional for Transition) · Luggage · Flight Class */}
           <div className="grid grid-cols-3 gap-6">
 
-            {/* Destination */}
+            {/* Destination — IATA typeahead (city / code search; stores 3-letter code) */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-destination">
                 Destination (IATA)
                 {showTransit && flightType === 'Transit'
                   ? <span className="ml-2 text-xs font-normal text-gray-400">— optional</span>
                   : null
                 }
               </label>
-              <input type="text" value={flightDestination} onChange={e => setFlightDestination(e.target.value.toUpperCase())}
-                placeholder={showTransit && flightType === 'Transit' ? 'May be unknown' : 'e.g. HKG'}
-                maxLength={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" />
+              <AirportTypeahead
+                id="create-flight-destination"
+                value={flightDestination}
+                onChange={setFlightDestination}
+                placeholder={showTransit && flightType === 'Transit' ? 'May be unknown' : 'Search IATA or city (e.g. HKG)'}
+                data-testid="create-flight-destination"
+              />
               {showTransit && flightType === 'Transit' && (
                 <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                   <Info className="w-3 h-3 flex-shrink-0" />

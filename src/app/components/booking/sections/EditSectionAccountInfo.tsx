@@ -206,7 +206,7 @@ export function EditSectionAccountInfo({
               />
               <span>
                 <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                <span className="block text-xs text-gray-500">Uncheck to keep LD credit unused on this booking (reprice / save).</span>
+                <span className="block text-xs text-gray-500">Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base.</span>
               </span>
             </label>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -219,7 +219,7 @@ export function EditSectionAccountInfo({
               />
               <span>
                 <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                <span className="block text-xs text-gray-500">Off → paid 40% off PS base (no free-upgrade burn).</span>
+                <span className="block text-xs text-gray-500">Off → paid 40% off PS base only if LD credit is checked (burns 1 LD).</span>
               </span>
             </label>
           </div>
