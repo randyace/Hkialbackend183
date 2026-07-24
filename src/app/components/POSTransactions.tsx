@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Search, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { Search, ChevronDown, ChevronRight, Clock, Pencil } from 'lucide-react';
 
 export interface PosTransactionGuestRow {
   name: string;
@@ -19,6 +19,7 @@ export interface PosTransactionItemRow {
   itemName: string;
   itemNameZh: string | null;
   quantity: number;
+  remarks: string | null;
   kitchenStatus: string;
   orderedAt: string | null;
   cancelledAt: string | null;
@@ -269,6 +270,20 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                                 <p className={isCancelled ? 'line-through text-gray-400 text-xs mt-0.5' : 'text-xs text-gray-500 mt-0.5'}>
                                   {item.itemNameZh}
                                 </p>
+                              ) : null}
+                              {item.remarks?.trim() ? (
+                                <div className="mt-1.5 flex">
+                                  <span
+                                    className={`inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 ${
+                                      isCancelled ? 'opacity-60' : ''
+                                    }`}
+                                  >
+                                    <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                                    <span className={`line-clamp-2 ${isCancelled ? 'line-through' : ''}`}>
+                                      {item.remarks.trim()}
+                                    </span>
+                                  </span>
+                                </div>
                               ) : null}
                             </td>
                             <td className={`px-4 py-2.5 text-center align-top ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>

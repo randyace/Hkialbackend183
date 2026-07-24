@@ -1,7 +1,28 @@
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { Button } from '../ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { useTranslation } from '../../lib/useTranslation';
 
 export interface OrderCartItem {
+  /** Stable cart-row identity (not the menu item id). */
+  cartLineId: string;
+  /** POS menu item id used when submitting the order. */
   id: number;
   name: string;
   quantity: number;
@@ -12,10 +33,185 @@ export interface CurrentOrderSidebarProps {
   items: OrderCartItem[];
   isSubmitting?: boolean;
   canSubmit?: boolean;
-  onQuantityChange: (id: number, quantity: number) => void;
-  onRemarksChange: (id: number, remarks: string) => void;
-  onRemoveItem: (id: number) => void;
+  onQuantityChange: (cartLineId: string, quantity: number) => void;
+  onRemarksChange: (cartLineId: string, remarks: string) => void;
+  onRemoveItem: (cartLineId: string) => void;
   onSubmitOrder: () => void;
+}
+
+type CartItemDialog = 'remarks' | 'quantity' | null;
+
+export function OrderCartItemRow({
+  item,
+  onQuantityChange,
+  onRemarksChange,
+  onRemoveItem,
+}: {
+  item: OrderCartItem;
+  onQuantityChange: (cartLineId: string, quantity: number) => void;
+  onRemarksChange: (cartLineId: string, remarks: string) => void;
+  onRemoveItem: (cartLineId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [openDialog, setOpenDialog] = useState<CartItemDialog>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [draftRemarks, setDraftRemarks] = useState(item.remarks);
+  const [draftQuantity, setDraftQuantity] = useState(String(item.quantity));
+  const trimmedRemarks = item.remarks.trim();
+
+  useEffect(() => {
+    if (openDialog === 'remarks') {
+      setDraftRemarks(item.remarks);
+    }
+    if (openDialog === 'quantity') {
+      setDraftQuantity(String(item.quantity));
+    }
+  }, [openDialog, item.remarks, item.quantity]);
+
+  const handleSaveRemarks = () => {
+    onRemarksChange(item.cartLineId, draftRemarks.trim());
+    setOpenDialog(null);
+  };
+
+  const handleSaveQuantity = () => {
+    const nextQuantity = Number.parseInt(draftQuantity, 10);
+    if (!Number.isFinite(nextQuantity) || nextQuantity < 1) {
+      return;
+    }
+    onQuantityChange(item.cartLineId, nextQuantity);
+    setOpenDialog(null);
+  };
+
+  return (
+    <>
+      <div className="rounded-lg border border-gray-200 bg-gray-50 shadow-sm">
+        <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDropdownOpen(true);
+              }}
+              className="w-full rounded-lg p-3 text-left transition-colors hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label={t('pos.actions_for', 'Actions for {{name}}', { name: item.name })}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                  {trimmedRemarks ? (
+                    <div className="mt-1.5 flex">
+                      <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                        <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                        <span className="line-clamp-2">{trimmedRemarks}</span>
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+                <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                  ×{item.quantity}
+                </span>
+              </div>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="w-44 z-[100]"
+            style={{ zIndex: 99999 }}
+          >
+            <DropdownMenuItem onSelect={() => setOpenDialog('remarks')}>
+              {t('pos.custom_request', 'Custom Request')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setOpenDialog('quantity')}>
+              {t('pos.change_quantity', 'Change Quantity')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onSelect={() => onRemoveItem(item.cartLineId)}
+            >
+              {t('pos.cancel_item', 'Cancel Item')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Dialog
+        open={openDialog === 'remarks'}
+        onOpenChange={(open) => setOpenDialog(open ? 'remarks' : null)}
+      >
+        <DialogContent className="sm:max-w-md" style={{ zIndex: 100000 }}>
+          <DialogHeader>
+            <DialogTitle>{t('pos.custom_request', 'Custom Request')}</DialogTitle>
+            <DialogDescription>
+              {t('pos.update_custom_request_for', 'Update the custom request for {{name}}.', {
+                name: item.name,
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={draftRemarks}
+            onChange={(event) => setDraftRemarks(event.target.value)}
+            placeholder={t('pos.custom_request_placeholder', 'e.g. Less ice, Extra hot')}
+            rows={4}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpenDialog(null)}>
+              {t('pos.cancel', 'Cancel')}
+            </Button>
+            <Button type="button" onClick={handleSaveRemarks}>
+              {t('pos.save', 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={openDialog === 'quantity'}
+        onOpenChange={(open) => setOpenDialog(open ? 'quantity' : null)}
+      >
+        <DialogContent className="sm:max-w-sm" style={{ zIndex: 100000 }}>
+          <DialogHeader>
+            <DialogTitle>{t('pos.change_quantity', 'Change Quantity')}</DialogTitle>
+            <DialogDescription>
+              {t('pos.update_quantity_for', 'Update quantity for {{name}}.', {
+                name: item.name,
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            type="number"
+            min={1}
+            step={1}
+            value={draftQuantity}
+            onChange={(event) => setDraftQuantity(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleSaveQuantity();
+              }
+            }}
+            autoFocus
+          />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpenDialog(null)}>
+              {t('pos.cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveQuantity}
+              disabled={
+                !Number.isFinite(Number.parseInt(draftQuantity, 10)) ||
+                Number.parseInt(draftQuantity, 10) < 1
+              }
+            >
+              {t('pos.save', 'Save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 export function CurrentOrderSidebar({
@@ -31,7 +227,9 @@ export function CurrentOrderSidebar({
     <aside className="flex w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
       <div className="border-b border-gray-200 px-5 py-4">
         <h2 className="text-lg font-semibold text-gray-900">Current Order</h2>
-        <p className="mt-1 text-sm text-gray-500">{items.length} item{items.length === 1 ? '' : 's'}</p>
+        <p className="mt-1 text-sm text-gray-500">
+          {items.length} item{items.length === 1 ? '' : 's'}
+        </p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -42,57 +240,13 @@ export function CurrentOrderSidebar({
         ) : (
           <ul className="space-y-3">
             {items.map((item) => (
-              <li
-                key={item.id}
-                className="rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-sm"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                  <button
-                    type="button"
-                    onClick={() => onRemoveItem(item.id)}
-                    className="rounded p-1 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-                    aria-label={`Remove ${item.name}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="mt-3 flex items-center justify-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    disabled={item.quantity <= 1}
-                    onClick={() => onQuantityChange(item.id, item.quantity - 1)}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="min-w-[2rem] text-center text-sm font-semibold text-gray-900">
-                    {item.quantity}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onQuantityChange(item.id, item.quantity + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <label className="mt-3 block">
-                  <span className="mb-1 block text-xs font-medium text-gray-500">Remarks</span>
-                  <input
-                    type="text"
-                    value={item.remarks}
-                    onChange={(e) => onRemarksChange(item.id, e.target.value)}
-                    placeholder="e.g. No ice, Extra hot"
-                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </label>
+              <li key={item.cartLineId}>
+                <OrderCartItemRow
+                  item={item}
+                  onQuantityChange={onQuantityChange}
+                  onRemarksChange={onRemarksChange}
+                  onRemoveItem={onRemoveItem}
+                />
               </li>
             ))}
           </ul>
