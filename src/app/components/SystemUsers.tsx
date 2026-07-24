@@ -42,6 +42,7 @@ export interface SystemUser {
   name:        string;
   email:       string;
   role:        SystemUserRole;
+  roleLevel?:  number;
   department:  string;
   status:      SystemUserStatus;
   lastLogin:   string;
@@ -64,6 +65,12 @@ export interface PermissionOption {
   label: string;
 }
 
+export interface SystemUserRowActions {
+  canEdit: boolean;
+  canManagePermissions: boolean;
+  canDelete: boolean;
+}
+
 export interface SystemUsersProps {
   /** Full list of system users to display */
   users?: SystemUser[];
@@ -75,6 +82,10 @@ export interface SystemUsersProps {
   canCreate?: boolean;
   canUpdate?: boolean;
   canDelete?: boolean;
+  /**
+   * Per-row hierarchy gates. When omitted, falls back to global canUpdate/canDelete.
+   */
+  resolveRowActions?: (user: SystemUser) => SystemUserRowActions;
   /** Navigate to create page */
   onCreateUser?: () => void;
   /** Navigate to edit page */
@@ -121,6 +132,7 @@ export function SystemUsers({
   canCreate           = true,
   canUpdate           = true,
   canDelete           = true,
+  resolveRowActions,
   onCreateUser        = () => {},
   onEditUser          = () => {},
   onDeleteUser        = () => {},
@@ -325,7 +337,14 @@ export function SystemUsers({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {paginatedUsers.map((user) => (
+                {paginatedUsers.map((user) => {
+                  const rowActions = resolveRowActions?.(user) ?? {
+                    canEdit: canUpdate,
+                    canManagePermissions: canUpdate,
+                    canDelete,
+                  };
+
+                  return (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm">{user.id}</td>
                     <td className="px-4 py-3">
@@ -333,8 +352,9 @@ export function SystemUsers({
                         <Shield className="h-4 w-4 shrink-0 text-gray-400" />
                         <button
                           type="button"
-                          className="truncate text-left text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                          onClick={() => canUpdate && onEditUser(user.id)}
+                          className="truncate text-left text-sm text-blue-600 hover:text-blue-800 hover:underline disabled:cursor-not-allowed disabled:text-gray-500 disabled:no-underline"
+                          disabled={!rowActions.canEdit}
+                          onClick={() => rowActions.canEdit && onEditUser(user.id)}
                         >
                           {user.name}
                         </button>
@@ -357,7 +377,7 @@ export function SystemUsers({
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <div className="flex items-center justify-end gap-1">
-                        {canUpdate && (
+                        {rowActions.canEdit && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -368,7 +388,7 @@ export function SystemUsers({
                             <Edit2 className="h-4 w-4" />
                           </Button>
                         )}
-                        {canUpdate && (
+                        {rowActions.canManagePermissions && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -379,7 +399,7 @@ export function SystemUsers({
                             <Key className="h-4 w-4" />
                           </Button>
                         )}
-                        {canDelete && (
+                        {rowActions.canDelete && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -393,7 +413,8 @@ export function SystemUsers({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           )}

@@ -357,12 +357,55 @@ interface AccountOption {
 }
 
 // ── Props interface ───────────────────────────────────────────────────────────
+/**
+ * Dev Quick Fill apply API (wired from admin wrapper `__dev__`).
+ * Delete this type + `renderDevQuickFill` prop with the `__dev__` folder before pentest.
+ */
+export interface CreateBookingDevQuickFillPayload {
+  accountType: 'Individual' | 'Corporate' | 'Agency' | '';
+  accountNumber: string;
+  paymentMode: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice' | '';
+  flightType: 'Arrival' | 'Departure' | 'Transit';
+  departureDate: string;
+  flightNo: string;
+  flightTime: string;
+  visitDate: string;
+  visitTime: string;
+  passengerTitle: 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
+  passengerFirstName: string;
+  passengerTravelDocNo: string;
+  passengerAgeGroup:
+    | 'Adults (aged 12 and above)'
+    | 'Children (aged 2-11)'
+    | 'Infants (under 2 years old)'
+    | '';
+  passengerBirthdayDay: string;
+  passengerBirthdayMonth: string;
+  passengerBirthdayYear: string;
+  passengerNationality: string;
+}
+
+export interface CreateBookingDevQuickFillRenderApi {
+  apply: (payload: CreateBookingDevQuickFillPayload) => void;
+  accountSearchResults?: AccountOption[];
+  accountSearchLoading?: boolean;
+  onAccountSearch?: (query: string) => void;
+  onAccountSelect?: (account: AccountOption) => void;
+  setShowAccountDropdown?: (open: boolean) => void;
+  passengerCount: number;
+}
+
 export interface CreateBookingProps {
   // 2026-06-30 — hide Transit option in the Flight Type 3-way toggle
   // + the 2nd-leg block + the Transit-only Destination "optional"
   // hint. Default true (backward-compat). Wrapper (admin
   // CreateBooking.tsx) passes false per Sky's directive.
   showTransit?: boolean;
+  /**
+   * Dev-only slot under Booking No. Provided by the admin wrapper when
+   * the signed-in email is on the `__dev__` allowlist. Remove before pentest.
+   */
+  renderDevQuickFill?: (api: CreateBookingDevQuickFillRenderApi) => React.ReactNode;
   onSubmit?: (data: BookingFormData) => void;
   onCancel?: () => void;
   isSubmitting?: boolean;
@@ -1019,6 +1062,7 @@ function RegionCodeCombobox({
 
 export function CreateBooking({
   showTransit = true,
+  renderDevQuickFill,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -2077,6 +2121,44 @@ export function CreateBooking({
     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
   };
 
+  // Dev Quick Fill — inject modal values into local form state.
+  // Remove with `renderDevQuickFill` + `__dev__` folder before pentest.
+  const applyDevQuickFill = (payload: CreateBookingDevQuickFillPayload) => {
+    setAccountType(payload.accountType);
+    setAccountNumber(payload.accountNumber);
+    setPaymentMode(payload.paymentMode);
+    setFlightType(payload.flightType);
+    setArrivalDate(payload.departureDate);
+    setFlightNo(payload.flightNo);
+    setFlightTime(payload.flightTime);
+    setVisitDate(payload.visitDate || payload.departureDate);
+    setVisitTime(payload.visitTime);
+
+    const existingSlots = vipPS + vipLD;
+    const targetCount = Math.max(1, existingSlots);
+    if (existingSlots === 0) {
+      setVipLD(1);
+    }
+
+    setPassengers(
+      Array.from({ length: targetCount }, (_, index) => ({
+        ...emptyPassenger(),
+        title: payload.passengerTitle,
+        firstName: payload.passengerFirstName,
+        lastName: String(index + 1),
+        travelDocNo: payload.passengerTravelDocNo,
+        ageGroup: payload.passengerAgeGroup,
+        birthdayDay: payload.passengerBirthdayDay,
+        birthdayMonth: payload.passengerBirthdayMonth,
+        birthdayYear: payload.passengerBirthdayYear,
+        nationality: payload.passengerNationality,
+      })),
+    );
+
+    setFieldErrors({});
+    setShowAccountDropdown?.(false);
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
@@ -2114,6 +2196,17 @@ export function CreateBooking({
             <p className="font-mono text-sm text-[#0f2942]">
               {bookingNo || '—'}
             </p>
+            {typeof renderDevQuickFill === 'function'
+              ? renderDevQuickFill({
+                  apply: applyDevQuickFill,
+                  accountSearchResults,
+                  accountSearchLoading,
+                  onAccountSearch,
+                  onAccountSelect,
+                  setShowAccountDropdown,
+                  passengerCount: Math.max(1, vipPS + vipLD),
+                })
+              : null}
           </div>
         </div>
       </div>
