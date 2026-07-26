@@ -2325,6 +2325,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 min={0}
                 value={vipPS}
                 onChange={e => handleVipPSChange(e.target.value)}
+                data-testid="vip-ps-quantity"
                 className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoVip ? 'border-red-400 bg-red-50' : ''}`}
               />
               {psNoVip && (
@@ -2380,6 +2381,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 min={0}
                 value={vipLD}
                 onChange={e => handleVipLDChange(e.target.value)}
+                data-testid="vip-ld-quantity"
                 className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoVip ? 'border-red-400 bg-red-50' : ''}`}
               />
               {ldNoVip && (
@@ -4276,6 +4278,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   type="button"
                   onClick={() => onSaveAllChanges?.(formData)}
                   disabled={isSavingAllChanges || hasGuestErrorsFinal}
+                  data-testid="booking-detail-master-save"
                   title={hasGuestErrorsFinal
                     ? (effectiveIncompleteVipInfoCount > 0
                         ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} before saving.`

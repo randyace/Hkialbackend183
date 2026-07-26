@@ -173,7 +173,13 @@ export interface BookableItemsProps {
   onCreateItem?: () => void;
 }
 
-export function BookableItems({ items: itemsProp, onEditItem, onDeleteItem, onCreateItem }: BookableItemsProps = {}) {
+export function BookableItems({
+  items: itemsProp,
+  isLoading = false,
+  onEditItem,
+  onDeleteItem,
+  onCreateItem,
+}: BookableItemsProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -181,7 +187,10 @@ export function BookableItems({ items: itemsProp, onEditItem, onDeleteItem, onCr
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const items: BookableItem[] = itemsProp?.length ? itemsProp : MOCK_ITEMS;
+  // Only fall back to MOCK_ITEMS for standalone figma Make (prop omitted).
+  // When the container passes `items` (even `[]` while loading), never flash
+  // mock rows — that was the user-visible "flashing mock data" bug.
+  const items: BookableItem[] = itemsProp !== undefined ? itemsProp : MOCK_ITEMS;
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -440,7 +449,14 @@ export function BookableItems({ items: itemsProp, onEditItem, onDeleteItem, onCr
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedItems.map((item) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={11} className="px-6 py-8 text-center text-sm text-gray-500">
+                    Loading bookable items…
+                  </td>
+                </tr>
+              ) : null}
+              {!isLoading && paginatedItems.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm">{item.id}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
