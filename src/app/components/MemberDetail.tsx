@@ -153,6 +153,10 @@ export interface Member {
   // quotas (Individual-only). Surfaced on the Member Summary Card under the
   // status/account-type badges so staff see balances without a separate top card.
   creditBalance?: number;
+  /** Open booking holds (HKD). */
+  creditOnHold?: number;
+  /** balance − on_hold. */
+  creditAvailable?: number;
   ldEntriesRemaining?: number | null;
   psFreeUpgradesRemaining?: number | null;
   appearance: { ethnicity: string; age: string; height: string; hairColor: string; glasses: string; };
@@ -829,38 +833,73 @@ export function MemberDetail({
                       )}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-gray-600">Free LD Entries</span>
-                    <p
-                      className="font-semibold text-[#0f2942]"
-                      data-testid="member-ld-remaining"
-                    >
-                      {memberData.accountType === 'Individual' ? (
-                        memberData.ldEntriesRemaining === -1
-                          ? <span className="text-amber-700">Unlimited</span>
-                          : (memberData.ldEntriesRemaining == null
-                              ? <span className="text-gray-400">—</span>
-                              : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Free PS Upgrades</span>
-                    <p
-                      className="font-semibold text-[#0f2942]"
-                      data-testid="member-ps-remaining"
-                    >
-                      {memberData.accountType === 'Individual' ? (
-                        memberData.psFreeUpgradesRemaining == null
-                          ? <span className="text-gray-400">—</span>
-                          : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </p>
-                  </div>
+                  {memberData.accountType === 'Individual' ? (
+                    <>
+                      <div>
+                        <span className="text-gray-600">Free LD Entries</span>
+                        <p
+                          className="font-semibold text-[#0f2942]"
+                          data-testid="member-ld-remaining"
+                        >
+                          {memberData.ldEntriesRemaining === -1
+                            ? <span className="text-amber-700">Unlimited</span>
+                            : (memberData.ldEntriesRemaining == null
+                                ? <span className="text-gray-400">—</span>
+                                : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Free PS Upgrades</span>
+                        <p
+                          className="font-semibold text-[#0f2942]"
+                          data-testid="member-ps-remaining"
+                        >
+                          {memberData.psFreeUpgradesRemaining == null
+                            ? <span className="text-gray-400">—</span>
+                            : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="text-gray-600">On Hold</span>
+                        <p
+                          className="font-semibold text-[#0f2942]"
+                          data-testid="member-credit-on-hold"
+                        >
+                          {memberData.creditOnHold == null || memberData.creditOnHold === 0 ? (
+                            <span className="text-gray-400">—</span>
+                          ) : (
+                            <span className="text-amber-700">
+                              HK${memberData.creditOnHold.toLocaleString(undefined, {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Available</span>
+                        <p
+                          className="font-semibold text-[#0f2942]"
+                          data-testid="member-credit-available"
+                        >
+                          {memberData.creditAvailable == null && memberData.creditBalance == null ? (
+                            <span className="text-gray-400">—</span>
+                          ) : (
+                            <span className="text-green-700">
+                              HK${(memberData.creditAvailable ?? memberData.creditBalance ?? 0).toLocaleString(undefined, {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

@@ -43,6 +43,10 @@ interface Account {
   status: 'Active' | 'Inactive' | 'Suspended';
   createdDate: string;
   creditBalance?: number;
+  /** Open booking holds (HKD). Wrapper maps accounts.credit_on_hold. */
+  creditOnHold?: number;
+  /** balance − on_hold for display. */
+  creditAvailable?: number;
   // 2026-07-13 round 6.2.143 — Individual membership free-entry
   // quotas. Surfaced via the wrapper's parent-repo `AccountList.tsx`
   // mapper (which reads `ld_entries_remaining` and
@@ -384,10 +388,19 @@ export function AccountList({
                         );
                       })()
                     ) : account.creditBalance !== undefined ? (
-                      // Corporate / TravelAgency: HK$ credit balance
-                      // (decimal:2 HKD stored on accounts.credit_balance,
-                      // surfaced via the wrapper mapper).
-                      <span className="text-green-600" data-testid="row-quota-credit">HK${account.creditBalance.toLocaleString()}</span>
+                      // Corporate / TravelAgency: balance + hold + available.
+                      <span className="text-green-600 text-sm" data-testid="row-quota-credit">
+                        {account.creditOnHold != null && account.creditOnHold > 0 ? (
+                          <span title={`Balance HK$${(account.creditBalance ?? 0).toLocaleString()} · On hold HK$${account.creditOnHold.toLocaleString()}`}>
+                            Avail HK${(account.creditAvailable ?? account.creditBalance).toLocaleString()}
+                            <span className="block text-xs text-amber-700">
+                              hold {account.creditOnHold.toLocaleString()}
+                            </span>
+                          </span>
+                        ) : (
+                          <>HK${account.creditBalance.toLocaleString()}</>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-gray-400" data-testid="row-quota-credit">—</span>
                     )}
