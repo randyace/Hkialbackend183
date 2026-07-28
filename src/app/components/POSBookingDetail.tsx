@@ -779,6 +779,8 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   isWalkIn?: boolean;
   onCheckout?: (paymentData: { method: string }) => void;
   onCheckoutClick?: () => void;
+  onClearWalkIn?: () => void | Promise<void>;
+  isClearingWalkIn?: boolean;
   isLoading?: boolean;
   heldPreorderItems?: Array<{
     name_en?: string | null;
@@ -814,6 +816,8 @@ export function POSBookingDetail({
   booking: bookingProp,
   isWalkIn = false,
   onCheckoutClick,
+  onClearWalkIn,
+  isClearingWalkIn = false,
   isLoading = false,
   heldPreorderItems = [],
   onFireHeldPreorders,
@@ -910,6 +914,8 @@ export function POSBookingDetail({
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
   const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
   const ticketItemCount = booking.orders.length;
+  const showCancelWalkIn =
+    isWalkIn && activeOrderCount === 0 && !hasPendingOrderItems && Boolean(onClearWalkIn);
   const showTicketBottomBarOnMobile = mobilePanel === 'menu';
   const showTicketBottomBarOnDesktop = !isTicketSidebarVisible;
   const isBatchSelectionActive = batchMode !== 'none';
@@ -1160,9 +1166,27 @@ export function POSBookingDetail({
           <Button variant="outline" className="flex-1 min-w-[90px]">
             Print Bill
           </Button>
-          <Button className="flex-1 min-w-[90px] bg-purple-700 hover:bg-purple-800 text-white" onClick={onCheckoutClick}>
-            Checkout
-          </Button>
+          {showCancelWalkIn ? (
+            <Button
+              variant="outline"
+              className="flex-1 min-w-[90px] border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => void onClearWalkIn?.()}
+              disabled={isClearingWalkIn}
+            >
+              {isClearingWalkIn ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                'Cancel Walk-in'
+              )}
+            </Button>
+          ) : (
+            <Button className="flex-1 min-w-[90px] bg-purple-700 hover:bg-purple-800 text-white" onClick={onCheckoutClick}>
+              Checkout
+            </Button>
+          )}
         </div>
       </div>
     </>
@@ -1518,10 +1542,17 @@ export function POSBookingDetail({
             </span>
             <button
               type="button"
-              onClick={onCheckoutClick}
-              className="rounded-lg bg-purple-700 px-8 py-3 text-lg font-bold text-white shadow-md hover:bg-purple-800"
+              onClick={showCancelWalkIn ? () => void onClearWalkIn?.() : onCheckoutClick}
+              disabled={showCancelWalkIn && isClearingWalkIn}
+              className={`rounded-lg px-8 py-3 text-lg font-bold text-white shadow-md ${
+                showCancelWalkIn
+                  ? 'bg-red-600 hover:bg-red-700 disabled:opacity-50'
+                  : 'bg-purple-700 hover:bg-purple-800'
+              }`}
             >
-              Checkout
+              {showCancelWalkIn
+                ? (isClearingWalkIn ? 'Clearing...' : 'Cancel Walk-in')
+                : 'Checkout'}
             </button>
           </div>
         </div>
