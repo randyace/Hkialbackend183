@@ -395,11 +395,12 @@ export interface CreateBookingProps {
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
     ps_free_upgrades_remaining?: number | null;
-    // Round 6.2.143 / 2026-07-17 — TravelAgency / Corporate money credit balance
-    // (accounts.credit_balance). Shown on Agency create-booking so
-    // staff can see remaining OnCredit headroom before submit.
-    // Agency OnCredit spend now fires at booking create (not only Confirm).
+    // Round 6.2.143 / 2026-07-28 — TravelAgency / Corporate money credit.
+    // available ≈ credit_balance − credit_on_hold (+ credit_limit when set).
+    // Agency OnCredit: hold at create, capture at Approved (not spend-at-create).
     credit_balance?: number | string | null;
+    credit_on_hold?: number | string | null;
+    credit_limit?: number | string | null;
     // 2026-06-14 — round 6.2.37. Eager-loaded TravelAgency
     // relation from `AccountController::show()`. Single-element
     // array (HasMany) — usually `[{ agency_code, agency_name,
@@ -2187,27 +2188,57 @@ export function CreateBooking({
                   </div>
                 </div>
               )}
-              {/* Round 6.2.143 — surface remaining agent account credit so
-                  staff know OnCredit headroom. Balance is topped up via
-                  /purchase Agency contract (Paid-at-create / sendInvoice)
-                  and decremented when the booking is Confirmed/Approved. */}
+              {/* Round 6.2.143 / 2026-07-28 — Agency available credit.
+                  available = balance − on_hold + limit. Hold is placed at
+                  create for OnCredit and captured at Approved. */}
               {selectedAccount && (selectedAccount.credit_balance != null && selectedAccount.credit_balance !== '') && (
-                <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3">
+                <div
+                  className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3"
+                  data-testid="create-booking-agency-credit-card"
+                >
                   <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
-                    <p className="text-sm text-purple-700 mt-0.5">
-                      Available:{' '}
-                      <strong>
-                        HKD {Number(selectedAccount.credit_balance).toLocaleString(undefined, {
+                    {(() => {
+                      const balance = Number(selectedAccount.credit_balance) || 0;
+                      const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
+                      const limit = Number(selectedAccount.credit_limit ?? 0) || 0;
+                      const available = balance - onHold + limit;
+                      const fmt = (n: number) =>
+                        n.toLocaleString(undefined, {
                           minimumFractionDigits: 0,
                           maximumFractionDigits: 2,
-                        })}
-                      </strong>
-                      {paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice' ? (
-                        <> · Payment mode uses credit on <strong>Confirm</strong> (not at create)</>
-                      ) : null}
-                    </p>
+                        });
+                      return (
+                        <>
+                          <p className="text-sm text-purple-700 mt-0.5">
+                            Available:{' '}
+                            <strong data-testid="create-booking-credit-available">
+                              HKD {fmt(available)}
+                            </strong>
+                            <span className="text-purple-600/90" data-testid="create-booking-credit-balance">
+                              {' '}· Balance HKD {fmt(balance)}
+                            </span>
+                            {onHold > 0 ? (
+                              <span className="text-purple-600/90" data-testid="create-booking-credit-on-hold">
+                                {' '}· On hold HKD {fmt(onHold)}
+                              </span>
+                            ) : null}
+                            {limit > 0 ? (
+                              <span className="text-purple-600/90" data-testid="create-booking-credit-limit">
+                                {' '}· Limit HKD {fmt(limit)}
+                              </span>
+                            ) : null}
+                          </p>
+                          {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
+                            <p className="text-xs text-purple-600 mt-1">
+                              OnCredit places a <strong>hold at create</strong>; balance is captured when the
+                              booking is <strong>Approved</strong>. Available already subtracts open holds.
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
