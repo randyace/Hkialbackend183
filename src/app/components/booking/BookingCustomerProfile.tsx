@@ -88,7 +88,8 @@ export interface CustomerDietary {
 export interface CustomerMovement {
   id?: number;
   movementInCharge?: string;
-  cicSupport?: string;
+  cic?: string;
+  support?: string;
   driver?: string;
   orderNo?: string;
   arrDate?: string;
@@ -518,7 +519,8 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     <tr className="bg-[#0f2942] text-white">
                       <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">CIC</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Support</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
                       <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
@@ -554,7 +556,8 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
                           </td>
                           <td className={movCellCls}>{m.movementInCharge || dash}</td>
-                          <td className={movCellCls}>{m.cicSupport || dash}</td>
+                          <td className={movCellCls}>{m.cic || dash}</td>
+                          <td className={movCellCls}>{m.support || dash}</td>
                           <td className={movCellCls}>{m.driver || dash}</td>
                           <td className={`${movCellCls} bg-blue-50/30`}><span className="font-mono text-[11px] text-blue-800">{m.orderNo}</span></td>
                           <td className={`${movCellCls} bg-blue-50/30`}>{m.deptDate || dash}</td>

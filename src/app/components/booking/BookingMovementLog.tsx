@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { History, Plus, Trash2, Loader2 } from 'lucide-react';
+import { History, Pencil, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
@@ -15,13 +15,15 @@ import { toast } from 'sonner@2.0.3';
 // 2026-07-16 — Add Movement form moved to parent-owned
 // `SharedMovementLogModal` (Booking Detail + Customer Detail share
 // the same grid modal). This table dialog only opens that modal
-// via `onOpenAddMovement`.
+// via `onOpenAddMovement` / `onEditMovement`.
 
 export interface MovementEntry {
   id: number;
+  bookingId?: number;
   source?: 'manual' | 'qr_scan' | string;
   movementInCharge?: string;
-  cicSupport?: string;
+  cic?: string;
+  support?: string;
   driver?: string;
   orderNo: string;
   deptDate?: string;
@@ -81,6 +83,8 @@ interface BookingMovementLogProps {
    * Required for Add — the form UI lives outside this table dialog.
    */
   onOpenAddMovement?: () => void;
+  /** Opens SharedMovementLogModal in edit mode for the selected row. */
+  onEditMovement?: (entry: MovementEntry) => void;
   /** @deprecated Prefer onOpenAddMovement + SharedMovementLogModal. */
   onAddMovement?: (form: MovementForm) => Promise<void>;
   /** Called when the user clicks the per-row delete button (manual entries only). */
@@ -97,6 +101,7 @@ export function BookingMovementLog({
   booking,
   movements: movementsProp = [],
   onOpenAddMovement,
+  onEditMovement,
   onDeleteMovement,
   isAddingMovement = false,
   isDeletingMovement = false,
@@ -158,18 +163,19 @@ export function BookingMovementLog({
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-gray-200">
-          <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
+          <table className="text-xs border-collapse" style={{ minWidth: '3280px' }}>
             <thead>
               <tr className="bg-[#0f2942] text-white">
                 <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">CIC</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Support</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Flt Time</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
@@ -188,13 +194,13 @@ export function BookingMovementLog({
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
                 <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+                <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[88px]">Action</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {bookingMovements.length === 0 ? (
                 <tr>
-                  <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
+                  <td colSpan={29} className="px-6 py-10 text-center text-gray-400 text-sm">
                     No movement records yet. Click &quot;Add Movement&quot; to create the first entry.
                   </td>
                 </tr>
@@ -202,16 +208,18 @@ export function BookingMovementLog({
                 const rowBg = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60';
                 // `source='qr_scan'` entries are READ-ONLY on the
                 // backend (audit trail). The UI reflects that by
-                // disabling the delete button. Manual entries can
-                // be deleted.
-                const canDelete = m.source !== 'qr_scan' && !!onDeleteMovement;
+                // disabling edit/delete. Manual entries can be edited.
+                const canMutate = m.source !== 'qr_scan';
+                const canEdit = canMutate && !!onEditMovement;
+                const canDelete = canMutate && !!onDeleteMovement;
                 return (
                   <tr key={m.id} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
                     <td className={`${cell} sticky left-0 z-10 ${rowBg} border-r border-gray-200 text-center`}>
                       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
                     </td>
                     <td className={cell}>{m.movementInCharge || dash}</td>
-                    <td className={cell}>{m.cicSupport || dash}</td>
+                    <td className={cell}>{m.cic || dash}</td>
+                    <td className={cell}>{m.support || dash}</td>
                     <td className={cell}>{m.driver || dash}</td>
                     <td className={`${cell} bg-blue-50/30`}><span className="font-mono text-[11px] text-blue-800">{m.orderNo}</span></td>
                     <td className={`${cell} bg-blue-50/30`}>{m.deptDate || dash}</td>
@@ -245,12 +253,30 @@ export function BookingMovementLog({
                       <span className="block truncate text-orange-700" title={m.remarksAdminIssue}>{m.remarksAdminIssue || dash}</span>
                     </td>
                     <td className={`${cell} text-center sticky right-0 z-10 ${rowBg} border-l border-gray-200`}>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
-                        onClick={() => handleDelete(m.id)}
-                        disabled={!canDelete || isDeletingMovement}
-                        title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Delete this entry'}>
-                        {isDeletingMovement ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                      </Button>
+                      <div className="inline-flex items-center justify-center gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => onEditMovement?.(m)}
+                          disabled={!canEdit}
+                          title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Edit this entry'}
+                          data-testid={`movement-edit-${m.id}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={() => handleDelete(m.id)}
+                          disabled={!canDelete || isDeletingMovement}
+                          title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Delete this entry'}
+                          data-testid={`movement-delete-${m.id}`}
+                        >
+                          {isDeletingMovement ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -256,6 +256,10 @@ export interface MemberDetailProps {
   onOpenDietaryDialog?: () => void;
   onCloseAddMovement?: () => void;
   onOpenMovementDialog?: () => void;
+  /** Opens SharedMovementLogModal in edit mode for a row. */
+  onEditMovement?: (entry: MovementLog) => void;
+  /** Deletes a movement via the parent (API). */
+  onDeleteMovement?: (entry: MovementLog) => Promise<void>;
   onOpenRemarkDialog?: () => void;
   onCloseAddRemark?: () => void;
 
@@ -337,9 +341,13 @@ export interface DietaryRequirement {
 
 export interface MovementLog {
   id: number;                        // 1. Gp No. (auto)
+  bookingId?: number;
+  source?: 'manual' | 'qr_scan' | string;
+  booking?: { id?: number; bookingNo?: string } | null;
   movementInCharge?: string;         // 2. Movement In Charge
-  cicSupport?: string;               // 3. CIC & Support
-  driver?: string;                   // 4. Driver
+  cic?: string;                      // 3. CIC
+  support?: string;                  // 4. Support
+  driver?: string;                   // 5. Driver
   orderNo: string;                   // 5. Order No. (Booking No.)
   deptDate?: string;                 // 6. Dept Date (Departure bookings)
   arrDate?: string;                  // 7. Arr Date (Arrival bookings)
@@ -454,6 +462,8 @@ export function MemberDetail({
   onCloseAddDietary,
   onCloseAddMovement,
   onOpenMovementDialog,
+  onEditMovement,
+  onDeleteMovement,
   onOpenRemarkDialog,
   onCloseAddRemark,
 
@@ -1721,7 +1731,8 @@ export function MemberDetail({
                     {/* Fixed identity columns */}
                     <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">CIC</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Support</th>
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
                     {/* Booking reference */}
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
@@ -1749,7 +1760,7 @@ export function MemberDetail({
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
                     <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                    <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[88px]">Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
@@ -1764,7 +1775,8 @@ export function MemberDetail({
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-[#0f2942]/10 text-[#0f2942]">{m.id}</span>
                         </td>
                         <td className={cell}>{m.movementInCharge || dash}</td>
-                        <td className={cell}>{m.cicSupport || dash}</td>
+                        <td className={cell}>{m.cic || dash}</td>
+                        <td className={cell}>{m.support || dash}</td>
                         <td className={cell}>{m.driver || dash}</td>
                         {/* Booking ref — soft blue tint */}
                         <td className={`${cell} bg-blue-50/30`}>
@@ -1805,24 +1817,57 @@ export function MemberDetail({
                         </td>
                         {/* Action — sticky right */}
                         <td className={`${cell} text-center sticky right-0 z-10 ${rowBg} border-l border-gray-200`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setMockMovements(prev => prev.filter(x => x.id !== m.id)); // demo fallback
-                              toast.success('Movement record removed');
-                            }}
-                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {(() => {
+                            const canMutate = m.source !== 'qr_scan';
+                            const canEdit = canMutate && !!onEditMovement;
+                            const canDelete = canMutate && !!onDeleteMovement;
+                            return (
+                              <div className="inline-flex items-center justify-center gap-0.5">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => onEditMovement?.(m)}
+                                  disabled={!canEdit}
+                                  title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Edit this entry'}
+                                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  data-testid={`member-movement-edit-${m.id}`}
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (!onDeleteMovement) {
+                                      toast.error('Delete is not wired — please configure the parent wrapper.');
+                                      return;
+                                    }
+                                    if (!window.confirm('Delete this movement entry? This cannot be undone.')) return;
+                                    try {
+                                      await onDeleteMovement(m);
+                                      toast.success('Movement record deleted.');
+                                    } catch (err) {
+                                      const message = err instanceof Error ? err.message : 'Failed to delete movement record.';
+                                      toast.error(message);
+                                    }
+                                  }}
+                                  disabled={!canDelete}
+                                  title={m.source === 'qr_scan' ? 'QR-scan entries are read-only (audit trail)' : 'Delete this entry'}
+                                  className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                                  data-testid={`member-movement-delete-${m.id}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );
                   })}
                   {displayMovements.length === 0 && (
                     <tr>
-                      <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
+                      <td colSpan={29} className="px-6 py-10 text-center text-gray-400 text-sm">
                         No movement records found. Click "Add Movement" to create the first entry.
                       </td>
                     </tr>
@@ -2516,7 +2561,7 @@ export function MemberDetail({
             {/* ── Section A: Assignment ───────────────────────────────── */}
             <div>
               <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Assignment</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
                   <input
@@ -2527,11 +2572,22 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC</label>
                   <input
                   type="text"
-                  value={movementFormProp.cicSupport || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, cicSupport: e.target.value })}
+                  placeholder="CIC staff name"
+                  value={movementFormProp.cic || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, cic: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Support</label>
+                  <input
+                  type="text"
+                  placeholder="Support staff name"
+                  value={movementFormProp.support || ''}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, support: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
                 </div>

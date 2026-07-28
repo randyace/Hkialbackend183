@@ -1,4 +1,4 @@
-import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square, CheckCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from './ui/card';
@@ -275,6 +275,8 @@ const MOCK_BOOKING_DETAIL: POSBooking = generateMockBooking('A-202603-000001');
 
 type TicketItemDialog = 'remarks' | 'quantity' | null;
 
+type BatchMode = 'none' | 'expedite' | 'served';
+
 function isOrderItemExpediteStatusEligible(order: OrderItem): boolean {
   if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served') {
     return false;
@@ -282,9 +284,20 @@ function isOrderItemExpediteStatusEligible(order: OrderItem): boolean {
   return order.isNew === true || order.status === 'pending' || order.status === 'preparing';
 }
 
-/** Pending/Preparing (or new cart) items that are not already expedited — selectable in batch mode. */
+/** Pending/Preparing (or new cart) items that are not already expedited — selectable in batch expedite mode. */
 function isOrderItemExpediteSelectable(order: OrderItem): boolean {
   return isOrderItemExpediteStatusEligible(order) && !order.isExpedited;
+}
+
+/** Submitted Pending/Preparing items — selectable in batch served mode. */
+function isOrderItemServedSelectable(order: OrderItem): boolean {
+  if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served' || order.isNew) {
+    return false;
+  }
+  return (
+    (order.status === 'pending' || order.status === 'preparing') &&
+    Boolean(order.posOrderItemId)
+  );
 }
 
 function TicketOrderItemRow({
@@ -293,6 +306,7 @@ function TicketOrderItemRow({
   statusBadgeClass,
   statusLabel,
   selectionMode = false,
+  selectionPurpose = 'expedite',
   isSelected = false,
   onToggleSelect,
   onCancelOrderItem,
@@ -301,12 +315,15 @@ function TicketOrderItemRow({
   onRemoveNewItem,
   onToggleExpedite,
   isTogglingExpedite = false,
+  onMarkServed,
+  isMarkingServed = false,
 }: {
   order: OrderItem;
   isCancelled: boolean;
   statusBadgeClass: string;
   statusLabel: string;
   selectionMode?: boolean;
+  selectionPurpose?: 'expedite' | 'served';
   isSelected?: boolean;
   onToggleSelect?: (orderId: string) => void;
   onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
@@ -318,6 +335,8 @@ function TicketOrderItemRow({
   onRemoveNewItem?: (itemId: string) => void;
   onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
   isTogglingExpedite?: boolean;
+  onMarkServed?: (posOrderItemId: number) => void | Promise<void>;
+  isMarkingServed?: boolean;
 }) {
   const { t } = useTranslation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -328,14 +347,21 @@ function TicketOrderItemRow({
   const isNewItem = Boolean(order.isNew);
   const isExpedited = Boolean(order.isExpedited);
   const isSubmittedItem = !isNewItem && !isCancelled && Boolean(order.posOrderItemId);
-  const isStatusEligible = isOrderItemExpediteStatusEligible(order);
-  const canToggleExpedite = isStatusEligible;
+  const isExpediteStatusEligible = isOrderItemExpediteStatusEligible(order);
+  const isServedSelectable = isOrderItemServedSelectable(order);
+  const canToggleExpedite = isExpediteStatusEligible;
+  const canMarkServed =
+    !selectionMode &&
+    isSubmittedItem &&
+    Boolean(onMarkServed) &&
+    (order.status === 'pending' || order.status === 'preparing');
   const canOpenMenu =
     !selectionMode &&
     ((isNewItem && Boolean(onUpdateNewItem || onRemoveNewItem)) ||
-      (isSubmittedItem && Boolean(onCancelOrderItem)));
+      (isSubmittedItem && Boolean(onCancelOrderItem || onMarkServed)));
   const isCancellingSubmitted =
     isSubmittedItem && cancellingOrderItemId === order.posOrderItemId;
+  const isBusy = Boolean(isCancellingSubmitted || isMarkingServed);
 
   useEffect(() => {
     if (openDialog === 'remarks') {
@@ -380,6 +406,40 @@ function TicketOrderItemRow({
     }
   };
 
+  const handleMarkServedFromMenu = () => {
+    setIsDropdownOpen(false);
+    if (order.posOrderItemId && onMarkServed) {
+      void onMarkServed(order.posOrderItemId);
+    }
+  };
+
+  const statusBadge = isNewItem ? (
+    <Badge className="shrink-0 text-xs bg-blue-100 text-blue-800 border border-blue-200">
+      {t('pos.new', 'New')}
+    </Badge>
+  ) : canMarkServed ? (
+    <button
+      type="button"
+      className={`shrink-0 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${statusBadgeClass}`}
+      disabled={isMarkingServed}
+      title={t('pos.mark_served', 'Mark as Served')}
+      aria-label={t('pos.mark_served', 'Mark as Served')}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (order.posOrderItemId && onMarkServed) {
+          void onMarkServed(order.posOrderItemId);
+        }
+      }}
+    >
+      {isMarkingServed ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+      {statusLabel}
+    </button>
+  ) : (
+    <Badge className={`shrink-0 text-xs ${statusBadgeClass}`}>
+      {statusLabel}
+    </Badge>
+  );
+
   const rowBody = (
     <>
       <div className="flex-1 min-w-0">
@@ -416,15 +476,6 @@ function TicketOrderItemRow({
       <span className={`text-sm tabular-nums shrink-0 ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
         x{order.quantity}
       </span>
-      {isNewItem ? (
-        <Badge className="shrink-0 text-xs bg-blue-100 text-blue-800 border border-blue-200">
-          {t('pos.new', 'New')}
-        </Badge>
-      ) : (
-        <Badge className={`shrink-0 text-xs ${statusBadgeClass}`}>
-          {statusLabel}
-        </Badge>
-      )}
     </>
   );
 
@@ -435,11 +486,14 @@ function TicketOrderItemRow({
       : 'border-gray-200 bg-white';
 
   if (selectionMode) {
-    if (!isStatusEligible) {
+    const isVisibleInSelection =
+      selectionPurpose === 'served' ? isServedSelectable : isExpediteStatusEligible;
+
+    if (!isVisibleInSelection) {
       return null;
     }
 
-    if (isExpedited) {
+    if (selectionPurpose === 'expedite' && isExpedited) {
       return (
         <div
           className={`flex w-full items-center gap-2 rounded-lg border py-2 px-3 text-left opacity-60 ${borderClass}`}
@@ -448,6 +502,7 @@ function TicketOrderItemRow({
         >
           <Square className="h-5 w-5 shrink-0 text-gray-300" aria-hidden />
           {rowBody}
+          {statusBadge}
         </div>
       );
     }
@@ -459,11 +514,16 @@ function TicketOrderItemRow({
         onClick={() => onToggleSelect?.(order.id)}
       >
         {isSelected ? (
-          <CheckSquare className="h-5 w-5 shrink-0 text-red-600" />
+          <CheckSquare
+            className={`h-5 w-5 shrink-0 ${
+              selectionPurpose === 'served' ? 'text-green-600' : 'text-red-600'
+            }`}
+          />
         ) : (
           <Square className="h-5 w-5 shrink-0 text-gray-400" />
         )}
         {rowBody}
+        {statusBadge}
       </button>
     );
   }
@@ -472,6 +532,7 @@ function TicketOrderItemRow({
     return (
       <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
         {rowBody}
+        {statusBadge}
         {canToggleExpedite && onToggleExpedite ? (
           <button
             type="button"
@@ -510,7 +571,7 @@ function TicketOrderItemRow({
                 setIsDropdownOpen(true);
               }}
               aria-label={t('pos.actions_for', 'Actions for {{name}}', { name: order.name })}
-              disabled={Boolean(isCancellingSubmitted)}
+              disabled={isBusy}
             >
               {rowBody}
             </button>
@@ -540,14 +601,35 @@ function TicketOrderItemRow({
                 </DropdownMenuItem>
               </>
             ) : null}
-            <DropdownMenuItem
-              className="text-red-600 focus:text-red-600"
-              onSelect={handleCancelFromMenu}
-            >
-              {t('pos.cancel_item', 'Cancel Item')}
-            </DropdownMenuItem>
+            {canMarkServed ? (
+              <DropdownMenuItem
+                className="text-green-600 focus:bg-green-50 focus:text-green-700"
+                disabled={isMarkingServed}
+                onSelect={handleMarkServedFromMenu}
+              >
+                <CheckCheck className="mr-2 h-3.5 w-3.5" />
+                {t('pos.mark_served', 'Mark Served')}
+              </DropdownMenuItem>
+            ) : null}
+            {isSubmittedItem && onCancelOrderItem ? (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onSelect={handleCancelFromMenu}
+              >
+                {t('pos.cancel_item', 'Cancel Item')}
+              </DropdownMenuItem>
+            ) : isNewItem ? (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onSelect={handleCancelFromMenu}
+              >
+                {t('pos.cancel_item', 'Cancel Item')}
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {statusBadge}
 
         {canToggleExpedite && onToggleExpedite ? (
           <button
@@ -694,6 +776,7 @@ function TicketOrderItemRow({
 export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_DETAIL */
   booking?: POSBooking | null;
+  isWalkIn?: boolean;
   onCheckout?: (paymentData: { method: string }) => void;
   onCheckoutClick?: () => void;
   isLoading?: boolean;
@@ -716,8 +799,12 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   isSubmittingPendingOrder?: boolean;
   onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
   onConfirmBatchExpedite?: (orders: OrderItem[]) => void | Promise<void>;
+  onConfirmBatchServed?: (orders: OrderItem[]) => void | Promise<void>;
   togglingExpediteOrderId?: string | null;
   isConfirmingBatchExpedite?: boolean;
+  isConfirmingBatchServed?: boolean;
+  onMarkServed?: (posOrderItemId: number) => void | Promise<void>;
+  markingServedItemId?: number | null;
   menuContent?: ReactNode;
 }
 
@@ -725,6 +812,7 @@ export function POSBookingDetail({
   bookingNo,
   onBack,
   booking: bookingProp,
+  isWalkIn = false,
   onCheckoutClick,
   isLoading = false,
   heldPreorderItems = [],
@@ -739,8 +827,12 @@ export function POSBookingDetail({
   isSubmittingPendingOrder = false,
   onToggleExpedite,
   onConfirmBatchExpedite,
+  onConfirmBatchServed,
   togglingExpediteOrderId = null,
   isConfirmingBatchExpedite = false,
+  isConfirmingBatchServed = false,
+  onMarkServed,
+  markingServedItemId = null,
   menuContent = null,
 }: POSBookingDetailFullProps) {
   const { t } = useTranslation();
@@ -814,25 +906,38 @@ export function POSBookingDetail({
   const [isContextDetailsOpen, setIsContextDetailsOpen] = useState(false);
   const [isTicketSidebarVisible, setIsTicketSidebarVisible] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<'menu' | 'ticket'>('menu');
-  const [expediteSelectionMode, setExpediteSelectionMode] = useState(false);
-  const [selectedExpediteIds, setSelectedExpediteIds] = useState<Set<string>>(new Set());
+  const [batchMode, setBatchMode] = useState<BatchMode>('none');
+  const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
   const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
   const ticketItemCount = booking.orders.length;
   const showTicketBottomBarOnMobile = mobilePanel === 'menu';
   const showTicketBottomBarOnDesktop = !isTicketSidebarVisible;
+  const isBatchSelectionActive = batchMode !== 'none';
 
   const expediteEligibleOrders = useMemo(
     () => booking.orders.filter((order) => isOrderItemExpediteSelectable(order)),
     [booking.orders],
   );
 
-  const exitExpediteSelectionMode = () => {
-    setExpediteSelectionMode(false);
-    setSelectedExpediteIds(new Set());
+  const servedEligibleOrders = useMemo(
+    () => booking.orders.filter((order) => isOrderItemServedSelectable(order)),
+    [booking.orders],
+  );
+
+  const batchEligibleOrders =
+    batchMode === 'served' ? servedEligibleOrders : expediteEligibleOrders;
+
+  const showBatchActions =
+    (expediteEligibleOrders.length > 0 && Boolean(onConfirmBatchExpedite)) ||
+    (servedEligibleOrders.length > 0 && Boolean(onConfirmBatchServed));
+
+  const exitBatchMode = () => {
+    setBatchMode('none');
+    setSelectedBatchIds(new Set());
   };
 
-  const toggleExpediteSelection = (orderId: string) => {
-    setSelectedExpediteIds((previous) => {
+  const toggleBatchSelection = (orderId: string) => {
+    setSelectedBatchIds((previous) => {
       const next = new Set(previous);
       if (next.has(orderId)) {
         next.delete(orderId);
@@ -843,17 +948,26 @@ export function POSBookingDetail({
     });
   };
 
-  const selectAllPendingForExpedite = () => {
-    setSelectedExpediteIds(new Set(expediteEligibleOrders.map((order) => order.id)));
+  const selectAllEligibleForBatch = () => {
+    setSelectedBatchIds(new Set(batchEligibleOrders.map((order) => order.id)));
   };
 
   const handleConfirmBatchExpedite = async () => {
-    const selected = expediteEligibleOrders.filter((order) => selectedExpediteIds.has(order.id));
+    const selected = expediteEligibleOrders.filter((order) => selectedBatchIds.has(order.id));
     if (selected.length === 0 || !onConfirmBatchExpedite) {
       return;
     }
     await onConfirmBatchExpedite(selected);
-    exitExpediteSelectionMode();
+    exitBatchMode();
+  };
+
+  const handleConfirmBatchServed = async () => {
+    const selected = servedEligibleOrders.filter((order) => selectedBatchIds.has(order.id));
+    if (selected.length === 0 || !onConfirmBatchServed) {
+      return;
+    }
+    await onConfirmBatchServed(selected);
+    exitBatchMode();
   };
 
   const openTicketPanel = () => {
@@ -878,53 +992,110 @@ export function POSBookingDetail({
             <p className="text-base font-semibold text-yellow-900 leading-tight">{pendingOrders}</p>
           </div>
         </div>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
-            <p className="text-sm text-gray-600">{booking.memberName}</p>
+        <div className="mb-1 flex flex-col gap-3">
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-base font-semibold text-gray-900 truncate">{booking.suiteName}</h2>
+            <p className="text-sm text-gray-600 truncate">{booking.memberName}</p>
             <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
           </div>
-          {expediteEligibleOrders.length > 0 && onConfirmBatchExpedite ? (
-            expediteSelectionMode ? (
-              <Button type="button" variant="outline" size="sm" onClick={exitExpediteSelectionMode}>
-                {t('pos.cancel', 'Cancel')}
-              </Button>
+
+          {showBatchActions ? (
+            isBatchSelectionActive ? (
+              <div className="flex w-full flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex w-full items-center justify-center"
+                  onClick={exitBatchMode}
+                >
+                  {t('pos.cancel', 'Cancel')}
+                </Button>
+                <div className="flex w-full flex-row gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="flex flex-1 items-center justify-center"
+                    onClick={selectAllEligibleForBatch}
+                  >
+                    {t('pos.select_all_pending', 'Select All Pending')}
+                  </Button>
+                  {batchMode === 'expedite' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex flex-1 items-center justify-center bg-red-600 text-white hover:bg-red-700"
+                      disabled={selectedBatchIds.size === 0 || isConfirmingBatchExpedite}
+                      onClick={() => void handleConfirmBatchExpedite()}
+                    >
+                      {isConfirmingBatchExpedite ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : (
+                        <Flame className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {t('pos.confirm_expedite', 'Confirm Expedite')}
+                        {selectedBatchIds.size > 0 ? ` (${selectedBatchIds.size})` : ''}
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex flex-1 items-center justify-center bg-green-600 text-white hover:bg-green-700"
+                      disabled={selectedBatchIds.size === 0 || isConfirmingBatchServed}
+                      onClick={() => void handleConfirmBatchServed()}
+                    >
+                      {isConfirmingBatchServed ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : (
+                        <CheckCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {t('pos.confirm_served', 'Confirm Served')}
+                        {selectedBatchIds.size > 0 ? ` (${selectedBatchIds.size})` : ''}
+                      </span>
+                    </Button>
+                  )}
+                </div>
+              </div>
             ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                onClick={() => setExpediteSelectionMode(true)}
-              >
-                <Zap className="mr-1 h-3.5 w-3.5" />
-                {t('pos.batch_expedite', 'Batch Expedite')}
-              </Button>
+              <div className="flex w-full flex-row gap-2">
+                {expediteEligibleOrders.length > 0 && onConfirmBatchExpedite ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-1 items-center justify-center border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                    onClick={() => {
+                      setSelectedBatchIds(new Set());
+                      setBatchMode('expedite');
+                    }}
+                  >
+                    <Zap className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t('pos.batch_expedite', 'Batch Expedite')}</span>
+                  </Button>
+                ) : null}
+                {servedEligibleOrders.length > 0 && onConfirmBatchServed ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-1 items-center justify-center border-green-600 bg-green-50 text-green-700 hover:bg-green-100"
+                    onClick={() => {
+                      setSelectedBatchIds(new Set());
+                      setBatchMode('served');
+                    }}
+                  >
+                    <CheckCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t('pos.batch_served', 'Batch Served')}</span>
+                  </Button>
+                ) : null}
+              </div>
             )
           ) : null}
         </div>
-        {expediteSelectionMode ? (
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={selectAllPendingForExpedite}>
-              {t('pos.select_all_pending', 'Select All Pending')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-red-600 text-white hover:bg-red-700"
-              disabled={selectedExpediteIds.size === 0 || isConfirmingBatchExpedite}
-              onClick={() => void handleConfirmBatchExpedite()}
-            >
-              {isConfirmingBatchExpedite ? (
-                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Flame className="mr-1 h-3.5 w-3.5" />
-              )}
-              {t('pos.confirm_expedite', 'Confirm Expedite')}
-              {selectedExpediteIds.size > 0 ? ` (${selectedExpediteIds.size})` : ''}
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -941,15 +1112,18 @@ export function POSBookingDetail({
                 isCancelled={isCancelled}
                 statusBadgeClass={getOrderStatusColor(order.status)}
                 statusLabel={formatOrderStatusLabel(order.status)}
-                selectionMode={expediteSelectionMode}
-                isSelected={selectedExpediteIds.has(order.id)}
-                onToggleSelect={toggleExpediteSelection}
+                selectionMode={isBatchSelectionActive}
+                selectionPurpose={batchMode === 'served' ? 'served' : 'expedite'}
+                isSelected={selectedBatchIds.has(order.id)}
+                onToggleSelect={toggleBatchSelection}
                 onCancelOrderItem={onCancelOrderItem}
                 cancellingOrderItemId={cancellingOrderItemId}
                 onUpdateNewItem={onUpdateNewItem}
                 onRemoveNewItem={onRemoveNewItem}
                 onToggleExpedite={onToggleExpedite}
                 isTogglingExpedite={togglingExpediteOrderId === order.id}
+                onMarkServed={onMarkServed}
+                isMarkingServed={markingServedItemId === order.posOrderItemId}
               />
             );
           })
@@ -1060,7 +1234,7 @@ export function POSBookingDetail({
         >
           <div className="shrink-0 p-3 flex flex-col gap-3">
 
-          {guestsWithDietaryRecords.length > 0 ? (
+          {!isWalkIn && guestsWithDietaryRecords.length > 0 ? (
             <div className="bg-red-50 border-l-4 border-red-500 px-3 py-2 shadow-sm rounded-r-lg shrink-0">
               <div className="flex items-center gap-1.5 mb-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
@@ -1149,7 +1323,7 @@ export function POSBookingDetail({
             </div>
           ) : null}
 
-          {heldPreorderItems.length > 0 ? (
+          {!isWalkIn && heldPreorderItems.length > 0 ? (
             <Card className="border border-yellow-200 bg-yellow-50 p-3 shrink-0">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-yellow-900">
                 Held Pre-orders (Guest not yet arrived / Ready to fire)
