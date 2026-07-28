@@ -22,6 +22,7 @@ import {
 } from './ui/tabs';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { countryNameFor } from '../../../../../utils/countries';
+import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -2734,8 +2735,22 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
                   <input
                   type="text"
+                  placeholder="e.g. 1h 30m"
                   value={movementFormProp.totalProcessingTime || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, totalProcessingTime: e.target.value })}
+                  onFocus={() => {
+                    const calculated = promptAutofillProcessingTime({
+                      startTime: movementFormProp.timeMetVIPAtGate,
+                      endTime: movementFormProp.timeLeftHKIAL,
+                      currentValue: movementFormProp.totalProcessingTime,
+                    });
+                    if (calculated) {
+                      onMovementFormChange?.({
+                        ...movementFormProp,
+                        totalProcessingTime: calculated,
+                      });
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
                 </div>

@@ -12,8 +12,9 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { expandPermissionAliases } from '@/lib/permissions';
+import { getMasterPermissionGroups } from '@/lib/permissionModules';
 import type {
-  PermissionOption,
   SystemUserFormData,
   SystemUserRole,
   SystemUserStatus,
@@ -38,9 +39,7 @@ export interface SystemUserEditProps {
   isLoading?: boolean;
   isSaving?: boolean;
   initialData?: SystemUserFormData | null;
-  /** @deprecated Prefer permissionGroups from the Spatie matrix */
-  availablePermissions?: PermissionOption[];
-  /** Grouped permissions from GET /permissions-matrix */
+  /** Grouped permissions — defaults to the full PermissionMatrix master catalog. */
   permissionGroups?: DirectPermissionGroup[];
   /** Initial direct (user-level) permission names from GET /users/{id}/direct-permissions */
   initialDirectPermissions?: string[];
@@ -51,27 +50,26 @@ export interface SystemUserEditProps {
   rolePermissions?: Partial<Record<SystemUserRole, string[]>>;
   roleLabels?: Record<SystemUserRole, string>;
   editableRoles?: SystemUserRole[];
+  /** Disable Role selects (self-edit). */
+  roleSelectDisabled?: boolean;
+  /** Entire permissions tab read-only (self-edit). */
+  permissionsReadOnly?: boolean;
+  /**
+   * When editing self (read-only): permission names the target effectively holds.
+   * Used for both visibility filtering and checkbox checked state.
+   */
+  effectivePermissionNames?: string[] | null;
+  /**
+   * Permission names the current actor may grant (editing others).
+   * When set, checkboxes outside this set are hidden.
+   * Omit / undefined / null with Super Admin = show full matrix.
+   */
+  grantablePermissionNames?: string[] | null;
   /** Tab to open initially: profile | permissions */
   initialTab?: 'profile' | 'permissions';
   onBack?: () => void;
   onSave?: (data: SystemUserFormData) => void;
 }
-
-const ALL_PERMISSIONS: PermissionOption[] = [
-  { value: 'bookings.view', label: 'View Bookings' },
-  { value: 'bookings.create', label: 'Create Bookings' },
-  { value: 'bookings.update', label: 'Update Bookings' },
-  { value: 'bookings.delete', label: 'Delete Bookings' },
-  { value: 'bookings.approve', label: 'Approve Bookings' },
-  { value: 'bookings.schedules.view', label: 'View Booking Schedules' },
-  { value: 'bookings.settings.view', label: 'View Booking Settings' },
-  { value: 'bookings.settings.update', label: 'Update Booking Settings' },
-  { value: 'system_users.view', label: 'View System Users' },
-  { value: 'system_users.create', label: 'Create System Users' },
-  { value: 'system_users.update', label: 'Update System Users' },
-  { value: 'system_users.delete', label: 'Delete System Users' },
-  { value: 'audit_logs.view', label: 'View Audit Logs' },
-];
 
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
   Administrator: 'Administrator',
@@ -90,14 +88,8 @@ const DEFAULT_FORM: SystemUserFormData = {
   password: '',
 };
 
-function fallbackGroupsFromOptions(options: PermissionOption[]): DirectPermissionGroup[] {
-  return [
-    {
-      key: 'all',
-      label: 'System Permissions',
-      permissions: options.map((o) => ({ name: o.value, label: o.label })),
-    },
-  ];
+function setContainsPermission(set: Set<string>, name: string): boolean {
+  return expandPermissionAliases(name).some((alias) => set.has(alias));
 }
 
 function GroupSelectAllCheckbox({
@@ -140,13 +132,16 @@ export function SystemUserEdit({
   isLoading = false,
   isSaving = false,
   initialData = null,
-  availablePermissions = ALL_PERMISSIONS,
   permissionGroups,
   initialDirectPermissions,
   spatieRoles = [],
   loadRolePermissions,
   roleLabels = DEFAULT_ROLE_LABELS,
   editableRoles = ['Staff', 'Supervisor', 'Administrator', 'Super Admin'],
+  roleSelectDisabled = false,
+  permissionsReadOnly = false,
+  effectivePermissionNames = null,
+  grantablePermissionNames = null,
   initialTab = 'profile',
   onBack = () => {},
   onSave = () => {},
@@ -165,10 +160,15 @@ export function SystemUserEdit({
   const previousRoleRef = useRef<SystemUserRole | null>(null);
   const skipNextDirectHydrateRef = useRef(false);
 
-  const groups =
-    permissionGroups && permissionGroups.length > 0
-      ? permissionGroups
-      : fallbackGroupsFromOptions(availablePermissions);
+  const effectiveSet = useMemo(() => {
+    if (effectivePermissionNames == null) return null;
+    return new Set(effectivePermissionNames);
+  }, [effectivePermissionNames]);
+
+  const grantableSet = useMemo(() => {
+    if (grantablePermissionNames == null) return null;
+    return new Set(grantablePermissionNames);
+  }, [grantablePermissionNames]);
 
   const selectedRoleId = useMemo(() => {
     const match = spatieRoles.find((role) => role.name === formRole);
@@ -179,6 +179,50 @@ export function SystemUserEdit({
     () => new Set(roleInheritedPermissions),
     [roleInheritedPermissions],
   );
+
+  /** Role defaults ∪ direct extras — checked state when editing others. */
+  const heldSet = useMemo(
+    () => new Set([...roleInheritedPermissions, ...directPermissions]),
+    [roleInheritedPermissions, directPermissions],
+  );
+
+  const permissionIsOwned = (name: string): boolean => {
+    if (permissionsReadOnly && effectiveSet) {
+      return setContainsPermission(effectiveSet, name);
+    }
+    return heldSet.has(name) || setContainsPermission(heldSet, name);
+  };
+
+  /**
+   * Always start from the master PermissionMatrix catalog (never the old 12-item list).
+   * Self-view: only permissions present in effective_permissions.
+   * Editing others: only permissions the actor may grant (full catalog when Super Admin).
+   */
+  const groups = useMemo(() => {
+    const base =
+      permissionGroups && permissionGroups.length > 0
+        ? permissionGroups
+        : getMasterPermissionGroups();
+
+    return base
+      .map((group) => ({
+        ...group,
+        permissions: group.permissions.filter((p) => {
+          if (permissionsReadOnly) {
+            if (!effectiveSet) return false;
+            return setContainsPermission(effectiveSet, p.name);
+          }
+          if (!grantableSet) return true;
+          return setContainsPermission(grantableSet, p.name);
+        }),
+      }))
+      .filter((group) => group.permissions.length > 0);
+  }, [
+    permissionGroups,
+    grantableSet,
+    effectiveSet,
+    permissionsReadOnly,
+  ]);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -259,6 +303,7 @@ export function SystemUserEdit({
       : editableRoles;
 
   const toggleDirectPermission = (perm: string) => {
+    if (permissionsReadOnly) return;
     if (inheritedSet.has(perm)) return;
     setDirectPermissions((prev) =>
       prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm],
@@ -266,6 +311,7 @@ export function SystemUserEdit({
   };
 
   const handleToggleGroup = (groupPermissions: string[], isCurrentlyAllSelected: boolean) => {
+    if (permissionsReadOnly) return;
     // Only toggle permissions that are not locked as role defaults.
     const toggleable = groupPermissions.filter((name) => !inheritedSet.has(name));
     if (toggleable.length === 0) return;
@@ -325,9 +371,12 @@ export function SystemUserEdit({
         </div>
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
+      <form className="flex min-h-0 flex-col space-y-4" onSubmit={handleSubmit}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
+          className="flex min-h-0 flex-col space-y-4"
+        >          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">Profile &amp; Security</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
           </TabsList>
@@ -367,12 +416,16 @@ export function SystemUserEdit({
                   <select
                     value={formRole}
                     onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600"
+                    disabled={roleSelectDisabled}
                   >
                     {formRoleOptions.map((role) => (
                       <option key={role} value={role}>{roleLabels[role]}</option>
                     ))}
                   </select>
+                  {roleSelectDisabled ? (
+                    <p className="mt-1 text-xs text-amber-700">You cannot change your own role.</p>
+                  ) : null}
                 </div>
                 <div>
                   <label className="mb-[10px] block text-sm text-gray-700">Department</label>
@@ -424,53 +477,62 @@ export function SystemUserEdit({
             </Card>
           </TabsContent>
 
-          <TabsContent value="permissions">
-            <Card className="p-6 space-y-6">
-              <div>
-                <label htmlFor="su-role-permissions" className="mb-[10px] block text-sm text-gray-700">
-                  Role
-                </label>
-                <select
-                  id="su-role-permissions"
-                  value={formRole}
-                  onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
-                  className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md"
-                >
-                  {formRoleOptions.map((role) => (
-                    <option key={role} value={role}>{roleLabels[role]}</option>
-                  ))}
-                </select>
-                <p className="text-sm text-gray-500 mt-2">
-                  Role defaults appear locked below. Only additional direct permissions are editable
-                  for this user.
-                </p>
+          <TabsContent
+            value="permissions"
+            className="flex min-h-0 flex-col data-[state=inactive]:hidden"
+          >
+            <Card className="flex max-h-[min(40rem,calc(100vh-14rem))] min-h-0 flex-col overflow-hidden p-6">
+              <div className="shrink-0 space-y-6">
+                <div>
+                  <label htmlFor="su-role-permissions" className="mb-[10px] block text-sm text-gray-700">
+                    Role
+                  </label>
+                  <select
+                    id="su-role-permissions"
+                    value={formRole}
+                    onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
+                    className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600"
+                    disabled={roleSelectDisabled || permissionsReadOnly}
+                  >
+                    {formRoleOptions.map((role) => (
+                      <option key={role} value={role}>{roleLabels[role]}</option>
+                    ))}
+                  </select>
+                  <p className="text-sm text-gray-500 mt-2">
+                    {permissionsReadOnly
+                      ? 'Permissions are read-only while editing your own account.'
+                      : 'Role defaults appear locked below. Only additional direct permissions are editable for this user.'}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Additional Direct Permissions
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Role defaults are checked and locked. Toggle extras on top of the role — changing
+                    the role clears any previous direct extras.
+                  </p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">
-                  Additional Direct Permissions
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                  Role defaults are checked and locked. Toggle extras on top of the role — changing
-                  the role clears any previous direct extras.
-                </p>
-              </div>
-
-              <div className="max-h-[32rem] overflow-y-auto pr-1">
+              <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                 {groups.map((group) => {
                   const groupPermissionNames = group.permissions.map((p) => p.name);
+                  if (groupPermissionNames.length === 0) {
+                    return null;
+                  }
+
+                  const isPermissionHeld = (name: string) => permissionIsOwned(name);
+
                   const toggleablePermissions = groupPermissionNames.filter(
                     (name) => !inheritedSet.has(name),
                   );
                   const isAllSelected =
                     groupPermissionNames.length > 0 &&
-                    groupPermissionNames.every(
-                      (p) => inheritedSet.has(p) || directPermissions.includes(p),
-                    );
+                    groupPermissionNames.every(isPermissionHeld);
                   const isSomeSelected =
-                    groupPermissionNames.some(
-                      (p) => inheritedSet.has(p) || directPermissions.includes(p),
-                    ) && !isAllSelected;
+                    groupPermissionNames.some(isPermissionHeld) && !isAllSelected;
                   const isToggleableAllSelected =
                     toggleablePermissions.length > 0 &&
                     toggleablePermissions.every((p) => directPermissions.includes(p));
@@ -483,7 +545,7 @@ export function SystemUserEdit({
                           id={selectAllId}
                           checked={isAllSelected}
                           indeterminate={isSomeSelected}
-                          disabled={toggleablePermissions.length === 0}
+                          disabled={permissionsReadOnly || toggleablePermissions.length === 0}
                           onChange={() =>
                             handleToggleGroup(groupPermissionNames, isToggleableAllSelected)
                           }
@@ -498,12 +560,13 @@ export function SystemUserEdit({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 mb-6">
                         {group.permissions.map((permission) => {
                           const isInherited = inheritedSet.has(permission.name);
-                          const isDirectlyAssigned = directPermissions.includes(permission.name);
+                          const isHeld = isPermissionHeld(permission.name);
+                          const isLocked = permissionsReadOnly || isInherited;
                           return (
                             <label
                               key={permission.name}
                               className={`flex items-center gap-3 rounded-md border border-transparent px-1 py-1 ${
-                                isInherited
+                                isLocked
                                   ? 'cursor-not-allowed opacity-90'
                                   : 'cursor-pointer hover:bg-gray-50'
                               }`}
@@ -511,18 +574,18 @@ export function SystemUserEdit({
                               <input
                                 type="checkbox"
                                 className="rounded border-gray-300 accent-black shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
-                                checked={isInherited || isDirectlyAssigned}
-                                disabled={isInherited}
+                                checked={isHeld}
+                                disabled={isLocked}
                                 onChange={() => toggleDirectPermission(permission.name)}
                               />
-                              <span className={`text-sm ${isInherited ? 'text-gray-500' : 'text-gray-900'}`}>
+                              <span className={`text-sm ${isInherited || permissionsReadOnly ? 'text-gray-500' : 'text-gray-900'}`}>
                                 <span className="block">
                                   {permission.label}
-                                  {isInherited && (
+                                  {isInherited ? (
                                     <span className="ml-1.5 text-xs font-normal text-gray-400">
                                       (Role Default)
                                     </span>
-                                  )}
+                                  ) : null}
                                 </span>
                                 <span className="block text-xs text-gray-400 font-mono">
                                   {permission.name}

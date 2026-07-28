@@ -1,9 +1,26 @@
-import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { useTranslation } from '../lib/useTranslation';
 
 interface OrderItem {
   id: string;
@@ -11,6 +28,7 @@ interface OrderItem {
   name: string;
   category: string;
   quantity: number;
+  remarks?: string;
   unitPrice: number;
   total: number;
   status: 'pending' | 'preparing' | 'served' | 'cancelled';
@@ -18,6 +36,7 @@ interface OrderItem {
   servedTime?: string;
   cancelledAt?: string | null;
   isNew?: boolean;
+  isExpedited?: boolean;
 }
 
 interface FoodAllergy {
@@ -254,6 +273,424 @@ const generateMockBooking = (bookingNo: string): POSBooking => {
 // ── MOCK constant + updated Props ────────────────────────────────────────────
 const MOCK_BOOKING_DETAIL: POSBooking = generateMockBooking('A-202603-000001');
 
+type TicketItemDialog = 'remarks' | 'quantity' | null;
+
+function isOrderItemExpediteStatusEligible(order: OrderItem): boolean {
+  if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served') {
+    return false;
+  }
+  return order.isNew === true || order.status === 'pending' || order.status === 'preparing';
+}
+
+/** Pending/Preparing (or new cart) items that are not already expedited — selectable in batch mode. */
+function isOrderItemExpediteSelectable(order: OrderItem): boolean {
+  return isOrderItemExpediteStatusEligible(order) && !order.isExpedited;
+}
+
+function TicketOrderItemRow({
+  order,
+  isCancelled,
+  statusBadgeClass,
+  statusLabel,
+  selectionMode = false,
+  isSelected = false,
+  onToggleSelect,
+  onCancelOrderItem,
+  cancellingOrderItemId,
+  onUpdateNewItem,
+  onRemoveNewItem,
+  onToggleExpedite,
+  isTogglingExpedite = false,
+}: {
+  order: OrderItem;
+  isCancelled: boolean;
+  statusBadgeClass: string;
+  statusLabel: string;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (orderId: string) => void;
+  onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
+  cancellingOrderItemId?: number | null;
+  onUpdateNewItem?: (
+    itemId: string,
+    payload: { quantity?: number; remarks?: string | null },
+  ) => void;
+  onRemoveNewItem?: (itemId: string) => void;
+  onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
+  isTogglingExpedite?: boolean;
+}) {
+  const { t } = useTranslation();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState<TicketItemDialog>(null);
+  const [draftRemarks, setDraftRemarks] = useState(order.remarks ?? '');
+  const [draftQuantity, setDraftQuantity] = useState(String(order.quantity));
+  const trimmedRemarks = (order.remarks ?? '').trim();
+  const isNewItem = Boolean(order.isNew);
+  const isExpedited = Boolean(order.isExpedited);
+  const isSubmittedItem = !isNewItem && !isCancelled && Boolean(order.posOrderItemId);
+  const isStatusEligible = isOrderItemExpediteStatusEligible(order);
+  const canToggleExpedite = isStatusEligible;
+  const canOpenMenu =
+    !selectionMode &&
+    ((isNewItem && Boolean(onUpdateNewItem || onRemoveNewItem)) ||
+      (isSubmittedItem && Boolean(onCancelOrderItem)));
+  const isCancellingSubmitted =
+    isSubmittedItem && cancellingOrderItemId === order.posOrderItemId;
+
+  useEffect(() => {
+    if (openDialog === 'remarks') {
+      setDraftRemarks(order.remarks ?? '');
+    }
+    if (openDialog === 'quantity') {
+      setDraftQuantity(String(order.quantity));
+    }
+  }, [openDialog, order.remarks, order.quantity]);
+
+  const handleSaveRemarks = () => {
+    if (!isNewItem || !onUpdateNewItem) {
+      return;
+    }
+    const nextRemarks = draftRemarks.trim();
+    onUpdateNewItem(order.id, {
+      remarks: nextRemarks === '' ? null : nextRemarks,
+    });
+    setOpenDialog(null);
+  };
+
+  const handleSaveQuantity = () => {
+    if (!isNewItem || !onUpdateNewItem) {
+      return;
+    }
+    const nextQuantity = Number.parseInt(draftQuantity, 10);
+    if (!Number.isFinite(nextQuantity) || nextQuantity < 1) {
+      return;
+    }
+    onUpdateNewItem(order.id, { quantity: nextQuantity });
+    setOpenDialog(null);
+  };
+
+  const handleCancelFromMenu = () => {
+    setIsDropdownOpen(false);
+    if (isNewItem) {
+      onRemoveNewItem?.(order.id);
+      return;
+    }
+    if (order.posOrderItemId && onCancelOrderItem) {
+      void onCancelOrderItem(order.posOrderItemId);
+    }
+  };
+
+  const rowBody = (
+    <>
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className={`text-sm font-semibold truncate ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+            {order.name}
+          </p>
+          {isExpedited && !isCancelled ? (
+            <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              <Flame className="h-3 w-3" aria-hidden />
+              {t('pos.expedited', 'Expedited')}
+            </span>
+          ) : null}
+        </div>
+        {trimmedRemarks ? (
+          <div className="mt-1.5 flex">
+            <span
+              className={`inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 ${
+                isCancelled ? 'opacity-60' : ''
+              }`}
+            >
+              <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+              <span className={`line-clamp-2 ${isCancelled ? 'line-through' : ''}`}>
+                {trimmedRemarks}
+              </span>
+            </span>
+          </div>
+        ) : order.id ? (
+          <p className={`text-xs text-gray-400 truncate ${isCancelled ? 'line-through' : ''}`}>
+            {order.id}
+          </p>
+        ) : null}
+      </div>
+      <span className={`text-sm tabular-nums shrink-0 ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+        x{order.quantity}
+      </span>
+      {isNewItem ? (
+        <Badge className="shrink-0 text-xs bg-blue-100 text-blue-800 border border-blue-200">
+          {t('pos.new', 'New')}
+        </Badge>
+      ) : (
+        <Badge className={`shrink-0 text-xs ${statusBadgeClass}`}>
+          {statusLabel}
+        </Badge>
+      )}
+    </>
+  );
+
+  const borderClass = isCancelled
+    ? 'border-gray-200 bg-gray-50'
+    : isExpedited
+      ? 'border-2 border-red-500 bg-red-50'
+      : 'border-gray-200 bg-white';
+
+  if (selectionMode) {
+    if (!isStatusEligible) {
+      return null;
+    }
+
+    if (isExpedited) {
+      return (
+        <div
+          className={`flex w-full items-center gap-2 rounded-lg border py-2 px-3 text-left opacity-60 ${borderClass}`}
+          aria-disabled="true"
+          title={t('pos.already_expedited', 'Already Expedited')}
+        >
+          <Square className="h-5 w-5 shrink-0 text-gray-300" aria-hidden />
+          {rowBody}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        className={`flex w-full items-center gap-2 rounded-lg border py-2 px-3 text-left ${borderClass}`}
+        onClick={() => onToggleSelect?.(order.id)}
+      >
+        {isSelected ? (
+          <CheckSquare className="h-5 w-5 shrink-0 text-red-600" />
+        ) : (
+          <Square className="h-5 w-5 shrink-0 text-gray-400" />
+        )}
+        {rowBody}
+      </button>
+    );
+  }
+
+  if (!canOpenMenu) {
+    return (
+      <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
+        {rowBody}
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={() => void onToggleExpedite(order)}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
+        <DropdownMenu modal={false} open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              onClick={(event) => {
+                event.stopPropagation();
+                setIsDropdownOpen(true);
+              }}
+              aria-label={t('pos.actions_for', 'Actions for {{name}}', { name: order.name })}
+              disabled={Boolean(isCancellingSubmitted)}
+            >
+              {rowBody}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            className="w-44 z-[100]"
+            style={{ zIndex: 99999 }}
+          >
+            {isNewItem ? (
+              <>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setIsDropdownOpen(false);
+                    setOpenDialog('remarks');
+                  }}
+                >
+                  {t('pos.custom_request', 'Custom Request')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => {
+                    setIsDropdownOpen(false);
+                    setOpenDialog('quantity');
+                  }}
+                >
+                  {t('pos.change_quantity', 'Change Quantity')}
+                </DropdownMenuItem>
+              </>
+            ) : null}
+            <DropdownMenuItem
+              className="text-red-600 focus:text-red-600"
+              onSelect={handleCancelFromMenu}
+            >
+              {t('pos.cancel_item', 'Cancel Item')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void onToggleExpedite(order);
+            }}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
+
+        {isNewItem && onRemoveNewItem ? (
+          <button
+            type="button"
+            aria-label={t('pos.cancel_item', 'Cancel Item')}
+            className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemoveNewItem(order.id);
+            }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+
+        {isSubmittedItem && onCancelOrderItem ? (
+          <button
+            type="button"
+            aria-label={t('pos.cancel_item', 'Cancel Item')}
+            className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={Boolean(isCancellingSubmitted)}
+            onClick={(event) => {
+              event.stopPropagation();
+              void onCancelOrderItem(order.posOrderItemId!);
+            }}
+          >
+            {isCancellingSubmitted ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
+          </button>
+        ) : null}
+      </div>
+
+      {isNewItem ? (
+        <>
+          <Dialog
+            open={openDialog === 'remarks'}
+            onOpenChange={(open) => setOpenDialog(open ? 'remarks' : null)}
+          >
+            <DialogContent className="sm:max-w-md" style={{ zIndex: 100000 }}>
+              <DialogHeader>
+                <DialogTitle>{t('pos.custom_request', 'Custom Request')}</DialogTitle>
+                <DialogDescription>
+                  {t('pos.update_custom_request_for', 'Update the custom request for {{name}}.', {
+                    name: order.name,
+                  })}
+                </DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={draftRemarks}
+                onChange={(event) => setDraftRemarks(event.target.value)}
+                placeholder={t('pos.custom_request_placeholder', 'e.g. Less ice, Extra hot')}
+                rows={4}
+                autoFocus
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenDialog(null)}>
+                  {t('pos.cancel', 'Cancel')}
+                </Button>
+                <Button type="button" onClick={handleSaveRemarks}>
+                  {t('pos.save', 'Save')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog
+            open={openDialog === 'quantity'}
+            onOpenChange={(open) => setOpenDialog(open ? 'quantity' : null)}
+          >
+            <DialogContent className="sm:max-w-sm" style={{ zIndex: 100000 }}>
+              <DialogHeader>
+                <DialogTitle>{t('pos.change_quantity', 'Change Quantity')}</DialogTitle>
+                <DialogDescription>
+                  {t('pos.update_quantity_for', 'Update quantity for {{name}}.', {
+                    name: order.name,
+                  })}
+                </DialogDescription>
+              </DialogHeader>
+              <Input
+                type="number"
+                min={1}
+                step={1}
+                value={draftQuantity}
+                onChange={(event) => setDraftQuantity(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleSaveQuantity();
+                  }
+                }}
+                autoFocus
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenDialog(null)}>
+                  {t('pos.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveQuantity}
+                  disabled={
+                    !Number.isFinite(Number.parseInt(draftQuantity, 10)) ||
+                    Number.parseInt(draftQuantity, 10) < 1
+                  }
+                >
+                  {t('pos.save', 'Save')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      ) : null}
+    </>
+  );
+}
+
 export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_DETAIL */
   booking?: POSBooking | null;
@@ -263,15 +700,24 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   heldPreorderItems?: Array<{
     name_en?: string | null;
     quantity: number;
+    remarks?: string | null;
   }>;
   onFireHeldPreorders?: () => void;
   isFiringHeldPreorders?: boolean;
   onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
   cancellingOrderItemId?: number | null;
+  onUpdateNewItem?: (
+    itemId: string,
+    payload: { quantity?: number; remarks?: string | null },
+  ) => void;
   onRemoveNewItem?: (itemId: string) => void;
   onSubmitPendingOrder?: () => void | Promise<void>;
   hasPendingOrderItems?: boolean;
   isSubmittingPendingOrder?: boolean;
+  onToggleExpedite?: (order: OrderItem) => void | Promise<void>;
+  onConfirmBatchExpedite?: (orders: OrderItem[]) => void | Promise<void>;
+  togglingExpediteOrderId?: string | null;
+  isConfirmingBatchExpedite?: boolean;
   menuContent?: ReactNode;
 }
 
@@ -286,12 +732,18 @@ export function POSBookingDetail({
   isFiringHeldPreorders = false,
   onCancelOrderItem,
   cancellingOrderItemId = null,
+  onUpdateNewItem,
   onRemoveNewItem,
   onSubmitPendingOrder,
   hasPendingOrderItems = false,
   isSubmittingPendingOrder = false,
+  onToggleExpedite,
+  onConfirmBatchExpedite,
+  togglingExpediteOrderId = null,
+  isConfirmingBatchExpedite = false,
   menuContent = null,
 }: POSBookingDetailFullProps) {
+  const { t } = useTranslation();
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const guests = booking.guests?.length > 0 ? booking.guests : booking.guestProfiles;
 
@@ -362,10 +814,47 @@ export function POSBookingDetail({
   const [isContextDetailsOpen, setIsContextDetailsOpen] = useState(false);
   const [isTicketSidebarVisible, setIsTicketSidebarVisible] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<'menu' | 'ticket'>('menu');
+  const [expediteSelectionMode, setExpediteSelectionMode] = useState(false);
+  const [selectedExpediteIds, setSelectedExpediteIds] = useState<Set<string>>(new Set());
   const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
   const ticketItemCount = booking.orders.length;
   const showTicketBottomBarOnMobile = mobilePanel === 'menu';
   const showTicketBottomBarOnDesktop = !isTicketSidebarVisible;
+
+  const expediteEligibleOrders = useMemo(
+    () => booking.orders.filter((order) => isOrderItemExpediteSelectable(order)),
+    [booking.orders],
+  );
+
+  const exitExpediteSelectionMode = () => {
+    setExpediteSelectionMode(false);
+    setSelectedExpediteIds(new Set());
+  };
+
+  const toggleExpediteSelection = (orderId: string) => {
+    setSelectedExpediteIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(orderId)) {
+        next.delete(orderId);
+      } else {
+        next.add(orderId);
+      }
+      return next;
+    });
+  };
+
+  const selectAllPendingForExpedite = () => {
+    setSelectedExpediteIds(new Set(expediteEligibleOrders.map((order) => order.id)));
+  };
+
+  const handleConfirmBatchExpedite = async () => {
+    const selected = expediteEligibleOrders.filter((order) => selectedExpediteIds.has(order.id));
+    if (selected.length === 0 || !onConfirmBatchExpedite) {
+      return;
+    }
+    await onConfirmBatchExpedite(selected);
+    exitExpediteSelectionMode();
+  };
 
   const openTicketPanel = () => {
     setIsTicketSidebarVisible(true);
@@ -389,9 +878,53 @@ export function POSBookingDetail({
             <p className="text-base font-semibold text-yellow-900 leading-tight">{pendingOrders}</p>
           </div>
         </div>
-        <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
-        <p className="text-sm text-gray-600">{booking.memberName}</p>
-        <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-gray-900">{booking.suiteName}</h2>
+            <p className="text-sm text-gray-600">{booking.memberName}</p>
+            <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
+          </div>
+          {expediteEligibleOrders.length > 0 && onConfirmBatchExpedite ? (
+            expediteSelectionMode ? (
+              <Button type="button" variant="outline" size="sm" onClick={exitExpediteSelectionMode}>
+                {t('pos.cancel', 'Cancel')}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                onClick={() => setExpediteSelectionMode(true)}
+              >
+                <Zap className="mr-1 h-3.5 w-3.5" />
+                {t('pos.batch_expedite', 'Batch Expedite')}
+              </Button>
+            )
+          ) : null}
+        </div>
+        {expediteSelectionMode ? (
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={selectAllPendingForExpedite}>
+              {t('pos.select_all_pending', 'Select All Pending')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={selectedExpediteIds.size === 0 || isConfirmingBatchExpedite}
+              onClick={() => void handleConfirmBatchExpedite()}
+            >
+              {isConfirmingBatchExpedite ? (
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Flame className="mr-1 h-3.5 w-3.5" />
+              )}
+              {t('pos.confirm_expedite', 'Confirm Expedite')}
+              {selectedExpediteIds.size > 0 ? ` (${selectedExpediteIds.size})` : ''}
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
@@ -402,59 +935,22 @@ export function POSBookingDetail({
             const isCancelled = Boolean(order.cancelledAt);
 
             return (
-              <div
+              <TicketOrderItemRow
                 key={order.id}
-                className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${
-                  isCancelled ? 'border-gray-200 bg-gray-50' : 'border-gray-200 bg-white'
-                }`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${isCancelled ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                    {order.name}
-                  </p>
-                  {order.id ? (
-                    <p className={`text-xs text-gray-400 truncate ${isCancelled ? 'line-through' : ''}`}>
-                      {order.id}
-                    </p>
-                  ) : null}
-                </div>
-                <span className={`text-sm tabular-nums shrink-0 ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                  x{order.quantity}
-                </span>
-                {order.isNew ? (
-                  <Badge className="shrink-0 text-xs bg-blue-100 text-blue-800 border border-blue-200">
-                    New
-                  </Badge>
-                ) : (
-                  <Badge className={`shrink-0 text-xs ${getOrderStatusColor(order.status)}`}>
-                    {formatOrderStatusLabel(order.status)}
-                  </Badge>
-                )}
-                {order.isNew && onRemoveNewItem ? (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${order.name}`}
-                    className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors"
-                    onClick={() => onRemoveNewItem(order.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : !isCancelled && order.posOrderItemId && onCancelOrderItem ? (
-                  <button
-                    type="button"
-                    aria-label={`Cancel ${order.name}`}
-                    className="shrink-0 p-2 rounded-md text-red-500 hover:bg-red-50 hover:text-red-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={cancellingOrderItemId === order.posOrderItemId}
-                    onClick={() => void onCancelOrderItem(order.posOrderItemId!)}
-                  >
-                    {cancellingOrderItemId === order.posOrderItemId ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <X className="h-4 w-4" />
-                    )}
-                  </button>
-                ) : null}
-              </div>
+                order={order}
+                isCancelled={isCancelled}
+                statusBadgeClass={getOrderStatusColor(order.status)}
+                statusLabel={formatOrderStatusLabel(order.status)}
+                selectionMode={expediteSelectionMode}
+                isSelected={selectedExpediteIds.has(order.id)}
+                onToggleSelect={toggleExpediteSelection}
+                onCancelOrderItem={onCancelOrderItem}
+                cancellingOrderItemId={cancellingOrderItemId}
+                onUpdateNewItem={onUpdateNewItem}
+                onRemoveNewItem={onRemoveNewItem}
+                onToggleExpedite={onToggleExpedite}
+                isTogglingExpedite={togglingExpediteOrderId === order.id}
+              />
             );
           })
         )}
@@ -659,15 +1155,29 @@ export function POSBookingDetail({
                 Held Pre-orders (Guest not yet arrived / Ready to fire)
               </h3>
               <ul className="mt-2 space-y-1">
-                {heldPreorderItems.map((item, index) => (
-                  <li
-                    key={`${item.name_en ?? 'item'}-${index}`}
-                    className="flex items-center justify-between rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
-                  >
-                    <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
-                    <span className="text-gray-600">x{item.quantity}</span>
-                  </li>
-                ))}
+                {heldPreorderItems.map((item, index) => {
+                  const trimmedRemarks = (item.remarks ?? '').trim();
+
+                  return (
+                    <li
+                      key={`${item.name_en ?? 'item'}-${item.remarks ?? ''}-${index}`}
+                      className="flex items-start justify-between gap-3 rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
+                        {trimmedRemarks ? (
+                          <div className="mt-1.5 flex">
+                            <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                              <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                              <span className="line-clamp-2">{trimmedRemarks}</span>
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                      <span className="shrink-0 text-gray-600">x{item.quantity}</span>
+                    </li>
+                  );
+                })}
               </ul>
               <Button
                 type="button"
