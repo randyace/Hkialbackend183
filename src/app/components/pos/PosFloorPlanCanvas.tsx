@@ -28,6 +28,8 @@ export interface PosFloorPlanSuite {
   floor: string | null;
   current_booking_id?: number | null;
   booking: PosFloorPlanBooking | null;
+  display_name?: string | null;
+  display_time?: string | null;
   has_upcoming_conflict?: boolean;
 }
 
@@ -414,6 +416,8 @@ export function PosFloorPlanCanvas({
                   const suiteName = suite?.suite_name ?? item.label;
                   const booking = suite?.booking ?? null;
                   const hasBooking = Boolean(booking);
+                  const fallbackDisplayName = suite?.display_name ?? 'Walk-in Order';
+                  const fallbackDisplayTime = suite?.display_time ?? null;
                   const hasUpcomingConflict = Boolean(suite?.has_upcoming_conflict);
                   const isAssignmentModeActive = isInteractiveModeActive || isMultiAssignMode;
                   const isSelectedForAssignment =
@@ -511,6 +515,21 @@ export function PosFloorPlanCanvas({
                               </span>
                             ) : null}
                           </div>
+                        </div>
+                      ) : displayStatus === 'occupied' || displayStatus === 'food-served' ? (
+                        <div className="mt-1 flex w-full min-h-0 flex-1 flex-col items-center justify-center gap-0.5">
+                          <div
+                            className={`line-clamp-1 w-full px-0.5 text-center text-[10px] ${isSelectedForAssignment ? 'text-white/90' : 'text-gray-700'}`}
+                          >
+                            {fallbackDisplayName}
+                          </div>
+                          {fallbackDisplayTime ? (
+                            <div
+                              className={`text-[10px] ${isSelectedForAssignment ? 'text-white/80' : 'text-gray-500'}`}
+                            >
+                              {fallbackDisplayTime}
+                            </div>
+                          ) : null}
                         </div>
                       ) : displayStatus === 'available' || displayStatus === 'cleaning' ? (
                         <div
