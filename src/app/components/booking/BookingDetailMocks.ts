@@ -108,7 +108,7 @@ export interface Booking {
     lastName?: string;
     ageGroup?: string;
   }>;
-  status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show';
+  status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   services: string[];
   amount: string | 'Pending Calculation' | 'Re-calculation' | 'Manual Adjustment';
@@ -414,7 +414,7 @@ export const buildInitialNonFlyingGuests = (total: number, bookingId: number): N
 export const generateMockBooking = (id: number): Booking => {
   const names = ['John Smith', 'Mary Johnson', 'David Lee', 'Sarah Chen', 'Robert Wang', 'Emma Wilson', 'Michael Brown', 'Lisa Taylor', 'James Anderson', 'Sophia Martinez'];
   const suites = ['VIP Suite A', 'VIP Suite B', 'Executive Suite', 'Business Suite', 'Premier Suite', 'Open Lounge'];
-  const statuses: Booking['status'][] = ['Pending for Review', 'Pending for Approval', 'Approved', 'Confirmed', 'Rejected', 'Cancelled', 'No-show'];
+  const statuses: Booking['status'][] = ['Pending for Review', 'Pending for Approval', 'Approved', 'Confirmed', 'Rejected', 'Cancelled', 'Incomplete (No-show)'];
   const airlines = ['CX', 'BA', 'NH', 'SQ', 'QF', 'EK', 'LH'];
   const origins = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA'];
   const destinations = ['HKG', 'TPE', 'ICN', 'BKK', 'SIN', 'NRT', 'PVG'];

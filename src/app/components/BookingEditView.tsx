@@ -83,7 +83,7 @@ export type EditBookingChannel = 'Online' | 'Email/Call to HKIAL';
 // line 96-99 exports.
 export type BookingStatusValue =
   | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
-  | 'Rejected' | 'Cancelled' | 'No-show';
+  | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
 export type PaymentStatusValue =
   | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
@@ -326,6 +326,8 @@ export interface BookingFormData {
   hasSecurity: boolean;
   hasPrivateSales: boolean;
   isAdHoc: boolean;
+  /** RFQ B8 — celebrity / VIP-artist flag (optional; parent wires save). */
+  isCelebrity?: boolean;
   // 2026-06-28 (round 6.2.75, Phase B — Create parity) —
   // Lounge Extension + qty stepper. Create form has had these
   // since round 6.2.20; Edit form was missing them. The

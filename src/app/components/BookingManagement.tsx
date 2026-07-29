@@ -52,7 +52,7 @@ interface Booking {
   flightDestination?: string;
   flightType: 'Arrival' | 'Departure' | 'Transit';
   bookingCategory: 'Agent Booking' | 'Corporate Booking' | 'Individual Booking' | 'Membership Booking' | 'AA Booking';
-  status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show';
+  status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   services: string[];
   amount: string | 'Pending Calculation' | 'Re-calculation' | 'Manual Adjustment';
@@ -103,7 +103,7 @@ const TRAVEL_AGENCY_DATA = [
 const generateMockBookings = (): Booking[] => {
   const names = ['John Smith', 'Mary Johnson', 'David Lee', 'Sarah Chen', 'Robert Wang', 'Emma Wilson', 'Michael Brown', 'Lisa Taylor', 'James Anderson', 'Sophia Martinez'];
   const suites = ['VIP Suite A', 'VIP Suite B', 'Executive Suite', 'Business Suite', 'Premier Suite', 'Open Lounge'];
-  const statuses: Booking['status'][] = ['Pending for Review', 'Pending for Approval', 'Approved', 'Confirmed', 'Rejected', 'Cancelled', 'No-show'];
+  const statuses: Booking['status'][] = ['Pending for Review', 'Pending for Approval', 'Approved', 'Confirmed', 'Rejected', 'Cancelled', 'Incomplete (No-show)'];
   const paymentStatuses: Booking['paymentStatus'][] = ['Not Required', 'Pending', 'Payment Link Sent', 'Paid', 'Overdue', 'Refunded'];
   const airlines = ['CX', 'BA', 'NH', 'SQ', 'QF', 'EK', 'LH'];
   const origins = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA'];
@@ -438,6 +438,7 @@ export function BookingManagement({
       'Rejected': 'bg-red-100 text-red-800 border border-red-200',
       'Cancelled': 'bg-gray-100 text-gray-800 border border-gray-200',
       'No-show': 'bg-orange-100 text-orange-800 border border-orange-200',
+      'Incomplete (No-show)': 'bg-orange-100 text-orange-800 border border-orange-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
@@ -677,7 +678,7 @@ export function BookingManagement({
                 <SelectItem value="Confirmed">Confirmed</SelectItem>
                 <SelectItem value="Rejected">Rejected</SelectItem>
                 <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="No-show">No-show</SelectItem>
+                <SelectItem value="Incomplete (No-show)">Incomplete (No-show)</SelectItem>
               </SelectContent>
             </Select>
             <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
