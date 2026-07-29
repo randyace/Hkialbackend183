@@ -101,7 +101,7 @@ export function POSCheckout({
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={onBack}>
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Floor Plan
+              {msg('Back to Floor Plan')}
             </Button>
           </div>
         </div>
@@ -112,25 +112,25 @@ export function POSCheckout({
           </div>
           
           <div>
-            <h2 className="text-2xl mb-2">Checkout Complete!</h2>
-            <p className="text-gray-600">Payment has been processed successfully</p>
+            <h2 className="text-2xl mb-2">{msg('Checkout Complete!')}</h2>
+            <p className="text-gray-600">{msg('Payment has been processed successfully')}</p>
           </div>
 
           <div className="bg-gray-50 p-6 rounded-lg space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-600">Booking Number:</span>
+              <span className="text-gray-600">{msg('Booking Number:')}</span>
               <span className="font-semibold">{bookingData.bookingNo}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Guest Name:</span>
+              <span className="text-gray-600">{msg('Guest Name:')}</span>
               <span className="font-semibold">{bookingData.guestName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Amount:</span>
+              <span className="text-gray-600">{msg('Total Amount:')}</span>
               <span className="font-semibold">HKD {totalAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Payment Method:</span>
+              <span className="text-gray-600">{msg('Payment Method:')}</span>
               <span className="font-semibold capitalize">{paymentMethod.replace('-', ' ')}</span>
             </div>
           </div>
@@ -138,16 +138,16 @@ export function POSCheckout({
           <div className="flex gap-3">
             <Button className="flex-1" variant="outline">
               <Printer className="w-4 h-4 mr-2" />
-              Print Receipt
+              {msg('Print Receipt')}
             </Button>
             <Button className="flex-1" variant="outline">
               <Mail className="w-4 h-4 mr-2" />
-              Email Receipt
+              {msg('Email Receipt')}
             </Button>
           </div>
 
           <Button className="w-full" onClick={onBack}>
-            Return to Floor Plan
+            {msg('Return to Floor Plan')}
           </Button>
         </Card>
       </div>
@@ -161,11 +161,11 @@ export function POSCheckout({
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Floor Plan
+            {msg('Back to Floor Plan')}
           </Button>
           <div>
             <h1>Checkout - {bookingNoProp}</h1>
-            <p className="text-gray-600">Complete payment and checkout</p>
+            <p className="text-gray-600">{msg('Complete payment and checkout')}</p>
           </div>
         </div>
         <Badge className="bg-green-600 text-white text-lg px-4 py-2">
@@ -178,22 +178,22 @@ export function POSCheckout({
         <div className="col-span-2 space-y-6">
           {/* Guest Information */}
           <Card className="p-6">
-            <h3 className="text-lg mb-4">Guest Information</h3>
+            <h3 className="text-lg mb-4">{msg('Guest Information')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Guest Name</Label>
+                <Label className="mb-2">{msg('Guest Name')}</Label>
                 <p className="font-semibold">{bookingData.guestName}</p>
               </div>
               <div>
-                <Label className="mb-2">Account Number</Label>
+                <Label className="mb-2">{msg('Account Number')}</Label>
                 <p className="font-semibold">{bookingData.accountNo}</p>
               </div>
               <div>
-                <Label className="mb-2">Membership Tier</Label>
+                <Label className="mb-2">{msg('Membership Tier')}</Label>
                 <Badge variant="default">{bookingData.membershipTier}</Badge>
               </div>
               <div>
-                <Label className="mb-2">Suite</Label>
+                <Label className="mb-2">{msg('Suite')}</Label>
                 <p className="font-semibold">{bookingData.suiteName}</p>
               </div>
             </div>
@@ -201,18 +201,18 @@ export function POSCheckout({
 
           {/* Time Summary */}
           <Card className="p-6">
-            <h3 className="text-lg mb-4">Time Summary</h3>
+            <h3 className="text-lg mb-4">{msg('Time Summary')}</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label className="mb-2">Check-in Time</Label>
+                <Label className="mb-2">{msg('Check-in Time')}</Label>
                 <p className="font-semibold">{bookingData.checkInTime}</p>
               </div>
               <div>
-                <Label className="mb-2">Check-out Time</Label>
+                <Label className="mb-2">{msg('Check-out Time')}</Label>
                 <p className="font-semibold">{bookingData.checkOutTime}</p>
               </div>
               <div>
-                <Label className="mb-2">Duration</Label>
+                <Label className="mb-2">{msg('Duration')}</Label>
                 <p className="font-semibold">{bookingData.duration}</p>
               </div>
             </div>
@@ -220,10 +220,10 @@ export function POSCheckout({
 
           {/* Order Items */}
           <Card className="p-6">
-            <h3 className="text-lg mb-4">Order Summary</h3>
+            <h3 className="text-lg mb-4">{msg('Order Summary')}</h3>
             <div className="space-y-3">
               {orderItems.length === 0 ? (
-                <p className="py-4 text-center text-sm text-gray-500">No food and beverage orders for this suite.</p>
+                <p className="py-4 text-center text-sm text-gray-500">{msg('No food and beverage orders for this suite.')}</p>
               ) : (
                 orderItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center py-2 border-b">
@@ -242,7 +242,7 @@ export function POSCheckout({
 
           {/* Payment Method */}
           <Card className="p-6">
-            <h3 className="text-lg mb-4">Payment Method</h3>
+            <h3 className="text-lg mb-4">{msg('Payment Method')}</h3>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -252,7 +252,7 @@ export function POSCheckout({
                   }`}
                 >
                   <CreditCard className={`w-8 h-8 ${paymentMethod === 'credit-card' ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={paymentMethod === 'credit-card' ? 'font-semibold text-blue-600' : ''}>Credit Card</span>
+                  <span className={paymentMethod === 'credit-card' ? 'font-semibold text-blue-600' : ''}>{msg('Credit Card')}</span>
                 </button>
                 
                 <button
@@ -262,23 +262,23 @@ export function POSCheckout({
                   }`}
                 >
                   <DollarSign className={`w-8 h-8 ${paymentMethod === 'account-credit' ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={paymentMethod === 'account-credit' ? 'font-semibold text-blue-600' : ''}>Account Credit</span>
+                  <span className={paymentMethod === 'account-credit' ? 'font-semibold text-blue-600' : ''}>{msg('Account Credit')}</span>
                 </button>
               </div>
 
               {paymentMethod === 'credit-card' && (
                 <div className="space-y-3">
                   <div>
-                    <Label className="mb-2">Card Number</Label>
+                    <Label className="mb-2">{msg('Card Number')}</Label>
                     <Input placeholder="**** **** **** ****" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="mb-2">Expiry Date</Label>
+                      <Label className="mb-2">{msg('Expiry Date')}</Label>
                       <Input placeholder={msg('MM/YY')} />
                     </div>
                     <div>
-                      <Label className="mb-2">CVV</Label>
+                      <Label className="mb-2">{msg('CVV')}</Label>
                       <Input placeholder="***" type="password" maxLength={3} />
                     </div>
                   </div>
@@ -289,11 +289,11 @@ export function POSCheckout({
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm text-gray-600">Available Credit Balance</p>
+                      <p className="text-sm text-gray-600">{msg('Available Credit Balance')}</p>
                       <p className="text-2xl font-semibold text-blue-600">HKD {bookingData.creditBalance.toLocaleString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-600">After Payment</p>
+                      <p className="text-sm text-gray-600">{msg('After Payment')}</p>
                       <p className="text-xl font-semibold">HKD {(bookingData.creditBalance - totalAmount).toLocaleString()}</p>
                     </div>
                   </div>
@@ -301,7 +301,7 @@ export function POSCheckout({
               )}
 
               <div>
-                <Label className="mb-2">Remarks / Notes</Label>
+                <Label className="mb-2">{msg('Remarks / Notes')}</Label>
                 <Textarea placeholder={msg('Optional payment notes...')} rows={2} />
               </div>
             </div>
@@ -311,35 +311,35 @@ export function POSCheckout({
         {/* Right Column - Payment Summary */}
         <div className="space-y-6">
           <Card className="p-6 sticky top-6">
-            <h3 className="text-lg mb-4">Payment Summary</h3>
+            <h3 className="text-lg mb-4">{msg('Payment Summary')}</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Lounge Access Fee</span>
+                <span className="text-gray-600">{msg('Lounge Access Fee')}</span>
                 <span className="font-semibold">HKD {bookingData.loungeAccess.toFixed(2)}</span>
               </div>
               
               <div className="border-t pt-3">
-                <p className="text-sm text-gray-600 mb-2">Food & Beverage</p>
+                <p className="text-sm text-gray-600 mb-2">{msg('Food & Beverage')}</p>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
+                  <span className="text-gray-600">{msg('Subtotal')}</span>
                   <span>HKD {subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
-                  <span className="text-gray-600">Service Charge (10%)</span>
+                  <span className="text-gray-600">{msg('Service Charge (10%)')}</span>
                   <span>HKD {serviceCharge.toFixed(2)}</span>
                 </div>
               </div>
 
               <div className="border-t pt-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">F&B Total</span>
+                  <span className="text-gray-600">{msg('F&B Total')}</span>
                   <span className="font-semibold">HKD {totalOrderAmount.toFixed(2)}</span>
                 </div>
               </div>
 
               <div className="border-t pt-3">
                 <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Amount</span>
+                  <span className="font-semibold">{msg('Total Amount')}</span>
                   <span className="font-bold text-blue-600">HKD {totalAmount.toFixed(2)}</span>
                 </div>
               </div>
@@ -353,11 +353,11 @@ export function POSCheckout({
                 disabled={isProcessing}
               >
                 {isProcessing ? (
-                  <>Processing...</>
+                  <>{msg('Processing...')}</>
                 ) : (
                   <>
                     <Receipt className="w-4 h-4 mr-2" />
-                    Complete Checkout
+                    {msg('Complete Checkout')}
                   </>
                 )}
               </Button>
@@ -368,21 +368,21 @@ export function POSCheckout({
                 onClick={onBack}
                 disabled={isProcessing}
               >
-                Cancel
+                {msg('Cancel')}
               </Button>
             </div>
           </Card>
 
           <Card className="p-4 bg-gray-50">
-            <h4 className="text-sm mb-2">Quick Actions</h4>
+            <h4 className="text-sm mb-2">{msg('Quick Actions')}</h4>
             <div className="space-y-2">
               <Button variant="outline" size="sm" className="w-full justify-start">
                 <Printer className="w-3 h-3 mr-2" />
-                Print Pre-bill
+                {msg('Print Pre-bill')}
               </Button>
               <Button variant="outline" size="sm" className="w-full justify-start">
                 <Mail className="w-3 h-3 mr-2" />
-                Email Summary
+                {msg('Email Summary')}
               </Button>
             </div>
           </Card>

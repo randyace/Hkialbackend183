@@ -628,7 +628,7 @@ function TicketOrderItemRow({
               <Textarea
                 value={draftRemarks}
                 onChange={(event) => setDraftRemarks(event.target.value)}
-                placeholder={msg('t(\'pos.custom_request_placeholder\', \'e.g. Less ice, Extra hot\')')}
+                placeholder={msg('e.g. Less ice, Extra hot')}
                 rows={4}
                 autoFocus
               />
@@ -869,15 +869,15 @@ export function POSBookingDetail({
       <div className="p-3 border-b border-gray-200 shrink-0">
         <div className="grid grid-cols-3 gap-1.5 mb-2">
           <div className="rounded border border-green-200 bg-green-50 px-2 py-1">
-            <p className="text-[10px] font-medium text-green-700 leading-tight">Served</p>
+            <p className="text-[10px] font-medium text-green-700 leading-tight">{msg('Served')}</p>
             <p className="text-base font-semibold text-green-900 leading-tight">{servedOrders}</p>
           </div>
           <div className="rounded border border-blue-200 bg-blue-50 px-2 py-1">
-            <p className="text-[10px] font-medium text-blue-700 leading-tight">Preparing</p>
+            <p className="text-[10px] font-medium text-blue-700 leading-tight">{msg('Preparing')}</p>
             <p className="text-base font-semibold text-blue-900 leading-tight">{preparingOrders}</p>
           </div>
           <div className="rounded border border-yellow-200 bg-yellow-50 px-2 py-1">
-            <p className="text-[10px] font-medium text-yellow-700 leading-tight">Pending</p>
+            <p className="text-[10px] font-medium text-yellow-700 leading-tight">{msg('Pending')}</p>
             <p className="text-base font-semibold text-yellow-900 leading-tight">{pendingOrders}</p>
           </div>
         </div>
@@ -932,7 +932,7 @@ export function POSBookingDetail({
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {booking.orders.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">No order items yet.</p>
+          <p className="text-sm text-gray-400 text-center py-6">{msg('No order items yet.')}</p>
         ) : (
           booking.orders.map((order) => {
             const isCancelled = Boolean(order.cancelledAt);
@@ -961,7 +961,7 @@ export function POSBookingDetail({
 
       <div className="border-t border-gray-200 p-3 shrink-0 bg-white space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-600">Total Amount</span>
+          <span className="text-sm font-medium text-gray-600">{msg('Total Amount')}</span>
           <span className="text-xl font-bold text-purple-700">
             HK${booking.totalAmount.toLocaleString()}
           </span>
@@ -976,21 +976,21 @@ export function POSBookingDetail({
               {isSubmittingPendingOrder ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  Sending...
+                  {msg('Sending...')}
                 </>
               ) : (
                 <>
                   <Utensils className="w-4 h-4 mr-1.5" />
-                  Send to Kitchen
+                  {msg('Send to Kitchen')}
                 </>
               )}
             </Button>
           ) : null}
           <Button variant="outline" className="flex-1 min-w-[90px]">
-            Print Bill
+            {msg('Print Bill')}
           </Button>
           <Button className="flex-1 min-w-[90px] bg-purple-700 hover:bg-purple-800 text-white" onClick={onCheckoutClick}>
-            Checkout
+            {msg('Checkout')}
           </Button>
         </div>
       </div>
@@ -1004,7 +1004,7 @@ export function POSBookingDetail({
           <div className="flex items-center gap-2 shrink-0">
             <Button variant="outline" onClick={onBack} size="sm" className="w-fit shrink-0">
               <ArrowLeft className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Back</span>
+              <span className="hidden sm:inline">{msg('Back')}</span>
             </Button>
             <Button
               type="button"
@@ -1024,12 +1024,12 @@ export function POSBookingDetail({
               {isTicketSidebarVisible ? (
                 <>
                   <PanelLeftClose className="h-4 w-4" />
-                  <span>Hide Ticket</span>
+                  <span>{msg('Hide Ticket')}</span>
                 </>
               ) : (
                 <>
                   <PanelLeftOpen className="h-4 w-4" />
-                  <span>View Ticket</span>
+                  <span>{msg('View Ticket')}</span>
                 </>
               )}
             </Button>
@@ -1068,7 +1068,7 @@ export function POSBookingDetail({
               <div className="flex items-center gap-1.5 mb-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                 <h3 className="text-xs font-semibold text-red-800 uppercase tracking-wide">
-                  Food Allergies &amp; Dietary
+                  {msg('Food Allergies &amp; Dietary')}
                 </h3>
               </div>
               <div className="space-y-2">
@@ -1086,7 +1086,7 @@ export function POSBookingDetail({
 
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
-                        Food Allergies
+                        {msg('Food Allergies')}
                       </p>
                       {guest.foodAllergies.length > 0 ? (
                         <>
@@ -1112,13 +1112,13 @@ export function POSBookingDetail({
                           </div>
                         </>
                       ) : (
-                        <p className="mt-1 text-xs text-gray-400">None recorded</p>
+                        <p className="mt-1 text-xs text-gray-400">{msg('None recorded')}</p>
                       )}
                     </div>
 
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">
-                        Dietary Requirements
+                        {msg('Dietary Requirements')}
                       </p>
                       {guest.dietaryRequirements.length > 0 ? (
                         <>
@@ -1143,7 +1143,7 @@ export function POSBookingDetail({
                           </div>
                         </>
                       ) : (
-                        <p className="mt-1 text-xs text-gray-400">None recorded</p>
+                        <p className="mt-1 text-xs text-gray-400">{msg('None recorded')}</p>
                       )}
                     </div>
                   </div>
@@ -1155,7 +1155,7 @@ export function POSBookingDetail({
           {heldPreorderItems.length > 0 ? (
             <Card className="border border-yellow-200 bg-yellow-50 p-3 shrink-0">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-yellow-900">
-                Held Pre-orders (Guest not yet arrived / Ready to fire)
+                {msg('Held Pre-orders (Guest not yet arrived / Ready to fire)')}
               </h3>
               <ul className="mt-2 space-y-1">
                 {heldPreorderItems.map((item, index) => {
@@ -1201,7 +1201,7 @@ export function POSBookingDetail({
             aria-expanded={isContextDetailsOpen}
           >
             <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-              Member, Booking &amp; Payment Details
+              {msg('Member, Booking &amp; Payment Details')}
             </span>
             <ChevronDown
               className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${isContextDetailsOpen ? 'rotate-180' : ''}`}
@@ -1213,23 +1213,23 @@ export function POSBookingDetail({
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <User className="w-3.5 h-3.5 text-gray-400" />
-                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Member</h3>
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">{msg('Member')}</h3>
               </div>
               <dl className="space-y-1">
                 <div>
-                  <dt className="text-xs text-gray-500">Name</dt>
+                  <dt className="text-xs text-gray-500">{msg('Name')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.memberName}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Account Number</dt>
+                  <dt className="text-xs text-gray-500">{msg('Account Number')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.accountNo}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Account Type</dt>
+                  <dt className="text-xs text-gray-500">{msg('Account Type')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.accountType}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Membership Tier</dt>
+                  <dt className="text-xs text-gray-500">{msg('Membership Tier')}</dt>
                   <dd>
                     <Badge className={`text-xs px-1.5 py-0 ${getMembershipColor(booking.membershipTier)}`}>
                       {booking.membershipTier}
@@ -1237,15 +1237,15 @@ export function POSBookingDetail({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Company</dt>
+                  <dt className="text-xs text-gray-500">{msg('Company')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.companyName || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Email</dt>
+                  <dt className="text-xs text-gray-500">{msg('Email')}</dt>
                   <dd className="text-sm font-medium text-gray-900 truncate">{booking.email}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Phone</dt>
+                  <dt className="text-xs text-gray-500">{msg('Phone')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.phone}</dd>
                 </div>
               </dl>
@@ -1254,31 +1254,31 @@ export function POSBookingDetail({
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Booking</h3>
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">{msg('Booking')}</h3>
               </div>
               <dl className="space-y-1">
                 <div>
-                  <dt className="text-xs text-gray-500">Suite</dt>
+                  <dt className="text-xs text-gray-500">{msg('Suite')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.suiteName}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Check-in Time</dt>
+                  <dt className="text-xs text-gray-500">{msg('Check-in Time')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.checkInTime}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Number of Guests</dt>
+                  <dt className="text-xs text-gray-500">{msg('Number of Guests')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.numberOfGuests} pax</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Flight Number</dt>
+                  <dt className="text-xs text-gray-500">{msg('Flight Number')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightNo}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Flight Time</dt>
+                  <dt className="text-xs text-gray-500">{msg('Flight Time')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightTime}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Destination</dt>
+                  <dt className="text-xs text-gray-500">{msg('Destination')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightDestination}</dd>
                 </div>
               </dl>
@@ -1287,15 +1287,15 @@ export function POSBookingDetail({
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Payment</h3>
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">{msg('Payment')}</h3>
               </div>
               <dl className="space-y-1">
                 <div>
-                  <dt className="text-xs text-gray-500">Payment Mode</dt>
+                  <dt className="text-xs text-gray-500">{msg('Payment Mode')}</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.paymentMode}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Payment Status</dt>
+                  <dt className="text-xs text-gray-500">{msg('Payment Status')}</dt>
                   <dd>
                     <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs px-1.5 py-0">
                       {booking.paymentStatus}
@@ -1303,11 +1303,11 @@ export function POSBookingDetail({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Total Amount</dt>
+                  <dt className="text-xs text-gray-500">{msg('Total Amount')}</dt>
                   <dd className="text-sm font-medium text-gray-900">HK${booking.totalAmount.toLocaleString()}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-gray-500">Credit Balance</dt>
+                  <dt className="text-xs text-gray-500">{msg('Credit Balance')}</dt>
                   <dd className="text-sm font-medium text-gray-900">
                     {booking.creditBalance !== undefined
                       ? `HK$${booking.creditBalance.toLocaleString()}`
@@ -1350,7 +1350,7 @@ export function POSBookingDetail({
               onClick={onCheckoutClick}
               className="rounded-lg bg-purple-700 px-8 py-3 text-lg font-bold text-white shadow-md hover:bg-purple-800"
             >
-              Checkout
+              {msg('Checkout')}
             </button>
           </div>
         </div>
@@ -1369,7 +1369,7 @@ export function POSBookingDetail({
             aria-current={mobilePanel === 'menu' ? 'page' : undefined}
           >
             <Utensils className="h-5 w-5" />
-            Menu
+            {msg('Menu')}
           </button>
           <button
             type="button"

@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { Download, TrendingUp, Building2, Plane, Users, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 const MONTHLY_UTILISATION = [
   { month: 'Aug',  cathaySessions: 18, jardine: 24, wings: 14, hsbc: 6,  pacific: 0 },
@@ -69,6 +70,7 @@ export function CorporateReports({
   onGenerateReport,
   isLoading = false,
 }: CorporateReportsProps = {}) {
+  const msg = useMsg();
   const displayMontly  = monthlyUtilisationProp ?? MOCK_MONTHLY_UTILISATION;
   const displaySummary = companySummaryProp     ?? MOCK_COMPANY_SUMMARY;
   const displayPie     = pieDataProp            ?? MOCK_PIE_DATA;
@@ -92,12 +94,12 @@ export function CorporateReports({
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900 mb-1">BD Usage Reports</h1>
-          <p className="text-sm text-gray-500">Monthly utilisation analytics for Business Development review.</p>
+          <h1 className="text-gray-900 mb-1">{msg('BD Usage Reports')}</h1>
+          <p className="text-sm text-gray-500">{msg('Monthly utilisation analytics for Business Development review.')}</p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
           onClick={() => toast.success('Report exported!', { description: 'Corporate utilisation report downloaded as PDF.' })}>
-          <Download className="w-4 h-4 mr-2" />Export Report
+          <Download className="w-4 h-4 mr-2" />{msg('Export Report')}
         </Button>
       </div>
 
@@ -106,17 +108,17 @@ export function CorporateReports({
         <Select value={filterPeriod} onValueChange={setFilterPeriod}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="last-3-months">Last 3 Months</SelectItem>
-            <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-            <SelectItem value="this-year">This Year</SelectItem>
+            <SelectItem value="last-3-months">{msg('Last 3 Months')}</SelectItem>
+            <SelectItem value="last-6-months">{msg('Last 6 Months')}</SelectItem>
+            <SelectItem value="this-year">{msg('This Year')}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Account Types</SelectItem>
-            <SelectItem value="Corporate">Corporate Only</SelectItem>
-            <SelectItem value="Agency">Agency Only</SelectItem>
+            <SelectItem value="all">{msg('All Account Types')}</SelectItem>
+            <SelectItem value="Corporate">{msg('Corporate Only')}</SelectItem>
+            <SelectItem value="Agency">{msg('Agency Only')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -124,20 +126,20 @@ export function CorporateReports({
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
-          <p className="text-xs text-blue-200 mb-1">Total Revenue</p>
+          <p className="text-xs text-blue-200 mb-1">{msg('Total Revenue')}</p>
           <p className="text-xl text-white">HKD {(totalRevenue / 1000).toFixed(0)}K</p>
           <p className="text-xs text-blue-300 mt-1">{filteredSummary.length} accounts</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-1 mb-1"><BarChart2 className="w-4 h-4 text-blue-500" /><p className="text-xs text-gray-500">Sessions Used</p></div>
+          <div className="flex items-center gap-1 mb-1"><BarChart2 className="w-4 h-4 text-blue-500" /><p className="text-xs text-gray-500">{msg('Sessions Used')}</p></div>
           <p className="text-2xl text-blue-600">{totalSessions}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-4 h-4 text-green-500" /><p className="text-xs text-gray-500">Avg Utilisation</p></div>
+          <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-4 h-4 text-green-500" /><p className="text-xs text-gray-500">{msg('Avg Utilisation')}</p></div>
           <p className="text-2xl text-green-600">{avgUtil}%</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-1 mb-1"><Users className="w-4 h-4 text-purple-500" /><p className="text-xs text-gray-500">Top Account</p></div>
+          <div className="flex items-center gap-1 mb-1"><Users className="w-4 h-4 text-purple-500" /><p className="text-xs text-gray-500">{msg('Top Account')}</p></div>
           <p className="text-sm text-purple-600 truncate">{topCompany?.company ?? '—'}</p>
           <p className="text-xs text-gray-500 mt-1">{topCompany?.utilPct ?? 0}% utilised</p>
         </Card>
@@ -147,7 +149,7 @@ export function CorporateReports({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Monthly Sessions by Company */}
         <Card className="p-4 md:col-span-2">
-          <p className="text-sm text-gray-700 mb-4">Monthly Sessions by Company</p>
+          <p className="text-sm text-gray-700 mb-4">{msg('Monthly Sessions by Company')}</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={displayMontly} margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -165,7 +167,7 @@ export function CorporateReports({
 
         {/* Sessions by Account Type Pie */}
         <Card className="p-4">
-          <p className="text-sm text-gray-700 mb-4">Sessions by Account Type</p>
+          <p className="text-sm text-gray-700 mb-4">{msg('Sessions by Account Type')}</p>
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie data={displayPie} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3} dataKey="value">
@@ -187,7 +189,7 @@ export function CorporateReports({
 
       {/* Revenue Trend */}
       <Card className="p-4 mb-6">
-        <p className="text-sm text-gray-700 mb-4">Revenue Trend — Corporate vs Agency (HKD)</p>
+        <p className="text-sm text-gray-700 mb-4">{msg('Revenue Trend — Corporate vs Agency (HKD)')}</p>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={displayTrend} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -204,19 +206,19 @@ export function CorporateReports({
       {/* Company Utilisation Table */}
       <Card>
         <div className="p-4 border-b">
-          <p className="text-sm text-gray-700">Company Monthly Utilisation Summary</p>
+          <p className="text-sm text-gray-700">{msg('Company Monthly Utilisation Summary')}</p>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Sessions Used</TableHead>
-                <TableHead>Utilisation</TableHead>
-                <TableHead>Revenue (HKD)</TableHead>
-                <TableHead>Last Booking</TableHead>
-                <TableHead>BD Action</TableHead>
+                <TableHead>{msg('Company')}</TableHead>
+                <TableHead>{msg('Type')}</TableHead>
+                <TableHead>{msg('Sessions Used')}</TableHead>
+                <TableHead>{msg('Utilisation')}</TableHead>
+                <TableHead>{msg('Revenue (HKD)')}</TableHead>
+                <TableHead>{msg('Last Booking')}</TableHead>
+                <TableHead>{msg('BD Action')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -225,8 +227,8 @@ export function CorporateReports({
                   <TableCell className="text-sm text-gray-900">{c.company}</TableCell>
                   <TableCell>
                     {c.type === 'Corporate'
-                      ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />Corporate</span>
-                      : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Agency</span>}
+                      ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />{msg('Corporate')}</span>
+                      : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />{msg('Agency')}</span>}
                   </TableCell>
                   <TableCell className="text-sm text-gray-700">{c.used}/{c.totalSessions}</TableCell>
                   <TableCell>
@@ -241,12 +243,12 @@ export function CorporateReports({
                   <TableCell className="text-sm text-gray-600">{c.lastBooking}</TableCell>
                   <TableCell>
                     {c.utilPct === 0
-                      ? <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">Re-engage</span>
+                      ? <span className="text-xs text-red-600 bg-red-50 px-2 py-0.5 rounded">{msg('Re-engage')}</span>
                       : c.utilPct >= 80
-                        ? <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded">Upsell</span>
+                        ? <span className="text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded">{msg('Upsell')}</span>
                         : c.utilPct < 40
-                          ? <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Follow Up</span>
-                          : <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded">On Track</span>}
+                          ? <span className="text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded">{msg('Follow Up')}</span>
+                          : <span className="text-xs text-blue-700 bg-blue-50 px-2 py-0.5 rounded">{msg('On Track')}</span>}
                   </TableCell>
                 </TableRow>
               ))}

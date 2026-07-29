@@ -120,7 +120,7 @@ export function ApplicationReview({
 
   const handleApprove = () => {
     if (!selectedApp || !internalGrouping) {
-      toast.error('Please fill in all required fields');
+      toast.error(msg('Please fill in all required fields'));
       return;
     }
 
@@ -147,7 +147,7 @@ export function ApplicationReview({
 
   const handleReject = () => {
     if (!selectedApp || !rejectionReason.trim()) {
-      toast.error('Please provide a rejection reason');
+      toast.error(msg('Please provide a rejection reason'));
       return;
     }
 
@@ -176,31 +176,31 @@ export function ApplicationReview({
 
   const getStatusBadge = (status: string, emailVerified: boolean) => {
     if (status === 'approved') {
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Approved</Badge>;
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">{msg('Approved')}</Badge>;
     }
     if (status === 'rejected') {
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Rejected</Badge>;
+      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">{msg('Rejected')}</Badge>;
     }
     if (status === 'email-verified') {
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Email Verified</Badge>;
+      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">{msg('Email Verified')}</Badge>;
     }
     if (!emailVerified) {
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending Verification</Badge>;
+      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">{msg('Pending Verification')}</Badge>;
     }
-    return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Pending</Badge>;
+    return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">{msg('Pending')}</Badge>;
   };
 
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-gray-900 mb-1">Application Review</h1>
-        <p className="text-sm text-gray-500">Review and approve individual customer applications</p>
+        <h1 className="text-gray-900 mb-1">{msg('Application Review')}</h1>
+        <p className="text-sm text-gray-500">{msg('Review and approve individual customer applications')}</p>
       </div>
 
       <Card className="p-4 md:p-6">
         <div className="mb-6">
-          <h3 className="text-gray-900 mb-1">Pending Applications</h3>
-          <p className="text-sm text-gray-500">Applications awaiting review</p>
+          <h3 className="text-gray-900 mb-1">{msg('Pending Applications')}</h3>
+          <p className="text-sm text-gray-500">{msg('Applications awaiting review')}</p>
         </div>
 
         <div className="space-y-4">
@@ -216,40 +216,40 @@ export function ApplicationReview({
                     {app.emailVerified && (
                       <Badge variant="outline" className="gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        Verified
+                        {msg('Verified')}
                       </Badge>
                     )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 text-sm">
                     <div>
-                      <p className="text-gray-500 mb-1">Application ID</p>
+                      <p className="text-gray-500 mb-1">{msg('Application ID')}</p>
                       <p className="text-gray-900">{app.id}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-1">Email</p>
+                      <p className="text-gray-500 mb-1">{msg('Email')}</p>
                       <p className="text-gray-900 flex items-center gap-1">
                         <Mail className="w-4 h-4" />
                         {app.email}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-1">Phone</p>
+                      <p className="text-gray-500 mb-1">{msg('Phone')}</p>
                       <p className="text-gray-900 flex items-center gap-1">
                         <Phone className="w-4 h-4" />
                         +{app.regionCode} {app.phone}
                       </p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-1">Submitted Date</p>
+                      <p className="text-gray-500 mb-1">{msg('Submitted Date')}</p>
                       <p className="text-gray-900">{app.submittedDate}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-1">Nationality</p>
+                      <p className="text-gray-500 mb-1">{msg('Nationality')}</p>
                       <p className="text-gray-900">{app.nationality}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500 mb-1">First 4 digits of Passport Number</p>
+                      <p className="text-gray-500 mb-1">{msg('First 4 digits of Passport Number')}</p>
                       <p className="text-gray-900">{app.passportNumber}</p>
                     </div>
                   </div>
@@ -265,7 +265,7 @@ export function ApplicationReview({
                       className="bg-green-600 hover:bg-green-700 flex-1 md:flex-none"
                     >
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      Approve
+                      {msg('Approve')}
                     </Button>
                     <Button
                       onClick={() => {
@@ -276,7 +276,7 @@ export function ApplicationReview({
                       className="text-red-600 border-red-600 hover:bg-red-50 flex-1 md:flex-none"
                     >
                       <XCircle className="w-4 h-4 mr-2" />
-                      Reject
+                      {msg('Reject')}
                     </Button>
                   </div>
                 )}
@@ -290,23 +290,23 @@ export function ApplicationReview({
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Approve Application</DialogTitle>
+            <DialogTitle>{msg('Approve Application')}</DialogTitle>
             <DialogDescription>
-              Review and complete the account creation details for this approved applicant
+              {msg('Review and complete the account creation details for this approved applicant')}
             </DialogDescription>
           </DialogHeader>
 
           {selectedApp && (
             <div className="space-y-6">
               <div className="p-4 bg-gray-50 rounded">
-                <h4 className="text-gray-900 mb-2">Applicant Information</h4>
+                <h4 className="text-gray-900 mb-2">{msg('Applicant Information')}</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-500">Name:</span>
+                    <span className="text-gray-500">{msg('Name:')}</span>
                     <span className="ml-2">{selectedApp.title} {selectedApp.firstName} {selectedApp.lastName}</span>
                   </div>
                   <div>
-                    <span className="text-gray-500">Email:</span>
+                    <span className="text-gray-500">{msg('Email:')}</span>
                     <span className="ml-2">{selectedApp.email}</span>
                   </div>
                 </div>
@@ -314,32 +314,32 @@ export function ApplicationReview({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="accountNumber">Account Number *</Label>
+                  <Label htmlFor="accountNumber">{msg('Account Number *')}</Label>
                   <Input 
                     id="accountNumber"
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
                     placeholder={msg('System generated')}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Can be manually amended</p>
+                  <p className="text-xs text-gray-500 mt-1">{msg('Can be manually amended')}</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="internalGrouping">Internal Grouping *</Label>
+                  <Label htmlFor="internalGrouping">{msg('Internal Grouping *')}</Label>
                   <Select value={internalGrouping} onValueChange={setInternalGrouping}>
                     <SelectTrigger id="internalGrouping">
                       <SelectValue placeholder={msg('Select grouping')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="vip">VIP</SelectItem>
-                      <SelectItem value="standard">Standard</SelectItem>
-                      <SelectItem value="premium">Premium</SelectItem>
+                      <SelectItem value="vip">{msg('VIP')}</SelectItem>
+                      <SelectItem value="standard">{msg('Standard')}</SelectItem>
+                      <SelectItem value="premium">{msg('Premium')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="companyCode">Company Code</Label>
+                  <Label htmlFor="companyCode">{msg('Company Code')}</Label>
                   <Input 
                     id="companyCode"
                     value={companyCode}
@@ -349,21 +349,21 @@ export function ApplicationReview({
                 </div>
 
                 <div>
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
+                  <Label htmlFor="paymentMethod">{msg('Payment Method')}</Label>
                   <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                     <SelectTrigger id="paymentMethod">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="upfront">Upfront</SelectItem>
-                      <SelectItem value="net-upfront">Net Upfront</SelectItem>
-                      <SelectItem value="on-credit">On-Credit</SelectItem>
+                      <SelectItem value="upfront">{msg('Upfront')}</SelectItem>
+                      <SelectItem value="net-upfront">{msg('Net Upfront')}</SelectItem>
+                      <SelectItem value="on-credit">{msg('On-Credit')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label htmlFor="bulkPurchaseCode">Bulk Purchase Code</Label>
+                  <Label htmlFor="bulkPurchaseCode">{msg('Bulk Purchase Code')}</Label>
                   <Input 
                     id="bulkPurchaseCode"
                     value={bulkPurchaseCode}
@@ -374,7 +374,7 @@ export function ApplicationReview({
               </div>
 
               <div>
-                <Label htmlFor="remarks">Remarks</Label>
+                <Label htmlFor="remarks">{msg('Remarks')}</Label>
                 <Textarea 
                   id="remarks"
                   value={remarks}
@@ -388,10 +388,10 @@ export function ApplicationReview({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
-              Approve & Create Account
+              {msg('Approve & Create Account')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -401,9 +401,9 @@ export function ApplicationReview({
       <Dialog open={isRejectionDialogOpen} onOpenChange={setIsRejectionDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject Application</DialogTitle>
+            <DialogTitle>{msg('Reject Application')}</DialogTitle>
             <DialogDescription>
-              Provide a detailed reason for rejecting this application
+              {msg('Provide a detailed reason for rejecting this application')}
             </DialogDescription>
           </DialogHeader>
 
@@ -411,7 +411,7 @@ export function ApplicationReview({
             <div className="space-y-4">
               <div className="p-4 bg-red-50 rounded border border-red-200">
                 <p className="text-sm text-gray-700">
-                  You are about to reject the application for:
+                  {msg('You are about to reject the application for:')}
                 </p>
                 <p className="text-gray-900 mt-1">
                   {selectedApp.title} {selectedApp.firstName} {selectedApp.lastName}
@@ -420,7 +420,7 @@ export function ApplicationReview({
               </div>
 
               <div>
-                <Label htmlFor="rejectionReason">Rejection Reason *</Label>
+                <Label htmlFor="rejectionReason">{msg('Rejection Reason *')}</Label>
                 <Textarea 
                   id="rejectionReason"
                   value={rejectionReason}
@@ -430,7 +430,7 @@ export function ApplicationReview({
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  This reason will be sent to the applicant via email
+                  {msg('This reason will be sent to the applicant via email')}
                 </p>
               </div>
             </div>
@@ -438,13 +438,13 @@ export function ApplicationReview({
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRejectionDialogOpen(false)}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button 
               onClick={handleReject} 
               className="bg-red-600 hover:bg-red-700"
             >
-              Confirm Rejection
+              {msg('Confirm Rejection')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -123,7 +123,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                     value={formData.nameSimp}
                     onChange={(e) => setFormData({ ...formData, nameSimp: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., 贵宾套房A"
+                    placeholder={msg('e.g., 贵宾套房A')}
                   />
                 </div>
                 <div>
@@ -133,7 +133,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                     value={formData.nameTrad}
                     onChange={(e) => setFormData({ ...formData, nameTrad: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., 貴賓套房A"
+                    placeholder={msg('e.g., 貴賓套房A')}
                   />
                 </div>
               </div>
@@ -251,7 +251,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                   required
                 />
                 <p className="text-sm text-gray-600 mt-1">
-                  {msg('Define the calculation formula for pricing. Examples:')} <code className="bg-gray-100 px-1 rounded">unitPrice</code>, <code className="bg-gray-100 px-1 rounded">(qty * unitPrice) - discount</code>
+                  {msg('Define the calculation formula for pricing. Examples:')} <code className="bg-gray-100 px-1 rounded">unitPrice</code>, <code className="bg-gray-100 px-1 rounded">{'(qty * unitPrice) - discount'}</code>
                 </p>
               </div>
 

@@ -587,16 +587,16 @@ export function BookingManagement({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>Booking Management</h1>
-          <p className="text-gray-600">Manage and review all lounge bookings</p>
+          <h1>{msg('Booking Management')}</h1>
+          <p className="text-gray-600">{msg('Manage and review all lounge bookings')}</p>
         </div>
         <div className="flex items-center gap-2">
-          {loading && <span className="text-xs text-gray-500">Refreshing…</span>}
+          {loading && <span className="text-xs text-gray-500">{msg('Refreshing…')}</span>}
           <Button
             onClick={onExportReport}
           >
             <Download className="w-4 h-4 mr-2" />
-            Export Report
+            {msg('Export Report')}
           </Button>
         </div>
       </div>
@@ -608,12 +608,12 @@ export function BookingManagement({
             <BadgePercent className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-semibold text-green-800 mb-1 flex items-center gap-2">
-                Agency Auto-Discount — Sample Demonstration
-                <span className="text-xs font-normal bg-green-200 text-green-800 px-2 py-0.5 rounded-full">For Client Review</span>
+                {msg('Agency Auto-Discount — Sample Demonstration')}
+                <span className="text-xs font-normal bg-green-200 text-green-800 px-2 py-0.5 rounded-full">{msg('For Client Review')}</span>
               </p>
               <p className="text-sm text-green-700 mb-3">
                 Bookings made under an Agency account automatically apply the agency's pre-configured default discount rate.
-                The <strong>Amount column</strong> below shows the original price (struck through) and the discounted final amount with a badge.
+                The <strong>{msg('Amount column')}</strong> {msg('below shows the original price (struck through) and the discounted final amount with a badge.')}
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 {[
@@ -636,7 +636,7 @@ export function BookingManagement({
               </div>
               <p className="text-xs text-green-600 mt-3 flex items-center gap-1">
                 <Info className="w-3 h-3" />
-                Filter by <strong>"Agent Booking"</strong> in the Booking Category dropdown to see only Agency bookings with auto-discounts.
+                {msg('Filter by')} <strong>{msg('"Agent Booking"')}</strong> {msg('in the Booking Category dropdown to see only Agency bookings with auto-discounts.')}
               </p>
             </div>
             <button
@@ -671,14 +671,14 @@ export function BookingManagement({
                 <SelectValue placeholder={msg('Booking Status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Booking Status</SelectItem>
-                <SelectItem value="Pending for Review">Pending for Review</SelectItem>
-                <SelectItem value="Pending for Approval">Pending for Approval</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Confirmed">Confirmed</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="No-show">No-show</SelectItem>
+                <SelectItem value="all">{msg('All Booking Status')}</SelectItem>
+                <SelectItem value="Pending for Review">{msg('Pending for Review')}</SelectItem>
+                <SelectItem value="Pending for Approval">{msg('Pending for Approval')}</SelectItem>
+                <SelectItem value="Approved">{msg('Approved')}</SelectItem>
+                <SelectItem value="Confirmed">{msg('Confirmed')}</SelectItem>
+                <SelectItem value="Rejected">{msg('Rejected')}</SelectItem>
+                <SelectItem value="Cancelled">{msg('Cancelled')}</SelectItem>
+                <SelectItem value="No-show">{msg('No-show')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -686,13 +686,13 @@ export function BookingManagement({
                 <SelectValue placeholder={msg('Payment Status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Payment Status</SelectItem>
-                <SelectItem value="Not Required">Not Required</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Payment Link Sent">Payment Link Sent</SelectItem>
-                <SelectItem value="Paid">Paid</SelectItem>
-                <SelectItem value="Overdue">Overdue</SelectItem>
-                <SelectItem value="Refunded">Refunded</SelectItem>
+                <SelectItem value="all">{msg('All Payment Status')}</SelectItem>
+                <SelectItem value="Not Required">{msg('Not Required')}</SelectItem>
+                <SelectItem value="Pending">{msg('Pending')}</SelectItem>
+                <SelectItem value="Payment Link Sent">{msg('Payment Link Sent')}</SelectItem>
+                <SelectItem value="Paid">{msg('Paid')}</SelectItem>
+                <SelectItem value="Overdue">{msg('Overdue')}</SelectItem>
+                <SelectItem value="Refunded">{msg('Refunded')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={bookingCategoryFilter} onValueChange={setBookingCategoryFilter}>
@@ -700,12 +700,12 @@ export function BookingManagement({
                 <SelectValue placeholder={msg('Booking Category')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Booking Category</SelectItem>
-                <SelectItem value="Agent Booking">Agent Booking</SelectItem>
-                <SelectItem value="Corporate Booking">Corporate Booking</SelectItem>
-                <SelectItem value="Individual Booking">Individual Booking</SelectItem>
-                <SelectItem value="Membership Booking">Membership Booking</SelectItem>
-                <SelectItem value="AA Booking">AA Booking</SelectItem>
+                <SelectItem value="all">{msg('All Booking Category')}</SelectItem>
+                <SelectItem value="Agent Booking">{msg('Agent Booking')}</SelectItem>
+                <SelectItem value="Corporate Booking">{msg('Corporate Booking')}</SelectItem>
+                <SelectItem value="Individual Booking">{msg('Individual Booking')}</SelectItem>
+                <SelectItem value="Membership Booking">{msg('Membership Booking')}</SelectItem>
+                <SelectItem value="AA Booking">{msg('AA Booking')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
@@ -713,10 +713,10 @@ export function BookingManagement({
                 <SelectValue placeholder={msg('Request Type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Request Types</SelectItem>
-                <SelectItem value="New">New</SelectItem>
-                <SelectItem value="Edit">Edit</SelectItem>
-                <SelectItem value="Cancel">Cancel</SelectItem>
+                <SelectItem value="all">{msg('All Request Types')}</SelectItem>
+                <SelectItem value="New">{msg('New')}</SelectItem>
+                <SelectItem value="Edit">{msg('Edit')}</SelectItem>
+                <SelectItem value="Cancel">{msg('Cancel')}</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex-1 relative">
@@ -757,17 +757,17 @@ export function BookingManagement({
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Booking No.</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guest Name</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Suite</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Flight Info</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guests</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Services</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Payment</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('ID')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Booking No.')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Guest Name')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Suite')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Flight Info')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Guests')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Services')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Status')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Payment')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Amount')}</th>
+                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -825,7 +825,7 @@ export function BookingManagement({
                       if (psCount === 0 && ldCount === 0) {
                         return (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                            Pending
+                            {msg('Pending')}
                           </span>
                         );
                       }

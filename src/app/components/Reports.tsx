@@ -283,7 +283,7 @@ function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) 
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          {msg('Tracks the')} <strong>"Free to Paid"</strong> pipeline — helping management understand if coupons attract
+          {msg('Tracks the')} <strong>{msg('"Free to Paid"')}</strong> pipeline — helping management understand if coupons attract
           high-value returning customers or one-time opportunists. {data?.kpis ? 'Period: based on selected date range.' : <>{msg('Report period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
@@ -370,7 +370,7 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
     <div className="space-y-6">
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <p className="text-sm text-green-800">
-          {msg('Focuses on the')} <strong>"Inflow"</strong> of the business — tracking whether the new paying client base
+          {msg('Focuses on the')} <strong>{msg('"Inflow"')}</strong> of the business — tracking whether the new paying client base
           is growing, what they are worth, and where they come from. {data?.kpis ? `Period: ${kpis.periodLabel}.` : <>{msg('Period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
@@ -483,7 +483,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
     <div className="space-y-6">
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-sm text-amber-800">
-          {msg('Measures the health and loyalty of the core')} <strong>"Bread and Butter"</strong> client base — tracking
+          {msg('Measures the health and loyalty of the core')} <strong>{msg('"Bread and Butter"')}</strong> client base — tracking
           retention, visit frequency, lifetime value, and early churn signals. {data?.kpis ? 'Period: based on selected date range.' : <>{msg('Period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
@@ -500,7 +500,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-5">
           <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Retention Rate by Membership Tier')}</h4>
-          <p className="text-xs text-gray-500 mb-4">% of tier members with ≥1 visit in past 6 months</p>
+          <p className="text-xs text-gray-500 mb-4">{msg('% of tier members with ≥1 visit in past 6 months')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={retentionByTier} layout="vertical" barSize={26}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
@@ -516,7 +516,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
 
         <Card className="p-5">
           <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly Churn Rate Trend')}</h4>
-          <p className="text-xs text-gray-500 mb-4">% of previously active clients who lapsed (&gt;6 months without a visit)</p>
+          <p className="text-xs text-gray-500 mb-4">{msg('% of previously active clients who lapsed (&gt;6 months without a visit)')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={churnTrend}>
               <defs>

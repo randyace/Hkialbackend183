@@ -169,7 +169,7 @@ function BalanceBadge({ used, total }: { used: number; total: number }) {
   const cfg = STATUS_CONFIG[status];
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${cfg.bg} ${cfg.textColor}`}>
-      {cfg.icon}{cfg.label}
+      {cfg.icon}{msg(cfg.label)}
     </span>
   );
 }
@@ -341,10 +341,10 @@ export function CompanyEdit({
         >
           {/* Company Information Section */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Company Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">{msg('Company Information')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label>Company Name</label>
+                <label>{msg('Company Name')}</label>
                 <input
                   type="text"
                   value={formCompanyName}
@@ -354,7 +354,7 @@ export function CompanyEdit({
                 />
               </div>
               <div>
-                <label>Company Code</label>
+                <label>{msg('Company Code')}</label>
                 <input
                   type="text"
                   value={formCompanyCode}
@@ -367,20 +367,20 @@ export function CompanyEdit({
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label>Payment Method</label>
+                <label>{msg('Payment Method')}</label>
                 <select
                   value={formPaymentMethod}
                   onChange={(e) => setFormPaymentMethod(e.target.value as typeof formPaymentMethod)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="Upfront">Upfront Payment</option>
-                  <option value="Net Upfront">Net Upfront</option>
-                  <option value="On-Credit">On Credit</option>
-                  <option value="Bulk Purchase">Bulk Purchase</option>
+                  <option value="Upfront">{msg('Upfront Payment')}</option>
+                  <option value="Net Upfront">{msg('Net Upfront')}</option>
+                  <option value="On-Credit">{msg('On Credit')}</option>
+                  <option value="Bulk Purchase">{msg('Bulk Purchase')}</option>
                 </select>
               </div>
               <div>
-                <label>Discount Rate (%)</label>
+                <label>{msg('Discount Rate (%)')}</label>
                 <input
                   type="number"
                   value={formDiscountRate}
@@ -392,7 +392,7 @@ export function CompanyEdit({
                 />
               </div>
               <div>
-                <label>Status</label>
+                <label>{msg('Status')}</label>
                 <div className="flex items-center gap-3 pt-2">
                   <Switch
                     checked={companyStatus}
@@ -408,7 +408,7 @@ export function CompanyEdit({
             {/* Contact Persons Section */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-700">Contact Persons</h4>
+                <h4 className="text-sm font-semibold text-gray-700">{msg('Contact Persons')}</h4>
                 <Button
                   type="button"
                   variant="outline"
@@ -417,7 +417,7 @@ export function CompanyEdit({
                   className="h-8"
                 >
                   <Plus className="w-4 h-4 mr-1" />
-                  Add Contact Person
+                  {msg('Add Contact Person')}
                 </Button>
               </div>
 
@@ -439,7 +439,7 @@ export function CompanyEdit({
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs">Name</label>
+                      <label className="text-xs">{msg('Name')}</label>
                       <Input
                         type="text"
                         value={contact.name}
@@ -449,7 +449,7 @@ export function CompanyEdit({
                       />
                     </div>
                     <div>
-                      <label className="text-xs">Email Address</label>
+                      <label className="text-xs">{msg('Email Address')}</label>
                       <Input
                         type="email"
                         value={contact.email}
@@ -459,7 +459,7 @@ export function CompanyEdit({
                       />
                     </div>
                     <div>
-                      <label className="text-xs">Phone Number</label>
+                      <label className="text-xs">{msg('Phone Number')}</label>
                       <Input
                         type="tel"
                         value={contact.phone}
@@ -474,7 +474,7 @@ export function CompanyEdit({
             </div>
 
             <div>
-              <label>Billing Address</label>
+              <label>{msg('Billing Address')}</label>
               <Textarea
                 value={formBillingAddress}
                 onChange={(e) => setFormBillingAddress(e.target.value)}
@@ -484,7 +484,7 @@ export function CompanyEdit({
             </div>
 
             <div>
-              <label>Remarks / Notes</label>
+              <label>{msg('Remarks / Notes')}</label>
               <Textarea
                 value={formRemarks}
                 onChange={(e) => setFormRemarks(e.target.value)}
@@ -496,7 +496,7 @@ export function CompanyEdit({
 
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button type="button" variant="outline" onClick={onBack}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               <Save className="w-4 h-4 mr-2" />
@@ -510,26 +510,26 @@ export function CompanyEdit({
       {isEditMode && company && (
         <Card className="p-6">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Company Members</h2>
-            <p className="text-sm text-gray-600">All customer accounts associated with this company</p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">{msg('Company Members')}</h2>
+            <p className="text-sm text-gray-600">{msg('All customer accounts associated with this company')}</p>
           </div>
 
           {/* Members Summary */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
-              <p className="text-xs text-blue-700 mb-1">Total Members</p>
+              <p className="text-xs text-blue-700 mb-1">{msg('Total Members')}</p>
               <p className="text-2xl font-semibold text-blue-900">{(members ?? MOCK_MEMBERS).length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
-              <p className="text-xs text-green-700 mb-1">Active</p>
+              <p className="text-xs text-green-700 mb-1">{msg('Active')}</p>
               <p className="text-2xl font-semibold text-green-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'active').length}</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
-              <p className="text-xs text-gray-700 mb-1">Inactive</p>
+              <p className="text-xs text-gray-700 mb-1">{msg('Inactive')}</p>
               <p className="text-2xl font-semibold text-gray-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'inactive').length}</p>
             </Card>
             <Card className="p-4 bg-red-50 border-red-200">
-              <p className="text-xs text-red-700 mb-1">Suspended</p>
+              <p className="text-xs text-red-700 mb-1">{msg('Suspended')}</p>
               <p className="text-2xl font-semibold text-red-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'suspended').length}</p>
             </Card>
           </div>
@@ -539,14 +539,14 @@ export function CompanyEdit({
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account #</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Account #')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Name')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Email')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Phone')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Department')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Role')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Status')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Last Login')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -591,23 +591,23 @@ export function CompanyEdit({
       {isEditMode && company && (
         <Card className="p-6">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Contracts</h2>
-            <p className="text-sm text-gray-600">View and manage all contracts for this company</p>
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">{msg('Active Contracts')}</h2>
+            <p className="text-sm text-gray-600">{msg('View and manage all contracts for this company')}</p>
           </div>
 
           {/* Contract Summary */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
-              <p className="text-xs text-blue-700 mb-1">Total Contracts</p>
+              <p className="text-xs text-blue-700 mb-1">{msg('Total Contracts')}</p>
               <p className="text-2xl font-semibold text-blue-900">{(contracts ?? MOCK_CONTRACTS).length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
-              <p className="text-xs text-green-700 mb-1">Total Sessions</p>
+              <p className="text-xs text-green-700 mb-1">{msg('Total Sessions')}</p>
               <p className="text-2xl font-semibold text-green-900">{totalSessions}</p>
               <p className="text-xs text-green-600 mt-1">{remainingSessions} remaining</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
-              <p className="text-xs text-gray-700 mb-1">Overall Balance</p>
+              <p className="text-xs text-gray-700 mb-1">{msg('Overall Balance')}</p>
               <div className="mt-2">
                 <BalanceBadge used={usedSessions} total={totalSessions} />
               </div>
@@ -648,7 +648,7 @@ export function CompanyEdit({
 
                     {/* Balance */}
                     <div className="col-span-3">
-                      <p className="text-xs text-gray-500 mb-1">Session Balance</p>
+                      <p className="text-xs text-gray-500 mb-1">{msg('Session Balance')}</p>
                       <SessionBar used={contract.sessionsUsed} total={contract.sessionsTotal} />
                     </div>
 
@@ -663,7 +663,7 @@ export function CompanyEdit({
                           onClick={() => handleEditContract(contract)}
                         >
                           <Edit2 className="w-3 h-3 mr-1" />
-                          Edit
+                          {msg('Edit')}
                         </Button>
                       </div>
                       {contract.notes && (
@@ -684,8 +684,8 @@ export function CompanyEdit({
           <div className="mb-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">Add New Customer to Company</h2>
-                <p className="text-sm text-gray-600">Create a new customer account associated with this company</p>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">{msg('Add New Customer to Company')}</h2>
+                <p className="text-sm text-gray-600">{msg('Create a new customer account associated with this company')}</p>
               </div>
               <UserPlus className="w-6 h-6 text-blue-600" />
             </div>
@@ -694,28 +694,28 @@ export function CompanyEdit({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="customerTitle">Title *</Label>
+                <Label htmlFor="customerTitle">{msg('Title *')}</Label>
                 <Select>
                   <SelectTrigger id="customerTitle">
                     <SelectValue placeholder={msg('Select')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mr">Mr.</SelectItem>
-                    <SelectItem value="mrs">Mrs.</SelectItem>
-                    <SelectItem value="ms">Ms.</SelectItem>
-                    <SelectItem value="dr">Dr.</SelectItem>
+                    <SelectItem value="mr">{msg('Mr.')}</SelectItem>
+                    <SelectItem value="mrs">{msg('Mrs.')}</SelectItem>
+                    <SelectItem value="ms">{msg('Ms.')}</SelectItem>
+                    <SelectItem value="dr">{msg('Dr.')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="customerFirstName">First Name *</Label>
+                <Label htmlFor="customerFirstName">{msg('First Name *')}</Label>
                 <Input
                   id="customerFirstName"
                   placeholder={msg('Enter first name')}
                 />
               </div>
               <div>
-                <Label htmlFor="customerLastName">Last Name *</Label>
+                <Label htmlFor="customerLastName">{msg('Last Name *')}</Label>
                 <Input
                   id="customerLastName"
                   placeholder={msg('Enter last name')}
@@ -725,7 +725,7 @@ export function CompanyEdit({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="customerEmail">Email *</Label>
+                <Label htmlFor="customerEmail">{msg('Email *')}</Label>
                 <div className="relative">
                   <Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
@@ -737,7 +737,7 @@ export function CompanyEdit({
                 </div>
               </div>
               <div>
-                <Label htmlFor="customerPhone">Contact Number *</Label>
+                <Label htmlFor="customerPhone">{msg('Contact Number *')}</Label>
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <Input
@@ -752,21 +752,21 @@ export function CompanyEdit({
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="customerRole">Customer Role</Label>
+                <Label htmlFor="customerRole">{msg('Customer Role')}</Label>
                 <Select>
                   <SelectTrigger id="customerRole">
                     <SelectValue placeholder={msg('Select role')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="executive">Executive</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
+                    <SelectItem value="employee">{msg('Employee')}</SelectItem>
+                    <SelectItem value="manager">{msg('Manager')}</SelectItem>
+                    <SelectItem value="executive">{msg('Executive')}</SelectItem>
+                    <SelectItem value="vip">{msg('VIP')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="customerDepartment">Department</Label>
+                <Label htmlFor="customerDepartment">{msg('Department')}</Label>
                 <Input
                   id="customerDepartment"
                   placeholder={msg('e.g., Sales, Marketing')}
@@ -775,7 +775,7 @@ export function CompanyEdit({
             </div>
 
             <div>
-              <Label htmlFor="customerRemarks">Customer Remarks</Label>
+              <Label htmlFor="customerRemarks">{msg('Customer Remarks')}</Label>
               <Textarea
                 id="customerRemarks"
                 placeholder={msg('Any notes about this customer...')}
@@ -786,13 +786,13 @@ export function CompanyEdit({
             <div className="flex justify-end pt-2">
               <Button type="button" className="bg-green-600 hover:bg-green-700">
                 <UserPlus className="w-4 h-4 mr-2" />
-                Add Customer to Company
+                {msg('Add Customer to Company')}
               </Button>
             </div>
           </div>
 
           <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border mt-4">
-            <strong>Note:</strong> New customers will receive a welcome email with login credentials. 
+            <strong>{msg('Note:')}</strong> New customers will receive a welcome email with login credentials. 
             They will be automatically linked to {company.companyName} ({company.companyCode}).
           </div>
         </Card>
@@ -802,7 +802,7 @@ export function CompanyEdit({
       <Dialog open={!!editingContract} onOpenChange={() => setEditingContract(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Contract</DialogTitle>
+            <DialogTitle>{msg('Edit Contract')}</DialogTitle>
             <DialogDescription>
               Update contract details for {editingContract?.contractNumber}
             </DialogDescription>
@@ -810,7 +810,7 @@ export function CompanyEdit({
           
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="mb-[10px] block">Expiry Date *</Label>
+              <Label className="mb-[10px] block">{msg('Expiry Date *')}</Label>
               <Input
                 type="date"
                 value={editForm.expiryDate}
@@ -819,7 +819,7 @@ export function CompanyEdit({
             </div>
 
             <div>
-              <Label className="mb-[10px] block">Total Sessions *</Label>
+              <Label className="mb-[10px] block">{msg('Total Sessions *')}</Label>
               <Input
                 type="number"
                 value={editForm.sessionsTotal}
@@ -828,7 +828,7 @@ export function CompanyEdit({
             </div>
 
             <div>
-              <Label className="mb-[10px] block">Used Sessions *</Label>
+              <Label className="mb-[10px] block">{msg('Used Sessions *')}</Label>
               <Input
                 type="number"
                 value={editForm.sessionsUsed}
@@ -838,10 +838,10 @@ export function CompanyEdit({
 
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setEditingContract(null)}>
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button className="bg-[#0f2942] hover:bg-[#1a3d5c]" onClick={handleSaveContract}>
-                Save Changes
+                {msg('Save Changes')}
               </Button>
             </div>
           </div>
@@ -852,7 +852,7 @@ export function CompanyEdit({
       <Dialog open={!!selectedMember} onOpenChange={() => setSelectedMember(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Member Details</DialogTitle>
+            <DialogTitle>{msg('Member Details')}</DialogTitle>
             <DialogDescription>
               View detailed information for {selectedMember?.name}
             </DialogDescription>
@@ -862,40 +862,40 @@ export function CompanyEdit({
             <div className="space-y-6 mt-4">
               {/* Basic Information */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Basic Information</h3>
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">{msg('Basic Information')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-gray-500">Account Number</Label>
+                    <Label className="text-xs text-gray-500">{msg('Account Number')}</Label>
                     <p className="text-sm font-medium text-gray-900">{selectedMember.accountNumber}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Full Name</Label>
+                    <Label className="text-xs text-gray-500">{msg('Full Name')}</Label>
                     <p className="text-sm font-medium text-gray-900">{selectedMember.name}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Email Address</Label>
+                    <Label className="text-xs text-gray-500">{msg('Email Address')}</Label>
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4 text-gray-400" />
                       <p className="text-sm text-gray-900">{selectedMember.email}</p>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Phone Number</Label>
+                    <Label className="text-xs text-gray-500">{msg('Phone Number')}</Label>
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4 text-gray-400" />
                       <p className="text-sm text-gray-900">{selectedMember.phone}</p>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Department</Label>
+                    <Label className="text-xs text-gray-500">{msg('Department')}</Label>
                     <p className="text-sm text-gray-900">{selectedMember.department || 'N/A'}</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Role</Label>
+                    <Label className="text-xs text-gray-500">{msg('Role')}</Label>
                     <Badge variant="outline" className="text-xs">{selectedMember.role}</Badge>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Status</Label>
+                    <Label className="text-xs text-gray-500">{msg('Status')}</Label>
                     <Badge className={
                       selectedMember.status === 'active' ? 'bg-green-100 text-green-800' :
                       selectedMember.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
@@ -905,7 +905,7 @@ export function CompanyEdit({
                     </Badge>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Join Date</Label>
+                    <Label className="text-xs text-gray-500">{msg('Join Date')}</Label>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-400" />
                       <p className="text-sm text-gray-900">
@@ -918,16 +918,16 @@ export function CompanyEdit({
 
               {/* Activity Information */}
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Activity</h3>
+                <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">{msg('Activity')}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs text-gray-500">Last Login</Label>
+                    <Label className="text-xs text-gray-500">{msg('Last Login')}</Label>
                     <p className="text-sm text-gray-900">
                       {selectedMember.lastLogin ? new Date(selectedMember.lastLogin).toLocaleDateString() : 'Never'}
                     </p>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Member Since</Label>
+                    <Label className="text-xs text-gray-500">{msg('Member Since')}</Label>
                     <p className="text-sm text-gray-900">
                       {Math.floor((Date.now() - new Date(selectedMember.joinDate).getTime()) / (1000 * 60 * 60 * 24))} days
                     </p>
@@ -938,17 +938,17 @@ export function CompanyEdit({
               {/* Company Information */}
               {company && (
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Company Information</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">{msg('Company Information')}</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-xs text-gray-500">Company Name</Label>
+                      <Label className="text-xs text-gray-500">{msg('Company Name')}</Label>
                       <div className="flex items-center gap-2">
                         <Building2 className="w-4 h-4 text-gray-400" />
                         <p className="text-sm text-gray-900">{company.companyName}</p>
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs text-gray-500">Company Code</Label>
+                      <Label className="text-xs text-gray-500">{msg('Company Code')}</Label>
                       <p className="text-sm text-gray-900">{company.companyCode}</p>
                     </div>
                   </div>
@@ -958,10 +958,10 @@ export function CompanyEdit({
               {/* Action Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={() => setSelectedMember(null)}>
-                  Close
+                  {msg('Close')}
                 </Button>
                 <Button className="bg-[#0f2942] hover:bg-[#1a3d5c]">
-                  View Full Profile
+                  {msg('View Full Profile')}
                 </Button>
               </div>
             </div>

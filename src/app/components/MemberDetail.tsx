@@ -172,7 +172,7 @@ const MOCK_MEMBER: Member = {
   accountType: 'Individual',
   status: 'Active',
   name: 'Mr. John Smith',
-  title: 'Mr.',
+  title: msg('Mr.'),
   firstName: 'John',
   lastName: 'Smith',
   email: 'john.smith@email.com',
@@ -580,7 +580,7 @@ export function MemberDetail({
 
   // ── Spouse mock state (demo fallback) ───────────────────────────────────
   const [mockSpouse, setMockSpouse] = useState<Spouse | null>({
-    title: 'Mrs.',
+    title: msg('Mrs.'),
     firstName: 'Amanda',
     lastName: 'Smith',
     email: 'amanda.smith@email.com',
@@ -591,7 +591,7 @@ export function MemberDetail({
   });
   const [mockIsSpouseDialogOpen, setMockIsSpouseDialogOpen] = useState(false);
   const [mockIsRemoveSpouseOpen, setMockIsRemoveSpouseOpen] = useState(false);
-  const [mockSpouseForm, setMockSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
+  const [mockSpouseForm, setMockSpouseForm] = useState<Spouse>({ title: msg('Mr.'), firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
 
   // memberData is defined above (prop-driven)
 
@@ -716,7 +716,7 @@ export function MemberDetail({
 
   const handleDeletePreference = (id: number) => {
     onDeletePreference?.(id);
-    toast.success('Preference removed');
+    toast.success(msg('Preference removed'));
   };
 
   const handleDeleteAllergy = (id: number) => {
@@ -741,7 +741,7 @@ export function MemberDetail({
 
   const handleDeleteRemark = (id: number) => {
     onDeleteRemark?.(id);
-    toast.success('Remark removed');
+    toast.success(msg('Remark removed'));
   };
 
   return (
@@ -753,8 +753,8 @@ export function MemberDetail({
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1>Member Details</h1>
-            <p className="text-gray-600">View and manage member profile information</p>
+            <h1>{msg('Member Details')}</h1>
+            <p className="text-gray-600">{msg('View and manage member profile information')}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -762,7 +762,7 @@ export function MemberDetail({
             <>
               <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
                 <X className="w-4 h-4 mr-2" />
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button onClick={() => { void handleSave(); }} disabled={isLoading}>
                 <Save className="w-4 h-4 mr-2" />
@@ -772,7 +772,7 @@ export function MemberDetail({
           ) : (
             <Button onClick={() => setIsEditing(true)} disabled={isLoading}>
               <Edit2 className="w-4 h-4 mr-2" />
-              Edit Profile
+              {msg('Edit Profile')}
             </Button>
           )}
         </div>
@@ -816,11 +816,11 @@ export function MemberDetail({
               {/* Account Quotas & Credit — under status / account-type badges */}
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
                 <h3 className="text-sm font-semibold text-[#0f2942] mb-2">
-                  Account Quotas &amp; Credit
+                  {msg('Account Quotas &amp; Credit')}
                 </h3>
                 <div className="grid grid-cols-3 gap-4 text-sm" data-testid="member-quota-credit-card">
                   <div>
-                    <span className="text-gray-600">Credit Balance</span>
+                    <span className="text-gray-600">{msg('Credit Balance')}</span>
                     <p
                       className="font-semibold text-[#0f2942]"
                       data-testid="member-credit-balance"
@@ -840,20 +840,20 @@ export function MemberDetail({
                   {memberData.accountType === 'Individual' ? (
                     <>
                       <div>
-                        <span className="text-gray-600">Free LD Entries</span>
+                        <span className="text-gray-600">{msg('Free LD Entries')}</span>
                         <p
                           className="font-semibold text-[#0f2942]"
                           data-testid="member-ld-remaining"
                         >
                           {memberData.ldEntriesRemaining === -1
-                            ? <span className="text-amber-700">Unlimited</span>
+                            ? <span className="text-amber-700">{msg('Unlimited')}</span>
                             : (memberData.ldEntriesRemaining == null
                                 ? <span className="text-gray-400">—</span>
                                 : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)}
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600">Free PS Upgrades</span>
+                        <span className="text-gray-600">{msg('Free PS Upgrades')}</span>
                         <p
                           className="font-semibold text-[#0f2942]"
                           data-testid="member-ps-remaining"
@@ -867,7 +867,7 @@ export function MemberDetail({
                   ) : (
                     <>
                       <div>
-                        <span className="text-gray-600">On Hold</span>
+                        <span className="text-gray-600">{msg('On Hold')}</span>
                         <p
                           className="font-semibold text-[#0f2942]"
                           data-testid="member-credit-on-hold"
@@ -885,7 +885,7 @@ export function MemberDetail({
                         </p>
                       </div>
                       <div>
-                        <span className="text-gray-600">Available</span>
+                        <span className="text-gray-600">{msg('Available')}</span>
                         <p
                           className="font-semibold text-[#0f2942]"
                           data-testid="member-credit-available"
@@ -910,11 +910,11 @@ export function MemberDetail({
           </div>
           <div className="text-right space-y-2">
             <div>
-              <p className="text-sm text-gray-600">Total Bookings</p>
+              <p className="text-sm text-gray-600">{msg('Total Bookings')}</p>
               <p className="text-2xl text-gray-900">{memberData.totalBookings}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Total Spent</p>
+              <p className="text-sm text-gray-600">{msg('Total Spent')}</p>
               <p className="text-xl text-green-600">{memberData.totalSpent}</p>
             </div>
           </div>
@@ -924,11 +924,11 @@ export function MemberDetail({
       {/* Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-          <TabsTrigger value="allergies">Food Allergies</TabsTrigger>
-          <TabsTrigger value="remarks">Remarks</TabsTrigger>
-          <TabsTrigger value="movements">Movement Log</TabsTrigger>
+          <TabsTrigger value="profile">{msg('Profile')}</TabsTrigger>
+          <TabsTrigger value="preferences">{msg('Preferences')}</TabsTrigger>
+          <TabsTrigger value="allergies">{msg('Food Allergies')}</TabsTrigger>
+          <TabsTrigger value="remarks">{msg('Remarks')}</TabsTrigger>
+          <TabsTrigger value="movements">{msg('Movement Log')}</TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-1.5">
             {activeIsAccountLocked
               ? <ShieldAlert className="w-3.5 h-3.5 text-red-500" />
@@ -941,17 +941,17 @@ export function MemberDetail({
         <TabsContent value="profile" className="space-y-6">
           {/* Basic Information */}
           <Card className="p-6">
-            <h3 className="mb-4">Basic Information</h3>
+            <h3 className="mb-4">{msg('Basic Information')}</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label>Title</label>
+                <label>{msg('Title')}</label>
                 <select
                   value={basicForm.title}
                   onChange={e => setBasicForm(f => ({ ...f, title: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
-                  <option value="">Select title</option>
+                  <option value="">{msg('Select title')}</option>
                   {PERSON_TITLES.map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
@@ -962,7 +962,7 @@ export function MemberDetail({
                 </select>
               </div>
               <div>
-                <label>First Name</label>
+                <label>{msg('First Name')}</label>
                 <input
                   type="text"
                   value={basicForm.firstName}
@@ -972,7 +972,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>Last Name</label>
+                <label>{msg('Last Name')}</label>
                 <input
                   type="text"
                   value={basicForm.lastName}
@@ -982,7 +982,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>Email</label>
+                <label>{msg('Email')}</label>
                 <input
                   type="email"
                   value={basicForm.email}
@@ -992,7 +992,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>Phone</label>
+                <label>{msg('Phone')}</label>
                 <input
                   type="tel"
                   value={basicForm.phone}
@@ -1002,7 +1002,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>Nationality</label>
+                <label>{msg('Nationality')}</label>
                 <NationalityTypeahead
                   id="member-detail-nationality"
                   value={basicForm.nationality}
@@ -1012,7 +1012,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>First 4 digits of Passport Number</label>
+                <label>{msg('First 4 digits of Passport Number')}</label>
                 <input
                   type="text"
                   value={basicForm.passportNumber.slice(0, 4)}
@@ -1026,10 +1026,10 @@ export function MemberDetail({
 
           {/* Account Information */}
           <Card className="p-6">
-            <h3 className="mb-4">Account Information</h3>
+            <h3 className="mb-4">{msg('Account Information')}</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label>Internal Grouping</label>
+                <label>{msg('Internal Grouping')}</label>
                 {/* Free-text: Corporate / Agency / Individual groups are free-form
                     on the API (internal_grouping string). The previous hard-coded
                     mock list (HSBC, EGL Tours, …) could not display or save real
@@ -1045,14 +1045,14 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label>Payment Method</label>
+                <label>{msg('Payment Method')}</label>
                 <select
                   value={accountForm.paymentMethod}
                   onChange={e => setAccountForm(f => ({ ...f, paymentMethod: e.target.value }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
-                  <option value="">Not set</option>
+                  <option value="">{msg('Not set')}</option>
                   {(memberData.accountType === 'Individual'
                     ? INDIVIDUAL_PAYMENT_METHODS
                     : ALL_PAYMENT_METHODS
@@ -1071,7 +1071,7 @@ export function MemberDetail({
                 </select>
               </div>
               <div>
-                <label>Company Code</label>
+                <label>{msg('Company Code')}</label>
                 <input
                   type="text"
                   value={accountForm.companyCode}
@@ -1085,7 +1085,7 @@ export function MemberDetail({
               {memberData.accountType === 'Individual' && (
                 <>
                   <div>
-                    <label>Membership Number</label>
+                    <label>{msg('Membership Number')}</label>
                     <input
                       type="text"
                       value={memberData.membershipNumber || ''}
@@ -1095,7 +1095,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Membership Type</label>
+                    <label>{msg('Membership Type')}</label>
                     <input
                       type="text"
                       value={memberData.membershipType || ''}
@@ -1105,7 +1105,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Membership Expiry</label>
+                    <label>{msg('Membership Expiry')}</label>
                     <input
                       type="date"
                       // Container already normalizes ISO datetime → YYYY-MM-DD;
@@ -1126,7 +1126,7 @@ export function MemberDetail({
             <div className="flex items-center justify-between mb-4">
               <h3 className="flex items-center gap-2">
                 <Heart className="w-5 h-5 text-pink-500" />
-                Spouse / Partner
+                {msg('Spouse / Partner')}
               </h3>
               {displaySpouse ? (
                 <div className="flex gap-2">
@@ -1139,7 +1139,7 @@ export function MemberDetail({
                     }}
                   >
                     <Edit2 className="w-4 h-4 mr-1.5" />
-                    Edit Spouse
+                    {msg('Edit Spouse')}
                   </Button>
                   <Button
                     variant="outline"
@@ -1148,7 +1148,7 @@ export function MemberDetail({
                     onClick={() => { onRemoveSpouseOpen?.(); setMockIsRemoveSpouseOpen(true); }}
                   >
                     <UserX className="w-4 h-4 mr-1.5" />
-                    Remove
+                    {msg('Remove')}
                   </Button>
                 </div>
               ) : (
@@ -1156,11 +1156,11 @@ export function MemberDetail({
                   size="sm"
                   onClick={() => {
                     if (onSpouseDialogOpen) { onSpouseDialogOpen(); }
-                    else { setMockSpouseForm({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' }); setMockIsSpouseDialogOpen(true); }
+                    else { setMockSpouseForm({ title: msg('Mr.'), firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' }); setMockIsSpouseDialogOpen(true); }
                   }}
                 >
                   <Plus className="w-4 h-4 mr-1.5" />
-                  Add Spouse
+                  {msg('Add Spouse')}
                 </Button>
               )}
             </div>
@@ -1187,56 +1187,56 @@ export function MemberDetail({
                 </div>
 
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Title</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('Title')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.title}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First Name</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('First Name')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.firstName}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Last Name</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('Last Name')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.lastName}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Email</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('Email')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.email || '—'}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Phone</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('Phone')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.phone || '—'}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Nationality</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('Nationality')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
                     {displaySpouse.nationality ? countryNameFor(displaySpouse.nationality) : '—'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First 4 Digits of Passport</label>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>{msg('First 4 Digits of Passport')}</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.passportFirst4 || '—'}</p>
                 </div>
               </div>
             ) : (
               <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg">
                 <Heart className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">No spouse / partner on record.</p>
-                <p className="text-gray-400 text-xs mt-1">Click "Add Spouse" to link one.</p>
+                <p className="text-gray-500 text-sm">{msg('No spouse / partner on record.')}</p>
+                <p className="text-gray-400 text-xs mt-1">{msg('Click "Add Spouse" to link one.')}</p>
               </div>
             )}
           </Card>
 
           {/* VIP Profile Information */}
           <Card className="p-6">
-            <h3 className="mb-4">VIP Profile</h3>
+            <h3 className="mb-4">{msg('VIP Profile')}</h3>
             
             <div className="space-y-6">
               {/* Appearance */}
               <div>
-                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Appearance</h4>
+                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">{msg('Appearance')}</h4>
                 <div className="grid grid-cols-5 gap-4">
                   <div>
-                    <label>Ethnicity</label>
+                    <label>{msg('Ethnicity')}</label>
                     <input
                       type="text"
                       value={appearanceForm.ethnicity}
@@ -1246,7 +1246,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Age Range</label>
+                    <label>{msg('Age Range')}</label>
                     <input
                       type="text"
                       value={appearanceForm.age}
@@ -1256,7 +1256,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Height</label>
+                    <label>{msg('Height')}</label>
                     <input
                       type="text"
                       value={appearanceForm.height}
@@ -1266,7 +1266,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Hair Color</label>
+                    <label>{msg('Hair Color')}</label>
                     <input
                       type="text"
                       value={appearanceForm.hairColor}
@@ -1276,16 +1276,16 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Glasses</label>
+                    <label>{msg('Glasses')}</label>
                     <select
                       value={appearanceForm.glasses}
                       onChange={e => setAppearanceForm(f => ({ ...f, glasses: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
-                      <option value="Sometimes">Sometimes</option>
+                      <option value="Yes">{msg('Yes')}</option>
+                      <option value="No">{msg('No')}</option>
+                      <option value="Sometimes">{msg('Sometimes')}</option>
                     </select>
                   </div>
                 </div>
@@ -1293,10 +1293,10 @@ export function MemberDetail({
 
               {/* Work Information */}
               <div>
-                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Work Information</h4>
+                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">{msg('Work Information')}</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label>Industry</label>
+                    <label>{msg('Industry')}</label>
                     <input
                       type="text"
                       value={workForm.industry}
@@ -1306,7 +1306,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Company Name</label>
+                    <label>{msg('Company Name')}</label>
                     <input
                       type="text"
                       value={workForm.company}
@@ -1316,7 +1316,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Position</label>
+                    <label>{msg('Position')}</label>
                     <input
                       type="text"
                       value={workForm.position}
@@ -1326,7 +1326,7 @@ export function MemberDetail({
                     />
                   </div>
                   <div>
-                    <label>Previous Work History</label>
+                    <label>{msg('Previous Work History')}</label>
                     <input
                       type="text"
                       value={workForm.previousWork}
@@ -1340,50 +1340,50 @@ export function MemberDetail({
 
               {/* Other Observations */}
               <div>
-                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Other Observations</h4>
+                <h4 className="text-sm uppercase tracking-wide text-gray-500 mb-3">{msg('Other Observations')}</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label>Handedness</label>
+                    <label>{msg('Handedness')}</label>
                     <select
                       value={observationsForm.handedness}
                       onChange={e => setObservationsForm(f => ({ ...f, handedness: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
-                      <option value="Right-handed">Right-handed</option>
-                      <option value="Left-handed">Left-handed</option>
-                      <option value="Ambidextrous">Ambidextrous</option>
+                      <option value="Right-handed">{msg('Right-handed')}</option>
+                      <option value="Left-handed">{msg('Left-handed')}</option>
+                      <option value="Ambidextrous">{msg('Ambidextrous')}</option>
                     </select>
                   </div>
                   <div>
-                    <label>Writing Hand</label>
+                    <label>{msg('Writing Hand')}</label>
                     <select
                       value={observationsForm.writingHand}
                       onChange={e => setObservationsForm(f => ({ ...f, writingHand: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
-                      <option value="Right">Right</option>
-                      <option value="Left">Left</option>
+                      <option value="Right">{msg('Right')}</option>
+                      <option value="Left">{msg('Left')}</option>
                     </select>
                   </div>
                   <div>
-                    <label>Preferred Language</label>
+                    <label>{msg('Preferred Language')}</label>
                     <select
                       value={observationsForm.preferredLanguage}
                       onChange={e => setObservationsForm(f => ({ ...f, preferredLanguage: e.target.value }))}
                       disabled={!isEditing}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     >
-                      <option value="English">English</option>
-                      <option value="Traditional Chinese">Traditional Chinese</option>
-                      <option value="Simplified Chinese">Simplified Chinese</option>
-                      <option value="Japanese">Japanese</option>
-                      <option value="Korean">Korean</option>
+                      <option value="English">{msg('English')}</option>
+                      <option value="Traditional Chinese">{msg('Traditional Chinese')}</option>
+                      <option value="Simplified Chinese">{msg('Simplified Chinese')}</option>
+                      <option value="Japanese">{msg('Japanese')}</option>
+                      <option value="Korean">{msg('Korean')}</option>
                     </select>
                   </div>
                   <div>
-                    <label>Interest Topics</label>
+                    <label>{msg('Interest Topics')}</label>
                     <input
                       type="text"
                       value={observationsForm.interests}
@@ -1403,10 +1403,10 @@ export function MemberDetail({
         <TabsContent value="preferences" className="space-y-4">
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3>Customer Preferences</h3>
+              <h3>{msg('Customer Preferences')}</h3>
               <Button onClick={() => { onOpenPreferenceDialog?.(); }}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Preference
+                {msg('Add Preference')}
               </Button>
             </div>
             <div className="space-y-3">
@@ -1444,9 +1444,9 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-1">
               <AlertCircle className="w-5 h-5 text-red-600" />
-              <h3>Food Allergies</h3>
+              <h3>{msg('Food Allergies')}</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-5">Critical information for food service</p>
+            <p className="text-sm text-gray-600 mb-5">{msg('Critical information for food service')}</p>
 
             {/* Customer sub-section */}
             <div className="mb-6">
@@ -1456,7 +1456,7 @@ export function MemberDetail({
                     <User className="w-3.5 h-3.5 text-blue-600" />
                   </div>
                   <span className="text-sm text-gray-700">{memberData.name}</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Customer</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{msg('Customer')}</span>
                 </div>
                 <Button
                   size="sm"
@@ -1468,11 +1468,11 @@ export function MemberDetail({
                   }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Add Allergy
+                  {msg('Add Allergy')}
                 </Button>
               </div>
               {displayFoodAllergies.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No allergies recorded.</div>
+                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">{msg('No allergies recorded.')}</div>
               ) : (
                 <div className="space-y-3">
                   {displayFoodAllergies.map((allergy, idx) => (
@@ -1509,9 +1509,9 @@ export function MemberDetail({
                   {displaySpouse ? (
                     <span className="text-sm text-gray-700">{displaySpouse.title} {displaySpouse.firstName} {displaySpouse.lastName}</span>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">No spouse on record</span>
+                    <span className="text-sm text-gray-400 italic">{msg('No spouse on record')}</span>
                   )}
-                  <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
+                  <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{msg('Spouse')}</span>
                 </div>
                 {displaySpouse && (
                   <Button
@@ -1524,16 +1524,16 @@ export function MemberDetail({
                   }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Add Allergy
+                    {msg('Add Allergy')}
                   </Button>
                 )}
               </div>
               {!displaySpouse ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
-                  Add a spouse in the Profile tab to record their allergy information.
+                  {msg('Add a spouse in the Profile tab to record their allergy information.')}
                 </div>
               ) : displaySpouseFoodAllergies.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No allergies recorded for spouse.</div>
+                <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">{msg('No allergies recorded for spouse.')}</div>
               ) : (
                 <div className="space-y-3">
                   {displaySpouseFoodAllergies.map((allergy, idx) => (
@@ -1562,9 +1562,9 @@ export function MemberDetail({
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-1">
               <Utensils className="w-5 h-5 text-green-600" />
-              <h3>Dietary Requirements & Preferences</h3>
+              <h3>{msg('Dietary Requirements & Preferences')}</h3>
             </div>
-            <p className="text-sm text-gray-600 mb-5">Record dietary preferences and requirements</p>
+            <p className="text-sm text-gray-600 mb-5">{msg('Record dietary preferences and requirements')}</p>
 
             {/* Customer sub-section */}
             <div className="mb-6">
@@ -1574,7 +1574,7 @@ export function MemberDetail({
                     <User className="w-3.5 h-3.5 text-blue-600" />
                   </div>
                   <span className="text-sm text-gray-700">{memberData.name}</span>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Customer</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{msg('Customer')}</span>
                 </div>
                 <Button
                   size="sm"
@@ -1582,11 +1582,11 @@ export function MemberDetail({
                   onClick={() => { onDietaryTargetChange?.('customer'); setMockDietaryTarget('customer'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onOpenDietaryDialog?.(); }}
                 >
                   <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Add Requirement
+                  {msg('Add Requirement')}
                 </Button>
               </div>
               {displayDietaryRequirements.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">No dietary requirements recorded.</div>
+                <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">{msg('No dietary requirements recorded.')}</div>
               ) : (
                 <div className="space-y-3">
                   {displayDietaryRequirements.map((dietary, idx) => (
@@ -1620,9 +1620,9 @@ export function MemberDetail({
                   {displaySpouse ? (
                     <span className="text-sm text-gray-700">{displaySpouse.title} {displaySpouse.firstName} {displaySpouse.lastName}</span>
                   ) : (
-                    <span className="text-sm text-gray-400 italic">No spouse on record</span>
+                    <span className="text-sm text-gray-400 italic">{msg('No spouse on record')}</span>
                   )}
-                  <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
+                  <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{msg('Spouse')}</span>
                 </div>
                 {displaySpouse && (
                   <Button
@@ -1631,16 +1631,16 @@ export function MemberDetail({
                     onClick={() => { onDietaryTargetChange?.('spouse'); setMockDietaryTarget('spouse'); onDietaryFormChange?.({ requirement: '', notes: '' }); setMockDietaryForm({ requirement: '', notes: '' }); onOpenDietaryDialog?.(); }}
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Add Requirement
+                    {msg('Add Requirement')}
                   </Button>
                 )}
               </div>
               {!displaySpouse ? (
                 <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-sm">
-                  Add a spouse in the Profile tab to record their dietary requirements.
+                  {msg('Add a spouse in the Profile tab to record their dietary requirements.')}
                 </div>
               ) : displaySpouseDietaryReqs.length === 0 ? (
-                <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">No dietary requirements recorded for spouse.</div>
+                <div className="text-center py-6 border-2 border-dashed border-pink-100 rounded-lg text-gray-400 text-sm">{msg('No dietary requirements recorded for spouse.')}</div>
               ) : (
                 <div className="space-y-3">
                   {displaySpouseDietaryReqs.map((dietary, idx) => (
@@ -1667,10 +1667,10 @@ export function MemberDetail({
         <TabsContent value="remarks" className="space-y-4">
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3>Staff Remarks</h3>
+              <h3>{msg('Staff Remarks')}</h3>
               <Button onClick={() => { onOpenRemarkDialog?.(); setMockIsAddRemarkOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Remark
+                {msg('Add Remark')}
               </Button>
             </div>
             <div className="space-y-3">
@@ -1708,13 +1708,13 @@ export function MemberDetail({
               <div>
                 <h3 className="flex items-center gap-2">
                   <History className="w-5 h-5 text-blue-600" />
-                  Movement Log
+                  {msg('Movement Log')}
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">Full movement details linked to booking records</p>
+                <p className="text-sm text-gray-600 mt-1">{msg('Full movement details linked to booking records')}</p>
               </div>
               <Button onClick={() => { onOpenMovementDialog?.(); setMockIsAddMovementOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Movement
+                {msg('Add Movement')}
               </Button>
             </div>
             <div className="overflow-x-auto rounded-lg border border-gray-200">
@@ -1722,37 +1722,37 @@ export function MemberDetail({
                 <thead>
                   <tr className="bg-[#0f2942] text-white">
                     {/* Fixed identity columns */}
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">{msg('Gp No.')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('Movement IC')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('CIC &amp; Support')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Driver')}</th>
                     {/* Booking reference */}
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">{msg('Order No.')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Dept Date')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Arr Date')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt No.')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt Time')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Dest / Origin')}</th>
                     {/* Lounge details */}
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">{msg('Lobby / Suite')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">{msg('Pax')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">{msg('Title')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('First Name')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('Last Name')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">{msg('C/I Bag.')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Remarks')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Nationality')}</th>
                     {/* Time columns */}
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
-                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                    <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Non-fly Arr.')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Met VIP at Gate')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Back to HKIAL')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. Start')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. End')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Arr. HKIAL')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Left HKIAL')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Process Time')}</th>
+                    <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Admin Remarks')}</th>
+                    <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">{msg('Action')}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
@@ -1826,7 +1826,7 @@ export function MemberDetail({
                   {displayMovements.length === 0 && (
                     <tr>
                       <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
-                        No movement records found. Click "Add Movement" to create the first entry.
+                        {msg('No movement records found. Click "Add Movement" to create the first entry.')}
                       </td>
                     </tr>
                   )}
@@ -1834,8 +1834,8 @@ export function MemberDetail({
               </table>
             </div>
             <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-              <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking reference columns &nbsp;
-              <span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200 ml-2"></span> Movement time columns
+              <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> {msg('Booking reference columns &nbsp;')}
+              <span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200 ml-2"></span> {msg('Movement time columns')}
             </p>
           </Card>
         </TabsContent>
@@ -1848,11 +1848,11 @@ export function MemberDetail({
             <div className="flex items-start gap-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <ShieldAlert className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-red-800">Account is currently locked</p>
+                <p className="text-sm font-semibold text-red-800">{msg('Account is currently locked')}</p>
                 <p className="text-xs text-red-600 mt-0.5">
-                  Reason: <span className="font-medium">{activeLockReason}</span>
+                  {msg('Reason:')} <span className="font-medium">{activeLockReason}</span>
                   <span className="mx-2 text-red-300">·</span>
-                  Locked at: <span className="font-medium">{activeLockedAt}</span>
+                  {msg('Locked at:')} <span className="font-medium">{activeLockedAt}</span>
                 </p>
               </div>
               <Button
@@ -1861,7 +1861,7 @@ export function MemberDetail({
                 onClick={() => { onShowUnlockConfirm?.(); setMockShowUnlockConfirm(true); }}
               >
                 <LockOpen className="w-3.5 h-3.5 mr-1.5" />
-                Unlock Now
+                {msg('Unlock Now')}
               </Button>
             </div>
           )}
@@ -1870,7 +1870,7 @@ export function MemberDetail({
           <Card className="p-6">
             <h3 className="flex items-center gap-2 mb-5">
               <Shield className="w-5 h-5 text-blue-600" />
-              Security Status
+              {msg('Security Status')}
             </h3>
             <div className="grid grid-cols-4 gap-4">
               {/* Account Lock Status */}
@@ -1879,7 +1879,7 @@ export function MemberDetail({
                   {activeIsAccountLocked
                     ? <Lock className="w-4 h-4 text-red-600" />
                     : <LockOpen className="w-4 h-4 text-green-600" />}
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Account Lock</span>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">{msg('Account Lock')}</span>
                 </div>
                 <p className={`text-sm font-semibold ${activeIsAccountLocked ? 'text-red-700' : 'text-green-700'}`}>
                   {activeIsAccountLocked ? 'Locked' : 'Unlocked'}
@@ -1893,32 +1893,32 @@ export function MemberDetail({
               <div className={`rounded-lg p-4 border ${activeTwoFAEnabled ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
                 <div className="flex items-center gap-2 mb-1">
                   <Smartphone className={`w-4 h-4 ${activeTwoFAEnabled ? 'text-green-600' : 'text-yellow-600'}`} />
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">2FA</span>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">{msg('2FA')}</span>
                 </div>
                 <p className={`text-sm font-semibold ${activeTwoFAEnabled ? 'text-green-700' : 'text-yellow-700'}`}>
                   {activeTwoFAEnabled ? 'Enabled' : 'Not Enabled'}
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">Authenticator App</p>
+                <p className="text-xs text-gray-400 mt-0.5">{msg('Authenticator App')}</p>
               </div>
 
               {/* Active Sessions */}
               <div className="rounded-lg p-4 border bg-blue-50 border-blue-200">
                 <div className="flex items-center gap-2 mb-1">
                   <Monitor className="w-4 h-4 text-blue-600" />
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Active Sessions</span>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">{msg('Active Sessions')}</span>
                 </div>
                 <p className="text-sm font-semibold text-blue-700">{activeActiveSessions} active</p>
-                <p className="text-xs text-gray-400 mt-0.5">Devices signed in</p>
+                <p className="text-xs text-gray-400 mt-0.5">{msg('Devices signed in')}</p>
               </div>
 
               {/* Last Login */}
               <div className="rounded-lg p-4 border bg-gray-50 border-gray-200">
                 <div className="flex items-center gap-2 mb-1">
                   <Clock className="w-4 h-4 text-gray-500" />
-                  <span className="text-xs text-gray-500 uppercase tracking-wide">Last Login</span>
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">{msg('Last Login')}</span>
                 </div>
                 <p className="text-sm font-semibold text-gray-700">2026-03-07</p>
-                <p className="text-xs text-gray-400 mt-0.5">09:15 · Hong Kong, HK</p>
+                <p className="text-xs text-gray-400 mt-0.5">{msg('09:15 · Hong Kong, HK')}</p>
               </div>
             </div>
           </Card>
@@ -1927,9 +1927,9 @@ export function MemberDetail({
           <Card className="p-6">
             <h3 className="flex items-center gap-2 mb-2">
               <Activity className="w-5 h-5 text-blue-600" />
-              Security Actions
+              {msg('Security Actions')}
             </h3>
-            <p className="text-sm text-gray-500 mb-5">Manage account access and credentials. All actions are logged in the audit trail.</p>
+            <p className="text-sm text-gray-500 mb-5">{msg('Manage account access and credentials. All actions are logged in the audit trail.')}</p>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Reset Password */}
@@ -1938,9 +1938,9 @@ export function MemberDetail({
                   <Key className="w-5 h-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Reset Password</p>
+                  <p className="text-sm font-semibold text-gray-900">{msg('Reset Password')}</p>
                   <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                    Send a password reset link to the customer's registered email address. The link expires in 24 hours.
+                    {msg('Send a password reset link to the customer\'s registered email address. The link expires in 24 hours.')}
                   </p>
                   <Button
                     size="sm"
@@ -1949,7 +1949,7 @@ export function MemberDetail({
                     onClick={() => { onShowResetPwConfirm?.(); setMockShowResetPwConfirm(true); }}
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    Send Reset Link
+                    {msg('Send Reset Link')}
                   </Button>
                 </div>
               </div>
@@ -1978,7 +1978,7 @@ export function MemberDetail({
                     onClick={() => { onShowUnlockConfirm?.(); setMockShowUnlockConfirm(true); }}
                   >
                     <LockOpen className="w-3.5 h-3.5 mr-1.5" />
-                    Unlock Account
+                    {msg('Unlock Account')}
                   </Button>
                 </div>
               </div>
@@ -1990,9 +1990,9 @@ export function MemberDetail({
                   <LogOut className="w-5 h-5 text-orange-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Force Sign Out All Sessions</p>
+                  <p className="text-sm font-semibold text-gray-900">{msg('Force Sign Out All Sessions')}</p>
                   <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                    Immediately terminate all active login sessions across all devices. The customer will need to sign in again.
+                    {msg('Immediately terminate all active login sessions across all devices. The customer will need to sign in again.')}
                   </p>
                   <Button
                     size="sm"
@@ -2001,7 +2001,7 @@ export function MemberDetail({
                     onClick={() => { onShowForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(true); }}
                   >
                     <LogOut className="w-3.5 h-3.5 mr-1.5" />
-                    Sign Out All Sessions
+                    {msg('Sign Out All Sessions')}
                   </Button>
                 </div>
               </div>
@@ -2013,9 +2013,9 @@ export function MemberDetail({
                   <Smartphone className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Reset Two-Factor Authentication</p>
+                  <p className="text-sm font-semibold text-gray-900">{msg('Reset Two-Factor Authentication')}</p>
                   <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                    Remove the current 2FA device binding. The customer will be prompted to set up 2FA again on next login.
+                    {msg('Remove the current 2FA device binding. The customer will be prompted to set up 2FA again on next login.')}
                   </p>
                   <Button
                     size="sm"
@@ -2025,7 +2025,7 @@ export function MemberDetail({
                     onClick={() => { onShowReset2FAConfirm?.(); setMockShowReset2FAConfirm(true); }}
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    Reset 2FA
+                    {msg('Reset 2FA')}
                   </Button>
                 </div>
               </div>
@@ -2036,26 +2036,26 @@ export function MemberDetail({
           <Card className="p-6">
             <h3 className="flex items-center gap-2 mb-1">
               <History className="w-5 h-5 text-blue-600" />
-              Recent Login Activity
+              {msg('Recent Login Activity')}
             </h3>
-            <p className="text-sm text-gray-500 mb-4">Last 10 login attempts across all devices</p>
+            <p className="text-sm text-gray-500 mb-4">{msg('Last 10 login attempts across all devices')}</p>
 
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Date & Time</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Device</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">IP Address</th>
-                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Location</th>
-                    <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Date & Time')}</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Device')}</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('IP Address')}</th>
+                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Location')}</th>
+                    <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">{msg('Status')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {displayLoginHistory.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                        No login activity recorded yet.
+                        {msg('No login activity recorded yet.')}
                       </td>
                     </tr>
                   ) : (
@@ -2075,17 +2075,17 @@ export function MemberDetail({
                         <td className="px-4 py-3 text-center">
                           {entry.status === 'Success' && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
-                              <CheckCircle2 className="w-3 h-3" /> Success
+                              <CheckCircle2 className="w-3 h-3" /> {msg('Success')}
                             </span>
                           )}
                           {entry.status === 'Failed' && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700">
-                              <XCircle className="w-3 h-3" /> Failed
+                              <XCircle className="w-3 h-3" /> {msg('Failed')}
                             </span>
                           )}
                           {entry.status === 'Locked Out' && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">
-                              <Lock className="w-3 h-3" /> Locked Out
+                              <Lock className="w-3 h-3" /> {msg('Locked Out')}
                             </span>
                           )}
                         </td>
@@ -2105,30 +2105,30 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LockOpen className="w-5 h-5 text-green-600" />
-              Unlock Account
+              {msg('Unlock Account')}
             </DialogTitle>
             <DialogDescription>
-              You are about to unlock <strong>{memberData.name}</strong>'s account.
+              {msg('You are about to unlock')} <strong>{memberData.name}</strong>{msg('\'s account.')}
             </DialogDescription>
           </DialogHeader>
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800 space-y-1">
-            <p><span className="font-medium">Lock reason:</span> {activeLockReason}</p>
-            <p><span className="font-medium">Locked at:</span> {activeLockedAt}</p>
-            <p className="mt-2">After unlocking, the customer will be able to sign in immediately. Consider requiring a password reset if suspicious activity is suspected.</p>
+            <p><span className="font-medium">{msg('Lock reason:')}</span> {activeLockReason}</p>
+            <p><span className="font-medium">{msg('Locked at:')}</span> {activeLockedAt}</p>
+            <p className="mt-2">{msg('After unlocking, the customer will be able to sign in immediately. Consider requiring a password reset if suspicious activity is suspected.')}</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideUnlockConfirm?.(); setMockShowUnlockConfirm(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideUnlockConfirm?.(); setMockShowUnlockConfirm(false); }}>{msg('Cancel')}</Button>
             <Button
               className="bg-green-600 hover:bg-green-700"
               onClick={() => {
                 setMockIsAccountLocked(false); // local demo fallback
                 onHideUnlockConfirm?.();
                 setMockShowUnlockConfirm(false);
-                toast.success('Account unlocked successfully. Customer can now sign in.');
+                toast.success(msg('Account unlocked successfully. Customer can now sign in.'));
               }}
             >
               <LockOpen className="w-4 h-4 mr-2" />
-              Confirm Unlock
+              {msg('Confirm Unlock')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2140,19 +2140,19 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Key className="w-5 h-5 text-blue-600" />
-              Send Password Reset Link
+              {msg('Send Password Reset Link')}
             </DialogTitle>
             <DialogDescription>
-              A password reset email will be sent to <strong>{memberData.email}</strong>.
+              {msg('A password reset email will be sent to')} <strong>{memberData.email}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1">
-            <p>The reset link will be valid for <span className="font-medium">24 hours</span>.</p>
-            <p>The customer's current password will remain active until they complete the reset.</p>
-            <p>This action will be recorded in the audit log.</p>
+            <p>The reset link will be valid for <span className="font-medium">{msg('24 hours')}</span>.</p>
+            <p>{msg('The customer\'s current password will remain active until they complete the reset.')}</p>
+            <p>{msg('This action will be recorded in the audit log.')}</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); }}>{msg('Cancel')}</Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => {
@@ -2162,7 +2162,7 @@ export function MemberDetail({
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Send Reset Link
+              {msg('Send Reset Link')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2174,19 +2174,19 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <LogOut className="w-5 h-5 text-orange-600" />
-              Force Sign Out All Sessions
+              {msg('Force Sign Out All Sessions')}
             </DialogTitle>
             <DialogDescription>
-              All active sessions for <strong>{memberData.name}</strong> will be terminated immediately.
+              {msg('All active sessions for')} <strong>{memberData.name}</strong> {msg('will be terminated immediately.')}
             </DialogDescription>
           </DialogHeader>
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-sm text-orange-800 space-y-1">
-            <p><span className="font-medium">{activeActiveSessions} active session{activeActiveSessions !== 1 ? 's' : ''}</span> will be signed out.</p>
-            <p>The customer will be logged out from all browsers and devices.</p>
-            <p>They will need to sign in again to access their account.</p>
+            <p><span className="font-medium">{activeActiveSessions} active session{activeActiveSessions !== 1 ? 's' : ''}</span> {msg('will be signed out.')}</p>
+            <p>{msg('The customer will be logged out from all browsers and devices.')}</p>
+            <p>{msg('They will need to sign in again to access their account.')}</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideForceLogoutConfirm?.(); setMockShowForceLogoutConfirm(false); }}>{msg('Cancel')}</Button>
             <Button
               className="bg-orange-600 hover:bg-orange-700"
               onClick={async () => {
@@ -2195,7 +2195,7 @@ export function MemberDetail({
                     await onForceLogout();
                   } else {
                     // Standalone figma Make path — mock-only success toast.
-                    toast.success('All sessions terminated. Customer has been signed out from all devices.');
+                    toast.success(msg('All sessions terminated. Customer has been signed out from all devices.'));
                   }
                 } finally {
                   onHideForceLogoutConfirm?.();
@@ -2204,7 +2204,7 @@ export function MemberDetail({
               }}
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out All Sessions
+              {msg('Sign Out All Sessions')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2216,30 +2216,30 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-purple-600" />
-              Reset Two-Factor Authentication
+              {msg('Reset Two-Factor Authentication')}
             </DialogTitle>
             <DialogDescription>
-              The 2FA device binding for <strong>{memberData.name}</strong> will be removed.
+              {msg('The 2FA device binding for')} <strong>{memberData.name}</strong> will be removed.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-800 space-y-1">
-            <p>The current authenticator app pairing will be <span className="font-medium">permanently unlinked</span>.</p>
-            <p>The customer will be prompted to set up 2FA again on their next login.</p>
-            <p>Use this if the customer has lost access to their authenticator app.</p>
+            <p>{msg('The current authenticator app pairing will be')} <span className="font-medium">{msg('permanently unlinked')}</span>.</p>
+            <p>{msg('The customer will be prompted to set up 2FA again on their next login.')}</p>
+            <p>{msg('Use this if the customer has lost access to their authenticator app.')}</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); }}>{msg('Cancel')}</Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
               onClick={() => {
                 setMockTwoFAEnabled(false); // local demo fallback
                 onHideReset2FAConfirm?.();
                 setMockShowReset2FAConfirm(false);
-                toast.success('2FA has been reset. Customer will be prompted to set up 2FA on next login.');
+                toast.success(msg('2FA has been reset. Customer will be prompted to set up 2FA on next login.'));
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Confirm Reset 2FA
+              {msg('Confirm Reset 2FA')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2249,46 +2249,46 @@ export function MemberDetail({
       <Dialog open={activeIsAddPreferenceOpen} onOpenChange={open => { if (!open) { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Customer Preference</DialogTitle>
-            <DialogDescription>Record a new preference for this member</DialogDescription>
+            <DialogTitle>{msg('Add Customer Preference')}</DialogTitle>
+            <DialogDescription>{msg('Record a new preference for this member')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label>Category</label>
+              <label>{msg('Category')}</label>
               <select
                 value={activePreferenceForm.category}
                 onChange={e => { onPreferenceFormChange?.({ category: e.target.value, preference: activePreferenceForm.preference }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
-                <option value="Seating">Seating</option>
-                <option value="Service">Service</option>
-                <option value="Beverage">Beverage</option>
-                <option value="Food">Food</option>
-                <option value="Temperature">Temperature</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Other">Other</option>
+                <option value="Seating">{msg('Seating')}</option>
+                <option value="Service">{msg('Service')}</option>
+                <option value="Beverage">{msg('Beverage')}</option>
+                <option value="Food">{msg('Food')}</option>
+                <option value="Temperature">{msg('Temperature')}</option>
+                <option value="Entertainment">{msg('Entertainment')}</option>
+                <option value="Other">{msg('Other')}</option>
               </select>
             </div>
             <div>
-              <label>Preference Details</label>
+              <label>{msg('Preference Details')}</label>
               <Textarea
                 value={activePreferenceForm.preference}
                 onChange={e => { onPreferenceFormChange?.({ category: activePreferenceForm.category, preference: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
-                placeholder="Describe the customer's preference..."
+                placeholder={msg("Describe the customer's preference...")}
                 rows={3}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>{msg('Cancel')}</Button>
             <Button onClick={() => {
               if (!activePreferenceForm.category.trim()) { toast.error(msg('Category is required')); return; }
               if (!activePreferenceForm.preference.trim()) { toast.error(msg('Preference details are required')); return; }
-              toast.success('Preference added');
+              toast.success(msg('Preference added'));
               onAddPreference?.();
               onCloseAddPreference?.();
               setMockIsAddPreferenceOpen(false);
-            }}>Add Preference</Button>
+            }}>{msg('Add Preference')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2299,8 +2299,8 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {activeAllergyTarget === 'spouse'
-                ? <><Heart className="w-4 h-4 text-pink-500" />Add Spouse Food Allergy</>
-                : <><User className="w-4 h-4 text-blue-600" />Add Customer Food Allergy</>}
+                ? <><Heart className="w-4 h-4 text-pink-500" />{msg('Add Spouse Food Allergy')}</>
+                : <><User className="w-4 h-4 text-blue-600" />{msg('Add Customer Food Allergy')}</>}
             </DialogTitle>
             <DialogDescription>
               {activeAllergyTarget === 'spouse'
@@ -2310,7 +2310,7 @@ export function MemberDetail({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label style={{ marginBottom: '10px', display: 'block' }}>Allergen</label>
+              <label style={{ marginBottom: '10px', display: 'block' }}>{msg('Allergen')}</label>
               <input
                 type="text"
                 value={activeAllergyForm.allergen}
@@ -2320,19 +2320,19 @@ export function MemberDetail({
               />
             </div>
             <div>
-              <label style={{ marginBottom: '10px', display: 'block' }}>Severity</label>
+              <label style={{ marginBottom: '10px', display: 'block' }}>{msg('Severity')}</label>
               <select
                 value={activeAllergyForm.severity}
                 onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, severity: e.target.value }); setMockAllergyForm(f => ({ ...f, severity: e.target.value })); }}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
-                <option value="Mild">Mild</option>
-                <option value="Moderate">Moderate</option>
-                <option value="Severe">Severe</option>
+                <option value="Mild">{msg('Mild')}</option>
+                <option value="Moderate">{msg('Moderate')}</option>
+                <option value="Severe">{msg('Severe')}</option>
               </select>
             </div>
             <div>
-              <label style={{ marginBottom: '10px', display: 'block' }}>Notes</label>
+              <label style={{ marginBottom: '10px', display: 'block' }}>{msg('Notes')}</label>
               <Textarea
                 value={activeAllergyForm.notes}
                 onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
@@ -2342,7 +2342,7 @@ export function MemberDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); }}>{msg('Cancel')}</Button>
             <Button onClick={() => {
               if (!activeAllergyForm.allergen.trim()) { toast.error(msg('Allergen name is required')); return; }
               const today = localDateStr();
@@ -2364,7 +2364,7 @@ export function MemberDetail({
               } else {
                 toast.success(msg('Food allergy added'));
               }
-            }}>Add Allergy</Button>
+            }}>{msg('Add Allergy')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2375,8 +2375,8 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {activeDietaryTarget === 'spouse'
-                ? <><Heart className="w-4 h-4 text-pink-500" />Add Spouse Dietary Requirement</>
-                : <><User className="w-4 h-4 text-blue-600" />Add Customer Dietary Requirement</>}
+                ? <><Heart className="w-4 h-4 text-pink-500" />{msg('Add Spouse Dietary Requirement')}</>
+                : <><User className="w-4 h-4 text-blue-600" />{msg('Add Customer Dietary Requirement')}</>}
             </DialogTitle>
             <DialogDescription>
               {activeDietaryTarget === 'spouse'
@@ -2386,7 +2386,7 @@ export function MemberDetail({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label style={{ marginBottom: '10px', display: 'block' }}>Requirement</label>
+              <label style={{ marginBottom: '10px', display: 'block' }}>{msg('Requirement')}</label>
               <input
                 type="text"
                 value={activeDietaryForm.requirement}
@@ -2396,7 +2396,7 @@ export function MemberDetail({
               />
             </div>
             <div>
-              <label style={{ marginBottom: '10px', display: 'block' }}>Notes</label>
+              <label style={{ marginBottom: '10px', display: 'block' }}>{msg('Notes')}</label>
               <Textarea
                 value={activeDietaryForm.notes}
                 onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, notes: e.target.value }); setMockDietaryForm(f => ({ ...f, notes: e.target.value })); }}
@@ -2406,7 +2406,7 @@ export function MemberDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); }}>{msg('Cancel')}</Button>
             <Button onClick={() => {
               if (!activeDietaryForm.requirement.trim()) { toast.error(msg('Requirement name is required')); return; }
               // Always close the dialog immediately and clear mock state
@@ -2420,7 +2420,7 @@ export function MemberDetail({
               } else {
                 toast.success(msg('Dietary requirement added'));
               }
-            }}>Add Requirement</Button>
+            }}>{msg('Add Requirement')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -2432,10 +2432,10 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-blue-600" />
-              Add Movement Record
+              {msg('Add Movement Record')}
             </DialogTitle>
             <DialogDescription>
-              Fill in the movement details. Staff is recorded automatically from your login.
+              {msg('Fill in the movement details. Staff is recorded automatically from your login.')}
             </DialogDescription>
           </DialogHeader>
 
@@ -2444,17 +2444,17 @@ export function MemberDetail({
             {/* Row 1 — Context */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Booking')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. A-20260308-000012"
+                  placeholder={msg('e.g. A-20260308-000012')}
                   value={movementFormProp.orderNo || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, orderNo: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Number')}</label>
                 <input
                   type="text"
                   placeholder={msg('e.g. CX880')}
@@ -2468,7 +2468,7 @@ export function MemberDetail({
             {/* Row 2 — Time & Location */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement Date</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Movement Date')}</label>
                 <input
                   type="date"
                   value={movementFormProp.movementDate || ''}
@@ -2477,7 +2477,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time In</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Time In')}</label>
                 <Time5MinSelect
                   value={movementFormProp.timeIn || ''}
                   onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeIn: v })}
@@ -2486,7 +2486,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Out</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Time Out')}</label>
                 <Time5MinSelect
                   value={movementFormProp.timeOut || ''}
                   onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeOut: v })}
@@ -2495,7 +2495,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Location</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Location')}</label>
                 <input
                   type="text"
                   value={movementFormProp.location || ''}
@@ -2507,7 +2507,7 @@ export function MemberDetail({
 
             {/* Row 3 — Remarks */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Remarks')}</label>
               <Textarea
                 rows={3}
                 className="text-sm"
@@ -2518,10 +2518,10 @@ export function MemberDetail({
 
             {/* ── Section A: Assignment ───────────────────────────────── */}
             <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Assignment</h4>
+              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">{msg('Assignment')}</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement In Charge</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Movement In Charge')}</label>
                   <input
                   type="text"
                   value={movementFormProp.movementInCharge || ''}
@@ -2530,7 +2530,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>CIC &amp; Support</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('CIC &amp; Support')}</label>
                   <input
                   type="text"
                   value={movementFormProp.cicSupport || ''}
@@ -2539,7 +2539,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Driver</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Driver')}</label>
                   <input
                   type="text"
                   value={movementFormProp.driver || ''}
@@ -2552,10 +2552,10 @@ export function MemberDetail({
 
             {/* ── Section B: Booking Reference ───────────────────────── */}
             <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Booking Reference</h4>
+              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">{msg('Booking Reference')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Dept Date')}</label>
                   <input
                   type="date"
                   value={movementFormProp.deptDate || ''}
@@ -2564,7 +2564,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arr Date</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Arr Date')}</label>
                   <input
                   type="date"
                   value={movementFormProp.arrDate || ''}
@@ -2573,7 +2573,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Time')}</label>
                   <Time5MinSelect
                     value={movementFormProp.flightTime || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, flightTime: v })}
@@ -2582,7 +2582,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Destination / Origin')}</label>
                   <input
                   type="text"
                   placeholder={msg('IATA code, e.g. LHR')}
@@ -2597,10 +2597,10 @@ export function MemberDetail({
 
             {/* ── Section C: Lounge & Guest Details ──────────────────── */}
             <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge &amp; Guest Details</h4>
+              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">{msg('Lounge &amp; Guest Details')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Lobby / Suite')}</label>
                   <input
                   type="text"
                   value={movementFormProp.lobbySuite || ''}
@@ -2609,7 +2609,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of Pax</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('No. of Pax')}</label>
                   <input
                   type="number"
                   min={1}
@@ -2619,7 +2619,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>No. of C/I Baggage</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('No. of C/I Baggage')}</label>
                   <input
                   type="number"
                   min={0}
@@ -2629,7 +2629,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Title</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Title')}</label>
                   <input
                   type="text"
                   value={movementFormProp.title || ''}
@@ -2638,7 +2638,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>First Name</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('First Name')}</label>
                   <input
                   type="text"
                   value={movementFormProp.firstName || ''}
@@ -2647,7 +2647,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Last Name</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Last Name')}</label>
                   <input
                   type="text"
                   value={movementFormProp.lastName || ''}
@@ -2656,7 +2656,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Nationality of Guests</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Nationality of Guests')}</label>
                   <NationalityTypeahead
                     id="member-detail-movement-nationality"
                     value={movementFormProp.nationality || ''}
@@ -2669,10 +2669,10 @@ export function MemberDetail({
 
             {/* ── Section D: Movement Times ───────────────────────────── */}
             <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Movement Times</h4>
+              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">{msg('Movement Times')}</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Time of Non-Flying Guests at HKIAL</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Arrival Time of Non-Flying Guests at HKIAL')}</label>
                   <Time5MinSelect
                     value={movementFormProp.arrTimeNonFlyingGuests || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, arrTimeNonFlyingGuests: v })}
@@ -2681,7 +2681,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Met VIP at Gate / VIP Arrive at HKIAL</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Time Met VIP at Gate / VIP Arrive at HKIAL')}</label>
                   <Time5MinSelect
                     value={movementFormProp.timeMetVIPAtGate || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeMetVIPAtGate: v })}
@@ -2690,7 +2690,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Back to HKIAL</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Time Back to HKIAL')}</label>
                   <Time5MinSelect
                     value={movementFormProp.timeBackToHKIAL || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeBackToHKIAL: v })}
@@ -2699,7 +2699,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (Start Time)</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Baggage Retrieval (Start Time)')}</label>
                   <Time5MinSelect
                     value={movementFormProp.baggageRetrievalStart || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalStart: v })}
@@ -2708,7 +2708,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Retrieval (End Time)</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Baggage Retrieval (End Time)')}</label>
                   <Time5MinSelect
                     value={movementFormProp.baggageRetrievalEnd || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageRetrievalEnd: v })}
@@ -2717,7 +2717,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Baggage Arrival at HKIAL</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Baggage Arrival at HKIAL')}</label>
                   <Time5MinSelect
                     value={movementFormProp.baggageArrivalAtHKIAL || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, baggageArrivalAtHKIAL: v })}
@@ -2726,7 +2726,7 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Time Left HKIAL / At Boarding Gate</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Time Left HKIAL / At Boarding Gate')}</label>
                   <Time5MinSelect
                     value={movementFormProp.timeLeftHKIAL || ''}
                     onChange={(v) => onMovementFormChange?.({ ...movementFormProp, timeLeftHKIAL: v })}
@@ -2735,10 +2735,10 @@ export function MemberDetail({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Total Processing Time</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Total Processing Time')}</label>
                   <input
                   type="text"
-                  placeholder="e.g. 1h 30m"
+                  placeholder={msg('e.g. 1h 30m')}
                   value={movementFormProp.totalProcessingTime || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, totalProcessingTime: e.target.value })}
                   onFocus={() => {
@@ -2758,7 +2758,7 @@ export function MemberDetail({
                 />
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Remarks for Admin Issue</label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Remarks for Admin Issue')}</label>
                   <Textarea
                   rows={2}
                   className="text-sm"
@@ -2771,12 +2771,12 @@ export function MemberDetail({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddMovement?.(); setMockIsAddMovementOpen(false); }}>{msg('Cancel')}</Button>
             <Button onClick={() => {
               onAddMovement?.();
             }}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Movement
+              {msg('Add Movement')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2786,25 +2786,25 @@ export function MemberDetail({
       <Dialog open={activeIsAddRemarkOpen} onOpenChange={open => { if (!open) { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Staff Remark</DialogTitle>
-            <DialogDescription>Add notes and observations about this member</DialogDescription>
+            <DialogTitle>{msg('Add Staff Remark')}</DialogTitle>
+            <DialogDescription>{msg('Add notes and observations about this member')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label>Category</label>
+              <label>{msg('Category')}</label>
               <select
                 value={remarkFormProp?.category || 'General'}
                 onChange={e => onRemarkFormChange?.({ ...remarkFormProp!, category: e.target.value, remark: remarkFormProp?.remark || '' })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               >
-                <option value="General">General</option>
-                <option value="Special Request">Special Request</option>
-                <option value="Service Note">Service Note</option>
-                <option value="VIP Note">VIP Note</option>
+                <option value="General">{msg('General')}</option>
+                <option value="Special Request">{msg('Special Request')}</option>
+                <option value="Service Note">{msg('Service Note')}</option>
+                <option value="VIP Note">{msg('VIP Note')}</option>
               </select>
             </div>
             <div>
-              <label>Remark</label>
+              <label>{msg('Remark')}</label>
               <Textarea
                 value={remarkFormProp?.remark || ''}
                 onChange={e => onRemarkFormChange?.({ ...remarkFormProp!, remark: e.target.value })}
@@ -2815,10 +2815,10 @@ export function MemberDetail({
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onCloseAddRemark?.(); setMockIsAddRemarkOpen(false); }}>{msg('Cancel')}</Button>
             <Button onClick={() => {
               onAddRemark?.();
-            }}>Add Remark</Button>
+            }}>{msg('Add Remark')}</Button>
 
           </DialogFooter>
         </DialogContent>
@@ -2843,7 +2843,7 @@ export function MemberDetail({
             {/* Name row */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Title</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Title')}</label>
                 <select
                   value={activeSpouseForm.title}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, title: e.target.value }); setMockSpouseForm(f => ({ ...f, title: e.target.value })); }}
@@ -2855,7 +2855,7 @@ export function MemberDetail({
                 </select>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name <span className="text-red-500">*</span></label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('First Name')} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={activeSpouseForm.firstName}
@@ -2865,7 +2865,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name <span className="text-red-500">*</span></label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Last Name')} <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   value={activeSpouseForm.lastName}
@@ -2879,7 +2879,7 @@ export function MemberDetail({
             {/* Contact */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Email</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Email')}</label>
                 <input
                   type="email"
                   value={activeSpouseForm.email}
@@ -2889,7 +2889,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Phone</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Phone')}</label>
                 <input
                   type="tel"
                   value={activeSpouseForm.phone}
@@ -2903,7 +2903,7 @@ export function MemberDetail({
             {/* Nationality + Passport */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Nationality')}</label>
                 <NationalityTypeahead
                   id="member-detail-spouse-nationality"
                   value={activeSpouseForm.nationality}
@@ -2915,7 +2915,7 @@ export function MemberDetail({
                 />
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First 4 Digits of Passport</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('First 4 Digits of Passport')}</label>
                 <input
                   type="text"
                   maxLength={4}
@@ -2930,7 +2930,7 @@ export function MemberDetail({
             {/* Linked Account (optional) */}
             <div>
               <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>
-                Linked Account Number <span className="text-gray-400 text-xs">(optional — if spouse is also a registered customer)</span>
+                {msg('Linked Account Number')} <span className="text-gray-400 text-xs">{msg('(optional — if spouse is also a registered customer)')}</span>
               </label>
               <input
                 type="text"
@@ -2943,11 +2943,11 @@ export function MemberDetail({
           </div>
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { onSpouseDialogClose?.(); setMockIsSpouseDialogOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onSpouseDialogClose?.(); setMockIsSpouseDialogOpen(false); }}>{msg('Cancel')}</Button>
             <Button
               onClick={() => {
                 if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
-                  toast.error('First Name and Last Name are required.'); return;
+                  toast.error(msg('First Name and Last Name are required.')); return;
                 }
                 setMockSpouse({ ...activeSpouseForm }); // demo fallback
                 toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
@@ -2968,14 +2968,14 @@ export function MemberDetail({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <UserX className="w-5 h-5" />
-              Remove Spouse
+              {msg('Remove Spouse')}
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove <strong>{displaySpouse?.title} {displaySpouse?.firstName} {displaySpouse?.lastName}</strong> as the spouse / partner of this customer? This action cannot be undone.
+              {msg('Are you sure you want to remove')} <strong>{displaySpouse?.title} {displaySpouse?.firstName} {displaySpouse?.lastName}</strong> {msg('as the spouse / partner of this customer? This action cannot be undone.')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => { onRemoveSpouseClose?.(); setMockIsRemoveSpouseOpen(false); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { onRemoveSpouseClose?.(); setMockIsRemoveSpouseOpen(false); }}>{msg('Cancel')}</Button>
             <Button
               variant="destructive"
               onClick={async () => {
@@ -2998,7 +2998,7 @@ export function MemberDetail({
                 setMockIsRemoveSpouseOpen(false);
               }}
             >
-              Remove Spouse
+              {msg('Remove Spouse')}
             </Button>
           </DialogFooter>
         </DialogContent>

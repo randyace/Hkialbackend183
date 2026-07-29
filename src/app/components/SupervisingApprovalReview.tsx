@@ -160,7 +160,7 @@ export function SupervisingApprovalReview({
     submittedAt: '2026-02-28 10:00',
     submittedBy: 'Staff User',
     lineItems: [
-      { description: 'Lounge Access (2 pax)', quantity: 2, unitPrice: 2400, amount: 4800 },
+      { description: msg('Lounge Access (2 pax)'), quantity: 2, unitPrice: 2400, amount: 4800 },
     ],
     subtotal: 4800,
     agencyDiscount: 0,

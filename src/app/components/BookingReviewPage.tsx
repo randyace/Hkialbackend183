@@ -1366,7 +1366,7 @@ export function BookingReviewPage({
               <textarea
                 className="w-full border border-gray-300 rounded-md p-2 text-sm"
                 rows={4}
-                placeholder="e.g. Please verify guest's flight class and re-submit."
+                placeholder={msg("e.g. Please verify guest's flight class and re-submit.")}
                 value={pushBackReason}
                 onChange={e => setPushBackReason(e.target.value)}
               />

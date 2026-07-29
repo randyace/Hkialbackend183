@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ export function KpiStatCard({
   onClick,
   className = '',
 }: KpiStatCardProps) {
+  const msg = useMsg();
   // Derive trend direction from change if not explicitly provided
   const resolvedTrend: KpiTrend =
     trend ?? (change == null ? 'neutral' : change > 0 ? 'up' : change < 0 ? 'down' : 'neutral');

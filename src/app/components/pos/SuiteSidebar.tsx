@@ -403,10 +403,10 @@ export function SuiteSidebar({
   const renderGuestAllergiesSection = (sectionGuests: PosOccupiedGuest[]) => (
     <div className="space-y-3">
       <h3 className="text-sm uppercase tracking-wide text-gray-500">
-        Food Allergies &amp; Dietary
+        {msg('Food Allergies &amp; Dietary')}
       </h3>
       {sectionGuests.length === 0 ? (
-        <p className="text-sm text-gray-400">No guest information available.</p>
+        <p className="text-sm text-gray-400">{msg('No guest information available.')}</p>
       ) : (
         <div className="space-y-3">
           {sectionGuests.map((guest, index) => {
@@ -441,7 +441,7 @@ export function SuiteSidebar({
                   <div className="mb-2">
                     <p className="mb-1.5 flex items-center gap-1 text-xs text-gray-500">
                       <AlertTriangle className="h-3 w-3 text-red-500" />
-                      Allergies
+                      {msg('Allergies')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {allergies.map((allergy, allergyIndex) => (
@@ -460,7 +460,7 @@ export function SuiteSidebar({
                   <div>
                     <p className="mb-1.5 flex items-center gap-1 text-xs text-gray-500">
                       <Heart className="h-3 w-3 text-green-500" />
-                      Dietary
+                      {msg('Dietary')}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {dietary.map((item, dietaryIndex) => (
@@ -490,14 +490,14 @@ export function SuiteSidebar({
     flightDepartureTime: string | null | undefined,
   ) => (
     <div className="space-y-4">
-      <h3 className="text-sm uppercase tracking-wide text-gray-500">Guest Information</h3>
+      <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Guest Information')}</h3>
       <div className="space-y-3">
         <div>
-          <label className="mb-2 block text-sm text-gray-600">Booking Number</label>
+          <label className="mb-2 block text-sm text-gray-600">{msg('Booking Number')}</label>
           <p className="text-lg text-gray-900">{bookingNumber ?? '—'}</p>
         </div>
         <div>
-          <label className="mb-2 block text-sm text-gray-600">Guest Name</label>
+          <label className="mb-2 block text-sm text-gray-600">{msg('Guest Name')}</label>
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-gray-400" />
             <p className="text-lg text-gray-900">{guestName}</p>
@@ -505,14 +505,14 @@ export function SuiteSidebar({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-2 block text-sm text-gray-600">Check-in Time</label>
+            <label className="mb-2 block text-sm text-gray-600">{msg('Check-in Time')}</label>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-gray-400" />
               <p className="text-sm text-gray-900">{formatCheckInTime(checkInTime)}</p>
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm text-gray-600">Flight Number</label>
+            <label className="mb-2 block text-sm text-gray-600">{msg('Flight Number')}</label>
             <div className="flex items-center gap-2">
               <Plane className="h-4 w-4 text-gray-400" />
               <p className="text-sm text-gray-900">{flightNumber ?? '—'}</p>
@@ -520,7 +520,7 @@ export function SuiteSidebar({
           </div>
         </div>
         <div>
-          <label className="mb-2 block text-sm text-gray-600">Flight Departure Time</label>
+          <label className="mb-2 block text-sm text-gray-600">{msg('Flight Departure Time')}</label>
           <p className="text-lg text-blue-600">{flightDepartureTime ?? '—'}</p>
         </div>
       </div>
@@ -537,14 +537,14 @@ export function SuiteSidebar({
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-lg font-semibold text-gray-900">{displaySuiteName}</h2>
                 <Badge className="border-red-200 bg-red-100 text-red-800 hover:bg-red-100">
-                  Occupied
+                  {msg('Occupied')}
                 </Badge>
               </div>
             ) : view === 'CLEANING_VIEW' ? (
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-lg font-semibold text-gray-900">{suiteName}</h2>
                 <Badge className="border-orange-200 bg-orange-100 text-orange-800 hover:bg-orange-100">
-                  Cleaning
+                  {msg('Cleaning')}
                 </Badge>
               </div>
             ) : view === 'RESERVED_VIEW' ? (
@@ -553,22 +553,22 @@ export function SuiteSidebar({
                   {reservedDetails?.suite?.name ?? suiteName}
                 </h2>
                 <Badge className="border-blue-200 bg-blue-100 text-blue-700 hover:bg-blue-100">
-                  Reserved
+                  {msg('Reserved')}
                 </Badge>
               </div>
             ) : view === 'LIST' ? (
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="truncate text-lg font-semibold text-gray-900">{suiteName}</h2>
                 <Badge className="border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                  Available
+                  {msg('Available')}
                 </Badge>
               </div>
             ) : view === 'PREORDER_CONFIRM' ? (
-              <h2 className="text-lg font-semibold text-gray-900">Send Pre-order to Kitchen?</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{msg('Send Pre-order to Kitchen?')}</h2>
             ) : view === 'MULTI_ASSIGN_VIEW' ? (
-              <h2 className="text-lg font-semibold text-gray-900">Assign Multiple Suites</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{msg('Assign Multiple Suites')}</h2>
             ) : (
-              <h2 className="text-lg font-semibold text-gray-900">Assign Booking to Suite</h2>
+              <h2 className="text-lg font-semibold text-gray-900">{msg('Assign Booking to Suite')}</h2>
             )}
           </div>
           <button
@@ -585,7 +585,7 @@ export function SuiteSidebar({
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
         {view === 'CLEANING_VIEW' ? (
           <p className="text-sm leading-relaxed text-gray-600">
-            This suite is being cleaned. Mark it as finished when it is ready for the next guest.
+            {msg('This suite is being cleaned. Mark it as finished when it is ready for the next guest.')}
           </p>
         ) : null}
 
@@ -594,11 +594,11 @@ export function SuiteSidebar({
             {isLoadingOccupied ? (
               <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading suite details...
+                {msg('Loading suite details...')}
               </div>
             ) : occupiedError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
-                Failed to load occupied suite details.
+                {msg('Failed to load occupied suite details.')}
               </div>
             ) : (
               <>
@@ -616,12 +616,12 @@ export function SuiteSidebar({
 
                 <div className="mt-6 space-y-3 border-t border-gray-200 pt-6">
                   <div className="mb-1 flex items-center justify-between">
-                    <h3 className="text-sm uppercase tracking-wide text-gray-500">Ordered Items</h3>
+                    <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Ordered Items')}</h3>
                     <ShoppingCart className="h-5 w-5 text-gray-400" />
                   </div>
 
                   {orderItems.length === 0 ? (
-                    <p className="text-sm text-gray-400">No items ordered yet.</p>
+                    <p className="text-sm text-gray-400">{msg('No items ordered yet.')}</p>
                   ) : (
                     orderItems.map((item, index) => (
                       <div
@@ -654,11 +654,11 @@ export function SuiteSidebar({
             {isLoadingReserved ? (
               <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading reserved suite details...
+                {msg('Loading reserved suite details...')}
               </div>
             ) : reservedError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
-                Failed to load reserved suite details.
+                {msg('Failed to load reserved suite details.')}
               </div>
             ) : (
               <>
@@ -694,15 +694,15 @@ export function SuiteSidebar({
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2 py-12 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading bookings...
+                  {msg('Loading bookings...')}
                 </div>
               ) : isError ? (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center text-sm text-red-700">
-                  Failed to load unassigned bookings.
+                  {msg('Failed to load unassigned bookings.')}
                 </div>
               ) : unassignedBookings.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-sm text-gray-400">
-                  No unassigned bookings for today.
+                  {msg('No unassigned bookings for today.')}
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -719,7 +719,7 @@ export function SuiteSidebar({
                           </p>
                           {bookingItem.has_preorder ? (
                             <Badge className="shrink-0 border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-100">
-                              Pre-order
+                              {msg('Pre-order')}
                             </Badge>
                           ) : null}
                         </div>
@@ -797,13 +797,13 @@ export function SuiteSidebar({
               {renderBookingResourceCounts(selectedBooking)}
             </div>
             <p className="text-sm leading-relaxed text-gray-600">
-              Please select suites from the floor plan.
+              {msg('Please select suites from the floor plan.')}
             </p>
             <div>
-              <h3 className="mb-2 text-sm font-medium text-gray-700">Selected Suites</h3>
+              <h3 className="mb-2 text-sm font-medium text-gray-700">{msg('Selected Suites')}</h3>
               {selectedSuiteIdsForAssignment.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center text-sm text-gray-400">
-                  No suites selected yet.
+                  {msg('No suites selected yet.')}
                 </p>
               ) : (
                 <ul className="space-y-2">
@@ -832,7 +832,7 @@ export function SuiteSidebar({
             {isFinishingCleaning ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Updating...
+                {msg('Updating...')}
               </>
             ) : (
               'Finished Cleaning'
@@ -846,7 +846,7 @@ export function SuiteSidebar({
               className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
               onClick={() => goToOrder()}
             >
-              View Full Details
+              {msg('View Full Details')}
             </Button>
             <Button
               className="flex-1 bg-purple-600 text-white hover:bg-purple-700"
@@ -855,13 +855,13 @@ export function SuiteSidebar({
                 onClose();
               }}
             >
-              Transfer
+              {msg('Transfer')}
             </Button>
             <Button
               className="flex-1 bg-green-600 text-white hover:bg-green-700"
               onClick={handleCheckout}
             >
-              Checkout
+              {msg('Checkout')}
             </Button>
           </div>
         ) : null}
@@ -875,7 +875,7 @@ export function SuiteSidebar({
             {isCheckingIn ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Checking in...
+                {msg('Checking in...')}
               </>
             ) : (
               'Check-in & Order'
@@ -892,7 +892,7 @@ export function SuiteSidebar({
             {isAssigning ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Creating...
+                {msg('Creating...')}
               </>
             ) : (
               'Create Booking'
@@ -903,7 +903,7 @@ export function SuiteSidebar({
         {view === 'PREORDER_CONFIRM' && selectedBooking ? (
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => setView('LIST')}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="flex-1 bg-emerald-600 text-white hover:bg-emerald-700"
@@ -913,7 +913,7 @@ export function SuiteSidebar({
               {isAssigning ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Sending...
+                  {msg('Sending...')}
                 </>
               ) : (
                 'Yes, Send to Kitchen'
@@ -931,7 +931,7 @@ export function SuiteSidebar({
             {isAssigning ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Assigning...
+                {msg('Assigning...')}
               </>
             ) : (
               'Assign Booking'
@@ -942,7 +942,7 @@ export function SuiteSidebar({
         {view === 'MULTI_ASSIGN_VIEW' && selectedBooking ? (
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={handleCancelMultiAssign}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
@@ -952,7 +952,7 @@ export function SuiteSidebar({
               {isAssigning ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Assigning...
+                  {msg('Assigning...')}
                 </>
               ) : (
                 'Confirm Assignment'

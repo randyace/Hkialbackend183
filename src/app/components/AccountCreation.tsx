@@ -254,11 +254,11 @@ export function AccountCreation({
     e.preventDefault();
 
     if (accountType === 'corporate' && !selectedCompanyId) {
-      toast.error('Please select a company');
+      toast.error(msg('Please select a company'));
       return;
     }
     if (accountType === 'travel-agency' && !selectedAgencyId) {
-      toast.error('Please select a travel agency');
+      toast.error(msg('Please select a travel agency'));
       return;
     }
 
@@ -300,14 +300,14 @@ export function AccountCreation({
     <Card className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Create New Account</h2>
-          <p className="text-gray-600">Fill in the details below to create a new account</p>
+          <h2 className="text-2xl font-bold text-gray-900">{msg('Create New Account')}</h2>
+          <p className="text-gray-600">{msg('Fill in the details below to create a new account')}</p>
         </div>
       </div>
 
       {/* Account Type Toggle */}
       <div className="mb-6">
-        <Label style={{ marginBottom: 10 }}>Account Type *</Label>
+        <Label style={{ marginBottom: 10 }}>{msg('Account Type *')}</Label>
         <div className="flex flex-wrap gap-4">
           {(['individual', 'corporate', 'travel-agency'] as const).map(typeOption => (
             <div key={typeOption} className="flex items-center space-x-2">
@@ -319,9 +319,9 @@ export function AccountCreation({
                 className="w-4 h-4"
               />
               <Label htmlFor={typeOption} className="cursor-pointer flex items-center gap-1">
-                {typeOption === 'individual' && <><UserPlus className="w-4 h-4" /> Individual</>}
-                {typeOption === 'corporate' && <><Building2 className="w-4 h-4" /> Corporate</>}
-                {typeOption === 'travel-agency' && <><Plane className="w-4 h-4" /> Agency</>}
+                {typeOption === 'individual' && <><UserPlus className="w-4 h-4" /> {msg('Individual')}</>}
+                {typeOption === 'corporate' && <><Building2 className="w-4 h-4" /> {msg('Corporate')}</>}
+                {typeOption === 'travel-agency' && <><Plane className="w-4 h-4" /> {msg('Agency')}</>}
               </Label>
             </div>
           ))}
@@ -335,7 +335,7 @@ export function AccountCreation({
           <>
             {/* Company Search */}
             <div className="mb-6">
-              <Label style={{ marginBottom: 10 }}>Select Company *</Label>
+              <Label style={{ marginBottom: 10 }}>{msg('Select Company *')}</Label>
               <div className="relative">
                 <Input
                   placeholder={msg('Search company by name...')}
@@ -346,7 +346,7 @@ export function AccountCreation({
                 {showCompanyDropdown && (
                   <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
                     {companySearchResults.length === 0 ? (
-                      <div className="p-3 text-gray-500 text-sm">No matching companies found</div>
+                      <div className="p-3 text-gray-500 text-sm">{msg('No matching companies found')}</div>
                     ) : (
                       companySearchResults.map(company => (
                         <div
@@ -369,7 +369,7 @@ export function AccountCreation({
               {selectedCompanyId && (
                 <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
                   <span className="text-sm text-green-700">
-                    Selected: <span className="font-medium">{companySearch}</span>
+                    {msg('Selected:')} <span className="font-medium">{companySearch}</span>
                   </span>
                   <button
                     type="button"
@@ -387,7 +387,7 @@ export function AccountCreation({
                 <h4 className="text-gray-800">Corporate Contacts ({corporateForms.length})</h4>
                 <Button type="button" variant="outline" size="sm" onClick={addCorporateForm}>
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Add Contact
+                  {msg('Add Contact')}
                 </Button>
               </div>
 
@@ -409,23 +409,23 @@ export function AccountCreation({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Title */}
                     <div>
-                      <Label htmlFor={`title-${subForm.id}`} style={{ marginBottom: 10 }}>Title *</Label>
+                      <Label htmlFor={`title-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Title *')}</Label>
                       <Select value={subForm.title} onValueChange={v => updateCorporateForm(subForm.id, 'title', v)}>
-                        <SelectTrigger id={`title-${subForm.id}`}><SelectValue placeholder="Select title" /></SelectTrigger>
+                        <SelectTrigger id={`title-${subForm.id}`}><SelectValue placeholder={msg('Select title')} /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Mr.">Mr.</SelectItem>
-                          <SelectItem value="Mrs.">Mrs.</SelectItem>
-                          <SelectItem value="Ms.">Ms.</SelectItem>
-                          <SelectItem value="Miss">Miss</SelectItem>
-                          <SelectItem value="Dr.">Dr.</SelectItem>
-                          <SelectItem value="Prof.">Prof.</SelectItem>
+                          <SelectItem value="Mr.">{msg('Mr.')}</SelectItem>
+                          <SelectItem value="Mrs.">{msg('Mrs.')}</SelectItem>
+                          <SelectItem value="Ms.">{msg('Ms.')}</SelectItem>
+                          <SelectItem value="Miss">{msg('Miss')}</SelectItem>
+                          <SelectItem value="Dr.">{msg('Dr.')}</SelectItem>
+                          <SelectItem value="Prof.">{msg('Prof.')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     {/* First Name */}
                     <div>
-                      <Label htmlFor={`fn-${subForm.id}`} style={{ marginBottom: 10 }}>First Name *</Label>
+                      <Label htmlFor={`fn-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('First Name *')}</Label>
                       <Input id={`fn-${subForm.id}`} value={subForm.firstName}
                         onChange={e => updateCorporateForm(subForm.id, 'firstName', e.target.value)}
                         placeholder={msg('Enter first name')} required />
@@ -433,7 +433,7 @@ export function AccountCreation({
 
                     {/* Last Name */}
                     <div>
-                      <Label htmlFor={`ln-${subForm.id}`} style={{ marginBottom: 10 }}>Last Name *</Label>
+                      <Label htmlFor={`ln-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Last Name *')}</Label>
                       <Input id={`ln-${subForm.id}`} value={subForm.lastName}
                         onChange={e => updateCorporateForm(subForm.id, 'lastName', e.target.value)}
                         placeholder={msg('Enter last name')} required />
@@ -441,7 +441,7 @@ export function AccountCreation({
 
                     {/* Email */}
                     <div>
-                      <Label htmlFor={`em-${subForm.id}`} style={{ marginBottom: 10 }}>Email *</Label>
+                      <Label htmlFor={`em-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Email *')}</Label>
                       <Input id={`em-${subForm.id}`} type="email" value={subForm.email}
                         onChange={e => updateCorporateForm(subForm.id, 'email', e.target.value)}
                         placeholder={msg('Enter email address')} required />
@@ -450,7 +450,7 @@ export function AccountCreation({
                     {/* Region Code + Contact Number */}
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor={`rc-${subForm.id}`} style={{ marginBottom: 10 }}>Region Code *</Label>
+                        <Label htmlFor={`rc-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Region Code *')}</Label>
                         <RegionCodeCombobox
                           id={`rc-${subForm.id}`}
                           value={subForm.regionCode}
@@ -459,7 +459,7 @@ export function AccountCreation({
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <Label htmlFor={`cn-${subForm.id}`} style={{ marginBottom: 10 }}>Contact Number *</Label>
+                        <Label htmlFor={`cn-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Contact Number *')}</Label>
                         <Input id={`cn-${subForm.id}`} value={subForm.contactNumber}
                           onChange={e => updateCorporateForm(subForm.id, 'contactNumber', filterContactNumber(e.target.value))}
                           placeholder={msg('Enter contact number')} required />
@@ -468,7 +468,7 @@ export function AccountCreation({
 
                     {/* Payment Method */}
                     <div>
-                      <Label style={{ marginBottom: 10 }}>Payment Method *</Label>
+                      <Label style={{ marginBottom: 10 }}>{msg('Payment Method *')}</Label>
                       <RadioGroup value={subForm.paymentMethod}
                         onValueChange={v => updateCorporateForm(subForm.id, 'paymentMethod', v)}
                         className="flex flex-wrap gap-4 mt-2">
@@ -483,7 +483,7 @@ export function AccountCreation({
 
                     {/* Remarks */}
                     <div>
-                      <Label htmlFor={`rm-${subForm.id}`} style={{ marginBottom: 10 }}>Remarks</Label>
+                      <Label htmlFor={`rm-${subForm.id}`} style={{ marginBottom: 10 }}>{msg('Remarks')}</Label>
                       <Input id={`rm-${subForm.id}`} value={subForm.remarks}
                         onChange={e => updateCorporateForm(subForm.id, 'remarks', e.target.value)}
                         placeholder={msg('Optional remarks')} />
@@ -502,7 +502,7 @@ export function AccountCreation({
               <>
                 {/* Agency Search */}
                 <div className="mb-6">
-                  <Label style={{ marginBottom: 10 }}>Select Agency *</Label>
+                  <Label style={{ marginBottom: 10 }}>{msg('Select Agency *')}</Label>
                   <div className="relative">
                     <Input
                       placeholder={msg('Search agency by name or code...')}
@@ -513,7 +513,7 @@ export function AccountCreation({
                     {showAgencyDropdown && (
                       <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
                         {agencySearchResults.length === 0 ? (
-                          <div className="p-3 text-gray-500 text-sm">No matching agencies found</div>
+                          <div className="p-3 text-gray-500 text-sm">{msg('No matching agencies found')}</div>
                         ) : (
                           agencySearchResults.map(agency => (
                             <div
@@ -536,7 +536,7 @@ export function AccountCreation({
                   {selectedAgencyId && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
                       <span className="text-sm text-green-700">
-                        Selected: <span className="font-medium">{agencySearch}</span>
+                        {msg('Selected:')} <span className="font-medium">{agencySearch}</span>
                       </span>
                       <button
                         type="button"
@@ -550,32 +550,32 @@ export function AccountCreation({
                 </div>
 
                 <div className="pt-4 border-t">
-                  <h4 className="text-gray-800 mb-4">Personal Information</h4>
+                  <h4 className="text-gray-800 mb-4">{msg('Personal Information')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="title" style={{ marginBottom: 10 }}>Title *</Label>
+                      <Label htmlFor="title" style={{ marginBottom: 10 }}>{msg('Title *')}</Label>
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
                         <SelectTrigger id="title"><SelectValue placeholder={msg('Select title')} /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Mr.">Mr.</SelectItem>
-                          <SelectItem value="Mrs.">Mrs.</SelectItem>
-                          <SelectItem value="Ms.">Ms.</SelectItem>
-                          <SelectItem value="Miss">Miss</SelectItem>
-                          <SelectItem value="Dr.">Dr.</SelectItem>
-                          <SelectItem value="Prof.">Prof.</SelectItem>
+                          <SelectItem value="Mr.">{msg('Mr.')}</SelectItem>
+                          <SelectItem value="Mrs.">{msg('Mrs.')}</SelectItem>
+                          <SelectItem value="Ms.">{msg('Ms.')}</SelectItem>
+                          <SelectItem value="Miss">{msg('Miss')}</SelectItem>
+                          <SelectItem value="Dr.">{msg('Dr.')}</SelectItem>
+                          <SelectItem value="Prof.">{msg('Prof.')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
+                      <Label htmlFor="firstName" style={{ marginBottom: 10 }}>{msg('First Name *')}</Label>
                       <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder={msg('Enter first name')} required />
                     </div>
                     <div>
-                      <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
+                      <Label htmlFor="lastName" style={{ marginBottom: 10 }}>{msg('Last Name *')}</Label>
                       <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder={msg('Enter last name')} required />
                     </div>
                     <div>
-                      <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
+                      <Label htmlFor="email" style={{ marginBottom: 10 }}>{msg('Email *')}</Label>
                       <Input
                         id="email"
                         type="email"
@@ -593,7 +593,7 @@ export function AccountCreation({
                     </div>
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
+                        <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>{msg('Region Code *')}</Label>
                         <RegionCodeCombobox
                           id="regionCode"
                           value={formData.regionCode}
@@ -602,12 +602,12 @@ export function AccountCreation({
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
+                        <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>{msg('Contact Number *')}</Label>
                         <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder={msg('Enter contact number')} required />
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
+                      <Label htmlFor="nationality" style={{ marginBottom: 10 }}>{msg('Nationality (optional)')}</Label>
                       <NationalityTypeahead
                         id="nationality"
                         value={formData.nationality}
@@ -615,7 +615,7 @@ export function AccountCreation({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
+                      <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>{msg('First 4 digits of Passport Number (optional)')}</Label>
                       <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder={msg('Enter first 4 digits')} maxLength={4} />
                     </div>
                   </div>
@@ -626,32 +626,32 @@ export function AccountCreation({
             {accountType === 'individual' && (
               <>
                 <div>
-                  <h4 className="text-gray-800 mb-4">Personal Information</h4>
+                  <h4 className="text-gray-800 mb-4">{msg('Personal Information')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="title" style={{ marginBottom: 10 }}>Title *</Label>
+                      <Label htmlFor="title" style={{ marginBottom: 10 }}>{msg('Title *')}</Label>
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
                         <SelectTrigger id="title"><SelectValue placeholder={msg('Select title')} /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Mr.">Mr.</SelectItem>
-                          <SelectItem value="Mrs.">Mrs.</SelectItem>
-                          <SelectItem value="Ms.">Ms.</SelectItem>
-                          <SelectItem value="Miss">Miss</SelectItem>
-                          <SelectItem value="Dr.">Dr.</SelectItem>
-                          <SelectItem value="Prof.">Prof.</SelectItem>
+                          <SelectItem value="Mr.">{msg('Mr.')}</SelectItem>
+                          <SelectItem value="Mrs.">{msg('Mrs.')}</SelectItem>
+                          <SelectItem value="Ms.">{msg('Ms.')}</SelectItem>
+                          <SelectItem value="Miss">{msg('Miss')}</SelectItem>
+                          <SelectItem value="Dr.">{msg('Dr.')}</SelectItem>
+                          <SelectItem value="Prof.">{msg('Prof.')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
+                      <Label htmlFor="firstName" style={{ marginBottom: 10 }}>{msg('First Name *')}</Label>
                       <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder={msg('Enter first name')} required />
                     </div>
                     <div>
-                      <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
+                      <Label htmlFor="lastName" style={{ marginBottom: 10 }}>{msg('Last Name *')}</Label>
                       <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder={msg('Enter last name')} required />
                     </div>
                     <div>
-                      <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
+                      <Label htmlFor="email" style={{ marginBottom: 10 }}>{msg('Email *')}</Label>
                       <Input
                         id="email"
                         type="email"
@@ -669,7 +669,7 @@ export function AccountCreation({
                     </div>
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>Region Code *</Label>
+                        <Label htmlFor="regionCode" style={{ marginBottom: 10 }}>{msg('Region Code *')}</Label>
                         <RegionCodeCombobox
                           id="regionCode"
                           value={formData.regionCode}
@@ -678,12 +678,12 @@ export function AccountCreation({
                         />
                       </div>
                       <div className="sm:col-span-2">
-                        <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
+                        <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>{msg('Contact Number *')}</Label>
                         <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder={msg('Enter contact number')} required />
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="nationality" style={{ marginBottom: 10 }}>Nationality (optional)</Label>
+                      <Label htmlFor="nationality" style={{ marginBottom: 10 }}>{msg('Nationality (optional)')}</Label>
                       <NationalityTypeahead
                         id="nationality"
                         value={formData.nationality}
@@ -691,7 +691,7 @@ export function AccountCreation({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
+                      <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>{msg('First 4 digits of Passport Number (optional)')}</Label>
                       <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder={msg('Enter first 4 digits')} maxLength={4} />
                     </div>
                   </div>
@@ -705,7 +705,7 @@ export function AccountCreation({
         {accountType !== 'corporate' && (
           <>
             <div>
-              <Label htmlFor="remarks" style={{ marginBottom: 10 }}>Remarks (optional)</Label>
+              <Label htmlFor="remarks" style={{ marginBottom: 10 }}>{msg('Remarks (optional)')}</Label>
               <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder={msg('Enter any additional remarks')} />
             </div>
           </>
@@ -714,7 +714,7 @@ export function AccountCreation({
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-4 border-t">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            Cancel
+            {msg('Cancel')}
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Creating...' : 'Create Account'}

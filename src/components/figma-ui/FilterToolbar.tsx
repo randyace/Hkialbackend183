@@ -130,7 +130,7 @@ export function FilterToolbar({
               transition-colors whitespace-nowrap"
           >
             <ResetIcon />
-            Reset
+            {msg('Reset')}
           </button>
         )}
 

@@ -386,7 +386,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm text-amber-800">
                   <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
                   <span>
-                    {msg('This booking status is')} <strong>{foundBooking.status}</strong>. Entry is only permitted for Confirmed or Approved bookings.
+                    {msg('This booking status is')} <strong>{foundBooking.status}</strong>{msg('. Entry is only permitted for Confirmed or Approved bookings.')}
                   </span>
                 </div>
               )}

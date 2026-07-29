@@ -264,7 +264,7 @@ export function OrderCartItemRow({
           <Textarea
             value={draftRemarks}
             onChange={(event) => setDraftRemarks(event.target.value)}
-            placeholder={msg('t(\'pos.custom_request_placeholder\', \'e.g. Less ice, Extra hot\')')}
+            placeholder={msg('e.g. Less ice, Extra hot')}
             rows={4}
             autoFocus
           />
@@ -338,6 +338,7 @@ export function CurrentOrderSidebar({
   onBatchExpedite,
   onSubmitOrder,
 }: CurrentOrderSidebarProps) {
+  const msg = useMsg();
   const { t } = useTranslation();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -382,7 +383,7 @@ export function CurrentOrderSidebar({
       <div className="border-b border-gray-200 px-5 py-4">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Current Order</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{msg('Current Order')}</h2>
             <p className="mt-1 text-sm text-gray-500">
               {items.length} item{items.length === 1 ? '' : 's'}
             </p>
@@ -435,7 +436,7 @@ export function CurrentOrderSidebar({
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-200 px-4 py-10 text-center text-sm text-gray-400">
-            No items yet. Add menu items from the right.
+            {msg('No items yet. Add menu items from the right.')}
           </div>
         ) : (
           <ul className="space-y-3">

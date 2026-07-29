@@ -652,11 +652,11 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                 // bookings, Destination is always HKG.
                 <>
                   <div>
-                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>1st-Leg Origin (IATA)</label>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('1st-Leg Origin (IATA)')}</label>
                     <input type="text" value={editFlightOrigin} onChange={e => setEditFlightOrigin(e.target.value.toUpperCase())} placeholder={msg('e.g. NRT')} maxLength={3} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>1st-Leg Destination (HKG)</label>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('1st-Leg Destination (HKG)')}</label>
                     <input type="text" value={editFlightDest} onChange={e => setEditFlightDest(e.target.value.toUpperCase())} placeholder={msg('HKG')} maxLength={3} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500 uppercase" />
                   </div>
                 </>
@@ -780,7 +780,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">{msg('Quantity of VIP Passengers')}</label>
                       <input type="number" min={0} value={editVipLD} onChange={e => handleEditVipLDChange(e.target.value)} className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm" />
-                      <p className="text-xs text-gray-400 mt-0.5">0 is valid for an all-PS-only booking</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{msg('0 is valid for an all-PS-only booking')}</p>
                     </div>
                     <div>
                       <label className="text-xs text-gray-600 block mb-1">{msg('Quantity of Non-Flying Guests')}</label>
@@ -1030,7 +1030,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                         <option value="Pick-up">{msg('Pick-up')}</option>
                         <option value="Destination">{msg('Destination')}</option>
                       </select>
-                      <input type="text" value={stop.location} onChange={e => updateEditLimoStop(stop.id, 'location', e.target.value)} placeholder={msg('stop.type === \'Pick-up\' ? \'e.g. Terminal 1\' : \'e.g. Four Seasons Hotel\'')} className="flex-1 px-3 py-1.5 border rounded text-sm" />
+                      <input type="text" value={stop.location} onChange={e => updateEditLimoStop(stop.id, 'location', e.target.value)} placeholder={stop.type === 'Pick-up' ? msg('e.g. Terminal 1') : msg('e.g. Four Seasons Hotel')} className="flex-1 px-3 py-1.5 border rounded text-sm" />
                       <button type="button" onClick={() => removeEditLimoStop(stop.id)} disabled={editLimoStops.length === 1} className="p-1.5 rounded border text-gray-400 hover:text-red-500 hover:border-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                         <Minus className="w-3.5 h-3.5" />
                       </button>

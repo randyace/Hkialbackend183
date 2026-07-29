@@ -257,7 +257,7 @@ function ProductEditForm({
                         type="number"
                         min={0}
                         value={displayPrice(addon.price)}
-                        placeholder={msg('addon.price === null ? \'N/A\' : \'0 = FREE\'')}
+                        placeholder={addon.price === null ? 'N/A' : msg('0 = FREE')}
                         onChange={(e) =>
                           updateAddOn(addon.id, 'price', parsePrice(e.target.value))
                         }

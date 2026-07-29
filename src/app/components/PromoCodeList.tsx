@@ -227,26 +227,29 @@ const usagePct = (b: PromoCode) =>
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 const TypeBadge = ({ type }: { type: CodeType }) => {
+  const msg = useMsg();
   if (type === 'Discount') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700">
-        <Percent className="w-3 h-3" /> Discount
+        <Percent className="w-3 h-3" /> {msg('Discount')}
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
-      <BookOpen className="w-3 h-3" /> Free Bookings
+      <BookOpen className="w-3 h-3" /> {msg('Free Bookings')}
     </span>
   );
 };
 
-const StatusBadge = ({ active }: { active: boolean }) =>
-  active ? (
-    <Badge className="bg-green-500 text-white text-xs">Active</Badge>
+const StatusBadge = ({ active }: { active: boolean }) => {
+  const msg = useMsg();
+  return active ? (
+    <Badge className="bg-green-500 text-white text-xs">{msg('Active')}</Badge>
   ) : (
-    <Badge variant="outline" className="text-gray-500 text-xs">Inactive</Badge>
+    <Badge variant="outline" className="text-gray-500 text-xs">{msg('Inactive')}</Badge>
   );
+};
 
 const UsageBar = ({ batch }: { batch: PromoCode }) => {
   const pct = usagePct(batch);
@@ -373,35 +376,35 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900 mb-1">Promo Code Batches</h1>
+          <h1 className="text-gray-900 mb-1">{msg('Promo Code Batches')}</h1>
           <p className="text-sm text-gray-500">
-            Corporate promo codes are created in batches per company. Expand a company to view its batches.
+            {msg('Corporate promo codes are created in batches per company. Expand a company to view its batches.')}
           </p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0" onClick={onCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Create Batch
+          {msg('Create Batch')}
         </Button>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
-          <p className="text-xs text-blue-200 mb-1">Total Batches</p>
+          <p className="text-xs text-blue-200 mb-1">{msg('Total Batches')}</p>
           <p className="text-2xl text-white">{totalBatches}</p>
           <p className="text-xs text-blue-300 mt-1">{companyGroups.length} companies</p>
         </Card>
         <Card className="p-4 border-2 border-green-300 bg-green-50">
-          <p className="text-xs text-green-700 mb-1">Active Batches</p>
+          <p className="text-xs text-green-700 mb-1">{msg('Active Batches')}</p>
           <p className="text-2xl text-green-600">{activeBatches}</p>
-          <p className="text-xs text-gray-500 mt-1">Currently running</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Currently running')}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-gray-500 mb-1">Total Codes Generated</p>
+          <p className="text-xs text-gray-500 mb-1">{msg('Total Codes Generated')}</p>
           <p className="text-2xl text-blue-600">{totalCodesAll.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-gray-500 mb-1">Total Codes Used</p>
+          <p className="text-xs text-gray-500 mb-1">{msg('Total Codes Used')}</p>
           <p className="text-2xl text-gray-700">{totalUsed.toLocaleString()}</p>
           <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
             <div
@@ -429,7 +432,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
               <SelectValue placeholder={msg('All Companies')} />
             </SelectTrigger>
             <SelectContent className="max-h-60">
-              <SelectItem value="all">All Companies</SelectItem>
+              <SelectItem value="all">{msg('All Companies')}</SelectItem>
               {batchCompanies.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
@@ -442,9 +445,9 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
               <SelectValue placeholder={msg('All Types')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Discount">Discount</SelectItem>
-              <SelectItem value="Free bookings">Free Bookings</SelectItem>
+              <SelectItem value="all">{msg('All Types')}</SelectItem>
+              <SelectItem value="Discount">{msg('Discount')}</SelectItem>
+              <SelectItem value="Free bookings">{msg('Free Bookings')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
@@ -452,9 +455,9 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
               <SelectValue placeholder={msg('All Statuses')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="all">{msg('All Statuses')}</SelectItem>
+              <SelectItem value="active">{msg('Active')}</SelectItem>
+              <SelectItem value="inactive">{msg('Inactive')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -467,23 +470,23 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10"></TableHead>
-                <TableHead>Company</TableHead>
-                <TableHead>Batches</TableHead>
+                <TableHead>{msg('Company')}</TableHead>
+                <TableHead>{msg('Batches')}</TableHead>
                 <TableHead>
                   <span className="flex items-center gap-1">
-                    <Hash className="w-3 h-3" /> Total Codes
+                    <Hash className="w-3 h-3" /> {msg('Total Codes')}
                   </span>
                 </TableHead>
-                <TableHead>Used</TableHead>
-                <TableHead>Active Batches</TableHead>
-                <TableHead>Inactive Batches</TableHead>
+                <TableHead>{msg('Used')}</TableHead>
+                <TableHead>{msg('Active Batches')}</TableHead>
+                <TableHead>{msg('Inactive Batches')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredGroups.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-gray-500 py-10">
-                    No promo code batches found.
+                    {msg('No promo code batches found.')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -598,9 +601,9 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                   </p>
                                   <p className="text-xs text-gray-500 flex items-center gap-1">
                                     {batch.reusable ? (
-                                      <><ToggleRight className="w-3 h-3 text-green-600" /> Reusable</>
+                                      <><ToggleRight className="w-3 h-3 text-green-600" /> {msg('Reusable')}</>
                                     ) : (
-                                      <><ToggleLeft className="w-3 h-3 text-gray-400" /> Single-use</>
+                                      <><ToggleLeft className="w-3 h-3 text-gray-400" /> {msg('Single-use')}</>
                                     )}
                                   </p>
                                 </div>
@@ -617,7 +620,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                       {days < 0 ? 'Expired' : days === 0 ? 'Expires today' : `${days} days left`}
                                     </p>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                      Use limit: <strong className="text-gray-700">{batch.useLimit} per code</strong>
+                                      {msg('Use limit:')} <strong className="text-gray-700">{batch.useLimit} per code</strong>
                                     </p>
                                   </div>
                                 </div>
@@ -625,11 +628,11 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
 
                               {/* Usage */}
                               <div className="col-span-2">
-                                <p className="text-xs text-gray-500 mb-1">Code Usage</p>
+                                <p className="text-xs text-gray-500 mb-1">{msg('Code Usage')}</p>
                                 <UsageBar batch={batch} />
                                 {usagePct(batch) >= 90 && (
                                   <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                                    <AlertTriangle className="w-3 h-3" /> Nearly exhausted
+                                    <AlertTriangle className="w-3 h-3" /> {msg('Nearly exhausted')}
                                   </p>
                                 )}
                               </div>
@@ -651,7 +654,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                     title={msg('Edit batch')}
                                   >
                                     <Edit className="w-3 h-3 mr-1" />
-                                    Edit
+                                    {msg('Edit')}
                                   </Button>
                                   {onDelete && (
                                     <Button

@@ -531,7 +531,7 @@ export function BookingInvoiceDialog({
               <li>{msg('• Payment is due upon receipt of this invoice')}</li>
               <li>{msg('• Cancellation must be made at least 24 hours in advance for full refund')}</li>
               <li>{msg('• Late cancellation or no-show may result in charges')}</li>
-              <li>• All prices are in Hong Kong Dollars (HKD)</li>
+              <li>{msg('• All prices are in Hong Kong Dollars (HKD)')}</li>
             </ul>
           </Card>
 

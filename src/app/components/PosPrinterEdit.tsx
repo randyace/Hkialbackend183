@@ -7,12 +7,16 @@ import { useMsg } from '@/i18n/useMsg';
 
 export type PosPrinterRole = 'kitchen' | 'receipt' | 'both';
 
+/** Matches API PosPrinter models */
+export type PosPrinterModel = 'thermal' | 'tm_u220';
+
 export interface PosPrinterFormData {
   name: string;
   host: string;
   port: number;
   beepCount: number;
   role: PosPrinterRole;
+  model: PosPrinterModel;
   isActive: boolean;
 }
 
@@ -33,6 +37,7 @@ const defaultFormData: PosPrinterFormData = {
   port: 9100,
   beepCount: 1,
   role: 'both',
+  model: 'thermal',
   isActive: true,
 };
 
@@ -87,7 +92,7 @@ export function PosPrinterEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading printer...
+        {msg('Loading printer...')}
       </div>
     );
   }
@@ -97,20 +102,20 @@ export function PosPrinterEdit({
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Printer' : 'Create Printer'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure POS receipt printer connection details.</p>
+          <p className="text-sm text-gray-500 mt-1">{msg('Configure POS receipt printer connection details.')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Printer Name</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Printer Name')}</span>
             <input
               required
               value={formData.name}
@@ -127,7 +132,7 @@ export function PosPrinterEdit({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Host IP Address</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Host IP Address')}</span>
             <input
               required
               value={formData.host}
@@ -145,7 +150,7 @@ export function PosPrinterEdit({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Port</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Port')}</span>
               <input
                 type="number"
                 min={1}
@@ -159,7 +164,7 @@ export function PosPrinterEdit({
             </label>
 
             <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Beep Count</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Beep Count')}</span>
               <input
                 type="number"
                 min={0}
@@ -173,7 +178,7 @@ export function PosPrinterEdit({
           </div>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Role</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Role')}</span>
             <select
               value={formData.role}
               onChange={(e) =>
@@ -184,9 +189,9 @@ export function PosPrinterEdit({
               }
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
             >
-              <option value="both">Kitchen + Receipt</option>
-              <option value="kitchen">Kitchen tickets only</option>
-              <option value="receipt">Guest receipts only</option>
+              <option value="both">{msg('Kitchen + Receipt')}</option>
+              <option value="kitchen">{msg('Kitchen tickets only')}</option>
+              <option value="receipt">{msg('Guest receipts only')}</option>
             </select>
             <p className="text-xs text-gray-500">
               Kitchen routing still uses each menu item&apos;s assigned printer. Receipt jobs go to
@@ -194,10 +199,31 @@ export function PosPrinterEdit({
             </p>
           </label>
 
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">{msg('Printer Model')}</span>
+            <select
+              value={formData.model}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  model: e.target.value as PosPrinterModel,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            >
+              <option value="thermal">{msg('Thermal ESC/POS (default)')}</option>
+              <option value="tm_u220">{msg('Epson TM-U220A (impact, auto-cutter)')}</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Model sets paper width, feed/cut, and agent TCP timeout. TM-U220 uses 76mm impact
+              profile with Big5 Chinese.
+            </p>
+          </label>
+
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Is Active</p>
-              <p className="text-xs text-gray-500">Inactive printers are hidden from menu item assignment.</p>
+              <p className="text-sm font-medium text-gray-800">{msg('Is Active')}</p>
+              <p className="text-xs text-gray-500">{msg('Inactive printers are hidden from menu item assignment.')}</p>
             </div>
             <Switch
               checked={formData.isActive}

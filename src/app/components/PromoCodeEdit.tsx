@@ -505,7 +505,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   type="number" min={1} max={100}
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  placeholder="e.g. 15"
+                  placeholder={msg('e.g. 15')}
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">{msg('Percentage discount applied at checkout.')}</p>
@@ -519,7 +519,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   type="number" min={1}
                   value={amount}
                   onChange={(e) => setAmount(Number(e.target.value))}
-                  placeholder="e.g. 1"
+                  placeholder={msg('e.g. 1')}
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">{msg('Complimentary bookings granted per code use.')}</p>
@@ -532,7 +532,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                 type="number" min={1}
                 value={useLimit}
                 onChange={(e) => setUseLimit(Number(e.target.value))}
-                placeholder="e.g. 1"
+                placeholder={msg('e.g. 1')}
                 required
               />
               <p className="text-xs text-gray-500 mt-1">{msg('How many times each individual code can be used.')}</p>
@@ -598,15 +598,15 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (English) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Title (English)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={msg('Enter title in English')} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Simplified Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Title (Simplified Chinese)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Input value={titleSimpChi} onChange={(e) => setTitleSimpChi(e.target.value)} placeholder="输入简体中文标题" />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Traditional Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Title (Traditional Chinese)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Input value={titleTradChi} onChange={(e) => setTitleTradChi(e.target.value)} placeholder="輸入繁體中文標題" />
             </div>
           </div>
@@ -620,15 +620,15 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (English) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Description (English)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder={msg('Enter description in English')} rows={3} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Simplified Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Description (Simplified Chinese)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Textarea value={descriptionSimpChi} onChange={(e) => setDescriptionSimpChi(e.target.value)} placeholder="输入简体中文描述" rows={3} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Traditional Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Description (Traditional Chinese)')} <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Textarea value={descriptionTradChi} onChange={(e) => setDescriptionTradChi(e.target.value)} placeholder="輸入繁體中文描述" rows={3} />
             </div>
           </div>

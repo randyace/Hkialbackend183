@@ -362,7 +362,7 @@ export function SystemUserEdit({
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
-            {isEditMode ? 'Edit System User' : 'Create New System User'}
+            {isEditMode ? msg('Edit System User') : msg('Create New System User')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {isEditMode
@@ -461,7 +461,7 @@ export function SystemUserEdit({
                 </div>
                 <div>
                   <label htmlFor="su-password" className="mb-[10px] block text-sm text-gray-700">
-                    Password {isEditMode && '(leave blank to keep current)'}
+                    Password {isEditMode && msg('(leave blank to keep current)')}
                   </label>
                   <input
                     id="su-password"
@@ -469,7 +469,7 @@ export function SystemUserEdit({
                     value={formPassword}
                     onChange={(e) => setFormPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder={msg('isEditMode ? \'••••••••\' : \'Minimum 8 characters\'')}
+                    placeholder={isEditMode ? '••••••••' : msg('Minimum 8 characters')}
                     required={!isEditMode}
                     minLength={isEditMode ? undefined : 8}
                   />
@@ -615,7 +615,7 @@ export function SystemUserEdit({
           </Button>
           <Button type="submit" disabled={isSaving} className="gap-2">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {isEditMode ? 'Update User' : 'Create User'}
+            {isEditMode ? msg('Update User') : msg('Create User')}
           </Button>
         </div>
       </form>

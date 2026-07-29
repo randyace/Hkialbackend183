@@ -790,13 +790,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   const handleAddItem = () => {
-    if (!selectedAddon) { toast.error('Please select an add-on service first.'); return; }
+    if (!selectedAddon) { toast.error(msg('Please select an add-on service first.')); return; }
     if (selectedAddon === 'Limousine Transfer' && limoStops.every(s => !s.location.trim())) {
-      toast.error('Please enter at least one destination or pick-up point.');
+      toast.error(msg('Please enter at least one destination or pick-up point.'));
       return;
     }
     if (selectedAddon === 'Wheelchair Assistance' && !wheelchairPassenger.trim()) {
-      toast.error('Please enter the passenger name.');
+      toast.error(msg('Please enter the passenger name.'));
       return;
     }
 
@@ -950,7 +950,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // That path was shipped in round 6.2.80 and is the source of truth.
   // The standalone-preview / figma Make export path stays intact
   // per INV-X1 — the EditSectionAccountInfo's `promoCodeOptions`
-  // empty-fallback renders a disabled `placeholder="e.g. SUMMER2024"`
+  // empty-fallback renders a disabled `placeholder={msg('e.g. SUMMER2024')}`
   // text input so the view remains self-previewable.
 
   // ── Suite & Time Assignment (Confirmed + Paid) ────────────────────────────
@@ -998,7 +998,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     booking.paymentStatus !== 'Refunded'
       ? [{
           key: 'generate-invoice',
-          label: 'Generate Invoice',
+          label: msg('Generate Invoice'),
           icon: <FileText className="w-4 h-4 mr-2" />,
           onClick: () => setShowInvoice(true),
           testId: 'actions-generate-invoice',
@@ -1007,7 +1007,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
       ? [{
           key: 'generate-payment-link',
-          label: 'Generate Payment Link',
+          label: msg('Generate Payment Link'),
           icon: <CreditCard className="w-4 h-4 mr-2" />,
           disabled: true,
         }]
@@ -1015,33 +1015,33 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(booking.paymentStatus === 'Payment Link Sent'
       ? [{
           key: 'send-payment-reminder',
-          label: 'Send Payment Reminder',
+          label: msg('Send Payment Reminder'),
           icon: <Mail className="w-4 h-4 mr-2" />,
         }]
       : []),
     ...(booking.paymentStatus === 'Overdue'
       ? [{
           key: 'reactivate',
-          label: 'Re-activate Booking',
+          label: msg('Re-activate Booking'),
           icon: <RotateCcw className="w-4 h-4 mr-2" />,
         }]
       : []),
     ...(booking.status === 'Confirmed'
       ? [{
           key: 'generate-qr',
-          label: 'Generate QR Code',
+          label: msg('Generate QR Code'),
           icon: <Download className="w-4 h-4 mr-2" />,
         }]
       : []),
     {
       key: 'share',
-      label: 'Share with Partners',
+      label: msg('Share with Partners'),
       icon: <Mail className="w-4 h-4 mr-2" />,
       disabled: true,
     },
     {
       key: 'movement-log',
-      label: 'Movement Log',
+      label: msg('Movement Log'),
       icon: <History className="w-4 h-4 mr-2" />,
       onClick: () => setIsMovementLogOpen(true),
       testId: 'actions-movement-log',
@@ -1051,7 +1051,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     booking.paymentStatus !== 'Refunded'
       ? [{
           key: 'process-refund',
-          label: 'Process Refund',
+          label: msg('Process Refund'),
           icon: <DollarSign className="w-4 h-4 mr-2" />,
           className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
         }]
@@ -1059,7 +1059,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(isConfirmedAndPaid
       ? [{
           key: 'refund',
-          label: 'Refund',
+          label: msg('Refund'),
           icon: <RefreshCw className="w-4 h-4 mr-2" />,
           className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200',
           onClick: () => {
@@ -1072,7 +1072,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(booking.status !== 'Cancelled' && booking.status !== 'Rejected'
       ? [{
           key: 'cancel',
-          label: 'Cancel Booking',
+          label: msg('Cancel Booking'),
           icon: <Trash2 className="w-4 h-4 mr-2" />,
           className: 'text-red-600 hover:text-red-700 hover:bg-red-50',
           onClick: () => {
@@ -1086,7 +1086,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   ];
   const handleProcessRefund = () => {
     const amt = parseFloat(refundAmount.replace(/[^0-9.]/g, ''));
-    if (!amt || amt <= 0) { toast.error('Please enter a valid refund amount.'); return; }
+    if (!amt || amt <= 0) { toast.error(msg('Please enter a valid refund amount.')); return; }
     if (amt > amountDueAfterVouchers) {
       toast.error(`Refund amount cannot exceed the maximum refundable amount of HK$${amountDueAfterVouchers.toLocaleString()}.`);
       return;
@@ -1719,7 +1719,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       <div>
         <Button variant="outline" onClick={onBack}>
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Bookings
+          {msg('Back to Bookings')}
         </Button>
       </div>
 
@@ -1731,7 +1731,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {booking.isAdHoc && (
               <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
                 <AlertCircle className="w-3 h-3 mr-1" />
-                Ad-hoc Booking
+                {msg('Ad-hoc Booking')}
               </Badge>
             )}
             {/* ── 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) ──
@@ -1757,12 +1757,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </Badge>
             )}
           </div>
-          <p className="text-gray-600">View and manage booking information</p>
+          <p className="text-gray-600">{msg('View and manage booking information')}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setShowInvoice(true)}>
             <FileText className="w-4 h-4 mr-2" />
-            Generate Invoice
+            {msg('Generate Invoice')}
           </Button>
           {/* 2026-06-28 (round 6.2.72, Phase E) — `[Edit Booking
               (full editor)]` button REMOVED. Per Sky's pivot
@@ -1778,7 +1778,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 3. Actions */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Actions</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Actions')}</h3>
         <div className="flex flex-wrap gap-2">
           {actionItems.map((action) => (
             <Button
@@ -1799,7 +1799,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       {/* 4. Rejection Reason (if applicable) */}
       {booking.rejectionReason && (
         <Card className="p-6 border-red-200 bg-red-50">
-          <h3 className="text-sm uppercase tracking-wide text-red-700 mb-2">Rejection Reason</h3>
+          <h3 className="text-sm uppercase tracking-wide text-red-700 mb-2">{msg('Rejection Reason')}</h3>
           <p className="text-sm text-red-900">{booking.rejectionReason}</p>
         </Card>
       )}
@@ -1823,7 +1823,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <Card className="p-6 border-amber-200 bg-amber-50">
           <h3 className="text-sm uppercase tracking-wide text-amber-700 mb-2 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4" />
-            Supervisor Decision
+            {msg('Supervisor Decision')}
           </h3>
           {booking.supervisorRejectionReason && (
             <p className="text-sm text-amber-900 mb-2">
@@ -1848,7 +1848,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-amber-900">
-                <strong>Ad-hoc Booking Alert:</strong> This booking was made less than 48 hours before the flight time. 
+                <strong>{msg('Ad-hoc Booking Alert:')}</strong> This booking was made less than 48 hours before the flight time. 
                 {booking.cutoffHours && (
                   <> Time remaining: {booking.cutoffHours} hours</>
                 )}
@@ -1880,7 +1880,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <h3 className="text-sm font-semibold text-amber-900">Similar Profile Detected</h3>
+                    <h3 className="text-sm font-semibold text-amber-900">{msg('Similar Profile Detected')}</h3>
                     <Badge className="bg-amber-200 text-amber-800 border border-amber-300 text-xs px-2 py-0.5">
                       {matchScoreLabel}
                     </Badge>
@@ -1888,22 +1888,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <p className="text-sm text-amber-800">
                     {pendingSuggestions.length > 1 ? (
                       <>
-                        <strong>{pendingSuggestions.length}</strong> profiles matching <strong>{fullName}</strong> were found. Do you want to review those profiles?
+                        <strong>{pendingSuggestions.length}</strong> profiles matching <strong>{fullName}</strong> {msg('were found. Do you want to review those profiles?')}
                       </>
                     ) : (
                       <>
-                        A profile matching <strong>{fullName}</strong> — same name, date of birth, gender and passport number — was found in a previous booking. Do you want to review those profiles?
+                        {msg('A profile matching')} <strong>{fullName}</strong> {msg('— same name, date of birth, gender and passport number — was found in a previous booking. Do you want to review those profiles?')}
                       </>
                     )}
                   </p>
                   <div className="flex items-center gap-2 mt-3">
                     <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5" onClick={() => openMergeDialog()}>
                       <Eye className="w-3.5 h-3.5" />
-                      View Profiles
+                      {msg('View Profiles')}
                     </Button>
                     <Button size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 gap-1.5" onClick={() => setShowSimilarBanner(false)}>
                       <X className="w-3.5 h-3.5" />
-                      Ignore
+                      {msg('Ignore')}
                     </Button>
                   </div>
                 </div>
@@ -1936,7 +1936,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       {/* 6. Guest Information */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm uppercase tracking-wide text-gray-500">Guest Information</h3>
+          <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Guest Information')}</h3>
           <Button
             variant="outline"
             size="sm"
@@ -1972,12 +1972,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             className="flex items-center gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            View Customer Profile
+            {msg('View Customer Profile')}
           </Button>
         </div>
         <div className="grid grid-cols-3 gap-6">
           <div>
-            <label className="text-sm text-gray-600">Guest Name</label>
+            <label className="text-sm text-gray-600">{msg('Guest Name')}</label>
             <div className="flex items-center gap-2 flex-wrap mt-0.5">
               <p className="text-lg">{booking.guestName}</p>
               <Button
@@ -2001,27 +2001,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </div>
           </div>
           <div>
-            <label className="text-sm text-gray-600">User ID</label>
+            <label className="text-sm text-gray-600">{msg('User ID')}</label>
             <p className="text-lg">{booking.accountNo}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Account Type</label>
+            <label className="text-sm text-gray-600">{msg('Account Type')}</label>
             <p className="text-lg">{booking.accountType}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Number of Guests</label>
+            <label className="text-sm text-gray-600">{msg('Number of Guests')}</label>
             <p className="text-lg">{booking.numberOfGuests} total</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Non-Flying Guests</label>
+            <label className="text-sm text-gray-600">{msg('Non-Flying Guests')}</label>
             <p className="text-lg">{booking.nonFlyingGuests || 0}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Payment Method</label>
+            <label className="text-sm text-gray-600">{msg('Payment Method')}</label>
             <p className="text-lg">{booking.paymentMode || '—'}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Account Discount</label>
+            <label className="text-sm text-gray-600">{msg('Account Discount')}</label>
             <p className="text-lg text-green-600">
               {booking.agencyDiscountRate
                 ? `${booking.agencyDiscountRate}% (Agency Default)`
@@ -2029,11 +2029,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Promotion Code</label>
+            <label className="text-sm text-gray-600">{msg('Promotion Code')}</label>
             <p className="text-lg">{booking.agencyCode || '—'}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Account Remark</label>
+            <label className="text-sm text-gray-600">{msg('Account Remark')}</label>
             <p className="text-lg">—</p>
           </div>
         </div>
@@ -2041,18 +2041,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 7. Flight Information */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Flight Information')}</h3>
         <div className="grid grid-cols-4 gap-6">
           {/* Row 1 — Flight Type & Arrival Date (above Flight Number) */}
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Type</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Type')}</label>
             {booking.flightType === 'Arrival' ? (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200">
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
                   </svg>
-                  Arrival
+                  {msg('Arrival')}
                 </span>
               </div>
             ) : booking.flightType === 'Transit' ? (
@@ -2068,7 +2068,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
                     <path d="M7 4l1.5 6L4 11.5l-.5 1 2 1 2 1.5 1-1.5L8 7l-1-3z"/>
                   </svg>
-                  Transit
+                  {msg('Transit')}
                 </span>
               </div>
             ) : (
@@ -2077,7 +2077,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <svg className="w-3.5 h-3.5 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
                   </svg>
-                  Departure
+                  {msg('Departure')}
                 </span>
               </div>
             )}
@@ -2092,27 +2092,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
           {/* Row 1 continued — Flight Number & Flight Time */}
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Number</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Number')}</label>
             <div className="flex items-center gap-2">
               <Plane className="w-4 h-4 text-gray-400" />
               <p className="text-lg">{booking.flightNo}</p>
             </div>
           </div>
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Time (STD/STA)</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Time (STD/STA)')}</label>
             <p className="text-lg">{booking.flightTime}</p>
           </div>
           {/* Row 2 — Route, Luggage, Flight Class */}
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Route</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Route')}</label>
             <p className="text-lg">{booking.flightOrigin || '—'} → {booking.flightDestination || '—'}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Number of Luggage</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Number of Luggage')}</label>
             <p className="text-lg">{booking.numberOfLuggage || 0} pcs</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Class (Main VIP Passenger)</label>
+            <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Class (Main VIP Passenger)')}</label>
             {booking.flightClass ? (
               <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
                 booking.flightClass === 'First Class'
@@ -2156,22 +2156,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         {booking.flightType === 'Transit' && booking.legs && booking.legs.length >= 2 && (
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h4 className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-4">
-              2nd Flight (Outbound)
+              {msg('2nd Flight (Outbound)')}
             </h4>
             <div className="grid grid-cols-5 gap-6">
               <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Number</label>
+                <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Number')}</label>
                 <div className="flex items-center gap-2">
                   <Plane className="w-4 h-4 text-gray-400" />
                   <p className="text-lg">{booking.legs[1].flightNo || '—'}</p>
                 </div>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Time (STD)</label>
+                <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Time (STD)')}</label>
                 <p className="text-lg">{booking.legs[1].flightTime || '—'}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Route</label>
+                <label className="text-sm text-gray-600 block mb-[10px]">{msg('Route')}</label>
                 {/* 2026-06-08 round 6.2.6.1 — Route column for the
                     2nd-leg block. Format: "{origin} → {destination}".
                     For Transit at HKG, origin = legs[1].flightOrigin
@@ -2201,7 +2201,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <p className="text-lg">{booking.legs[1].departureDate || booking.legs[1].arrivalDate || '—'}</p>
               </div>
               <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Class</label>
+                <label className="text-sm text-gray-600 block mb-[10px]">{msg('Flight Class')}</label>
                 {booking.legs[1].flightClass ? (
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
                     booking.legs[1].flightClass === 'First Class'
@@ -2235,7 +2235,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   data-testid="transit-gap-display"
                 >
                   <Info className="w-4 h-4 flex-shrink-0" />
-                  Transit gap: <strong>{hours}h {mins}m</strong>
+                  {msg('Transit gap:')} <strong>{hours}h {mins}m</strong>
                   {isValid ? ' (compliant with 6h minimum)' : ' (BELOW 6h minimum — data error)'}.
                 </p>
               );
@@ -2246,16 +2246,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 8. Booking Details */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Booking Details</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Booking Details')}</h3>
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
-            <label className="text-sm text-gray-600">Suite/Lounge</label>
+            <label className="text-sm text-gray-600">{msg('Suite/Lounge')}</label>
             <p className="text-lg">{booking.suite || 'Not assigned'}</p>
             {(booking.assignedSuiteNames?.length || booking.assignedLoungeNames?.length) ? (
               <div className="mt-2 space-y-1.5">
                 {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 items-center">
-                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Suites</span>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{msg('Suites')}</span>
                     {booking.assignedSuiteNames.map(name => (
                       <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">
                         {name}
@@ -2265,7 +2265,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 )}
                 {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 items-center">
-                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Lounges</span>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{msg('Lounges')}</span>
                     {booking.assignedLoungeNames.map(name => (
                       <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                         {name}
@@ -2277,15 +2277,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             ) : null}
           </div>
           <div>
-            <label className="text-sm text-gray-600">Date & Time</label>
+            <label className="text-sm text-gray-600">{msg('Date & Time')}</label>
             <p className="text-lg">{booking.dateTime}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Payment Mode</label>
+            <label className="text-sm text-gray-600">{msg('Payment Mode')}</label>
             <p className="text-lg">{booking.paymentMode}</p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Booking Type</label>
+            <label className="text-sm text-gray-600">{msg('Booking Type')}</label>
             <p className="text-lg">{booking.bookingType}</p>
           </div>
         </div>
@@ -2294,8 +2294,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="text-sm font-semibold text-gray-800">Part 1 — Premiere Suite</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Max 6 guests (VIP + Non-Flying) per suite · At least 1 VIP Passenger required</p>
+              <h4 className="text-sm font-semibold text-gray-800">{msg('Part 1 — Premiere Suite')}</h4>
+              <p className="text-xs text-gray-500 mt-0.5">{msg('Max 6 guests (VIP + Non-Flying) per suite · At least 1 VIP Passenger required')}</p>
             </div>
             {numPremiereSuites > 0 && (
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${psOverCapacity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -2306,7 +2306,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Quantity of Premiere Suite</label>
+              <label className="text-sm text-gray-600 block mb-[10px]">{msg('Quantity of Premiere Suite')}</label>
               <input
                 type="number"
                 min={0}
@@ -2316,12 +2316,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               />
               {psGuestsWithoutSuite && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Must be at least 1
+                  <AlertCircle className="w-3 h-3" /> {msg('Must be at least 1')}
                 </p>
               )}
             </div>
             <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Quantity of VIP Passengers</label>
+              <label className="text-sm text-gray-600 block mb-[10px]">{msg('Quantity of VIP Passengers')}</label>
               <input
                 type="number"
                 min={0}
@@ -2332,12 +2332,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               />
               {psNoVip && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Required
+                  <AlertCircle className="w-3 h-3" /> {msg('Required')}
                 </p>
               )}
             </div>
             <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Quantity of Non-Flying Guests</label>
+              <label className="text-sm text-gray-600 block mb-[10px]">{msg('Quantity of Non-Flying Guests')}</label>
               <input
                 type="number"
                 min={0}
@@ -2364,7 +2364,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className={`border rounded-lg p-4 ${ldErrors.length > 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
+              <h4 className="text-sm font-semibold text-gray-800">{msg('Part 2 — Lounge Deluxe')}</h4>
               <p className="text-xs text-gray-500 mt-0.5">
                 Max 3 Non-Flying Guests per booking
                 {hasLdIntent && ' · At least 1 VIP Passenger required'}
@@ -2377,7 +2377,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Quantity of VIP Passengers</label>
+              <label className="text-sm text-gray-600 block mb-[10px]">{msg('Quantity of VIP Passengers')}</label>
               <input
                 type="number"
                 min={0}
@@ -2388,12 +2388,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               />
               {ldNoVip && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Required
+                  <AlertCircle className="w-3 h-3" /> {msg('Required')}
                 </p>
               )}
             </div>
             <div>
-              <label className="text-sm text-gray-600 block mb-[10px]">Quantity of Non-Flying Guests</label>
+              <label className="text-sm text-gray-600 block mb-[10px]">{msg('Quantity of Non-Flying Guests')}</label>
               <input
                 type="number"
                 min={0}
@@ -2403,7 +2403,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               />
               {ldNonFlyingExceeded && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Max 3 allowed
+                  <AlertCircle className="w-3 h-3" /> {msg('Max 3 allowed')}
                 </p>
               )}
             </div>
@@ -2473,12 +2473,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 9. Contact Person */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Contact Person</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Contact Person')}</h3>
         <div className="grid grid-cols-3 gap-6">
           {/* Name */}
           <div>
             <label className="text-sm text-gray-600 block mb-[10px]">
-              <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Name</span>
+              <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{msg('Name')}</span>
             </label>
             <input
               type="text"
@@ -2491,7 +2491,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {/* Contact Email */}
           <div>
             <label className="text-sm text-gray-600 block mb-[10px]">
-              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Contact Email</span>
+              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{msg('Contact Email')}</span>
             </label>
             <input
               type="email"
@@ -2504,7 +2504,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {/* Contact No — round 6.2.76: region code + local number split */}
           <div>
             <label className="text-sm text-gray-600 block mb-[10px]">
-              <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />Contact No.</span>
+              <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{msg('Contact No.')}</span>
             </label>
             <div className="flex gap-2">
               {/* 2026-06-28 (round 6.2.76) — short region-code select.
@@ -2526,16 +2526,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 className="w-28 px-2 py-2 border rounded text-sm bg-white"
               >
                 <option value="">—</option>
-                <option value="+852">+852 (HK)</option>
-                <option value="+86">+86 (CN)</option>
-                <option value="+1">+1 (US/CA)</option>
-                <option value="+44">+44 (UK)</option>
-                <option value="+81">+81 (JP)</option>
-                <option value="+65">+65 (SG)</option>
-                <option value="+61">+61 (AU)</option>
-                <option value="+886">+886 (TW)</option>
-                <option value="+853">+853 (MO)</option>
-                <option value="+82">+82 (KR)</option>
+                <option value="+852">{msg('+852 (HK)')}</option>
+                <option value="+86">{msg('+86 (CN)')}</option>
+                <option value="+1">{msg('+1 (US/CA)')}</option>
+                <option value="+44">{msg('+44 (UK)')}</option>
+                <option value="+81">{msg('+81 (JP)')}</option>
+                <option value="+65">{msg('+65 (SG)')}</option>
+                <option value="+61">{msg('+61 (AU)')}</option>
+                <option value="+886">{msg('+886 (TW)')}</option>
+                <option value="+853">{msg('+853 (MO)')}</option>
+                <option value="+82">{msg('+82 (KR)')}</option>
               </select>
               <input
                 type="tel"
@@ -2549,7 +2549,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {/* Booking Memo — full width */}
           <div className="col-span-3">
             <label className="text-sm text-gray-600 block mb-[10px]">
-              <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />Booking Memo</span>
+              <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />{msg('Booking Memo')}</span>
             </label>
             <textarea
               value={bookingMemo}
@@ -2566,7 +2566,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       <Card className="p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-sm uppercase tracking-wide text-gray-500">VIP Passenger Details</h3>
+            <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('VIP Passenger Details')}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
               {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} —
               {vipPS > 0 && ` ${vipPS} from Premiere Suite`}
@@ -2588,7 +2588,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  Account profile has spouse on record: <strong>{profileSpouseDisplayName}</strong>
+                  {msg('Account profile has spouse on record:')} <strong>{profileSpouseDisplayName}</strong>
                   {' '}— no matching passenger or non-flying guest in this booking.
                 </span>
               </div>
@@ -2619,13 +2619,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </div>
           )}
           {passengers.length === 0 && (
-            <span className="text-xs text-gray-400 italic">No VIP passengers assigned yet.</span>
+            <span className="text-xs text-gray-400 italic">{msg('No VIP passengers assigned yet.')}</span>
           )}
         </div>
 
         {passengers.length === 0 ? (
           <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-            <p className="text-sm">Assign VIP Passengers in the Booking Details section above to fill in passenger details.</p>
+            <p className="text-sm">{msg('Assign VIP Passengers in the Booking Details section above to fill in passenger details.')}</p>
           </div>
         ) : (
           <div className="space-y-6">
@@ -2658,12 +2658,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Role badge */}
                     {isOwner && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-xs font-bold">
-                        <Star className="w-3 h-3" /> Account Owner
+                        <Star className="w-3 h-3" /> {msg('Account Owner')}
                       </span>
                     )}
                     {isSpouse && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-xs font-bold">
-                        <Heart className="w-3 h-3" /> Spouse
+                        <Heart className="w-3 h-3" /> {msg('Spouse')}
                       </span>
                     )}
                     <span className="text-sm font-medium text-gray-700">
@@ -2673,7 +2673,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Voucher toggle — only for owner/spouse */}
                     {eligible && (
                       <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Use Voucher</span>
+                        <span className="text-xs text-gray-500">{msg('Use Voucher')}</span>
                         <button
                           type="button"
                           onClick={() => togglePassengerVoucher(idx)}
@@ -2691,7 +2691,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </button>
                         {voucherOn && (
                           <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                            <Ticket className="w-3 h-3 inline mr-0.5" />Entry Free
+                            <Ticket className="w-3 h-3 inline mr-0.5" />{msg('Entry Free')}
                           </span>
                         )}
                       </div>
@@ -2702,23 +2702,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Row 1: Title | First Name | Last Name | Travel Document No */}
                     <div className="grid grid-cols-6 gap-4">
                       <div className="col-span-1">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Title</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Title')}</label>
                         <select
                           value={p.title}
                           onChange={e => updatePassenger(idx, 'title', e.target.value)}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">—</option>
-                          <option value="Mr">Mr</option>
-                          <option value="Mrs">Mrs</option>
-                          <option value="Ms">Ms</option>
-                          <option value="Miss">Miss</option>
-                          <option value="Dr">Dr</option>
-                          <option value="Prof">Prof</option>
+                          <option value="Mr">{msg('Mr')}</option>
+                          <option value="Mrs">{msg('Mrs')}</option>
+                          <option value="Ms">{msg('Ms')}</option>
+                          <option value="Miss">{msg('Miss')}</option>
+                          <option value="Dr">{msg('Dr')}</option>
+                          <option value="Prof">{msg('Prof')}</option>
                         </select>
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm text-gray-600 block mb-[10px]">First Name</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('First Name')}</label>
                         <input
                           type="text"
                           value={p.firstName}
@@ -2728,7 +2728,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Last Name</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Last Name')}</label>
                         <input
                           type="text"
                           value={p.lastName}
@@ -2738,12 +2738,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </div>
                       <div className="col-span-1">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Travel Document No.</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Travel Document No.')}</label>
                         <input
                           type="text"
                           value={p.travelDocNo}
                           onChange={e => updatePassenger(idx, 'travelDocNo', e.target.value)}
-                          placeholder="e.g. K12345678"
+                          placeholder={msg('e.g. K12345678')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -2752,7 +2752,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Row 2: Membership No | Age Group | Birthday (Day / Month / Year) */}
                     <div className="grid grid-cols-6 gap-4">
                       <div className="col-span-1">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Membership No.</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Membership No.')}</label>
                         <input
                           type="text"
                           value={p.membershipNo}
@@ -2762,27 +2762,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </div>
                       <div className="col-span-2">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Age Group</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Age Group')}</label>
                         <select
                           value={p.ageGroup}
                           onChange={e => updatePassenger(idx, 'ageGroup', e.target.value)}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
-                          <option value="">Select age group</option>
-                          <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                          <option value="Children (aged 2-11)">Children (aged 2-11)</option>
-                          <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
+                          <option value="">{msg('Select age group')}</option>
+                          <option value="Adults (aged 12 and above)">{msg('Adults (aged 12 and above)')}</option>
+                          <option value="Children (aged 2-11)">{msg('Children (aged 2-11)')}</option>
+                          <option value="Infants (under 2 years old)">{msg('Infants (under 2 years old)')}</option>
                         </select>
                       </div>
                       <div className="col-span-3">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Birthday</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Birthday')}</label>
                         <div className="grid grid-cols-3 gap-2">
                           <select
                             value={p.birthdayDay}
                             onChange={e => updatePassenger(idx, 'birthdayDay', e.target.value)}
                             className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                           >
-                            <option value="">Day</option>
+                            <option value="">{msg('Day')}</option>
                             {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => (
                               <option key={d} value={d}>{d}</option>
                             ))}
@@ -2792,7 +2792,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             onChange={e => updatePassenger(idx, 'birthdayMonth', e.target.value)}
                             className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                           >
-                            <option value="">Month</option>
+                            <option value="">{msg('Month')}</option>
                             {MONTHS.map(m => (
                               <option key={m} value={m}>{m}</option>
                             ))}
@@ -2814,7 +2814,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <div>
                       <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                         <Utensils className="w-3.5 h-3.5 text-red-400" />
-                        Food Allergies
+                        {msg('Food Allergies')}
                       </label>
                       <input
                         type="text"
@@ -2825,7 +2825,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                       {p.foodAllergies && (
                         <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen & F&B staff
+                          <AlertCircle className="w-3 h-3" /> {msg('Allergy noted — please inform kitchen & F&B staff')}
                         </p>
                       )}
                     </div>
@@ -2851,7 +2851,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       <Card className="p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h3 className="text-sm uppercase tracking-wide text-gray-500">Non-Flying Guest Details</h3>
+            <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Non-Flying Guest Details')}</h3>
             <p className="text-xs text-gray-400 mt-0.5">
               {nonFlyingGuests.length} guest{nonFlyingGuests.length !== 1 ? 's' : ''} —
               {nonFlyingPS > 0 && ` ${nonFlyingPS} from Premiere Suite`}
@@ -2887,7 +2887,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
         {nonFlyingGuests.length === 0 ? (
           <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-            <p className="text-sm">Assign Non-Flying Guests in the Booking Details section above to fill in guest details.</p>
+            <p className="text-sm">{msg('Assign Non-Flying Guests in the Booking Details section above to fill in guest details.')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -2914,7 +2914,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </span>
                     {isSpouseNFG && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 text-xs font-bold">
-                        <Heart className="w-3 h-3" /> Spouse
+                        <Heart className="w-3 h-3" /> {msg('Spouse')}
                       </span>
                     )}
                     <span className="text-sm font-medium text-gray-700">
@@ -2924,7 +2924,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Voucher toggle for spouse */}
                     {eligible && (
                       <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Use Voucher</span>
+                        <span className="text-xs text-gray-500">{msg('Use Voucher')}</span>
                         <button
                           type="button"
                           onClick={() => toggleNFGVoucher(idx)}
@@ -2942,7 +2942,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </button>
                         {voucherOn && (
                           <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                            <Ticket className="w-3 h-3 inline mr-0.5" />Entry Free
+                            <Ticket className="w-3 h-3 inline mr-0.5" />{msg('Entry Free')}
                           </span>
                         )}
                       </div>
@@ -2953,24 +2953,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <div className="grid grid-cols-4 gap-4">
                       {/* Title */}
                       <div>
-                        <label className="text-sm text-gray-600 block mb-[10px]">Title</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Title')}</label>
                         <select
                           value={g.title}
                           onChange={e => updateNonFlyingGuest(idx, 'title', e.target.value)}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">—</option>
-                          <option value="Mr">Mr</option>
-                          <option value="Mrs">Mrs</option>
-                          <option value="Ms">Ms</option>
-                          <option value="Miss">Miss</option>
-                          <option value="Dr">Dr</option>
-                          <option value="Prof">Prof</option>
+                          <option value="Mr">{msg('Mr')}</option>
+                          <option value="Mrs">{msg('Mrs')}</option>
+                          <option value="Ms">{msg('Ms')}</option>
+                          <option value="Miss">{msg('Miss')}</option>
+                          <option value="Dr">{msg('Dr')}</option>
+                          <option value="Prof">{msg('Prof')}</option>
                         </select>
                       </div>
                       {/* First Name */}
                       <div>
-                        <label className="text-sm text-gray-600 block mb-[10px]">First Name</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('First Name')}</label>
                         <input
                           type="text"
                           value={g.firstName}
@@ -2981,7 +2981,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                       {/* Last Name */}
                       <div>
-                        <label className="text-sm text-gray-600 block mb-[10px]">Last Name</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Last Name')}</label>
                         <input
                           type="text"
                           value={g.lastName}
@@ -2992,16 +2992,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                       {/* Age Group */}
                       <div>
-                        <label className="text-sm text-gray-600 block mb-[10px]">Age Group</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">{msg('Age Group')}</label>
                         <select
                           value={g.ageGroup}
                           onChange={e => updateNonFlyingGuest(idx, 'ageGroup', e.target.value)}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
-                          <option value="">Select age group</option>
-                          <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                          <option value="Children (aged 2-11)">Children (aged 2-11)</option>
-                          <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
+                          <option value="">{msg('Select age group')}</option>
+                          <option value="Adults (aged 12 and above)">{msg('Adults (aged 12 and above)')}</option>
+                          <option value="Children (aged 2-11)">{msg('Children (aged 2-11)')}</option>
+                          <option value="Infants (under 2 years old)">{msg('Infants (under 2 years old)')}</option>
                         </select>
                       </div>
                     </div>
@@ -3009,7 +3009,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <div>
                       <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                         <Utensils className="w-3.5 h-3.5 text-red-400" />
-                        Food Allergies
+                        {msg('Food Allergies')}
                       </label>
                       <input
                         type="text"
@@ -3020,7 +3020,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                       {g.foodAllergies && (
                         <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen & F&B staff
+                          <AlertCircle className="w-3 h-3" /> {msg('Allergy noted — please inform kitchen & F&B staff')}
                         </p>
                       )}
                     </div>
@@ -3044,7 +3044,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <Card className="p-6 border-green-200 bg-green-50/40">
           <div className="flex items-center gap-2 mb-4">
             <BadgePercent className="w-5 h-5 text-green-700" />
-            <h3 className="text-sm uppercase tracking-wide text-green-800">Agency Discount Applied</h3>
+            <h3 className="text-sm uppercase tracking-wide text-green-800">{msg('Agency Discount Applied')}</h3>
           </div>
 
           {/* Agency Info Banner */}
@@ -3063,21 +3063,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {/* Pricing Breakdown */}
           <div className="bg-white border border-green-100 rounded-lg divide-y divide-gray-100">
             <div className="flex items-center justify-between px-5 py-3">
-              <span className="text-sm text-gray-600">Base Service Amount</span>
+              <span className="text-sm text-gray-600">{msg('Base Service Amount')}</span>
               <span className="text-sm font-medium text-gray-800">HK${booking.originalAmountValue.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between px-5 py-3 bg-green-50/60">
               <div className="flex items-center gap-2">
                 <BadgePercent className="w-4 h-4 text-green-600" />
                 <span className="text-sm text-green-800">Agency Discount ({booking.agencyDiscountRate}%)</span>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Auto-applied</span>
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{msg('Auto-applied')}</span>
               </div>
               <span className="text-sm font-medium text-green-700">
                 − HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}
               </span>
             </div>
             <div className="flex items-center justify-between px-5 py-4 bg-green-50">
-              <span className="font-semibold text-gray-900">Total Payable</span>
+              <span className="font-semibold text-gray-900">{msg('Total Payable')}</span>
               <div className="text-right">
                 <p className="text-xs text-gray-400 line-through">HK${booking.originalAmountValue.toLocaleString()}</p>
                 <p className="text-xl font-semibold text-green-700">HK${booking.finalAmountValue.toLocaleString()}</p>
@@ -3088,7 +3088,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <div className="flex items-center gap-2 mt-3">
             <CheckCircle className="w-4 h-4 text-green-600" />
             <p className="text-xs text-green-700">
-              Discount automatically applied based on <strong>{booking.agencyName}</strong>'s contracted rate. 
+              {msg('Discount automatically applied based on')} <strong>{booking.agencyName}</strong>'s contracted rate. 
               Total savings: <strong>HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}</strong>
             </p>
           </div>
@@ -3109,11 +3109,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <Card className="p-6 border-indigo-200 bg-indigo-50/40" data-testid="membership-benefit-pricing-card">
             <div className="flex items-center gap-2 mb-4">
               <Gem className="w-5 h-5 text-indigo-700" />
-              <h3 className="text-sm uppercase tracking-wide text-indigo-800">Membership Benefit Applied</h3>
+              <h3 className="text-sm uppercase tracking-wide text-indigo-800">{msg('Membership Benefit Applied')}</h3>
             </div>
             <div className="bg-white border border-indigo-100 rounded-lg divide-y divide-gray-100">
               <div className="flex items-center justify-between px-5 py-3">
-                <span className="text-sm text-gray-600">Base Service Amount</span>
+                <span className="text-sm text-gray-600">{msg('Base Service Amount')}</span>
                 <span className="text-sm font-medium text-gray-800">HK${original.toLocaleString()}</span>
               </div>
               {membershipLines.map((line) => (
@@ -3121,7 +3121,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <div className="flex items-center gap-2">
                     <Gem className="w-4 h-4 text-indigo-600" />
                     <span className="text-sm text-indigo-800">{line.label || line.key}</span>
-                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Waived</span>
+                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{msg('Waived')}</span>
                   </div>
                   <span className="text-sm font-medium text-indigo-700">
                     − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
@@ -3129,7 +3129,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </div>
               ))}
               <div className="flex items-center justify-between px-5 py-4 bg-indigo-50">
-                <span className="font-semibold text-gray-900">Total Payable</span>
+                <span className="font-semibold text-gray-900">{msg('Total Payable')}</span>
                 <div className="text-right">
                   <p className="text-xs text-gray-400 line-through">HK${original.toLocaleString()}</p>
                   <p className="text-xl font-semibold text-indigo-700">HK${final.toLocaleString()}</p>
@@ -3143,24 +3143,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       {/* 12. Service Items */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
+          <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Service Items')}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item</th>
-                <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Subtotal</th>
+                <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Item')}</th>
+                <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">{msg('Quantity')}</th>
+                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Price')}</th>
+                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Discount')}</th>
+                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Subtotal')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {/* SECTION 1: Suite & Lounge */}
               <tr className="bg-blue-50">
                 <td colSpan={5} className="px-4 py-2">
-                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Suite & Lounge</p>
+                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">{msg('Suite & Lounge')}</p>
                 </td>
               </tr>
               
@@ -3194,7 +3194,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <tr>
                 <td colSpan={5} className="px-4 py-2 bg-gray-50">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                    <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                     <textarea
                       className="w-full px-3 py-2 border rounded text-sm resize-none"
                       rows={2}
@@ -3208,7 +3208,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <>
                   <tr className="bg-purple-50">
                     <td colSpan={5} className="px-4 py-2">
-                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Additional Services</p>
+                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">{msg('Additional Services')}</p>
                     </td>
                   </tr>
 
@@ -3220,22 +3220,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <div className="flex items-start gap-2">
                         <Utensils className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
                         <div>
-                          <p className="font-medium">Food & Beverage Package</p>
-                          <p className="text-xs text-gray-500">Premium Selection — all food & drinks complimentary</p>
+                          <p className="font-medium">{msg('Food & Beverage Package')}</p>
+                          <p className="text-xs text-gray-500">{msg('Premium Selection — all food & drinks complimentary')}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">1</td>
                     <td className="px-4 py-3 text-right">
-                      <span className="text-sm text-green-600 font-medium">HK$0</span>
+                      <span className="text-sm text-green-600 font-medium">{msg('HK$0')}</span>
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
-                    <td className="px-4 py-3 text-right font-medium text-green-600">Complimentary</td>
+                    <td className="px-4 py-3 text-right font-medium text-green-600">{msg('Complimentary')}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                        <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                         <textarea 
                           className="w-full px-3 py-2 border rounded text-sm resize-none"
                           rows={2}
@@ -3275,8 +3275,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         <div className="flex items-center gap-2">
                           <Car className="w-4 h-4 text-purple-600" />
                           <div>
-                            <p className="font-medium">Limousine Transfer Service</p>
-                            <p className="text-xs text-gray-500">Airport Transfer</p>
+                            <p className="font-medium">{msg('Limousine Transfer Service')}</p>
+                            <p className="text-xs text-gray-500">{msg('Airport Transfer')}</p>
                           </div>
                         </div>
                       </td>
@@ -3303,7 +3303,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <tr>
                       <td colSpan={5} className="px-4 py-2 bg-gray-50">
                         <div className="flex flex-col gap-1">
-                          <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                          <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                           <textarea
                             className="w-full px-3 py-2 border rounded text-sm resize-none"
                             rows={2}
@@ -3325,8 +3325,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <div className="flex items-center gap-2">
                         <ShoppingBag className="w-4 h-4 text-green-600" />
                         <div>
-                          <p className="font-medium">In-lounge Shopping Service</p>
-                          <p className="text-xs text-gray-500">Personal Shopping Assistant</p>
+                          <p className="font-medium">{msg('In-lounge Shopping Service')}</p>
+                          <p className="text-xs text-gray-500">{msg('Personal Shopping Assistant')}</p>
                         </div>
                       </div>
                     </td>
@@ -3346,12 +3346,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
-                    <td className="px-4 py-3 text-right font-medium">HK$500</td>
+                    <td className="px-4 py-3 text-right font-medium">{msg('HK$500')}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                        <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                         <textarea 
                           className="w-full px-3 py-2 border rounded text-sm resize-none"
                           rows={2}
@@ -3390,8 +3390,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-amber-600" />
                           <div>
-                            <p className="font-medium">Lounge Extension Service</p>
-                            <p className="text-xs text-gray-500">Additional hours beyond the base 3 hours</p>
+                            <p className="font-medium">{msg('Lounge Extension Service')}</p>
+                            <p className="text-xs text-gray-500">{msg('Additional hours beyond the base 3 hours')}</p>
                           </div>
                         </div>
                       </td>
@@ -3426,8 +3426,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <tr>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium">Express Spa Treatment</p>
-                        <p className="text-xs text-gray-500">30-minute massage</p>
+                        <p className="font-medium">{msg('Express Spa Treatment')}</p>
+                        <p className="text-xs text-gray-500">{msg('30-minute massage')}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -3446,12 +3446,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                     </td>
                     <td className="px-4 py-3 text-right text-green-600">15%</td>
-                    <td className="px-4 py-3 text-right font-medium">HK$510</td>
+                    <td className="px-4 py-3 text-right font-medium">{msg('HK$510')}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                        <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                         <textarea 
                           className="w-full px-3 py-2 border rounded text-sm resize-none"
                           rows={2}
@@ -3468,8 +3468,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <tr>
                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium">Private Meeting Room</p>
-                        <p className="text-xs text-gray-500">2-hour booking</p>
+                        <p className="font-medium">{msg('Private Meeting Room')}</p>
+                        <p className="text-xs text-gray-500">{msg('2-hour booking')}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -3488,12 +3488,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
-                    <td className="px-4 py-3 text-right font-medium">HK$1,200</td>
+                    <td className="px-4 py-3 text-right font-medium">{msg('HK$1,200')}</td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                        <label className="text-xs text-gray-600">{msg('Remarks by Staff:')}</label>
                         <textarea 
                           className="w-full px-3 py-2 border rounded text-sm resize-none"
                           rows={2}
@@ -3509,7 +3509,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {/* ADD NEW ITEM SECTION */}
               <tr className="bg-green-50">
                 <td colSpan={5} className="px-4 py-2">
-                  <p className="text-xs font-semibold text-green-900 uppercase tracking-wide">Add New Item</p>
+                  <p className="text-xs font-semibold text-green-900 uppercase tracking-wide">{msg('Add New Item')}</p>
                 </td>
               </tr>
 
@@ -3574,7 +3574,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           if (results.length === 0) {
                             return (
                               <div className="px-4 py-3 text-sm text-gray-500">
-                                No services found for "<span className="font-medium">{addonSearch}</span>"
+                                {msg('No services found for "')}<span className="font-medium">{addonSearch}</span>"
                               </div>
                             );
                           }
@@ -3630,7 +3630,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="text-xs text-gray-400">HK$</span>
+                      <span className="text-xs text-gray-400">{msg('HK$')}</span>
                       <input
                         type="text"
                         value={addonUnitPrice}
@@ -3656,7 +3656,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       className="bg-green-600 hover:bg-green-700"
                       onClick={handleAddItem}
                     >
-                      Add Item
+                      {msg('Add Item')}
                     </Button>
                   </td>
                 </tr>
@@ -3668,7 +3668,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <td colSpan={5} className="px-4 py-3">
                     <div className="flex items-center gap-2 mb-2">
                       <MapPin className="w-4 h-4 text-blue-600" />
-                      <p className="text-xs text-blue-800">Destinations / Pick-up Points</p>
+                      <p className="text-xs text-blue-800">{msg('Destinations / Pick-up Points')}</p>
                     </div>
                     <div className="space-y-2">
                       {limoStops.map((stop, idx) => (
@@ -3681,14 +3681,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             onChange={e => updateLimoStop(stop.id, 'type', e.target.value)}
                             className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0"
                           >
-                            <option value="Pick-up">Pick-up</option>
-                            <option value="Destination">Destination</option>
+                            <option value="Pick-up">{msg('Pick-up')}</option>
+                            <option value="Destination">{msg('Destination')}</option>
                           </select>
                           <input
                             type="text"
                             value={stop.location}
                             onChange={e => updateLimoStop(stop.id, 'location', e.target.value)}
-                            placeholder={msg('stop.type === \'Pick-up\' ? \'e.g. Terminal 1, Arrival Hall\' : \'e.g. Four Seasons Hotel, HK\'')}
+                            placeholder={stop.type === 'Pick-up' ? msg('e.g. Terminal 1, Arrival Hall') : msg('e.g. Four Seasons Hotel, HK')}
                             className="flex-1 px-3 py-1.5 border rounded text-sm"
                           />
                           <button
@@ -3708,7 +3708,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       className="mt-2 flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Add another stop
+                      {msg('Add another stop')}
                     </button>
                   </td>
                 </tr>
@@ -3719,7 +3719,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <td colSpan={5} className="px-4 py-3">
                     <div className="flex items-center gap-2 mb-2">
                       <User className="w-4 h-4 text-orange-600" />
-                      <p className="text-xs text-orange-800">Passenger Requiring Assistance</p>
+                      <p className="text-xs text-orange-800">{msg('Passenger Requiring Assistance')}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <input
@@ -3729,7 +3729,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         placeholder={msg('Enter full name of passenger...')}
                         className="w-80 px-3 py-1.5 border rounded text-sm"
                       />
-                      <p className="text-xs text-gray-400">As shown on travel document</p>
+                      <p className="text-xs text-gray-400">{msg('As shown on travel document')}</p>
                     </div>
                   </td>
                 </tr>
@@ -3739,7 +3739,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <tr className="bg-green-50/20">
                 <td colSpan={5} className="px-4 pb-3 pt-1">
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-600 mb-[10px]">Remarks by Staff:</label>
+                    <label className="text-xs text-gray-600 mb-[10px]">{msg('Remarks by Staff:')}</label>
                     <textarea
                       value={addonRemarks}
                       onChange={e => setAddonRemarks(e.target.value)}
@@ -3770,17 +3770,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <td colSpan={3} className="px-4 py-2 text-right text-sm text-green-700">
                   <span className="inline-flex items-center gap-1.5">
                     <Utensils className="w-3.5 h-3.5" />
-                    Food & Beverage (incl. pre-order):
+                    {msg('Food & Beverage (incl. pre-order):')}
                   </span>
                 </td>
                 <td className="px-4 py-2 text-right text-sm font-medium text-green-600" colSpan={2}>
-                  Complimentary
+                  {msg('Complimentary')}
                 </td>
               </tr>
               {/* Service subtotal row */}
               {serviceSubtotal > 0 && (
                 <tr className="bg-gray-50">
-                  <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-600">Additional Services Subtotal:</td>
+                  <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-600">{msg('Additional Services Subtotal:')}</td>
                   <td className="px-4 py-2 text-right text-sm font-medium text-gray-800" colSpan={2}>
                     HK${Math.round(serviceSubtotal).toLocaleString()}
                   </td>
@@ -3870,10 +3870,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 15. Pricing Information */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Pricing Information</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Pricing Information')}</h3>
         <div className="grid grid-cols-3 gap-6">
           <div>
-            <label className="text-sm text-gray-600">Total</label>
+            <label className="text-sm text-gray-600">{msg('Total')}</label>
             {/*
              * If staff has set a final amount, show that.
              * Otherwise show the live preview from
@@ -3902,7 +3902,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             )}
           </div>
           <div>
-            <label className="text-sm text-gray-600">Payment</label>
+            <label className="text-sm text-gray-600">{msg('Payment')}</label>
             <p className="text-lg font-semibold text-blue-600">
               {/* Round 6.2.12 + 6.2.13: prefer `livePreviewTotal`
                * (from `POST /api/bookings/price-preview`) when
@@ -3919,7 +3919,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </p>
           </div>
           <div>
-            <label className="text-sm text-gray-600">Balance</label>
+            <label className="text-sm text-gray-600">{msg('Balance')}</label>
             <p className="text-lg font-semibold text-red-600">
               {/* Round 6.2.13: removed `headCountTotal +
                * serviceSubtotal` local estimate. Show "Pending
@@ -3969,42 +3969,42 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
       {/* 16. Status Management */}
       <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Status Management</h3>
+        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">{msg('Status Management')}</h3>
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="text-sm text-gray-600 mb-2 block">Booking Status</label>
+            <label className="text-sm text-gray-600 mb-2 block">{msg('Booking Status')}</label>
             <select
               className="w-full px-3 py-2 border rounded"
               value={statusValue}
               onChange={e => setStatusValue(e.target.value as BookingStatusValue)}
             >
-              <option value="Pending for Review">Pending for Review</option>
-              <option value="Pending for Approval">Pending for Approval</option>
-              <option value="Approved">Approved</option>
-              <option value="Confirmed">Confirmed</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Cancelled">Cancelled</option>
-              <option value="No-show">No-show</option>
+              <option value="Pending for Review">{msg('Pending for Review')}</option>
+              <option value="Pending for Approval">{msg('Pending for Approval')}</option>
+              <option value="Approved">{msg('Approved')}</option>
+              <option value="Confirmed">{msg('Confirmed')}</option>
+              <option value="Rejected">{msg('Rejected')}</option>
+              <option value="Cancelled">{msg('Cancelled')}</option>
+              <option value="No-show">{msg('No-show')}</option>
             </select>
           </div>
           <div>
-            <label className="text-sm text-gray-600 mb-2 block">Payment Status</label>
+            <label className="text-sm text-gray-600 mb-2 block">{msg('Payment Status')}</label>
             <select
               className="w-full px-3 py-2 border rounded"
               value={paymentStatusValue}
               onChange={e => setPaymentStatusValue(e.target.value as PaymentStatusValue)}
             >
-              <option value="Not Required">Not Required</option>
-              <option value="Pending">Pending</option>
-              <option value="Invoice Sent">Invoice Sent</option>
-              <option value="Payment Link Sent">Payment Link Sent</option>
-              <option value="Paid">Paid</option>
-              <option value="Overdue">Overdue</option>
-              <option value="Refunded">Refunded</option>
+              <option value="Not Required">{msg('Not Required')}</option>
+              <option value="Pending">{msg('Pending')}</option>
+              <option value="Invoice Sent">{msg('Invoice Sent')}</option>
+              <option value="Payment Link Sent">{msg('Payment Link Sent')}</option>
+              <option value="Paid">{msg('Paid')}</option>
+              <option value="Overdue">{msg('Overdue')}</option>
+              <option value="Refunded">{msg('Refunded')}</option>
             </select>
           </div>
           <div className="col-span-2">
-            <label className="text-sm text-gray-600 mb-2 block">Status Update Reason / Notes</label>
+            <label className="text-sm text-gray-600 mb-2 block">{msg('Status Update Reason / Notes')}</label>
             <textarea
               className="w-full px-3 py-2 border rounded resize-none"
               rows={3}
@@ -4089,9 +4089,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <div className="bg-red-600 px-6 py-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />
                 <div>
-                  <h2 className="text-white text-base">Remove VIP Passengers</h2>
+                  <h2 className="text-white text-base">{msg('Remove VIP Passengers')}</h2>
                   <p className="text-red-100 text-xs mt-0.5">
-                    Reducing <span className="font-semibold">{sectionLabel}</span> VIP Passengers
+                    {msg('Reducing')} <span className="font-semibold">{sectionLabel}</span> VIP Passengers
                     from <span className="font-semibold">{currentCount}</span> to{' '}
                     <span className="font-semibold">{newValue}</span>
                   </p>
@@ -4101,7 +4101,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {/* Instruction bar */}
               <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
                 <p className="text-xs text-amber-800">
-                  Select exactly <span className="font-semibold">{removeCount}</span> passenger{removeCount > 1 ? 's' : ''} to remove.
+                  {msg('Select exactly')} <span className="font-semibold">{removeCount}</span> passenger{removeCount > 1 ? 's' : ''} to remove.
                   The remaining passenger information will be preserved.
                 </p>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ml-3 flex-shrink-0 transition-colors ${
@@ -4142,7 +4142,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                       {checked && (
                         <span className="ml-auto flex-shrink-0 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-                          Will be removed
+                          {msg('Will be removed')}
                         </span>
                       )}
                     </label>
@@ -4156,7 +4156,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   onClick={() => setDeleteDialog(null)}
                   className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  Cancel
+                  {msg('Cancel')}
                 </button>
                 <button
                   onClick={confirmDeletePassengers}
@@ -4274,7 +4274,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   onClick={onBack}
                   disabled={isSavingAllChanges}
                 >
-                  <X className="w-4 h-4 mr-1.5" /> Back
+                  <X className="w-4 h-4 mr-1.5" /> {msg('Back')}
                 </Button>
                 <Button
                   type="button"
@@ -4314,12 +4314,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {/* Booking summary reference */}
             <div className="grid grid-cols-2 gap-3">
               <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-xs text-gray-500 mb-0.5">Guest</p>
+                <p className="text-xs text-gray-500 mb-0.5">{msg('Guest')}</p>
                 <p className="text-sm font-medium text-gray-800">{booking.guestName}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{booking.accountNo}</p>
               </div>
               <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-xs text-gray-500 mb-0.5">Booking Reference</p>
+                <p className="text-xs text-gray-500 mb-0.5">{msg('Booking Reference')}</p>
                 <p className="text-sm font-medium text-gray-800 font-mono">{booking.bookingNo}</p>
                 <p className="text-xs text-gray-400 mt-0.5">Payment: {booking.paymentMode}</p>
               </div>
@@ -4329,7 +4329,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <div className="px-4 py-4 bg-purple-50 border-2 border-purple-200 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-purple-600 font-medium uppercase tracking-wide mb-1">Maximum Refundable Amount</p>
+                  <p className="text-xs text-purple-600 font-medium uppercase tracking-wide mb-1">{msg('Maximum Refundable Amount')}</p>
                   <p className="text-2xl font-bold text-purple-700">HK${amountDueAfterVouchers.toLocaleString()}</p>
                   <p className="text-xs text-purple-500 mt-1">
                     We will not refund more than the customer paid
@@ -4341,9 +4341,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     onClick={() => setRefundAmount(String(amountDueAfterVouchers))}
                     className="px-3 py-1.5 bg-purple-600 text-white rounded-md text-xs hover:bg-purple-700 transition-colors font-medium"
                   >
-                    Fill Max
+                    {msg('Fill Max')}
                   </button>
-                  <p className="text-xs text-purple-400 mt-1">Full refund</p>
+                  <p className="text-xs text-purple-400 mt-1">{msg('Full refund')}</p>
                 </div>
               </div>
               {/* Breakdown — Round 6.2.13 (2026-06-08):
@@ -4355,7 +4355,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 * `headCountRate × pax` calculation. */}
               <div className="mt-3 pt-3 border-t border-purple-200 flex flex-wrap gap-x-6 gap-y-1 text-xs">
                 <div>
-                  <span className="text-purple-400">Live Preview Total: </span>
+                  <span className="text-purple-400">{msg('Live Preview Total:')} </span>
                   <span className="text-purple-700 font-medium">
                     {livePreviewTotal !== null
                       ? `HK$${livePreviewTotal.toLocaleString()}`
@@ -4364,13 +4364,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </div>
                 {serviceSubtotal > 0 && (
                   <div>
-                    <span className="text-purple-400">Services: </span>
+                    <span className="text-purple-400">{msg('Services:')} </span>
                     <span className="text-purple-700 font-medium">+ HK${serviceSubtotal.toLocaleString()}</span>
                   </div>
                 )}
                 {voucherCount > 0 && (
                   <div>
-                    <span className="text-purple-400">Voucher Deduction: </span>
+                    <span className="text-purple-400">{msg('Voucher Deduction:')} </span>
                     <span className="text-purple-700 font-medium">− HK${voucherTotal.toLocaleString()}</span>
                   </div>
                 )}
@@ -4382,7 +4382,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
                 <Ticket className="w-4 h-4 text-amber-600 shrink-0" />
                 <p className="text-sm text-amber-800">
-                  This booking used <strong>{voucherCount} voucher{voucherCount > 1 ? 's' : ''}</strong> (HK${voucherTotal.toLocaleString()} value). Vouchers are non-refundable and are excluded from the maximum refundable amount above.
+                  {msg('This booking used')} <strong>{voucherCount} voucher{voucherCount > 1 ? 's' : ''}</strong> (HK${voucherTotal.toLocaleString()} value). Vouchers are non-refundable and are excluded from the maximum refundable amount above.
                 </p>
               </div>
             )}
@@ -4390,10 +4390,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {/* Refund Amount */}
             <div>
               <label className="text-sm text-gray-700 font-medium block mb-[10px]">
-                Refund Amount (HKD) <span className="text-red-500">*</span>
+                {msg('Refund Amount (HKD)')} <span className="text-red-500">*</span>
               </label>
               <div className="flex items-center gap-2">
-                <span className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-l-md text-sm text-gray-600">HK$</span>
+                <span className="px-3 py-2 bg-gray-100 border border-gray-200 rounded-l-md text-sm text-gray-600">{msg('HK$')}</span>
                 <input
                   type="number"
                   value={refundAmount}
@@ -4417,7 +4417,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </p>
                 ) : (
                   <p className="text-xs text-gray-500 mt-1">
-                    Refund: <strong className="text-purple-700">HK${parseFloat(refundAmount).toLocaleString('en', { minimumFractionDigits: 2 })}</strong>
+                    {msg('Refund:')} <strong className="text-purple-700">HK${parseFloat(refundAmount).toLocaleString('en', { minimumFractionDigits: 2 })}</strong>
                     {amountDueAfterVouchers > 0 && (
                       <span className="text-gray-400 ml-1">
                         ({Math.round((parseFloat(refundAmount) / amountDueAfterVouchers) * 100)}% of maximum)
@@ -4430,7 +4430,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
             {/* Refund Reason */}
             <div>
-              <label className="text-sm text-gray-700 font-medium block mb-[10px]">Reason for Refund</label>
+              <label className="text-sm text-gray-700 font-medium block mb-[10px]">{msg('Reason for Refund')}</label>
               <textarea
                 value={refundReason}
                 onChange={e => setRefundReason(e.target.value)}
@@ -4444,21 +4444,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <div className="flex items-start gap-2 px-3 py-2.5 bg-purple-50 border border-purple-100 rounded-lg">
               <AlertCircle className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
               <p className="text-xs text-purple-700">
-                After confirmation, this refund case will be logged in <strong>Refund Reports</strong> and a notification will be sent to the Finance team for processing.
+                {msg('After confirmation, this refund case will be logged in')} <strong>{msg('Refund Reports')}</strong> {msg('and a notification will be sent to the Finance team for processing.')}
               </p>
             </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t">
             <Button variant="outline" className="flex-1" onClick={() => setShowRefundDialog(false)}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="flex-1 bg-purple-600 hover:bg-purple-700"
               onClick={handleProcessRefund}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Confirm Refund
+              {msg('Confirm Refund')}
             </Button>
           </div>
         </DialogContent>

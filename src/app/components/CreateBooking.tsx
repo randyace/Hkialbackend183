@@ -1904,7 +1904,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-account-type',
         key: 'accountType',
-        label: 'Account Type',
+        label: msg('Account Type'),
         message: 'Please select an account type.',
       });
     }
@@ -1912,7 +1912,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-account-number',
         key: 'accountNumber',
-        label: 'Account Number',
+        label: msg('Account Number'),
         message: 'Please enter the account number.',
       });
     }
@@ -1920,7 +1920,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-payment-mode',
         key: 'paymentMode',
-        label: 'Payment Mode',
+        label: msg('Payment Mode'),
         message: 'Please select the payment mode for agency booking.',
       });
     }
@@ -1928,7 +1928,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-visit-date',
         key: 'visitDate',
-        label: 'Visit Date',
+        label: msg('Visit Date'),
         message: 'Please enter the visit date.',
       });
     }
@@ -1936,7 +1936,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-visit-time',
         key: 'visitTime',
-        label: 'Visit Time',
+        label: msg('Visit Time'),
         message: 'Please enter the visit time.',
       });
     }
@@ -1944,7 +1944,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-flight-no',
         key: 'flightNo',
-        label: 'Flight Number',
+        label: msg('Flight Number'),
         message: 'Please enter the flight number.',
       });
     }
@@ -1952,7 +1952,7 @@ export function CreateBooking({
       issues.push({
         fieldId: 'create-flightTime',
         key: 'flightTime',
-        label: 'Flight Time',
+        label: msg('Flight Time'),
         message: 'Please enter the flight time.',
       });
     }
@@ -1965,7 +1965,7 @@ export function CreateBooking({
         issues.push({
           fieldId: 'create-leg2-arrivalDate',
           key: 'leg2ArrivalDate',
-          label: '2nd Leg Arrival Date & Time',
+          label: msg('2nd Leg Arrival Date & Time'),
           message: 'Please enter the 2nd leg arrival date and time.',
         });
       }
@@ -1973,7 +1973,7 @@ export function CreateBooking({
         issues.push({
           fieldId: 'create-leg2-flightNo',
           key: 'leg2FlightNo',
-          label: '2nd Leg Flight Number',
+          label: msg('2nd Leg Flight Number'),
           message: 'Please enter the 2nd leg flight number.',
         });
       }
@@ -1981,7 +1981,7 @@ export function CreateBooking({
         issues.push({
           fieldId: 'create-leg2-flightTime',
           key: 'leg2FlightTime',
-          label: '2nd Leg Flight Time',
+          label: msg('2nd Leg Flight Time'),
           message: 'Please enter the 2nd leg flight time.',
         });
       }
@@ -1989,7 +1989,7 @@ export function CreateBooking({
         issues.push({
           fieldId: 'create-leg2-flightClass',
           key: 'leg2FlightClass',
-          label: '2nd Leg Flight Class',
+          label: msg('2nd Leg Flight Class'),
           message: 'Please select the 2nd leg flight class.',
         });
       }
@@ -1997,7 +1997,7 @@ export function CreateBooking({
         issues.push({
           fieldId: 'create-leg2-arrivalDate',
           key: 'transitGap',
-          label: 'Transit Gap',
+          label: msg('Transit Gap'),
           message: transitGapError,
         });
       }
@@ -2169,8 +2169,8 @@ export function CreateBooking({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>Create New Booking</h1>
-          <p className="text-gray-600">Create a lounge booking for a customer</p>
+          <h1>{msg('Create New Booking')}</h1>
+          <p className="text-gray-600">{msg('Create a lounge booking for a customer')}</p>
         </div>
         <div className="flex items-center gap-3">
           {/* Round 6.2.30 (2026-06-10) — Quick Fill Demo button
@@ -2194,7 +2194,7 @@ export function CreateBooking({
                 em-dash placeholder renders while the
                 mount-effect is in flight or if the network
                 call fails (soft-fail in the wrapper). */}
-            <p className="text-xs text-gray-400">Booking No.</p>
+            <p className="text-xs text-gray-400">{msg('Booking No.')}</p>
             <p className="font-mono text-sm text-[#0f2942]">
               {bookingNo || '—'}
             </p>
@@ -2219,14 +2219,14 @@ export function CreateBooking({
             1. ACCOUNT & GUEST INFORMATION
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Account &amp; Guest Information</h2>
+          <h2 className="mb-1">{msg('Account &amp; Guest Information')}</h2>
           <p className="text-sm text-gray-500 mb-6">
-            Select account type and enter guest details. Agency accounts auto-apply their default discount rate.
+            {msg('Select account type and enter guest details. Agency accounts auto-apply their default discount rate.')}
           </p>
 
           {/* Account Type */}
           <div className="mb-6" id="create-account-type">
-            <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Type <span className="text-red-500">*</span></label>
+            <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Account Type')} <span className="text-red-500">*</span></label>
             <div className="grid grid-cols-3 gap-4">
               {(['Individual', 'Corporate', 'Agency'] as const).map(type => (
                 <button key={type} type="button"
@@ -2239,7 +2239,7 @@ export function CreateBooking({
                     {type === 'Agency' && <Plane className="w-5 h-5" />}
                   </div>
                   <span className="text-sm font-medium">{type}</span>
-                  {type === 'Agency' && <span className="text-xs text-green-600 flex items-center gap-1"><BadgePercent className="w-3 h-3" />Discount auto-applies</span>}
+                  {type === 'Agency' && <span className="text-xs text-green-600 flex items-center gap-1"><BadgePercent className="w-3 h-3" />{msg('Discount auto-applies')}</span>}
                 </button>
               ))}
             </div>
@@ -2254,7 +2254,7 @@ export function CreateBooking({
           {accountType === 'Agency' && (
             <div className="mb-6 space-y-4">
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Travel Agency</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Travel Agency')}</label>
                 {selectedAccount?.travel_agency?.[0] ? (
                   <div className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50 flex items-center gap-2 text-gray-700">
                     <Building2 className="w-3.5 h-3.5 text-gray-400" />
@@ -2266,7 +2266,7 @@ export function CreateBooking({
                   </div>
                 ) : (
                   <div className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-md text-sm bg-gray-50 text-gray-500 italic">
-                    Search and select an Agency-typed account below — the agency is linked to the account and cannot be chosen ad-hoc.
+                    {msg('Search and select an Agency-typed account below — the agency is linked to the account and cannot be chosen ad-hoc.')}
                   </div>
                 )}
               </div>
@@ -2274,10 +2274,10 @@ export function CreateBooking({
                 <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-green-800">Default Discount Automatically Applied</p>
+                    <p className="text-sm font-semibold text-green-800">{msg('Default Discount Automatically Applied')}</p>
                     <p className="text-sm text-green-700 mt-0.5">
                       <strong>{selectedAgency.name}</strong> ({selectedAgency.code}) — <strong>{selectedAgency.discountRate}%</strong> off
-                      {selectedAgency.paymentMethod ? <> · Payment: <strong>{selectedAgency.paymentMethod}</strong></> : null}
+                      {selectedAgency.paymentMethod ? <> {msg('· Payment:')} <strong>{selectedAgency.paymentMethod}</strong></> : null}
                     </p>
                   </div>
                 </div>
@@ -2292,7 +2292,7 @@ export function CreateBooking({
                 >
                   <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
+                    <p className="text-sm font-semibold text-purple-800">{msg('Account Credit Balance')}</p>
                     {(() => {
                       const balance = Number(selectedAccount.credit_balance) || 0;
                       const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
@@ -2326,8 +2326,8 @@ export function CreateBooking({
                           </p>
                           {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
                             <p className="text-xs text-purple-600 mt-1">
-                              OnCredit places a <strong>hold at create</strong>; balance is captured when the
-                              booking is <strong>Approved</strong>. Available already subtracts open holds.
+                              {msg('OnCredit places a')} <strong>{msg('hold at create')}</strong>; balance is captured when the
+                              booking is <strong>{msg('Approved')}</strong>{msg('. Available already subtracts open holds.')}
                             </p>
                           )}
                         </>
@@ -2342,7 +2342,7 @@ export function CreateBooking({
           {/* Core Guest Fields */}
           <div className="grid grid-cols-2 gap-6">
             <div className="relative">
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Number <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Account Number')} <span className="text-red-500">*</span></label>
               {accountSearchResults !== undefined ? (
                 <div className="relative">
                   <input type="text"
@@ -2355,9 +2355,9 @@ export function CreateBooking({
                   {showAccountDropdown && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
                       {accountSearchLoading ? (
-                        <div className="px-4 py-3 text-sm text-gray-500 text-center">Searching…</div>
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">{msg('Searching…')}</div>
                       ) : accountSearchResults.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-gray-500">No accounts found</div>
+                        <div className="px-4 py-3 text-sm text-gray-500">{msg('No accounts found')}</div>
                       ) : accountSearchResults.map(acc => (
                         <button key={acc.id} type="button"
                           onMouseDown={e => { e.preventDefault(); setAccountNumber(acc.accountNumber); setAccountType(acc.type); setShowAccountDropdown(false); if (onAccountSelect) onAccountSelect(acc); }}
@@ -2383,7 +2383,7 @@ export function CreateBooking({
               )}
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Search Guest</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Search Guest')}</label>
               <div className="relative">
                 <input type="text"
                   value={guestName}
@@ -2395,9 +2395,9 @@ export function CreateBooking({
                 {(showGuestDropdown || guestSearchFocused) && guestSearchResults !== undefined && (
                   <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
                     {guestSearchLoading ? (
-                      <div className="px-4 py-3 text-sm text-gray-500 text-center">Searching…</div>
+                      <div className="px-4 py-3 text-sm text-gray-500 text-center">{msg('Searching…')}</div>
                     ) : guestSearchResults.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-gray-500">No guests found</div>
+                      <div className="px-4 py-3 text-sm text-gray-500">{msg('No guests found')}</div>
                     ) : guestSearchResults.map(acc => (
                       <button key={acc.id} type="button"
                         onMouseDown={e => { e.preventDefault(); setGuestName(acc.name); setAccountNumber(acc.accountNumber); setAccountType(acc.type); setShowGuestDropdown(false); setGuestSearchFocused(false); if (onGuestSearchSelect) onGuestSearchSelect(acc); }}
@@ -2413,29 +2413,29 @@ export function CreateBooking({
             </div>
             <div className="col-span-2 grid grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>First Name</label>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>{msg('First Name')}</label>
                   <input type="text" value={selectedAccount?.first_name || ''} readOnly
                     className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>Last Name</label>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>{msg('Last Name')}</label>
                   <input type="text" value={selectedAccount?.last_name || ''} readOnly
                     className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>Contact Number</label>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>{msg('Contact Number')}</label>
                   <input type="text" value={selectedAccount?.phone || ''} readOnly
                     className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>E-mail</label>
+                  <label className="text-xs text-gray-500 block" style={{ marginBottom: '4px' }}>{msg('E-mail')}</label>
                   <input type="text" value={selectedAccount?.email || ''} readOnly
                     className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
                 </div>
               </div>
             {accountType === 'Corporate' && (
               <div className="col-span-2">
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Company Name</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Company Name')}</label>
                 <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)}
                   placeholder={msg('Corporate account company name')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -2443,7 +2443,7 @@ export function CreateBooking({
             )}
             {accountType === 'Individual' && (
               <div>
-                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
+                <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Membership Tier')}</label>
                 <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)} disabled={!!selectedAccount}>
                   <SelectTrigger><SelectValue placeholder={msg('Select tier')} /></SelectTrigger>
                   <SelectContent>
@@ -2456,16 +2456,16 @@ export function CreateBooking({
             )}
             {accountType === 'Individual' && selectedAccount && (
               <div className="col-span-2 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-                <p className="text-sm font-medium text-[#0f2942] mb-2">Membership benefits</p>
+                <p className="text-sm font-medium text-[#0f2942] mb-2">{msg('Membership benefits')}</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-gray-600">Free LD entries left</span>
+                    <span className="text-gray-600">{msg('Free LD entries left')}</span>
                     <p className="font-semibold text-[#0f2942]" data-testid="membership-ld-remaining">
                       {formatMembershipQuota(selectedAccount.ld_entries_remaining)}
                     </p>
                   </div>
                   <div>
-                    <span className="text-gray-600">Free PS upgrades left</span>
+                    <span className="text-gray-600">{msg('Free PS upgrades left')}</span>
                     <p className="font-semibold text-[#0f2942]" data-testid="membership-ps-remaining">
                       {formatMembershipQuota(selectedAccount.ps_free_upgrades_remaining)}
                     </p>
@@ -2481,8 +2481,8 @@ export function CreateBooking({
                       onChange={(e) => setUseMembershipLdFree(e.target.checked)}
                     />
                     <span>
-                      <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD).</span>
+                      <span className="font-medium text-[#0f2942]">{msg('Use free LD entry credit')}</span>
+                      <span className="block text-xs text-gray-500">{msg('Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD).')}</span>
                     </span>
                   </label>
                   <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -2494,20 +2494,20 @@ export function CreateBooking({
                       onChange={(e) => setUseMembershipPsFree(e.target.checked)}
                     />
                     <span>
-                      <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base only if LD credit is checked.</span>
+                      <span className="font-medium text-[#0f2942]">{msg('Use free PS upgrade credit')}</span>
+                      <span className="block text-xs text-gray-500">{msg('Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base only if LD credit is checked.')}</span>
                     </span>
                   </label>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Uncheck to keep the credit unused for this booking. No tier % discount.
+                  {msg('Uncheck to keep the credit unused for this booking. No tier % discount.')}
                 </p>
               </div>
             )}
             <div id="create-payment-mode">
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Payment Mode <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Payment Mode')} <span className="text-red-500">*</span></label>
               <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setFieldErrors((prev) => { if (!prev.paymentMode) return prev; const n = { ...prev }; delete n.paymentMode; return n; }); }}>
-                <SelectTrigger className={fieldErrors.paymentMode ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select payment mode" /></SelectTrigger>
+                <SelectTrigger className={fieldErrors.paymentMode ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder={msg('Select payment mode')} /></SelectTrigger>
                 <SelectContent>
                   {paymentModeOptions().map(m => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
@@ -2521,7 +2521,7 @@ export function CreateBooking({
               )}
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking Channel</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Booking Channel')}</label>
               <div className="flex gap-3">
                 {(['Online', 'Email/Call to HKIAL'] as const).map(ch => (
                   <button key={ch} type="button"
@@ -2532,7 +2532,7 @@ export function CreateBooking({
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Discount</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Account Discount')}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="number" min={0} max={100} step={1}
@@ -2552,12 +2552,12 @@ export function CreateBooking({
                 {selectedAgency
                   ? <>Default {selectedAgency.discountRate}% (Agency){accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}</>
                   : accountType === 'Individual'
-                    ? <>Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %</>
+                    ? <>{msg('Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %')}</>
                     : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Remark</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Account Remark')}</label>
               <input type="text" value={accountRemark} onChange={e => setAccountRemark(e.target.value)}
                 placeholder={msg('e.g. VIP Member – Priority Service')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -2565,10 +2565,10 @@ export function CreateBooking({
             <div className="flex items-center gap-3 col-span-2 pt-1">
               <Checkbox id="adhoc" checked={isAdHoc} onCheckedChange={v => setIsAdHoc(v as boolean)} />
               <label htmlFor="adhoc" className="cursor-pointer text-sm">
-                <span className="font-medium">Mark as Ad-hoc / Urgent Booking</span>
-                <span className="text-gray-500 ml-2">(booking submitted within 48-hour cut-off window)</span>
+                <span className="font-medium">{msg('Mark as Ad-hoc / Urgent Booking')}</span>
+                <span className="text-gray-500 ml-2">{msg('(booking submitted within 48-hour cut-off window)')}</span>
               </label>
-              {isAdHoc && <Badge className="bg-amber-100 text-amber-700 border border-amber-200 ml-1">Ad-hoc</Badge>}
+              {isAdHoc && <Badge className="bg-amber-100 text-amber-700 border border-amber-200 ml-1">{msg('Ad-hoc')}</Badge>}
             </div>
           </div>
         </Card>
@@ -2577,14 +2577,14 @@ export function CreateBooking({
             2. FLIGHT INFORMATION
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-6">Flight Information</h2>
+          <h2 className="mb-6">{msg('Flight Information')}</h2>
 
           {/* Row 1 — Flight Type · Flight Date */}
           <div className="grid grid-cols-2 gap-6 mb-6">
 
             {/* Flight Type */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Type <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Type')} <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
                 {([
                   { type: 'Arrival'    as FlightType, activeClass: 'bg-emerald-600 border-emerald-600 text-white', iconClass: '-rotate-45' },
@@ -2619,7 +2619,7 @@ export function CreateBooking({
 
             {/* Flight Number */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Number')} <span className="text-red-500">*</span></label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -2680,7 +2680,7 @@ export function CreateBooking({
 
             {/* Flight Time */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time (STD/STA) <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Time (STD/STA)')} <span className="text-red-500">*</span></label>
               {/* 2026-07-07 (round 6.2.121) — Sky's Safari/Firefox
                   timepicker fix: replaced the native `<input type="time">`
                   (which ignored `step={300}` on Chrome/Safari AND had
@@ -2707,7 +2707,7 @@ export function CreateBooking({
             {/* Origin — IATA typeahead (city / code search; stores 3-letter code) */}
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-origin">
-                Origin (IATA)
+                {msg('Origin (IATA)')}
               </label>
               <AirportTypeahead
                 id="create-flight-origin"
@@ -2727,7 +2727,7 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }} htmlFor="create-flight-destination">
                 Destination (IATA)
                 {showTransit && flightType === 'Transit'
-                  ? <span className="ml-2 text-xs font-normal text-gray-400">— optional</span>
+                  ? <span className="ml-2 text-xs font-normal text-gray-400">{msg('— optional')}</span>
                   : null
                 }
               </label>
@@ -2741,14 +2741,14 @@ export function CreateBooking({
               {showTransit && flightType === 'Transit' && (
                 <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
                   <Info className="w-3 h-3 flex-shrink-0" />
-                  Final destination may not be identifiable from the transit flight number.
+                  {msg('Final destination may not be identifiable from the transit flight number.')}
                 </p>
               )}
             </div>
 
             {/* Luggage */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Number of Luggage</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Number of Luggage')}</label>
               <div className="relative">
                 <Luggage className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input type="number" min={0} value={numberOfLuggage}
@@ -2759,14 +2759,14 @@ export function CreateBooking({
 
             {/* Flight Class */}
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Class (Main VIP Passenger)</label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Flight Class (Main VIP Passenger)')}</label>
               <Select value={flightClass} onValueChange={v => setFlightClass(v as FlightClass)}>
                 <SelectTrigger><SelectValue placeholder={msg('Select class')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Economy Class">Economy Class</SelectItem>
-                  <SelectItem value="Business Class">Business Class</SelectItem>
+                  <SelectItem value="Economy Class">{msg('Economy Class')}</SelectItem>
+                  <SelectItem value="Business Class">{msg('Business Class')}</SelectItem>
                   <SelectItem value="First Class">
-                    <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />First Class</span>
+                    <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />{msg('First Class')}</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -2784,14 +2784,14 @@ export function CreateBooking({
               disappears when the wrapper opts out of Transit. */}
           {showTransit && flightType === 'Transit' && (
             <div className="mt-6 pt-6 border-t border-gray-200" data-testid="transit-leg2-block">
-              <h3 className="text-sm font-semibold text-sky-700 mb-1">2nd Flight (Outbound) <span className="text-red-500">*</span></h3>
+              <h3 className="text-sm font-semibold text-sky-700 mb-1">{msg('2nd Flight (Outbound)')} <span className="text-red-500">*</span></h3>
               <p className="text-xs text-gray-500 mb-4">
                 The 2nd leg of your transit. The 1st leg (above) is your inbound to HKG; this is your outbound.
                 Gap between leg 1 arrival and leg 2 arrival must be at least 6 hours.
               </p>
               <div className="grid grid-cols-2 gap-6 mb-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date &amp; Time <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Leg 2 Arrival Date &amp; Time')} <span className="text-red-500">*</span></label>
                   <input
                     id="create-leg2-arrivalDate"
                     type="datetime-local"
@@ -2834,7 +2834,7 @@ export function CreateBooking({
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Number <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Leg 2 Flight Number')} <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -2856,7 +2856,7 @@ export function CreateBooking({
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Time (STD) <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Leg 2 Flight Time (STD)')} <span className="text-red-500">*</span></label>
                   {/* 2026-07-07 (round 6.2.121) — see comment on the
                       leg-1 Flight Time cell above. Same Safari/Firefox
                       fix. `testId="leg2-flightTime"` is preserved so
@@ -2876,14 +2876,14 @@ export function CreateBooking({
                   )}
                 </div>
                 <div id="create-leg2-flightClass">
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Flight Class <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Leg 2 Flight Class')} <span className="text-red-500">*</span></label>
                   <Select value={leg2FlightClass} onValueChange={v => { setLeg2FlightClass(v as FlightClass); setFieldErrors((prev) => { if (!prev.leg2FlightClass) return prev; const n = { ...prev }; delete n.leg2FlightClass; return n; }); }}>
-                    <SelectTrigger data-testid="leg2-flightClass" className={fieldErrors.leg2FlightClass ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectTrigger data-testid="leg2-flightClass" className={fieldErrors.leg2FlightClass ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder={msg('Select class')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Economy Class">Economy Class</SelectItem>
-                      <SelectItem value="Business Class">Business Class</SelectItem>
+                      <SelectItem value="Economy Class">{msg('Economy Class')}</SelectItem>
+                      <SelectItem value="Business Class">{msg('Business Class')}</SelectItem>
                       <SelectItem value="First Class">
-                        <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />First Class</span>
+                        <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />{msg('First Class')}</span>
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -2908,12 +2908,12 @@ export function CreateBooking({
             3. BOOKING DETAILS
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-6">Booking Details</h2>
+          <h2 className="mb-6">{msg('Booking Details')}</h2>
 
           {/* Visit Date / Time */}
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Visit Date')} <span className="text-red-500">*</span></label>
               <input type="date" id="create-visit-date" value={visitDate}
                 onChange={e => { setVisitDate(e.target.value); setFieldErrors((prev) => { if (!prev.visitDate) return prev; const n = { ...prev }; delete n.visitDate; return n; }); }}
                 className={`${dateInputClassName(visitDate)}${fieldErrors.visitDate ? ' border-red-400 bg-red-50' : ''}`} />
@@ -2924,7 +2924,7 @@ export function CreateBooking({
               )}
             </div>
             <div>
-              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time <span className="text-red-500">*</span></label>
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>{msg('Visit Time')} <span className="text-red-500">*</span></label>
               {/* 2026-07-07 (round 6.2.121) — Sky's Safari/Firefox
                   timepicker fix: swapped the native `<input type="time">`
                   (with `min`/`max` that didn't work on Safari/Firefox
@@ -2961,8 +2961,8 @@ export function CreateBooking({
           <div id="create-premiere-suite-section" className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h4 className="text-sm font-semibold text-gray-800">Part 1 — Premiere Suite</h4>
-                <p className="text-xs text-gray-500 mt-0.5">Max 6 guests (VIP + Non-Flying) per suite · At least 1 VIP Passenger required</p>
+                <h4 className="text-sm font-semibold text-gray-800">{msg('Part 1 — Premiere Suite')}</h4>
+                <p className="text-xs text-gray-500 mt-0.5">{msg('Max 6 guests (VIP + Non-Flying) per suite · At least 1 VIP Passenger required')}</p>
               </div>
               {numPremiereSuites > 0 && (
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${psOverCapacity ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -2981,21 +2981,21 @@ export function CreateBooking({
             )}
             <div className="grid grid-cols-3 gap-6">
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Premiere Suite</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Quantity of Premiere Suite')}</label>
                 <input type="number" min={0} value={numPremiereSuites}
                   onChange={e => setNumPremiereSuites(Math.max(0, parseInt(e.target.value) || 0))}
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psGuestsNoSuite ? 'border-red-400 bg-red-50' : ''}`} />
-                {psGuestsNoSuite && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Must be at least 1</p>}
+                {psGuestsNoSuite && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{msg('Must be at least 1')}</p>}
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Quantity of VIP Passengers')}</label>
                 <input type="number" min={0} value={vipPS}
                   onChange={e => openDeleteDialog('PS', Math.max(0, parseInt(e.target.value) || 0))}
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
-                {(psNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                {(psNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{msg('Required')}</p>}
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Quantity of Non-Flying Guests')}</label>
                 <input type="number" min={0} value={nonFlyingPS}
                   onChange={e => setNonFlyingPS(Math.max(0, parseInt(e.target.value) || 0))}
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${psOverCapacity ? 'border-red-400 bg-red-50' : ''}`} />
@@ -3006,7 +3006,7 @@ export function CreateBooking({
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Assign Physical Suites <span className="text-gray-400 font-normal">(optional)</span></p>
+                  <p className="text-sm font-medium text-gray-700">{msg('Assign Physical Suites')} <span className="text-gray-400 font-normal">{msg('(optional)')}</span></p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Check up to {numPremiereSuites} suite{numPremiereSuites === 1 ? '' : 's'} (CIP 1–6, Function Room).
                   </p>
@@ -3022,9 +3022,9 @@ export function CreateBooking({
                 )}
               </div>
               {numPremiereSuites === 0 ? (
-                <p className="text-xs text-gray-400 italic">Set Quantity of Premiere Suite above to enable suite assignment.</p>
+                <p className="text-xs text-gray-400 italic">{msg('Set Quantity of Premiere Suite above to enable suite assignment.')}</p>
               ) : physicalSuites.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No physical suites available — ask an administrator to seed CIP 1-6 / Function Room.</p>
+                <p className="text-xs text-gray-400 italic">{msg('No physical suites available — ask an administrator to seed CIP 1-6 / Function Room.')}</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {physicalSuites.map(s => {
@@ -3075,8 +3075,8 @@ export function CreateBooking({
           <div id="create-lounge-deluxe-section" className={`border rounded-lg p-4 ${ldErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
-                <p className="text-xs text-gray-500 mt-0.5">Max 3 Non-Flying Guests per booking · At least 1 VIP Passenger required</p>
+                <h4 className="text-sm font-semibold text-gray-800">{msg('Part 2 — Lounge Deluxe')}</h4>
+                <p className="text-xs text-gray-500 mt-0.5">{msg('Max 3 Non-Flying Guests per booking · At least 1 VIP Passenger required')}</p>
               </div>
               <span className={`text-xs px-2 py-1 rounded-full font-medium ${ldNonFlyingOver ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                 {nonFlyingLD} / 3 non-flying used
@@ -3084,28 +3084,28 @@ export function CreateBooking({
             </div>
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of VIP Passengers</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Quantity of VIP Passengers')}</label>
                 <input type="number" min={0} value={vipLD}
                   onChange={e => openDeleteDialog('LD', Math.max(0, parseInt(e.target.value) || 0))}
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNoAdult || noFlyingGuest ? 'border-red-400 bg-red-50' : ''}`} />
-                {(ldNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Required</p>}
+                {(ldNoAdult || noFlyingGuest) && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{msg('Required')}</p>}
               </div>
               <div>
-                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Quantity of Non-Flying Guests</label>
+                <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Quantity of Non-Flying Guests')}</label>
                 <input type="number" min={0} value={nonFlyingLD}
                   onChange={e => setNonFlyingLD(Math.max(0, parseInt(e.target.value) || 0))}
                   className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 ${ldNonFlyingOver ? 'border-red-400 bg-red-50' : ''}`} />
-                {ldNonFlyingOver && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Max 3 allowed</p>}
+                {ldNonFlyingOver && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{msg('Max 3 allowed')}</p>}
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Lounge Deluxe quantity = number of VIP Passengers (1 LD = 1 LDVIP).</p>
+            <p className="text-xs text-gray-500 mt-2">{msg('Lounge Deluxe quantity = number of VIP Passengers (1 LD = 1 LDVIP).')}</p>
 
             {/* Lounge Deluxe — physical lobby checkboxes */}
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Assign Lobby Seats <span className="text-gray-400 font-normal">(optional, free choice)</span></p>
-                  <p className="text-xs text-gray-500 mt-0.5">Check any subset of Lobby 1–8 that the guest will use.</p>
+                  <p className="text-sm font-medium text-gray-700">{msg('Assign Lobby Seats')} <span className="text-gray-400 font-normal">{msg('(optional, free choice)')}</span></p>
+                  <p className="text-xs text-gray-500 mt-0.5">{msg('Check any subset of Lobby 1–8 that the guest will use.')}</p>
                 </div>
                 {assignedLoungeIds.length > 0 && (
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -3122,7 +3122,7 @@ export function CreateBooking({
                 )}
               </div>
               {physicalLounges.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">No physical lounges available — ask an administrator to seed Lobby 1-8.</p>
+                <p className="text-xs text-gray-400 italic">{msg('No physical lounges available — ask an administrator to seed Lobby 1-8.')}</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {physicalLounges.map(l => {
@@ -3180,11 +3180,11 @@ export function CreateBooking({
             4. CONTACT PERSON
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-6">Contact Person</h2>
+          <h2 className="mb-6">{msg('Contact Person')}</h2>
           <div className="grid grid-cols-3 gap-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Name</span>
+                <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{msg('Name')}</span>
               </label>
               <input type="text" value={contactName} onChange={e => setContactName(e.target.value)}
                 placeholder={msg('Full name of contact person')}
@@ -3192,7 +3192,7 @@ export function CreateBooking({
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Contact Email</span>
+                <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{msg('Contact Email')}</span>
               </label>
               <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)}
                 placeholder={msg('e.g. contact@example.com')}
@@ -3200,11 +3200,11 @@ export function CreateBooking({
             </div>
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />Contact No.</span>
+                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{msg('Contact No.')}</span>
               </label>
               <div className="flex gap-2">
                 {/* 2026-06-23 — replaced the hardcoded 4-region <select>
-                    with the typeahead <RegionCodeCombobox> sourced from
+                    {msg('with the typeahead')} <RegionCodeCombobox> sourced from
                     GET /api/lookups/region-codes via the wrapper's
                     `regionCodes` prop. Width w-32 leaves room for the
                     formatted "852 - Hong Kong" display. */}
@@ -3225,7 +3225,7 @@ export function CreateBooking({
             </div>
             <div className="col-span-3">
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />Booking Memo</span>
+                <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />{msg('Booking Memo')}</span>
               </label>
               <textarea value={bookingMemo} onChange={e => setBookingMemo(e.target.value)}
                 placeholder={msg('Internal notes or special instructions for this booking…')}
@@ -3241,7 +3241,7 @@ export function CreateBooking({
         <Card className="p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h2>VIP Passenger Details</h2>
+              <h2>{msg('VIP Passenger Details')}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 {/* 2026-06-09 round 6.2.22 — badge count was
                     `passengers.length` (the raw array length),
@@ -3265,7 +3265,7 @@ export function CreateBooking({
 
           {(vipPS + vipLD) === 0 ? (
             <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-              <p className="text-sm">Assign VIP Passengers in the Booking Details section above.</p>
+              <p className="text-sm">{msg('Assign VIP Passengers in the Booking Details section above.')}</p>
             </div>
           ) : (
             <div className="space-y-6">
@@ -3298,61 +3298,61 @@ export function CreateBooking({
                       {/* Row 1 */}
                       <div className="grid grid-cols-6 gap-4">
                         <div className="col-span-1">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Title</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Title')}</label>
                           <select value={p.title} onChange={e => updatePassenger(idx, 'title', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">—</option>
-                            <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Prof</option>
+                            <option>{msg('Mr')}</option><option>{msg('Mrs')}</option><option>{msg('Ms')}</option><option>{msg('Miss')}</option><option>{msg('Dr')}</option><option>{msg('Prof')}</option>
                           </select>
                         </div>
                         <div className="col-span-2">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('First Name')}</label>
                           <input type="text" value={p.firstName} onChange={e => updatePassenger(idx, 'firstName', e.target.value)}
                             placeholder={msg('First name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-2">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Last Name')}</label>
                           <input type="text" value={p.lastName} onChange={e => updatePassenger(idx, 'lastName', e.target.value)}
                             placeholder={msg('Last name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-1">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Travel Doc No.</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Travel Doc No.')}</label>
                           <input type="text" value={p.travelDocNo} onChange={e => updatePassenger(idx, 'travelDocNo', e.target.value)}
-                            placeholder="e.g. K12345678"
+                            placeholder={msg('e.g. K12345678')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                       </div>
                       {/* Row 2 */}
                       <div className="grid grid-cols-6 gap-4">
                         <div className="col-span-1">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Membership No.</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Membership No.')}</label>
                           <input type="text" value={p.membershipNo} onChange={e => updatePassenger(idx, 'membershipNo', e.target.value)}
                             placeholder={msg('MEM-XXXX')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-2">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Age Group</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Age Group')}</label>
                           <select value={p.ageGroup} onChange={e => updatePassenger(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
-                            <option value="">Select age group</option>
-                            <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                            <option value="Children (aged 2-11)">Children (aged 2-11)</option>
-                            <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
+                            <option value="">{msg('Select age group')}</option>
+                            <option value="Adults (aged 12 and above)">{msg('Adults (aged 12 and above)')}</option>
+                            <option value="Children (aged 2-11)">{msg('Children (aged 2-11)')}</option>
+                            <option value="Infants (under 2 years old)">{msg('Infants (under 2 years old)')}</option>
                           </select>
                         </div>
                         <div className="col-span-3">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Birthday')}</label>
                           <div className="grid grid-cols-3 gap-2">
                             <select value={p.birthdayDay} onChange={e => updatePassenger(idx, 'birthdayDay', e.target.value)}
                               className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
-                              <option value="">Day</option>
+                              <option value="">{msg('Day')}</option>
                               {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => <option key={d}>{d}</option>)}
                             </select>
                             <select value={p.birthdayMonth} onChange={e => updatePassenger(idx, 'birthdayMonth', e.target.value)}
                               className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
-                              <option value="">Month</option>
+                              <option value="">{msg('Month')}</option>
                               {MONTHS.map(m => <option key={m}>{m}</option>)}
                             </select>
                             <input type="number" value={p.birthdayYear} onChange={e => updatePassenger(idx, 'birthdayYear', e.target.value)}
@@ -3363,7 +3363,7 @@ export function CreateBooking({
                       </div>
                       {/* Row 3: Nationality (ISO alpha-2) */}
                       <div>
-                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Nationality *')}</label>
                         <NationalityTypeahead
                           id={`create-vip-nationality-${idx}`}
                           value={p.nationality}
@@ -3381,7 +3381,7 @@ export function CreateBooking({
                       <div>
                         <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-                          Food Allergies
+                          {msg('Food Allergies')}
                         </label>
                         <input
                           type="text"
@@ -3392,7 +3392,7 @@ export function CreateBooking({
                         />
                         {p.foodAllergies && (
                           <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                            <AlertCircle className="w-3 h-3" /> {msg('Allergy noted — please inform kitchen &amp; F&amp;B staff')}
                           </p>
                         )}
                       </div>
@@ -3410,7 +3410,7 @@ export function CreateBooking({
         {(nonFlyingPS + nonFlyingLD) > 0 && (
           <Card className="p-6">
             <div className="mb-5">
-              <h2>Non-Flying Guest Details</h2>
+              <h2>{msg('Non-Flying Guest Details')}</h2>
               {/* 2026-06-09 round 6.2.22 — same fix as the VIP
                   badge (line 1492-1502): report the CONFIGURED
                   count (nonFlyingPS + nonFlyingLD), not the raw
@@ -3445,38 +3445,38 @@ export function CreateBooking({
                     <div className="p-4">
                       <div className="grid grid-cols-4 gap-4">
                         <div>
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Title</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Title')}</label>
                           <select value={g.title} onChange={e => updateNonFlying(idx, 'title', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">—</option>
-                            <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Prof</option>
+                            <option>{msg('Mr')}</option><option>{msg('Mrs')}</option><option>{msg('Ms')}</option><option>{msg('Miss')}</option><option>{msg('Dr')}</option><option>{msg('Prof')}</option>
                           </select>
                         </div>
                         <div>
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('First Name')}</label>
                           <input type="text" value={g.firstName} onChange={e => updateNonFlying(idx, 'firstName', e.target.value)}
                             placeholder={msg('First name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div>
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Last Name')}</label>
                           <input type="text" value={g.lastName} onChange={e => updateNonFlying(idx, 'lastName', e.target.value)}
                             placeholder={msg('Last name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div>
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Age Group</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Age Group')}</label>
                           <select value={g.ageGroup} onChange={e => updateNonFlying(idx, 'ageGroup', e.target.value)}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
-                            <option value="">Select age group</option>
-                            <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
-                            <option value="Children (aged 2-11)">Children (aged 2-11)</option>
-                            <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
+                            <option value="">{msg('Select age group')}</option>
+                            <option value="Adults (aged 12 and above)">{msg('Adults (aged 12 and above)')}</option>
+                            <option value="Children (aged 2-11)">{msg('Children (aged 2-11)')}</option>
+                            <option value="Infants (under 2 years old)">{msg('Infants (under 2 years old)')}</option>
                           </select>
                         </div>
                       </div>
                       <div className="mt-4">
-                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Nationality *')}</label>
                         <NationalityTypeahead
                           id={`create-nfg-nationality-${idx}`}
                           value={g.nationality}
@@ -3498,7 +3498,7 @@ export function CreateBooking({
                       <div className="mt-4">
                         <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 text-red-400" />
-                          Food Allergies
+                          {msg('Food Allergies')}
                         </label>
                         <input
                           type="text"
@@ -3509,7 +3509,7 @@ export function CreateBooking({
                         />
                         {g.foodAllergies && (
                           <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                            <AlertCircle className="w-3 h-3" /> {msg('Allergy noted — please inform kitchen &amp; F&amp;B staff')}
                           </p>
                         )}
                       </div>
@@ -3525,8 +3525,8 @@ export function CreateBooking({
             7. ADD-ON SERVICES
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Add-on Services</h2>
-          <p className="text-sm text-gray-500 mb-5">Search and select services to include with this booking.</p>
+          <h2 className="mb-1">{msg('Add-on Services')}</h2>
+          <p className="text-sm text-gray-500 mb-5">{msg('Search and select services to include with this booking.')}</p>
 
           {(() => {
             // Full service catalogue for Create Booking
@@ -3706,7 +3706,7 @@ export function CreateBooking({
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
                       {dropdownResults.length === 0 ? (
                         <div className="px-4 py-3 text-sm text-gray-500">
-                          No services found for "<span className="font-medium">{addonSearch}</span>"
+                          {msg('No services found for "')}<span className="font-medium">{addonSearch}</span>"
                         </div>
                       ) : dropdownResults.map((rawSvc) => {
                         // 2026-06-08 round 6.2.8 — apply DB price override
@@ -3763,7 +3763,7 @@ export function CreateBooking({
                   <div className="p-4 rounded-lg border border-purple-200 bg-purple-50/40">
                     <div className="flex items-center gap-2 mb-3">
                       <Car className="w-4 h-4 text-purple-600" />
-                      <p className="text-sm text-purple-800 font-medium">Limousine Transfer — Pick-up &amp; Drop-off Stops</p>
+                      <p className="text-sm text-purple-800 font-medium">{msg('Limousine Transfer — Pick-up &amp; Drop-off Stops')}</p>
                     </div>
                     <div className="space-y-2">
                       {limoStops.map((stop, i) => (
@@ -3771,7 +3771,7 @@ export function CreateBooking({
                           <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">{i + 1}</span>
                           <select value={stop.type} onChange={e => updateLimoStop(stop.id, 'type', e.target.value)}
                             className="px-2 py-1.5 border border-gray-300 rounded text-sm w-32 bg-white shrink-0">
-                            <option>Pick-up</option><option>Destination</option>
+                            <option>{msg('Pick-up')}</option><option>{msg('Destination')}</option>
                           </select>
                           <div className="relative flex-1">
                             <MapPin className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -3787,7 +3787,7 @@ export function CreateBooking({
                       ))}
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={addLimoStop} className="mt-3 gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
-                      <Plus className="w-3.5 h-3.5" />Add Stop
+                      <Plus className="w-3.5 h-3.5" />{msg('Add Stop')}
                     </Button>
                   </div>
                 )}
@@ -3797,9 +3797,9 @@ export function CreateBooking({
                   <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/40">
                     <div className="flex items-center gap-2 mb-3">
                       <Accessibility className="w-4 h-4 text-blue-600" />
-                      <p className="text-sm text-blue-800 font-medium">Wheelchair Assistance — Passenger Details</p>
+                      <p className="text-sm text-blue-800 font-medium">{msg('Wheelchair Assistance — Passenger Details')}</p>
                     </div>
-                    <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Passenger Name</label>
+                    <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>{msg('Passenger Name')}</label>
                     <input type="text" value={wheelchairPassenger} onChange={e => setWheelchairPassenger(e.target.value)}
                       placeholder={msg('Name of passenger requiring assistance')}
                       className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
@@ -3814,10 +3814,10 @@ export function CreateBooking({
                   <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/40">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock className="w-4 h-4 text-amber-600" />
-                      <p className="text-sm text-amber-800 font-medium">Lounge Extension — Additional Hours</p>
+                      <p className="text-sm text-amber-800 font-medium">{msg('Lounge Extension — Additional Hours')}</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <label className="text-sm text-gray-600">Hours</label>
+                      <label className="text-sm text-gray-600">{msg('Hours')}</label>
                       <button type="button" onClick={() => setLoungeExtensionQty(q => Math.max(1, q - 1))}
                         disabled={loungeExtensionQty <= 1}
                         className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
@@ -3834,7 +3834,7 @@ export function CreateBooking({
                         className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
                         <Plus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="text-xs text-gray-500">(max 6 hours per booking)</span>
+                      <span className="text-xs text-gray-500">{msg('(max 6 hours per booking)')}</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-2">
                       HK${(bookableItemPrices?.['Lounge Extension'] ?? 0).toLocaleString()} per hour
@@ -3859,8 +3859,8 @@ export function CreateBooking({
             8. PROMO / REDEMPTION CODE
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Promotion / Redemption Code</h2>
-          <p className="text-sm text-gray-500 mb-4">Enter a promo or redemption code to apply a discount to this booking.</p>
+          <h2 className="mb-1">{msg('Promotion / Redemption Code')}</h2>
+          <p className="text-sm text-gray-500 mb-4">{msg('Enter a promo or redemption code to apply a discount to this booking.')}</p>
           {promoApplied ? (
             <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50">
               <div className="flex items-center gap-3">
@@ -3886,7 +3886,7 @@ export function CreateBooking({
                   } else {
                     setLocalPromoApplied(null);
                   }
-                  toast.info('Promotion code removed.');
+                  toast.info(msg('Promotion code removed.'));
                 }}
               >
                 <X className="w-4 h-4" />
@@ -3930,8 +3930,8 @@ export function CreateBooking({
             9. SPECIAL REQUESTS
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Special Requests &amp; Notes</h2>
-          <p className="text-sm text-gray-500 mb-4">Any dietary requirements, accessibility needs, or special instructions for the lounge team.</p>
+          <h2 className="mb-1">{msg('Special Requests &amp; Notes')}</h2>
+          <p className="text-sm text-gray-500 mb-4">{msg('Any dietary requirements, accessibility needs, or special instructions for the lounge team.')}</p>
           <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
             placeholder={msg('e.g. Birthday celebration, Kosher meal required, Allergy to nuts…')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -3943,7 +3943,7 @@ export function CreateBooking({
             ════════════════════════════════════════ */}
         {liveBreakdown.length > 0 && liveTotal !== null && (
           <Card className="p-6">
-            <h2 className="mb-5">Price Breakdown</h2>
+            <h2 className="mb-5">{msg('Price Breakdown')}</h2>
             <div className="space-y-2 text-sm max-w-md ml-auto">
               {liveBreakdown.map((item, i) => (
                 <div key={i} className="flex justify-between py-1.5 border-b border-gray-100">
@@ -3954,7 +3954,7 @@ export function CreateBooking({
                 </div>
               ))}
               <div className="flex justify-between py-2 border-t border-gray-200">
-                <span className="font-semibold text-gray-900">Total</span>
+                <span className="font-semibold text-gray-900">{msg('Total')}</span>
                 <span className="text-xl font-bold text-[#0f2942]">HK${liveTotal.toLocaleString()}</span>
               </div>
               {liveRulesApplied.length > 0 && (
@@ -3978,13 +3978,13 @@ export function CreateBooking({
           <div className="flex items-center gap-2 text-sm text-gray-500">
             {hasGuestErrors && (
               <span className="flex items-center gap-1 text-red-600">
-                <AlertCircle className="w-4 h-4" />Please fix guest detail errors before submitting.
+                <AlertCircle className="w-4 h-4" />{msg('Please fix guest detail errors before submitting.')}
               </span>
             )}
           </div>
           <div className="flex gap-3">
-            <Button type="button" variant="outline" onClick={() => toast.info('Form cleared.')}>
-              Cancel
+            <Button type="button" variant="outline" onClick={() => toast.info(msg('Form cleared.'))}>
+              {msg('Cancel')}
             </Button>
             <Button type="submit" className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white gap-2 px-8"
               // 2026-06-08 — Transit 2nd-leg gate: when the inline gap
@@ -4000,11 +4000,11 @@ export function CreateBooking({
               {isSubmitting ? (
                 <>
                   <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Submitting…
+                  {msg('Submitting…')}
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />Create Booking
+                  <Plus className="w-4 h-4" />{msg('Create Booking')}
                 </>
               )}
             </Button>
@@ -4017,7 +4017,7 @@ export function CreateBooking({
       <Dialog open={!!deleteDialog} onOpenChange={open => { if (!open) setDeleteDialog(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Remove Passengers</DialogTitle>
+            <DialogTitle>{msg('Remove Passengers')}</DialogTitle>
             <DialogDescription>
               You are reducing the VIP passenger count. Select which passenger(s) to remove. You must select exactly {deleteDialog?.candidates.length !== undefined ? (deleteDialog.candidates.length - deleteDialog!.newValue + (deleteDialog!.section === 'PS' ? deleteDialog!.newValue < vipPS ? vipPS - deleteDialog!.newValue : 0 : vipLD - deleteDialog!.newValue)) : ''} passenger(s) to remove.
             </DialogDescription>
@@ -4034,10 +4034,10 @@ export function CreateBooking({
             ))}
           </div>
           <div className="flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => setDeleteDialog(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setDeleteDialog(null)}>{msg('Cancel')}</Button>
             <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={confirmDeletePassengers}
               disabled={deleteDialog?.selected.size === 0}>
-              Remove Selected
+              {msg('Remove Selected')}
             </Button>
           </div>
         </DialogContent>
