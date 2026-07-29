@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckSquare, Flame, Pencil, Square, Zap } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
@@ -333,47 +333,9 @@ export function CurrentOrderSidebar({
   onRemarksChange,
   onRemoveItem,
   onToggleExpedite,
-  onBatchExpedite,
   onSubmitOrder,
 }: CurrentOrderSidebarProps) {
   const { t } = useTranslation();
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-
-  const eligibleIds = useMemo(
-    () => items.filter((item) => !item.isExpedited).map((item) => item.cartLineId),
-    [items],
-  );
-
-  const exitSelectionMode = () => {
-    setSelectionMode(false);
-    setSelectedIds(new Set());
-  };
-
-  const toggleSelect = (cartLineId: string) => {
-    setSelectedIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(cartLineId)) {
-        next.delete(cartLineId);
-      } else {
-        next.add(cartLineId);
-      }
-      return next;
-    });
-  };
-
-  const selectAllPending = () => {
-    setSelectedIds(new Set(eligibleIds));
-  };
-
-  const confirmBatchExpedite = () => {
-    const ids = Array.from(selectedIds);
-    if (ids.length === 0) {
-      return;
-    }
-    onBatchExpedite?.(ids);
-    exitSelectionMode();
-  };
 
   return (
     <aside className="flex w-[340px] shrink-0 flex-col border-r border-gray-200 bg-white">
@@ -385,49 +347,7 @@ export function CurrentOrderSidebar({
               {items.length} item{items.length === 1 ? '' : 's'}
             </p>
           </div>
-          {items.length > 0 && onBatchExpedite ? (
-            selectionMode ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={exitSelectionMode}
-              >
-                {t('pos.cancel', 'Cancel')}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                onClick={() => setSelectionMode(true)}
-              >
-                <Zap className="mr-1 h-3.5 w-3.5" />
-                {t('pos.batch_expedite', 'Batch Expedite')}
-              </Button>
-            )
-          ) : null}
         </div>
-
-        {selectionMode ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={selectAllPending}>
-              {t('pos.select_all_pending', 'Select All Pending')}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="bg-red-600 text-white hover:bg-red-700"
-              disabled={selectedIds.size === 0}
-              onClick={confirmBatchExpedite}
-            >
-              <Flame className="mr-1 h-3.5 w-3.5" />
-              {t('pos.confirm_expedite', 'Confirm Expedite')}
-              {selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -441,9 +361,6 @@ export function CurrentOrderSidebar({
               <li key={item.cartLineId}>
                 <OrderCartItemRow
                   item={item}
-                  selectionMode={selectionMode}
-                  isSelected={selectedIds.has(item.cartLineId)}
-                  onToggleSelect={toggleSelect}
                   onQuantityChange={onQuantityChange}
                   onRemarksChange={onRemarksChange}
                   onRemoveItem={onRemoveItem}
@@ -459,7 +376,7 @@ export function CurrentOrderSidebar({
         <Button
           type="button"
           className="w-full bg-blue-600 text-white hover:bg-blue-700"
-          disabled={items.length === 0 || isSubmitting || !canSubmit || selectionMode}
+          disabled={items.length === 0 || isSubmitting || !canSubmit}
           onClick={onSubmitOrder}
         >
           {isSubmitting ? 'Submitting...' : 'Submit Order'}
