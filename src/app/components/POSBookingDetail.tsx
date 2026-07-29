@@ -1,4 +1,4 @@
-import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, CheckSquare, Square, CheckCheck } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square, CheckCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Card } from './ui/card';
@@ -533,6 +533,27 @@ function TicketOrderItemRow({
       <div className={`flex items-center gap-2 rounded-lg border py-2 px-3 ${borderClass}`}>
         {rowBody}
         {statusBadge}
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={() => void onToggleExpedite(order)}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -609,6 +630,31 @@ function TicketOrderItemRow({
         </DropdownMenu>
 
         {statusBadge}
+
+        {canToggleExpedite && onToggleExpedite ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              void onToggleExpedite(order);
+            }}
+            disabled={isTogglingExpedite}
+            className={`shrink-0 flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:opacity-50 ${
+              isExpedited
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+            }`}
+            aria-pressed={isExpedited}
+            aria-label={t('pos.expedite', 'Expedite')}
+            title={t('pos.expedite', 'Expedite')}
+          >
+            {isTogglingExpedite ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Zap className="h-3.5 w-3.5" fill={isExpedited ? 'currentColor' : 'none'} />
+            )}
+          </button>
+        ) : null}
 
         {isNewItem && onRemoveNewItem ? (
           <button
@@ -888,7 +934,8 @@ export function POSBookingDetail({
     batchMode === 'served' ? servedEligibleOrders : expediteEligibleOrders;
 
   const showBatchActions =
-    servedEligibleOrders.length > 0 && Boolean(onConfirmBatchServed);
+    (expediteEligibleOrders.length > 0 && Boolean(onConfirmBatchExpedite)) ||
+    (servedEligibleOrders.length > 0 && Boolean(onConfirmBatchServed));
 
   const exitBatchMode = () => {
     setBatchMode('none');
@@ -980,27 +1027,62 @@ export function POSBookingDetail({
                   >
                     {t('pos.select_all_pending', 'Select All Pending')}
                   </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="flex flex-1 items-center justify-center bg-green-600 text-white hover:bg-green-700"
-                    disabled={selectedBatchIds.size === 0 || isConfirmingBatchServed}
-                    onClick={() => void handleConfirmBatchServed()}
-                  >
-                    {isConfirmingBatchServed ? (
-                      <Loader2 className="mr-1 h-3.5 w-3.5 shrink-0 animate-spin" />
-                    ) : (
-                      <CheckCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
-                    )}
-                    <span className="truncate">
-                      {t('pos.confirm_served', 'Confirm Served')}
-                      {selectedBatchIds.size > 0 ? ` (${selectedBatchIds.size})` : ''}
-                    </span>
-                  </Button>
+                  {batchMode === 'expedite' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex flex-1 items-center justify-center bg-red-600 text-white hover:bg-red-700"
+                      disabled={selectedBatchIds.size === 0 || isConfirmingBatchExpedite}
+                      onClick={() => void handleConfirmBatchExpedite()}
+                    >
+                      {isConfirmingBatchExpedite ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : (
+                        <Flame className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {t('pos.confirm_expedite', 'Confirm Expedite')}
+                        {selectedBatchIds.size > 0 ? ` (${selectedBatchIds.size})` : ''}
+                      </span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex flex-1 items-center justify-center bg-green-600 text-white hover:bg-green-700"
+                      disabled={selectedBatchIds.size === 0 || isConfirmingBatchServed}
+                      onClick={() => void handleConfirmBatchServed()}
+                    >
+                      {isConfirmingBatchServed ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 shrink-0 animate-spin" />
+                      ) : (
+                        <CheckCheck className="mr-1 h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span className="truncate">
+                        {t('pos.confirm_served', 'Confirm Served')}
+                        {selectedBatchIds.size > 0 ? ` (${selectedBatchIds.size})` : ''}
+                      </span>
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
               <div className="flex w-full flex-row gap-2">
+                {expediteEligibleOrders.length > 0 && onConfirmBatchExpedite ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="flex flex-1 items-center justify-center border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                    onClick={() => {
+                      setSelectedBatchIds(new Set());
+                      setBatchMode('expedite');
+                    }}
+                  >
+                    <Zap className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{t('pos.batch_expedite', 'Batch Expedite')}</span>
+                  </Button>
+                ) : null}
                 {servedEligibleOrders.length > 0 && onConfirmBatchServed ? (
                   <Button
                     type="button"
@@ -1079,7 +1161,7 @@ export function POSBookingDetail({
                 statusBadgeClass={getOrderStatusColor(order.status)}
                 statusLabel={formatOrderStatusLabel(order.status)}
                 selectionMode={isBatchSelectionActive}
-                selectionPurpose="served"
+                selectionPurpose={batchMode === 'served' ? 'served' : 'expedite'}
                 isSelected={selectedBatchIds.has(order.id)}
                 onToggleSelect={toggleBatchSelection}
                 onCancelOrderItem={onCancelOrderItem}

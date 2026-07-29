@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckSquare, Flame, Pencil, Square } from 'lucide-react';
+import { CheckSquare, Flame, Pencil, Square, Zap } from 'lucide-react';
 import { Button } from '../ui/button';
 import {
   Dialog,
@@ -220,7 +220,29 @@ export function OrderCartItemRow({
             ) : null}
           </DropdownMenu>
 
-          {/* Expedite controls removed in pre-order management UI. */}
+          {!selectionMode && onToggleExpedite ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleExpedite(item.cartLineId);
+              }}
+              className={`m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md transition-colors ${
+                isExpedited
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-white text-red-500 ring-1 ring-red-200 hover:bg-red-50'
+              }`}
+              aria-pressed={isExpedited}
+              aria-label={
+                isExpedited
+                  ? t('pos.clear_expedite', 'Clear expedite for {{name}}', { name: item.name })
+                  : t('pos.expedite_item', 'Expedite {{name}}', { name: item.name })
+              }
+              title={t('pos.expedite', 'Expedite')}
+            >
+              <Zap className="h-4 w-4" fill={isExpedited ? 'currentColor' : 'none'} />
+            </button>
+          ) : null}
         </div>
       </div>
 
