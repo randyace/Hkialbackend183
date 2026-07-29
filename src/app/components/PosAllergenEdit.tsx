@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 export type PosAllergenType = 'Allergy' | 'Dietary';
 
@@ -20,8 +22,8 @@ export interface PosAllergenEditProps {
 }
 
 const TYPE_OPTIONS: { value: PosAllergenType; label: string }[] = [
-  { value: 'Allergy', label: 'Allergy' },
-  { value: 'Dietary', label: 'Dietary' },
+  { value: 'Allergy', label: msg('Allergy') },
+  { value: 'Dietary', label: msg('Dietary') },
 ];
 
 const defaultFormData: PosAllergenFormData = {
@@ -37,6 +39,7 @@ export function PosAllergenEdit({
   onBack,
   onSave,
 }: PosAllergenEditProps) {
+  const msg = useMsg();
   const isEditMode = !!allergenId;
   const [formData, setFormData] = useState<PosAllergenFormData>(defaultFormData);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -76,7 +79,7 @@ export function PosAllergenEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading allergen...
+        {msg('Loading allergen...')}
       </div>
     );
   }
@@ -86,20 +89,20 @@ export function PosAllergenEdit({
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Allergen / Dietary Label' : 'Create Allergen / Dietary Label'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure allergen or dietary restriction labels for POS menu items.</p>
+          <p className="text-sm text-gray-500 mt-1">{msg('Configure allergen or dietary restriction labels for POS menu items.')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Name</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Name')}</span>
             <input
               required
               value={formData.name}
@@ -107,7 +110,7 @@ export function PosAllergenEdit({
                 setFormData((prev) => ({ ...prev, name: e.target.value }));
                 if (nameError) setNameError(null);
               }}
-              placeholder="e.g. Peanuts, Dairy, Vegetarian, Gluten-Free"
+              placeholder={msg('e.g. Peanuts, Dairy, Vegetarian, Gluten-Free')}
               className={`w-full px-3 py-2 border rounded-lg text-sm ${
                 nameError ? 'border-red-400' : 'border-gray-200'
               }`}
@@ -116,7 +119,7 @@ export function PosAllergenEdit({
           </label>
 
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-gray-700">Type</legend>
+            <legend className="text-sm font-medium text-gray-700">{msg('Type')}</legend>
             <div className="flex flex-wrap gap-4">
               {TYPE_OPTIONS.map((option) => (
                 <label

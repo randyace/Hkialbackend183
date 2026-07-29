@@ -8,6 +8,8 @@ import {
   FLOOR_PLAN_DEFAULT_CANVAS_WIDTH,
   normalizeLayoutForDisplay,
 } from '@/utils/floorPlanLayoutScale';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 export interface PosFloorPlanBooking {
   id: number;
@@ -207,11 +209,11 @@ function staticItemStyles(label: string): string {
 }
 
 const LEGEND_ITEMS = [
-  { key: 'available', bg: 'bg-green-100 border-green-400', dot: 'bg-green-500', label: 'Available' },
-  { key: 'reserved', bg: 'bg-indigo-100 border-indigo-400', dot: 'bg-indigo-500', label: 'Reserved (booking assigned)' },
-  { key: 'occupied', bg: 'bg-red-100 border-red-400', dot: 'bg-red-500', label: 'Occupied' },
-  { key: 'food-served', bg: 'bg-yellow-100 border-yellow-400', dot: 'bg-yellow-500', label: 'Food Served' },
-  { key: 'cleaning', bg: 'bg-orange-100 border-orange-400', dot: 'bg-orange-500', label: 'Cleaning' },
+  { key: 'available', bg: 'bg-green-100 border-green-400', dot: 'bg-green-500', label: msg('Available') },
+  { key: 'reserved', bg: 'bg-indigo-100 border-indigo-400', dot: 'bg-indigo-500', label: msg('Reserved (booking assigned)') },
+  { key: 'occupied', bg: 'bg-red-100 border-red-400', dot: 'bg-red-500', label: msg('Occupied') },
+  { key: 'food-served', bg: 'bg-yellow-100 border-yellow-400', dot: 'bg-yellow-500', label: msg('Food Served') },
+  { key: 'cleaning', bg: 'bg-orange-100 border-orange-400', dot: 'bg-orange-500', label: msg('Cleaning') },
 ] as const;
 
 export function PosFloorPlanCanvas({
@@ -228,6 +230,7 @@ export function PosFloorPlanCanvas({
   onToggleSuiteSelection,
   onOpenQrScanner,
 }: PosFloorPlanCanvasProps) {
+  const msg = useMsg();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -311,7 +314,7 @@ export function PosFloorPlanCanvas({
     return (
       <div className="flex flex-1 items-center justify-center gap-2 py-20 text-gray-500">
         <Loader2 className="h-5 w-5 animate-spin" />
-        Loading floor plan...
+        {msg('Loading floor plan...')}
       </div>
     );
   }
@@ -320,9 +323,9 @@ export function PosFloorPlanCanvas({
     <div className="space-y-3 p-4 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">POS Floor Plan</h1>
+          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">{msg('POS Floor Plan')}</h1>
           <p className="text-sm text-gray-600 sm:text-base">
-            Real-time suite status and guest management
+            {msg('Real-time suite status and guest management')}
           </p>
         </div>
         {onOpenQrScanner ? (
@@ -331,7 +334,7 @@ export function PosFloorPlanCanvas({
             onClick={onOpenQrScanner}
           >
             <QrCode className="h-4 w-4" />
-            Scan QR for Entry
+            {msg('Scan QR for Entry')}
           </Button>
         ) : null}
       </div>
@@ -339,23 +342,23 @@ export function PosFloorPlanCanvas({
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         <Card className="border-green-200 bg-green-50 px-3 py-2">
           <div className="text-lg font-semibold leading-tight text-green-700">{statusCounts.available}</div>
-          <div className="text-xs text-green-600">Available</div>
+          <div className="text-xs text-green-600">{msg('Available')}</div>
         </Card>
         <Card className="border-indigo-200 bg-indigo-50 px-3 py-2">
           <div className="text-lg font-semibold leading-tight text-indigo-700">{statusCounts.reserved}</div>
-          <div className="text-xs text-indigo-600">Reserved</div>
+          <div className="text-xs text-indigo-600">{msg('Reserved')}</div>
         </Card>
         <Card className="border-red-200 bg-red-50 px-3 py-2">
           <div className="text-lg font-semibold leading-tight text-red-700">{statusCounts.occupied}</div>
-          <div className="text-xs text-red-600">Occupied</div>
+          <div className="text-xs text-red-600">{msg('Occupied')}</div>
         </Card>
         <Card className="border-yellow-200 bg-yellow-50 px-3 py-2">
           <div className="text-lg font-semibold leading-tight text-yellow-700">{statusCounts.foodServed}</div>
-          <div className="text-xs text-yellow-600">Food Served</div>
+          <div className="text-xs text-yellow-600">{msg('Food Served')}</div>
         </Card>
         <Card className="col-span-2 border-orange-200 bg-orange-50 px-3 py-2 sm:col-span-1">
           <div className="text-lg font-semibold leading-tight text-orange-700">{statusCounts.cleaning}</div>
-          <div className="text-xs text-orange-600">Cleaning</div>
+          <div className="text-xs text-orange-600">{msg('Cleaning')}</div>
         </Card>
       </div>
 
@@ -366,7 +369,7 @@ export function PosFloorPlanCanvas({
         >
           {layoutData.length === 0 ? (
             <div className="flex min-h-[320px] items-center justify-center px-6 text-center text-sm text-gray-400">
-              No floor plan layout configured. Set up the layout in Lounge Management first.
+              {msg('No floor plan layout configured. Set up the layout in Lounge Management first.')}
             </div>
           ) : (
             <div className="flex min-h-full justify-center p-4 pt-10">
@@ -479,7 +482,7 @@ export function PosFloorPlanCanvas({
                       {hasUpcomingConflict ? (
                         <span
                           className="absolute -right-1.5 -top-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold leading-none text-white shadow"
-                          title="Upcoming booking conflict"
+                          title={msg('Upcoming booking conflict')}
                         >
                           !
                         </span>

@@ -126,6 +126,7 @@ import {
   emptyNonFlyingGuest, buildInitialNonFlyingGuests,
   generateMockBooking,
 } from './booking/BookingDetailMocks';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-06-28 (round 6.2.73) — type-bridge helpers between the
 // upper-card's local `PassengerDetail[]` / `NonFlyingGuest[]`
@@ -482,6 +483,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
+  const msg = useMsg();
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
@@ -2482,7 +2484,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               type="text"
               value={contactName}
               onChange={e => setContactName(e.target.value)}
-              placeholder="Full name of contact person"
+              placeholder={msg('Full name of contact person')}
               className="w-full px-3 py-2 border rounded text-sm"
             />
           </div>
@@ -2495,7 +2497,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               type="email"
               value={contactEmail}
               onChange={e => setContactEmail(e.target.value)}
-              placeholder="e.g. contact@example.com"
+              placeholder={msg('e.g. contact@example.com')}
               className="w-full px-3 py-2 border rounded text-sm"
             />
           </div>
@@ -2520,7 +2522,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <select
                 value={regionCode}
                 onChange={e => setRegionCode(e.target.value)}
-                aria-label="Region code"
+                aria-label={msg('Region code')}
                 className="w-28 px-2 py-2 border rounded text-sm bg-white"
               >
                 <option value="">—</option>
@@ -2552,7 +2554,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <textarea
               value={bookingMemo}
               onChange={e => setBookingMemo(e.target.value)}
-              placeholder="Internal notes or special instructions for this booking..."
+              placeholder={msg('Internal notes or special instructions for this booking...')}
               className="w-full px-3 py-2 border rounded text-sm resize-none"
               rows={3}
             />
@@ -2721,7 +2723,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           type="text"
                           value={p.firstName}
                           onChange={e => updatePassenger(idx, 'firstName', e.target.value)}
-                          placeholder="First name"
+                          placeholder={msg('First name')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -2731,7 +2733,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           type="text"
                           value={p.lastName}
                           onChange={e => updatePassenger(idx, 'lastName', e.target.value)}
-                          placeholder="Last name"
+                          placeholder={msg('Last name')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -2755,7 +2757,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           type="text"
                           value={p.membershipNo}
                           onChange={e => updatePassenger(idx, 'membershipNo', e.target.value)}
-                          placeholder="MEM-XXXX"
+                          placeholder={msg('MEM-XXXX')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -2799,7 +2801,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             type="number"
                             value={p.birthdayYear}
                             onChange={e => updatePassenger(idx, 'birthdayYear', e.target.value)}
-                            placeholder="Year"
+                            placeholder={msg('Year')}
                             min={1900}
                             max={new Date().getFullYear()}
                             className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
@@ -2818,7 +2820,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         type="text"
                         value={p.foodAllergies}
                         onChange={e => updatePassenger(idx, 'foodAllergies', e.target.value)}
-                        placeholder="e.g. Shellfish, Peanuts, Dairy — leave blank if none"
+                        placeholder={msg('e.g. Shellfish, Peanuts, Dairy — leave blank if none')}
                         className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 ${p.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                       />
                       {p.foodAllergies && (
@@ -2973,7 +2975,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           type="text"
                           value={g.firstName}
                           onChange={e => updateNonFlyingGuest(idx, 'firstName', e.target.value)}
-                          placeholder="First name"
+                          placeholder={msg('First name')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -2984,7 +2986,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           type="text"
                           value={g.lastName}
                           onChange={e => updateNonFlyingGuest(idx, 'lastName', e.target.value)}
-                          placeholder="Last name"
+                          placeholder={msg('Last name')}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>
@@ -3013,7 +3015,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         type="text"
                         value={g.foodAllergies}
                         onChange={e => updateNonFlyingGuest(idx, 'foodAllergies', e.target.value)}
-                        placeholder="e.g. Peanuts, Shellfish — leave blank if none"
+                        placeholder={msg('e.g. Peanuts, Shellfish — leave blank if none')}
                         className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 ${g.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                       />
                       {g.foodAllergies && (
@@ -3524,7 +3526,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Type to search services, e.g. Limousine, Fast Track, Shower…"
+                        placeholder={msg('Type to search services, e.g. Limousine, Fast Track, Shower…')}
                         value={addonSearch}
                         onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
                         onFocus={() => setShowAddonDropdown(true)}
@@ -3686,7 +3688,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             type="text"
                             value={stop.location}
                             onChange={e => updateLimoStop(stop.id, 'location', e.target.value)}
-                            placeholder={stop.type === 'Pick-up' ? 'e.g. Terminal 1, Arrival Hall' : 'e.g. Four Seasons Hotel, HK'}
+                            placeholder={msg('stop.type === \'Pick-up\' ? \'e.g. Terminal 1, Arrival Hall\' : \'e.g. Four Seasons Hotel, HK\'')}
                             className="flex-1 px-3 py-1.5 border rounded text-sm"
                           />
                           <button
@@ -3724,7 +3726,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         type="text"
                         value={wheelchairPassenger}
                         onChange={e => setWheelchairPassenger(e.target.value)}
-                        placeholder="Enter full name of passenger..."
+                        placeholder={msg('Enter full name of passenger...')}
                         className="w-80 px-3 py-1.5 border rounded text-sm"
                       />
                       <p className="text-xs text-gray-400">As shown on travel document</p>
@@ -3743,7 +3745,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       onChange={e => setAddonRemarks(e.target.value)}
                       className="w-full px-3 py-2 border rounded text-sm resize-none"
                       rows={2}
-                      placeholder="Enter remarks for this new item..."
+                      placeholder={msg('Enter remarks for this new item...')}
                     />
                   </div>
                 </td>
@@ -4006,7 +4008,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <textarea
               className="w-full px-3 py-2 border rounded resize-none"
               rows={3}
-              placeholder="Enter reason for status change or additional notes..."
+              placeholder={msg('Enter reason for status change or additional notes...')}
               value={rejectionReasonText}
               onChange={e => setRejectionReasonText(e.target.value)}
             />
@@ -4432,7 +4434,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <textarea
                 value={refundReason}
                 onChange={e => setRefundReason(e.target.value)}
-                placeholder="Enter the reason for this refund (e.g. service issue, guest complaint, cancellation)..."
+                placeholder={msg('Enter the reason for this refund (e.g. service issue, guest complaint, cancellation)...')}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-400"
               />

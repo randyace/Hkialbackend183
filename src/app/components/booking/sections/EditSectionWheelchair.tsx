@@ -15,6 +15,7 @@
 import { Accessibility } from 'lucide-react';
 import { Card } from '../../ui/card';
 import type { BookingFormData } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionWheelchairProps {
   formData: BookingFormData;
@@ -25,11 +26,12 @@ export function EditSectionWheelchair({
   formData,
   onFormChange,
 }: EditSectionWheelchairProps) {
+  const msg = useMsg();
   if (!formData.hasWheelchair) return null;
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
-        <Accessibility className="w-4 h-4" /> Wheelchair Recipient
+        <Accessibility className="w-4 h-4" /> {msg('Wheelchair Recipient')}
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         The passenger who will receive the wheelchair assistance. Only shown when
@@ -38,13 +40,13 @@ export function EditSectionWheelchair({
       <div>
         <label className="block text-sm text-gray-600 mb-[10px]">
           <Accessibility className="w-3.5 h-3.5 inline mr-1" />
-          Passenger Name
+          {msg('Passenger Name')}
         </label>
         <input
           type="text"
           value={formData.wheelchairPassenger ?? ''}
           onChange={e => onFormChange({ wheelchairPassenger: e.target.value })}
-          placeholder="e.g. Mr James Hoffmann"
+          placeholder={msg('e.g. Mr James Hoffmann')}
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
         />
       </div>

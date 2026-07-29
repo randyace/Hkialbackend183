@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * PriceManagement.tsx — Pure presentational component.
  *
@@ -28,6 +29,7 @@ import {
   Calculator,
 } from 'lucide-react';
 import { mockPriceManagementData } from './__fixtures__/PriceManagement.mocks';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -113,15 +115,16 @@ function fmtHKDSigned(amount: number): string {
 // ─── Add-on Table ─────────────────────────────────────────────────────────────
 
 function AddOnTable({ addOns }: { addOns: AddOnRate[] }) {
+  const msg = useMsg();
   return (
     <div className="overflow-hidden rounded-lg border border-gray-200">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left px-4 py-3 text-gray-600 font-medium">Add-on</th>
-            <th className="text-right px-4 py-3 text-gray-600 font-medium w-36">Price</th>
-            <th className="text-left px-4 py-3 text-gray-600 font-medium w-36">Unit</th>
-            <th className="text-left px-4 py-3 text-gray-600 font-medium">Notes</th>
+            <th className="text-left px-4 py-3 text-gray-600 font-medium">{msg('Add-on')}</th>
+            <th className="text-right px-4 py-3 text-gray-600 font-medium w-36">{msg('Price')}</th>
+            <th className="text-left px-4 py-3 text-gray-600 font-medium w-36">{msg('Unit')}</th>
+            <th className="text-left px-4 py-3 text-gray-600 font-medium">{msg('Notes')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -132,7 +135,7 @@ function AddOnTable({ addOns }: { addOns: AddOnRate[] }) {
                 {addon.price === null ? (
                   <span className="text-gray-400 italic">N/A</span>
                 ) : addon.price === 0 ? (
-                  <span className="text-green-600 font-medium">FREE</span>
+                  <span className="text-green-600 font-medium">{msg('FREE')}</span>
                 ) : (
                   <span className="text-gray-900">HKD {addon.price.toLocaleString()}</span>
                 )}
@@ -176,7 +179,7 @@ function ProductCard({
           onClick={onEdit}
         >
           <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-          Edit Rates
+          {msg('Edit Rates')}
         </Button>
       </div>
 
@@ -184,7 +187,7 @@ function ProductCard({
         {/* Base price */}
         <div className={`rounded-xl border ${accentLight} p-4 flex items-center justify-between`}>
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Base Price</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wide">{msg('Base Price')}</p>
             <p className={`text-3xl font-bold ${accentText} mt-1`}>
               HKD {product.basePrice.toLocaleString()}
             </p>
@@ -206,7 +209,7 @@ function ProductCard({
         {/* Included services */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Included Services
+            {msg('Included Services')}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {product.includes.map((item) => (
@@ -220,7 +223,7 @@ function ProductCard({
         {/* Add-on rates */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Add-on Rates
+            {msg('Add-on Rates')}
           </p>
           <AddOnTable addOns={product.addOns} />
         </div>
@@ -256,7 +259,7 @@ function SpecialRulesTab({
             <Tag className="w-5 h-5" />
             <div>
               <h2 className="font-semibold">{comboDiscount.noteRef} — Arrival + Departure Combo</h2>
-              <p className="text-white/80 text-sm">Applied to the 2nd leg only</p>
+              <p className="text-white/80 text-sm">{msg('Applied to the 2nd leg only')}</p>
             </div>
           </div>
           <Button
@@ -266,14 +269,14 @@ function SpecialRulesTab({
             onClick={onEditCombo}
           >
             <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-            Edit Rule
+            {msg('Edit Rule')}
           </Button>
         </div>
         <div className="p-6">
           <div className="flex items-start gap-6">
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-8 py-4 text-center flex-shrink-0">
               <p className="text-4xl font-bold text-amber-600">{comboDiscount.discountPercent}%</p>
-              <p className="text-sm text-amber-700 mt-0.5">discount on 2nd leg</p>
+              <p className="text-sm text-amber-700 mt-0.5">{msg('discount on 2nd leg')}</p>
             </div>
             <div className="flex-1 space-y-3">
               <p className="text-gray-700 text-sm leading-relaxed">{comboDiscount.description}</p>
@@ -282,8 +285,8 @@ function SpecialRulesTab({
                 Applies when combined arrival + departure stay is ≤ {comboDiscount.maxCombinedHours} hours
               </div>
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-                <strong>Important:</strong> The discount is applied to the{' '}
-                <em>entire computed total</em> of the 2nd leg (base + all add-ons). It is NOT applied
+                <strong>{msg('Important:')}</strong> The discount is applied to the{' '}
+                <em>{msg('entire computed total')}</em> of the 2nd leg (base + all add-ons). It is NOT applied
                 to the 1st leg.
               </div>
             </div>
@@ -296,9 +299,9 @@ function SpecialRulesTab({
         <div className="bg-gray-700 text-white px-6 py-4 flex items-center gap-3">
           <AlertTriangle className="w-5 h-5 text-yellow-300" />
           <div>
-            <h2 className="font-semibold">Capacity Cap Rules</h2>
+            <h2 className="font-semibold">{msg('Capacity Cap Rules')}</h2>
             <p className="text-white/70 text-sm">
-              Enforced at booking creation; warnings shown on violation
+              {msg('Enforced at booking creation; warnings shown on violation')}
             </p>
           </div>
         </div>
@@ -322,7 +325,7 @@ function SpecialRulesTab({
                   <Users className="w-4 h-4 text-gray-400" />
                   <span className="text-2xl font-bold">{cap.cap}</span>
                 </div>
-                <p className="text-xs text-gray-400">max guests</p>
+                <p className="text-xs text-gray-400">{msg('max guests')}</p>
               </div>
             </div>
           ))}
@@ -334,7 +337,7 @@ function SpecialRulesTab({
         <div className="p-5 flex items-start gap-3">
           <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-blue-800">
-            <strong>No service charge, tax, or agency discount</strong> is handled by the pricing
+            <strong>{msg('No service charge, tax, or agency discount')}</strong> is handled by the pricing
             engine. Any promo code discount must be applied as a separate line item on top of the
             backend-computed total.
           </p>
@@ -347,6 +350,7 @@ function SpecialRulesTab({
 // ─── Worked Examples Tab ──────────────────────────────────────────────────────
 
 function ExamplesTab({ examples }: { examples: WorkedExample[] }) {
+  const msg = useMsg();
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
@@ -366,10 +370,10 @@ function ExamplesTab({ examples }: { examples: WorkedExample[] }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-2.5 text-gray-600 font-medium">Line Item</th>
-                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-16">Qty</th>
-                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-28">Unit</th>
-                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-28">Subtotal</th>
+                    <th className="text-left px-4 py-2.5 text-gray-600 font-medium">{msg('Line Item')}</th>
+                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-16">{msg('Qty')}</th>
+                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-28">{msg('Unit')}</th>
+                    <th className="text-right px-4 py-2.5 text-gray-600 font-medium w-28">{msg('Subtotal')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -393,7 +397,7 @@ function ExamplesTab({ examples }: { examples: WorkedExample[] }) {
                 </tbody>
                 <tfoot>
                   <tr className="bg-[#0f2942] text-white">
-                    <td className="px-4 py-3 font-semibold" colSpan={3}>Total</td>
+                    <td className="px-4 py-3 font-semibold" colSpan={3}>{msg('Total')}</td>
                     <td className="px-4 py-3 text-right font-bold font-mono">
                       HKD {ex.total.toLocaleString()}
                     </td>
@@ -423,6 +427,7 @@ function CheatSheet({
   loungeDeluxe: ProductPricing;
   premiereSuite: ProductPricing;
 }) {
+  const msg = useMsg();
   const getAddon = (product: ProductPricing, id: string) =>
     product.addOns.find((a) => a.id === id)?.price ?? null;
 
@@ -449,8 +454,8 @@ function CheatSheet({
       <div className="bg-[#0f2942] text-white px-6 py-4 flex items-center gap-3">
         <Calculator className="w-5 h-5" />
         <div>
-          <h2 className="font-semibold">Quick Reference Cheat Sheet</h2>
-          <p className="text-white/70 text-sm">Numbers reflect the current rate card above</p>
+          <h2 className="font-semibold">{msg('Quick Reference Cheat Sheet')}</h2>
+          <p className="text-white/70 text-sm">{msg('Numbers reflect the current rate card above')}</p>
         </div>
       </div>
       <div className="divide-y divide-gray-100">
@@ -479,6 +484,7 @@ export function PriceManagement({
   onEditProduct   = mockPriceManagementData.onEditProduct,
   onEditComboDiscount = mockPriceManagementData.onEditComboDiscount,
 }: PriceManagementProps) {
+  const msg = useMsg();
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* Page Header */}
@@ -486,10 +492,10 @@ export function PriceManagement({
         <div>
           <h1 className="text-gray-900 flex items-center gap-2">
             <DollarSign className="w-6 h-6 text-[#0f2942]" />
-            Price Management
+            {msg('Price Management')}
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            Manage base prices, add-on rates, and special rules for all HKIA VIP Lounge products.
+            {msg('Manage base prices, add-on rates, and special rules for all HKIA VIP Lounge products.')}
           </p>
         </div>
         <div className="text-right text-xs text-gray-400 space-y-0.5">
@@ -508,19 +514,19 @@ export function PriceManagement({
         <TabsList className="bg-gray-100 p-1 rounded-lg">
           <TabsTrigger value="rate-cards" className="gap-2">
             <DollarSign className="w-4 h-4" />
-            Rate Cards
+            {msg('Rate Cards')}
           </TabsTrigger>
           <TabsTrigger value="special-rules" className="gap-2">
             <AlertTriangle className="w-4 h-4" />
-            Special Rules
+            {msg('Special Rules')}
           </TabsTrigger>
           <TabsTrigger value="examples" className="gap-2">
             <Calculator className="w-4 h-4" />
-            Worked Examples
+            {msg('Worked Examples')}
           </TabsTrigger>
           <TabsTrigger value="cheat-sheet" className="gap-2">
             <FileText className="w-4 h-4" />
-            Cheat Sheet
+            {msg('Cheat Sheet')}
           </TabsTrigger>
         </TabsList>
 

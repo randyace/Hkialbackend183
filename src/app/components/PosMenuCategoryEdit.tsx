@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosMenuCategoryFormData {
   name: string;
@@ -33,6 +34,7 @@ export function PosMenuCategoryEdit({
   onBack,
   onSave,
 }: PosMenuCategoryEditProps) {
+  const msg = useMsg();
   const isEditMode = !!categoryId;
   const [formData, setFormData] = useState<PosMenuCategoryFormData>(defaultFormData);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function PosMenuCategoryEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading category...
+        {msg('Loading category...')}
       </div>
     );
   }
@@ -69,20 +71,20 @@ export function PosMenuCategoryEdit({
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Menu Category' : 'Create Menu Category'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure POS menu category details.</p>
+          <p className="text-sm text-gray-500 mt-1">{msg('Configure POS menu category details.')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Category Name</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Category Name')}</span>
             <input
               required
               value={formData.name}
@@ -98,7 +100,7 @@ export function PosMenuCategoryEdit({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Sort Order</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Sort Order')}</span>
             <input
               type="number"
               min={0}
@@ -112,8 +114,8 @@ export function PosMenuCategoryEdit({
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Is Active</p>
-              <p className="text-xs text-gray-500">Inactive categories are hidden from POS ordering tabs.</p>
+              <p className="text-sm font-medium text-gray-800">{msg('Is Active')}</p>
+              <p className="text-xs text-gray-500">{msg('Inactive categories are hidden from POS ordering tabs.')}</p>
             </div>
             <Switch
               checked={formData.isActive}

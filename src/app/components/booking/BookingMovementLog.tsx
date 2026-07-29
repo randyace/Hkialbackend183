@@ -3,6 +3,7 @@ import { History, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-06-18 (round 6.2.48) — prop-driven Movement Log dialog.
 // Pre-refactor: this component used a hard-coded `INITIAL_MOVEMENTS`
@@ -101,6 +102,7 @@ export function BookingMovementLog({
   isAddingMovement = false,
   isDeletingMovement = false,
 }: BookingMovementLogProps) {
+  const msg = useMsg();
   // Sync parent-driven movements into local state so the table
   // re-renders on prop change. Without this, the wrapper's
   // refetch-after-add would update the prop but the table would
@@ -115,14 +117,14 @@ export function BookingMovementLog({
 
   const handleDelete = async (id: number) => {
     if (!onDeleteMovement) {
-      toast.error('Delete is not wired — please configure the parent wrapper.');
+      toast.error(msg('Delete is not wired — please configure the parent wrapper.'));
       return;
     }
     if (!window.confirm('Delete this movement entry? This cannot be undone.')) return;
     try {
       await onDeleteMovement(id);
       setBookingMovements(prev => prev.filter(x => x.id !== id));
-      toast.success('Movement record deleted.');
+      toast.success(msg('Movement record deleted.'));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete movement record.';
       toast.error(message);
@@ -138,22 +140,22 @@ export function BookingMovementLog({
             Movement Log — {booking.bookingNo}
           </DialogTitle>
           <DialogDescription>
-            Full movement details for this booking. Booking reference fields are pre-filled from the booking record.
+            {msg('Full movement details for this booking. Booking reference fields are pre-filled from the booking record.')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center justify-between mt-2 mb-3">
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <p>{bookingMovements.length} record{bookingMovements.length !== 1 ? 's' : ''}</p>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking ref columns</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200"></span> Time columns</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> {msg('Booking ref columns')}</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-teal-100 border border-teal-200"></span> {msg('Time columns')}</span>
           </div>
           <Button
             size="sm"
             onClick={() => onOpenAddMovement?.()}
             disabled={!onOpenAddMovement || isAddingMovement}
           >
-            <Plus className="w-4 h-4 mr-1.5" />Add Movement
+            <Plus className="w-4 h-4 mr-1.5" />{msg('Add Movement')}
           </Button>
         </div>
 
@@ -161,41 +163,41 @@ export function BookingMovementLog({
           <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
             <thead>
               <tr className="bg-[#0f2942] text-white">
-                <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
-                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
-                <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">Action</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">{msg('Gp No.')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('Movement IC')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('CIC &amp; Support')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Driver')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">{msg('Order No.')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Dept Date')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Arr Date')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt No.')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt Time')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Dest / Origin')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">{msg('Lobby / Suite')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">{msg('Pax')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">{msg('Title')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('First Name')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('Last Name')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">{msg('C/I Bag.')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Remarks')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Nationality')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Non-fly Arr.')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Met VIP at Gate')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Back to HKIAL')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. Start')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. End')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Arr. HKIAL')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Left HKIAL')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Process Time')}</th>
+                <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Admin Remarks')}</th>
+                <th className="px-3 py-2.5 text-center whitespace-nowrap sticky right-0 z-20 bg-[#0f2942] border-l border-white/20 min-w-[60px]">{msg('Action')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {bookingMovements.length === 0 ? (
                 <tr>
                   <td colSpan={28} className="px-6 py-10 text-center text-gray-400 text-sm">
-                    No movement records yet. Click &quot;Add Movement&quot; to create the first entry.
+                    {msg('No movement records yet. Click &quot;Add Movement&quot; to create the first entry.')}
                   </td>
                 </tr>
               ) : bookingMovements.map((m, idx) => {

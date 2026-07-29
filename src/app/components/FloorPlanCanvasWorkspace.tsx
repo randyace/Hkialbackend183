@@ -5,6 +5,7 @@ import {
   FLOOR_PLAN_DEFAULT_CANVAS_HEIGHT,
   FLOOR_PLAN_DEFAULT_CANVAS_WIDTH,
 } from '@/utils/floorPlanLayoutScale';
+import { useMsg } from '@/i18n/useMsg';
 
 export const DEFAULT_CANVAS_WIDTH = FLOOR_PLAN_DEFAULT_CANVAS_WIDTH;
 export const DEFAULT_CANVAS_HEIGHT = FLOOR_PLAN_DEFAULT_CANVAS_HEIGHT;
@@ -40,6 +41,7 @@ export function FloorPlanCanvasWorkspace({
   onCanvasClick,
   children,
 }: FloorPlanCanvasWorkspaceProps) {
+  const msg = useMsg();
   const [zoom, setZoom] = useState(1);
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +124,7 @@ export function FloorPlanCanvasWorkspace({
           onClick={() => setZoom((value) => Math.min(2, Number((value + 0.1).toFixed(1))))}
           disabled={zoom >= 2}
         >
-          Zoom In (+)
+          {msg('Zoom In (+)')}
         </Button>
         <Button
           type="button"
@@ -131,10 +133,10 @@ export function FloorPlanCanvasWorkspace({
           onClick={() => setZoom((value) => Math.max(0.5, Number((value - 0.1).toFixed(1))))}
           disabled={zoom <= 0.5}
         >
-          Zoom Out (-)
+          {msg('Zoom Out (-)')}
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={() => setZoom(1)}>
-          Reset (100%)
+          {msg('Reset (100%)')}
         </Button>
       </div>
     </div>

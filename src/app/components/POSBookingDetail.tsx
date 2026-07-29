@@ -21,6 +21,8 @@ import {
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { useTranslation } from '../lib/useTranslation';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 interface OrderItem {
   id: string;
@@ -626,7 +628,7 @@ function TicketOrderItemRow({
               <Textarea
                 value={draftRemarks}
                 onChange={(event) => setDraftRemarks(event.target.value)}
-                placeholder={t('pos.custom_request_placeholder', 'e.g. Less ice, Extra hot')}
+                placeholder={msg('t(\'pos.custom_request_placeholder\', \'e.g. Less ice, Extra hot\')')}
                 rows={4}
                 autoFocus
               />
@@ -743,6 +745,7 @@ export function POSBookingDetail({
   isConfirmingBatchExpedite = false,
   menuContent = null,
 }: POSBookingDetailFullProps) {
+  const msg = useMsg();
   const { t } = useTranslation();
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const guests = booking.guests?.length > 0 ? booking.guests : booking.guestProfiles;
@@ -1353,7 +1356,7 @@ export function POSBookingDetail({
         </div>
       ) : null}
 
-      <nav className="shrink-0 border-t border-gray-200 bg-white lg:hidden" aria-label="POS panels">
+      <nav className="shrink-0 border-t border-gray-200 bg-white lg:hidden" aria-label={msg('POS panels')}>
         <div className="grid grid-cols-2">
           <button
             type="button"

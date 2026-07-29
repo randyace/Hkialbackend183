@@ -18,6 +18,7 @@ import { UserCheck } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Checkbox } from '../../ui/checkbox';
 import type { BookingFormData, EditStaffOption } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionStaffProps {
   formData: BookingFormData;
@@ -30,6 +31,7 @@ export function EditSectionStaff({
   onFormChange,
   staffOptions,
 }: EditSectionStaffProps) {
+  const msg = useMsg();
   const assignedIds = new Set(formData.assignedStaffIds ?? []);
   const toggle = (id: number) => {
     const next = new Set(assignedIds);
@@ -40,7 +42,7 @@ export function EditSectionStaff({
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
-        <UserCheck className="w-4 h-4" /> In-Charge Staff
+        <UserCheck className="w-4 h-4" /> {msg('In-Charge Staff')}
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Select one or more staff members who will be responsible for this booking.
@@ -75,7 +77,7 @@ export function EditSectionStaff({
                 </div>
                 {isSelected && (
                   <span className="shrink-0 text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
-                    In-Charge
+                    {msg('In-Charge')}
                   </span>
                 )}
               </label>
@@ -86,7 +88,7 @@ export function EditSectionStaff({
       {assignedIds.size > 0 && staffOptions.length > 0 && (
         <div className="mt-4 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg">
           <p className="text-xs text-indigo-700">
-            <strong>Assigned:</strong>{' '}
+            <strong>{msg('Assigned:')}</strong>{' '}
             {staffOptions.filter(s => assignedIds.has(s.id)).map(s => s.name).join(', ')}
           </p>
         </div>

@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * RolePermissionMatrix.tsx — Presentational enterprise Role Permissions matrix.
  */
@@ -6,6 +7,7 @@ import { Fragment, useEffect, useRef } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Loader2, Save, Shield } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface RolePermissionAction {
   key: string;
@@ -106,7 +108,7 @@ function RowSelectAllCheckbox({
       checked={checked}
       disabled={disabled}
       onChange={onChange}
-      aria-label="Select all permissions in this row"
+      aria-label={msg('Select all permissions in this row')}
     />
   );
 }
@@ -125,6 +127,7 @@ export function RolePermissionMatrix({
   onRolePermissionsChange,
   onSave,
 }: RolePermissionMatrixProps) {
+  const msg = useMsg();
   const selectedSet = new Set(rolePermissions);
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
 
@@ -144,7 +147,7 @@ export function RolePermissionMatrix({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading role permissions…
+        {msg('Loading role permissions…')}
       </div>
     );
   }
@@ -156,7 +159,7 @@ export function RolePermissionMatrix({
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
             <Shield className="w-6 h-6 text-gray-700" />
-            Role Permissions
+            {msg('Role Permissions')}
           </h1>
           <p className="text-sm text-gray-500 mt-1 max-w-2xl">
             Assign module and feature access for each role template. Changes apply after you save
@@ -177,7 +180,7 @@ export function RolePermissionMatrix({
       {/* Role selector */}
       <Card className="p-4">
         <label className="block space-y-1.5 max-w-md">
-          <span className="text-sm font-medium text-gray-700">Target role</span>
+          <span className="text-sm font-medium text-gray-700">{msg('Target role')}</span>
           <select
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
             value={selectedRoleId ?? ''}
@@ -187,7 +190,7 @@ export function RolePermissionMatrix({
             }}
             disabled={roles.length === 0 || isSaving}
           >
-            {roles.length === 0 && <option value="">No roles available</option>}
+            {roles.length === 0 && <option value="">{msg('No roles available')}</option>}
             {roles.map((role) => (
               <option key={role.id} value={role.id}>
                 {role.name}
@@ -196,7 +199,7 @@ export function RolePermissionMatrix({
           </select>
           {selectedRole && (
             <span className="text-xs text-gray-500">
-              Editing template for <span className="font-medium text-gray-700">{selectedRole.name}</span>
+              {msg('Editing template for')} <span className="font-medium text-gray-700">{selectedRole.name}</span>
               {' · '}
               {rolePermissions.length} permission{rolePermissions.length === 1 ? '' : 's'} selected
             </span>
@@ -217,25 +220,25 @@ export function RolePermissionMatrix({
             <thead>
               <tr className="bg-white border-b border-gray-200">
                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-12">
-                  <span className="sr-only">Select all in row</span>
+                  <span className="sr-only">{msg('Select all in row')}</span>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[24%]">
-                  Feature
+                  {msg('Feature')}
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">
-                  Read
+                  {msg('Read')}
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">
-                  Create
+                  {msg('Create')}
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">
-                  Update
+                  {msg('Update')}
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">
-                  Delete
+                  {msg('Delete')}
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Special Actions
+                  {msg('Special Actions')}
                 </th>
               </tr>
             </thead>
@@ -346,7 +349,7 @@ export function RolePermissionMatrix({
               {groupedPermissions.length === 0 && (
                 <tr>
                   <td colSpan={TABLE_COL_COUNT} className="px-4 py-12 text-center text-sm text-gray-500">
-                    No permission modules available.
+                    {msg('No permission modules available.')}
                   </td>
                 </tr>
               )}

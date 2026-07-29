@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Save } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 const MOCK_SETTINGS = {
   defaultCutoffHours: 3,
@@ -30,11 +31,12 @@ export interface BookingSettingsProps {
 }
 
 export function BookingSettings({ settings: settingsProp, onBack = () => {}, onSave }: BookingSettingsProps = {}) {
+  const msg = useMsg();
   const [settings, setSettings] = useState<BookingSettingsData>(settingsProp ?? MOCK_SETTINGS);
 
   const handleSave = () => {
     onSave?.(settings);
-    toast.success('Booking settings updated successfully');
+    toast.success(msg('Booking settings updated successfully'));
   };
 
   return (
@@ -45,17 +47,17 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div>
-          <h1>Booking Settings</h1>
-          <p className="text-gray-600">Configure system-wide booking parameters</p>
+          <h1>{msg('Booking Settings')}</h1>
+          <p className="text-gray-600">{msg('Configure system-wide booking parameters')}</p>
         </div>
       </div>
 
       {/* General Settings */}
       <Card className="p-6">
-        <h3 className="mb-4">General Settings</h3>
+        <h3 className="mb-4">{msg('General Settings')}</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label>Default Cutoff Hours</label>
+            <label>{msg('Default Cutoff Hours')}</label>
             <input
               type="number"
               value={settings.defaultCutoffHours}
@@ -64,10 +66,10 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               min="1"
               max="48"
             />
-            <p className="text-sm text-gray-600 mt-1">Hours before flight time to cutoff booking</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Hours before flight time to cutoff booking')}</p>
           </div>
           <div>
-            <label>Maximum Guests Per Booking</label>
+            <label>{msg('Maximum Guests Per Booking')}</label>
             <input
               type="number"
               value={settings.maxGuestsPerBooking}
@@ -76,10 +78,10 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               min="1"
               max="20"
             />
-            <p className="text-sm text-gray-600 mt-1">Maximum number of guests allowed</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Maximum number of guests allowed')}</p>
           </div>
           <div>
-            <label>Minimum Booking Advance (hours)</label>
+            <label>{msg('Minimum Booking Advance (hours)')}</label>
             <input
               type="number"
               value={settings.minBookingAdvance}
@@ -87,10 +89,10 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-full px-4 py-2 border border-gray-300 rounded-md"
               min="1"
             />
-            <p className="text-sm text-gray-600 mt-1">Minimum hours in advance for booking</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Minimum hours in advance for booking')}</p>
           </div>
           <div>
-            <label>Maximum Booking Advance (days)</label>
+            <label>{msg('Maximum Booking Advance (days)')}</label>
             <input
               type="number"
               value={settings.maxBookingAdvance}
@@ -98,14 +100,14 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-full px-4 py-2 border border-gray-300 rounded-md"
               min="1"
             />
-            <p className="text-sm text-gray-600 mt-1">Maximum days in advance for booking</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Maximum days in advance for booking')}</p>
           </div>
         </div>
       </Card>
 
       {/* Booking Options */}
       <Card className="p-6">
-        <h3 className="mb-4">Booking Options</h3>
+        <h3 className="mb-4">{msg('Booking Options')}</h3>
         <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -115,8 +117,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Allow Ad-hoc Bookings</div>
-              <p className="text-sm text-gray-600">Enable walk-in bookings without prior reservation</p>
+              <div className="text-gray-900">{msg('Allow Ad-hoc Bookings')}</div>
+              <p className="text-sm text-gray-600">{msg('Enable walk-in bookings without prior reservation')}</p>
             </div>
           </label>
           <label className="flex items-center gap-3">
@@ -127,8 +129,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Require Flight Information</div>
-              <p className="text-sm text-gray-600">Make flight details mandatory for all bookings</p>
+              <div className="text-gray-900">{msg('Require Flight Information')}</div>
+              <p className="text-sm text-gray-600">{msg('Make flight details mandatory for all bookings')}</p>
             </div>
           </label>
           <label className="flex items-center gap-3">
@@ -139,8 +141,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Allow Non-flying Guests</div>
-              <p className="text-sm text-gray-600">Permit guests who are not flying (e.g., companions)</p>
+              <div className="text-gray-900">{msg('Allow Non-flying Guests')}</div>
+              <p className="text-sm text-gray-600">{msg('Permit guests who are not flying (e.g., companions)')}</p>
             </div>
           </label>
         </div>
@@ -148,7 +150,7 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
 
       {/* Approval Automation */}
       <Card className="p-6">
-        <h3 className="mb-4">Approval Automation</h3>
+        <h3 className="mb-4">{msg('Approval Automation')}</h3>
         <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -158,8 +160,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Auto-approve VIP Bookings</div>
-              <p className="text-sm text-gray-600">Automatically approve bookings from VIP customers</p>
+              <div className="text-gray-900">{msg('Auto-approve VIP Bookings')}</div>
+              <p className="text-sm text-gray-600">{msg('Automatically approve bookings from VIP customers')}</p>
             </div>
           </label>
           <label className="flex items-center gap-3">
@@ -170,8 +172,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Auto-approve Corporate Bookings</div>
-              <p className="text-sm text-gray-600">Automatically approve bookings from corporate accounts</p>
+              <div className="text-gray-900">{msg('Auto-approve Corporate Bookings')}</div>
+              <p className="text-sm text-gray-600">{msg('Automatically approve bookings from corporate accounts')}</p>
             </div>
           </label>
         </div>
@@ -179,10 +181,10 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
 
       {/* Service Settings */}
       <Card className="p-6">
-        <h3 className="mb-4">Service Settings</h3>
+        <h3 className="mb-4">{msg('Service Settings')}</h3>
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <label>Limousine Lead Time (hours)</label>
+            <label>{msg('Limousine Lead Time (hours)')}</label>
             <input
               type="number"
               value={settings.limousineLeadTime}
@@ -191,14 +193,14 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               min="1"
               max="72"
             />
-            <p className="text-sm text-gray-600 mt-1">Minimum hours in advance to book limousine service</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Minimum hours in advance to book limousine service')}</p>
           </div>
         </div>
       </Card>
 
       {/* Payment Settings */}
       <Card className="p-6">
-        <h3 className="mb-4">Payment Settings</h3>
+        <h3 className="mb-4">{msg('Payment Settings')}</h3>
         <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -208,12 +210,12 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Require Payment for Upfront Bookings</div>
-              <p className="text-sm text-gray-600">Payment must be completed before confirmation</p>
+              <div className="text-gray-900">{msg('Require Payment for Upfront Bookings')}</div>
+              <p className="text-sm text-gray-600">{msg('Payment must be completed before confirmation')}</p>
             </div>
           </label>
           <div>
-            <label>Payment Link Expiry (hours)</label>
+            <label>{msg('Payment Link Expiry (hours)')}</label>
             <input
               type="number"
               value={settings.paymentLinkExpiry}
@@ -222,14 +224,14 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               min="1"
               max="168"
             />
-            <p className="text-sm text-gray-600 mt-1">Hours until payment link expires</p>
+            <p className="text-sm text-gray-600 mt-1">{msg('Hours until payment link expires')}</p>
           </div>
         </div>
       </Card>
 
       {/* Notification Settings */}
       <Card className="p-6">
-        <h3 className="mb-4">Notification Settings</h3>
+        <h3 className="mb-4">{msg('Notification Settings')}</h3>
         <div className="space-y-4">
           <label className="flex items-center gap-3">
             <input
@@ -239,8 +241,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Enable Email Notifications</div>
-              <p className="text-sm text-gray-600">Send booking confirmations and updates via email</p>
+              <div className="text-gray-900">{msg('Enable Email Notifications')}</div>
+              <p className="text-sm text-gray-600">{msg('Send booking confirmations and updates via email')}</p>
             </div>
           </label>
           <label className="flex items-center gap-3">
@@ -251,8 +253,8 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
               className="w-4 h-4"
             />
             <div>
-              <div className="text-gray-900">Enable SMS Notifications</div>
-              <p className="text-sm text-gray-600">Send booking reminders and updates via SMS</p>
+              <div className="text-gray-900">{msg('Enable SMS Notifications')}</div>
+              <p className="text-sm text-gray-600">{msg('Send booking reminders and updates via SMS')}</p>
             </div>
           </label>
         </div>
@@ -262,7 +264,7 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
       <div className="flex justify-end">
         <Button onClick={handleSave}>
           <Save className="w-4 h-4 mr-2" />
-          Save Settings
+          {msg('Save Settings')}
         </Button>
       </div>
     </div>

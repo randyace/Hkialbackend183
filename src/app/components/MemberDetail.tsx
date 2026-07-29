@@ -23,6 +23,8 @@ import {
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { countryNameFor } from '../../../../../utils/countries';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -87,7 +89,7 @@ function Time5MinSelect({
       data-hkial-time-5min-select
     >
       <select
-        aria-label="Hour"
+        aria-label={msg('Hour')}
         value={safeH}
         onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
         required={required}
@@ -100,7 +102,7 @@ function Time5MinSelect({
       </select>
       <span className="opacity-60 text-sm select-none">:</span>
       <select
-        aria-label="Minute"
+        aria-label={msg('Minute')}
         value={safeM}
         onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
         required={required}
@@ -506,6 +508,7 @@ export function MemberDetail({
   onShowReset2FAConfirm,
   onHideReset2FAConfirm,
 }: MemberDetailProps) {
+  const msg = useMsg();
   // Use passed member or fall back to mock — single source of truth
   const memberData: Member = memberProp ?? MOCK_MEMBER;
 
@@ -693,7 +696,7 @@ export function MemberDetail({
       if (onSave) {
         await onSave(updated);
       } else {
-        toast.success('Member details updated successfully');
+        toast.success(msg('Member details updated successfully'));
       }
       setIsEditing(false);
     } catch {
@@ -718,22 +721,22 @@ export function MemberDetail({
 
   const handleDeleteAllergy = (id: number) => {
     onDeleteAllergy?.(id);
-    toast.success('Allergy information removed');
+    toast.success(msg('Allergy information removed'));
   };
 
   const handleDeleteDietary = (id: number) => {
     onDeleteDietary?.(id);
-    toast.success('Dietary requirement removed');
+    toast.success(msg('Dietary requirement removed'));
   };
 
   const handleDeleteSpouseAllergy = (id: number) => {
     onDeleteSpouseAllergy?.(id);
-    toast.success('Spouse allergy information removed');
+    toast.success(msg('Spouse allergy information removed'));
   };
 
   const handleDeleteSpouseDietary = (id: number) => {
     onDeleteSpouseDietary?.(id);
-    toast.success('Spouse dietary requirement removed');
+    toast.success(msg('Spouse dietary requirement removed'));
   };
 
   const handleDeleteRemark = (id: number) => {
@@ -1036,7 +1039,7 @@ export function MemberDetail({
                   value={accountForm.internalGrouping}
                   onChange={e => setAccountForm(f => ({ ...f, internalGrouping: e.target.value }))}
                   disabled={!isEditing}
-                  placeholder="e.g. company or agency name"
+                  placeholder={msg('e.g. company or agency name')}
                   className="w-full disabled:bg-gray-50"
                   autoComplete="off"
                 />
@@ -1074,7 +1077,7 @@ export function MemberDetail({
                   value={accountForm.companyCode}
                   onChange={e => setAccountForm(f => ({ ...f, companyCode: e.target.value }))}
                   disabled={!isEditing}
-                  placeholder="Optional"
+                  placeholder={msg('Optional')}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
@@ -1386,7 +1389,7 @@ export function MemberDetail({
                       value={observationsForm.interests}
                       onChange={e => setObservationsForm(f => ({ ...f, interests: e.target.value }))}
                       disabled={!isEditing}
-                      placeholder="e.g., Golf, Wine, Art"
+                      placeholder={msg('e.g., Golf, Wine, Art')}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                     />
                   </div>
@@ -1810,7 +1813,7 @@ export function MemberDetail({
                             size="sm"
                             onClick={() => {
                               setMockMovements(prev => prev.filter(x => x.id !== m.id)); // demo fallback
-                              toast.success('Movement record removed');
+                              toast.success(msg('Movement record removed'));
                             }}
                             className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                           >
@@ -2279,8 +2282,8 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddPreference?.(); setMockIsAddPreferenceOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!activePreferenceForm.category.trim()) { toast.error('Category is required'); return; }
-              if (!activePreferenceForm.preference.trim()) { toast.error('Preference details are required'); return; }
+              if (!activePreferenceForm.category.trim()) { toast.error(msg('Category is required')); return; }
+              if (!activePreferenceForm.preference.trim()) { toast.error(msg('Preference details are required')); return; }
               toast.success('Preference added');
               onAddPreference?.();
               onCloseAddPreference?.();
@@ -2312,7 +2315,7 @@ export function MemberDetail({
                 type="text"
                 value={activeAllergyForm.allergen}
                 onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
-                placeholder="e.g., Peanuts, Shellfish, Dairy"
+                placeholder={msg('e.g., Peanuts, Shellfish, Dairy')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               />
             </div>
@@ -2333,7 +2336,7 @@ export function MemberDetail({
               <Textarea
                 value={activeAllergyForm.notes}
                 onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, notes: e.target.value }); setMockAllergyForm(f => ({ ...f, notes: e.target.value })); }}
-                placeholder="Additional information about the allergy..."
+                placeholder={msg('Additional information about the allergy...')}
                 rows={3}
               />
             </div>
@@ -2341,7 +2344,7 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddAllergy?.(); setMockIsAddAllergyOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!activeAllergyForm.allergen.trim()) { toast.error('Allergen name is required'); return; }
+              if (!activeAllergyForm.allergen.trim()) { toast.error(msg('Allergen name is required')); return; }
               const today = localDateStr();
               const newItem: FoodAllergy = {
                 id: Date.now(),
@@ -2357,9 +2360,9 @@ export function MemberDetail({
               // Then trigger container to save (container reads form state synchronously)
               onAddAllergy?.();
               if (target === 'spouse') {
-                toast.success('Spouse food allergy added');
+                toast.success(msg('Spouse food allergy added'));
               } else {
-                toast.success('Food allergy added');
+                toast.success(msg('Food allergy added'));
               }
             }}>Add Allergy</Button>
           </DialogFooter>
@@ -2388,7 +2391,7 @@ export function MemberDetail({
                 type="text"
                 value={activeDietaryForm.requirement}
                 onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, requirement: e.target.value }); setMockDietaryForm(f => ({ ...f, requirement: e.target.value })); }}
-                placeholder="e.g., Vegetarian, Low Sodium, Halal"
+                placeholder={msg('e.g., Vegetarian, Low Sodium, Halal')}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md"
               />
             </div>
@@ -2397,7 +2400,7 @@ export function MemberDetail({
               <Textarea
                 value={activeDietaryForm.notes}
                 onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, notes: e.target.value }); setMockDietaryForm(f => ({ ...f, notes: e.target.value })); }}
-                placeholder="Additional details..."
+                placeholder={msg('Additional details...')}
                 rows={3}
               />
             </div>
@@ -2405,7 +2408,7 @@ export function MemberDetail({
           <DialogFooter>
             <Button variant="outline" onClick={() => { onCloseAddDietary?.(); setMockIsAddDietaryOpen(false); }}>Cancel</Button>
             <Button onClick={() => {
-              if (!activeDietaryForm.requirement.trim()) { toast.error('Requirement name is required'); return; }
+              if (!activeDietaryForm.requirement.trim()) { toast.error(msg('Requirement name is required')); return; }
               // Always close the dialog immediately and clear mock state
               const target = activeDietaryTarget;
               onCloseAddDietary?.();
@@ -2413,9 +2416,9 @@ export function MemberDetail({
               // Trigger container to save (container reads form state synchronously)
               onAddDietary?.();
               if (target === 'spouse') {
-                toast.success('Spouse dietary requirement added');
+                toast.success(msg('Spouse dietary requirement added'));
               } else {
-                toast.success('Dietary requirement added');
+                toast.success(msg('Dietary requirement added'));
               }
             }}>Add Requirement</Button>
           </DialogFooter>
@@ -2454,7 +2457,7 @@ export function MemberDetail({
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Number</label>
                 <input
                   type="text"
-                  placeholder="e.g. CX880"
+                  placeholder={msg('e.g. CX880')}
                   value={movementFormProp.flightNo || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, flightNo: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm uppercase"
@@ -2582,7 +2585,7 @@ export function MemberDetail({
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Destination / Origin</label>
                   <input
                   type="text"
-                  placeholder="IATA code, e.g. LHR"
+                  placeholder={msg('IATA code, e.g. LHR')}
                   maxLength={3}
                   value={movementFormProp.destinationOrigin || ''}
                   onChange={e => onMovementFormChange?.({ ...movementFormProp, destinationOrigin: e.target.value })}
@@ -2805,7 +2808,7 @@ export function MemberDetail({
               <Textarea
                 value={remarkFormProp?.remark || ''}
                 onChange={e => onRemarkFormChange?.({ ...remarkFormProp!, remark: e.target.value })}
-                placeholder="Enter your remark..."
+                placeholder={msg('Enter your remark...')}
                 rows={4}
               />
 
@@ -2857,7 +2860,7 @@ export function MemberDetail({
                   type="text"
                   value={activeSpouseForm.firstName}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, firstName: e.target.value }); setMockSpouseForm(f => ({ ...f, firstName: e.target.value })); }}
-                  placeholder="First name"
+                  placeholder={msg('First name')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
@@ -2867,7 +2870,7 @@ export function MemberDetail({
                   type="text"
                   value={activeSpouseForm.lastName}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, lastName: e.target.value }); setMockSpouseForm(f => ({ ...f, lastName: e.target.value })); }}
-                  placeholder="Last name"
+                  placeholder={msg('Last name')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
@@ -2881,7 +2884,7 @@ export function MemberDetail({
                   type="email"
                   value={activeSpouseForm.email}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, email: e.target.value }); setMockSpouseForm(f => ({ ...f, email: e.target.value })); }}
-                  placeholder="email@example.com"
+                  placeholder={msg('email@example.com')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
@@ -2891,7 +2894,7 @@ export function MemberDetail({
                   type="tel"
                   value={activeSpouseForm.phone}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, phone: e.target.value }); setMockSpouseForm(f => ({ ...f, phone: e.target.value })); }}
-                  placeholder="+852 XXXX XXXX"
+                  placeholder={msg('+852 XXXX XXXX')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
@@ -2918,7 +2921,7 @@ export function MemberDetail({
                   maxLength={4}
                   value={activeSpouseForm.passportFirst4}
                   onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, passportFirst4: e.target.value }); setMockSpouseForm(f => ({ ...f, passportFirst4: e.target.value })); }}
-                  placeholder="e.g., UK78"
+                  placeholder={msg('e.g., UK78')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
               </div>
@@ -2933,7 +2936,7 @@ export function MemberDetail({
                 type="text"
                 value={activeSpouseForm.linkedAccountNo || ''}
                 onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, linkedAccountNo: e.target.value }); setMockSpouseForm(f => ({ ...f, linkedAccountNo: e.target.value })); }}
-                placeholder="e.g., ACC-2024-1099"
+                placeholder={msg('e.g., ACC-2024-1099')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               />
             </div>

@@ -9,6 +9,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ export function PaginationBar({
   compact = false,
   className = '',
 }: PaginationBarProps) {
+  const msg = useMsg();
   const from = Math.min((currentPage - 1) * pageSize + 1, totalItems);
   const to = Math.min(currentPage * pageSize, totalItems);
 
@@ -101,7 +103,7 @@ export function PaginationBar({
 
           {pageSizeOptions && onPageSizeChange && (
             <label className="flex items-center gap-1.5 text-sm text-gray-500 whitespace-nowrap">
-              Rows:
+              {msg('Rows:')}
               <select
                 value={pageSize}
                 onChange={(e) => {
@@ -125,15 +127,15 @@ export function PaginationBar({
 
       {/* ── Right: page buttons ── */}
       <nav
-        aria-label="Pagination"
+        aria-label={msg('Pagination')}
         className="flex items-center gap-1"
       >
         {/* First */}
         <NavButton
           onClick={() => onPageChange(1)}
           disabled={!canPrev}
-          aria-label="First page"
-          title="First page"
+          aria-label={msg('First page')}
+          title={msg('First page')}
         >
           <DoubleChevronLeft />
         </NavButton>
@@ -142,8 +144,8 @@ export function PaginationBar({
         <NavButton
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!canPrev}
-          aria-label="Previous page"
-          title="Previous page"
+          aria-label={msg('Previous page')}
+          title={msg('Previous page')}
         >
           <ChevronLeft />
         </NavButton>
@@ -181,8 +183,8 @@ export function PaginationBar({
         <NavButton
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!canNext}
-          aria-label="Next page"
-          title="Next page"
+          aria-label={msg('Next page')}
+          title={msg('Next page')}
         >
           <ChevronRight />
         </NavButton>
@@ -191,8 +193,8 @@ export function PaginationBar({
         <NavButton
           onClick={() => onPageChange(totalPages)}
           disabled={!canNext}
-          aria-label="Last page"
-          title="Last page"
+          aria-label={msg('Last page')}
+          title={msg('Last page')}
         >
           <DoubleChevronRight />
         </NavButton>

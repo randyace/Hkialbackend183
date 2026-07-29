@@ -45,6 +45,7 @@ import { Badge } from '../../ui/badge';
 import { Input } from '../../ui/input';
 import { CATALOG_ADDONS } from '../../addons';
 import type { BookingFormData } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionAddonsProps {
   formData: BookingFormData;
@@ -65,6 +66,7 @@ export function EditSectionAddons({
   bookableItemPrices,
   catalogAddonSlot,
 }: EditSectionAddonsProps) {
+  const msg = useMsg();
   // Local search state (mirrors Create's `addonSearch` /
   // `showAddonDropdown` pattern at CreateBooking.tsx:2781-2853).
   const [addonSearch, setAddonSearch] = useState('');
@@ -113,7 +115,7 @@ export function EditSectionAddons({
   return (
     <Card className="p-5">
       <h3 className="text-base font-semibold text-gray-900 mb-1 flex items-center gap-2">
-        <Plus className="w-4 h-4" /> Add-on Services
+        <Plus className="w-4 h-4" /> {msg('Add-on Services')}
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Search and select services to include with this booking. Toggle off a chip to
@@ -151,7 +153,7 @@ export function EditSectionAddons({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <Input
             type="text"
-            placeholder="Search services to add, e.g. Limousine, Wheelchair, Lounge…"
+            placeholder={msg('Search services to add, e.g. Limousine, Wheelchair, Lounge…')}
             value={addonSearch}
             onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
             onFocus={() => setShowAddonDropdown(true)}
@@ -174,7 +176,7 @@ export function EditSectionAddons({
           <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
             {dropdownResults.length === 0 ? (
               <div className="px-4 py-3 text-sm text-gray-500">
-                No services found for "<span className="font-medium">{addonSearch}</span>"
+                {msg('No services found for "')}<span className="font-medium">{addonSearch}</span>"
               </div>
             ) : dropdownResults.map((rawSvc) => {
               const svc = resolveServiceDisplay(rawSvc);
@@ -225,10 +227,10 @@ export function EditSectionAddons({
         <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/40 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="w-4 h-4 text-amber-600" />
-            <p className="text-sm text-amber-800 font-medium">Lounge Extension — Additional Hours</p>
+            <p className="text-sm text-amber-800 font-medium">{msg('Lounge Extension — Additional Hours')}</p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600">Hours</label>
+            <label className="text-sm text-gray-600">{msg('Hours')}</label>
             <button type="button"
               onClick={() => onFormChange({ loungeExtensionQty: Math.max(1, formData.loungeExtensionQty - 1) })}
               disabled={formData.loungeExtensionQty <= 1}
@@ -248,7 +250,7 @@ export function EditSectionAddons({
               className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
               <Plus className="w-3.5 h-3.5" />
             </button>
-            <span className="text-xs text-gray-500">(max 6 hours per booking)</span>
+            <span className="text-xs text-gray-500">{msg('(max 6 hours per booking)')}</span>
           </div>
           <p className="text-xs text-gray-500 mt-2">
             HK${(bookableItemPrices?.['Lounge Extension'] ?? 0).toLocaleString()} per hour
@@ -281,7 +283,7 @@ export function EditSectionAddons({
       {formData.hasLimousine && (
         <div className="p-3 rounded-lg border border-purple-200 bg-purple-50/40 mb-4 text-xs text-purple-800 flex items-center gap-2">
           <Car className="w-3.5 h-3.5" />
-          Limousine Transfer is on — edit stops in the <strong className="ml-1">Limousine Stops</strong> section below.
+          {msg('Limousine Transfer is on — edit stops in the')} <strong className="ml-1">{msg('Limousine Stops')}</strong> {msg('section below.')}
         </div>
       )}
 
@@ -290,7 +292,7 @@ export function EditSectionAddons({
       {formData.hasWheelchair && (
         <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/40 mb-4 text-xs text-blue-800 flex items-center gap-2">
           <Accessibility className="w-3.5 h-3.5" />
-          Wheelchair Assistance is on — set the recipient in the <strong className="ml-1">Wheelchair Recipient</strong> section below.
+          {msg('Wheelchair Assistance is on — set the recipient in the')} <strong className="ml-1">{msg('Wheelchair Recipient')}</strong> {msg('section below.')}
         </div>
       )}
 
@@ -307,7 +309,7 @@ export function EditSectionAddons({
           />
           <span className="text-sm text-gray-700 flex items-center gap-1.5">
             <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-            Ad-hoc Booking (this booking was created outside the normal flow)
+            {msg('Ad-hoc Booking (this booking was created outside the normal flow)')}
           </span>
         </label>
         <p className="text-xs text-gray-400 mt-1 ml-7">

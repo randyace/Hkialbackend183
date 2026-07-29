@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, UtensilsCrossed, Clock, CheckCheck, X, AlertTriangle } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 interface PendingItem {
   name: string;
@@ -66,6 +67,7 @@ export const INITIAL_OVERDUE_COUNT = MOCK_ALERTS.filter(o =>
 ).length;
 
 export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, onRefresh, onViewBooking }: POSFoodAlertProps = {}) {
+  const msg = useMsg();
   const baseAlerts = alertsProp.length > 0 ? alertsProp : MOCK_ALERTS;
   const [orders, setOrders] = useState<FoodAlert[]>(baseAlerts);
   const [isExpanded, setIsExpanded]       = useState(true);
@@ -129,14 +131,14 @@ export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, on
             }`}
           >
             {isExpanded ? (
-              <><ChevronUp className="w-3.5 h-3.5" /> Collapse</>
+              <><ChevronUp className="w-3.5 h-3.5" /> {msg('Collapse')}</>
             ) : (
-              <><ChevronDown className="w-3.5 h-3.5" /> Expand</>
+              <><ChevronDown className="w-3.5 h-3.5" /> {msg('Expand')}</>
             )}
           </button>
           <button
             onClick={() => setDismissed(true)}
-            title="Dismiss alert"
+            title={msg('Dismiss alert')}
             className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
@@ -181,7 +183,7 @@ export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, on
                       </button>
                       {isOverdue && (
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-100 text-red-700 border border-red-200 rounded text-xs">
-                          <AlertTriangle className="w-2.5 h-2.5" /> Overdue
+                          <AlertTriangle className="w-2.5 h-2.5" /> {msg('Overdue')}
                         </span>
                       )}
                     </div>
@@ -217,7 +219,7 @@ export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, on
                     className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-green-600 hover:bg-green-700 text-white transition-colors"
                   >
                     <CheckCheck className="w-3.5 h-3.5" />
-                    Mark Served
+                    {msg('Mark Served')}
                   </button>
                 </div>
               );

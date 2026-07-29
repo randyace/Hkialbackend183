@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export type PosPrinterRole = 'kitchen' | 'receipt' | 'both';
 
@@ -43,6 +44,7 @@ export function PosPrinterEdit({
   onBack,
   onSave,
 }: PosPrinterEditProps) {
+  const msg = useMsg();
   const isEditMode = !!printerId;
   const [formData, setFormData] = useState<PosPrinterFormData>(defaultFormData);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -116,7 +118,7 @@ export function PosPrinterEdit({
                 setFormData((prev) => ({ ...prev, name: e.target.value }));
                 if (nameError) setNameError(null);
               }}
-              placeholder="e.g. Hot Kitchen, Bar"
+              placeholder={msg('e.g. Hot Kitchen, Bar')}
               className={`w-full px-3 py-2 border rounded-lg text-sm ${
                 nameError ? 'border-red-400' : 'border-gray-200'
               }`}

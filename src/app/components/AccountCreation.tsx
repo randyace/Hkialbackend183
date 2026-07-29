@@ -9,6 +9,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
 import { Building2, Plane, X, UserPlus } from 'lucide-react';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
@@ -75,7 +77,7 @@ function RegionCodeCombobox({
         aria-autocomplete="list"
         autoComplete="off"
         value={displayValue}
-        placeholder={placeholder}
+        placeholder={msg('placeholder')}
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => { setHasFocus(true); setOpen(true); }}
         onKeyDown={(e) => {
@@ -176,6 +178,7 @@ export function AccountCreation({
   isSubmitting = false,
   fieldErrors = {},
 }: AccountCreationProps = {}) {
+  const msg = useMsg();
   const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
   void _countries; // nationality uses NationalityTypeahead (local ISO list); prop kept for wrapper compat
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>(
@@ -335,7 +338,7 @@ export function AccountCreation({
               <Label style={{ marginBottom: 10 }}>Select Company *</Label>
               <div className="relative">
                 <Input
-                  placeholder="Search company by name..."
+                  placeholder={msg('Search company by name...')}
                   value={companySearch}
                   onChange={(e) => handleCompanySearchChange(e.target.value)}
                   onFocus={() => companySearch.length > 0 && setShowCompanyDropdown(true)}
@@ -425,7 +428,7 @@ export function AccountCreation({
                       <Label htmlFor={`fn-${subForm.id}`} style={{ marginBottom: 10 }}>First Name *</Label>
                       <Input id={`fn-${subForm.id}`} value={subForm.firstName}
                         onChange={e => updateCorporateForm(subForm.id, 'firstName', e.target.value)}
-                        placeholder="Enter first name" required />
+                        placeholder={msg('Enter first name')} required />
                     </div>
 
                     {/* Last Name */}
@@ -433,7 +436,7 @@ export function AccountCreation({
                       <Label htmlFor={`ln-${subForm.id}`} style={{ marginBottom: 10 }}>Last Name *</Label>
                       <Input id={`ln-${subForm.id}`} value={subForm.lastName}
                         onChange={e => updateCorporateForm(subForm.id, 'lastName', e.target.value)}
-                        placeholder="Enter last name" required />
+                        placeholder={msg('Enter last name')} required />
                     </div>
 
                     {/* Email */}
@@ -441,7 +444,7 @@ export function AccountCreation({
                       <Label htmlFor={`em-${subForm.id}`} style={{ marginBottom: 10 }}>Email *</Label>
                       <Input id={`em-${subForm.id}`} type="email" value={subForm.email}
                         onChange={e => updateCorporateForm(subForm.id, 'email', e.target.value)}
-                        placeholder="Enter email address" required />
+                        placeholder={msg('Enter email address')} required />
                     </div>
 
                     {/* Region Code + Contact Number */}
@@ -459,7 +462,7 @@ export function AccountCreation({
                         <Label htmlFor={`cn-${subForm.id}`} style={{ marginBottom: 10 }}>Contact Number *</Label>
                         <Input id={`cn-${subForm.id}`} value={subForm.contactNumber}
                           onChange={e => updateCorporateForm(subForm.id, 'contactNumber', filterContactNumber(e.target.value))}
-                          placeholder="Enter contact number" required />
+                          placeholder={msg('Enter contact number')} required />
                       </div>
                     </div>
 
@@ -483,7 +486,7 @@ export function AccountCreation({
                       <Label htmlFor={`rm-${subForm.id}`} style={{ marginBottom: 10 }}>Remarks</Label>
                       <Input id={`rm-${subForm.id}`} value={subForm.remarks}
                         onChange={e => updateCorporateForm(subForm.id, 'remarks', e.target.value)}
-                        placeholder="Optional remarks" />
+                        placeholder={msg('Optional remarks')} />
                     </div>
                   </div>
                 </div>
@@ -502,7 +505,7 @@ export function AccountCreation({
                   <Label style={{ marginBottom: 10 }}>Select Agency *</Label>
                   <div className="relative">
                     <Input
-                      placeholder="Search agency by name or code..."
+                      placeholder={msg('Search agency by name or code...')}
                       value={agencySearch}
                       onChange={(e) => handleAgencySearchChange(e.target.value)}
                       onFocus={() => agencySearch.length > 0 && setShowAgencyDropdown(true)}
@@ -552,7 +555,7 @@ export function AccountCreation({
                     <div>
                       <Label htmlFor="title" style={{ marginBottom: 10 }}>Title *</Label>
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
-                        <SelectTrigger id="title"><SelectValue placeholder="Select title" /></SelectTrigger>
+                        <SelectTrigger id="title"><SelectValue placeholder={msg('Select title')} /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Mr.">Mr.</SelectItem>
                           <SelectItem value="Mrs.">Mrs.</SelectItem>
@@ -565,11 +568,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
-                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="Enter first name" required />
+                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder={msg('Enter first name')} required />
                     </div>
                     <div>
                       <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
-                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder="Enter last name" required />
+                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder={msg('Enter last name')} required />
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
@@ -578,7 +581,7 @@ export function AccountCreation({
                         type="email"
                         value={formData.email}
                         onChange={e => setFormData({...formData, email: e.target.value})}
-                        placeholder="Enter email address"
+                        placeholder={msg('Enter email address')}
                         required
                         style={fieldErrors.email ? { borderColor: '#dc2626', borderWidth: 2 } : undefined}
                       />
@@ -600,7 +603,7 @@ export function AccountCreation({
                       </div>
                       <div className="sm:col-span-2">
                         <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
-                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder="Enter contact number" required />
+                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder={msg('Enter contact number')} required />
                       </div>
                     </div>
                     <div>
@@ -613,7 +616,7 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
-                      <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder="Enter first 4 digits" maxLength={4} />
+                      <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder={msg('Enter first 4 digits')} maxLength={4} />
                     </div>
                   </div>
                 </div>
@@ -628,7 +631,7 @@ export function AccountCreation({
                     <div>
                       <Label htmlFor="title" style={{ marginBottom: 10 }}>Title *</Label>
                       <Select value={formData.title} onValueChange={v => setFormData({...formData, title: v})}>
-                        <SelectTrigger id="title"><SelectValue placeholder="Select title" /></SelectTrigger>
+                        <SelectTrigger id="title"><SelectValue placeholder={msg('Select title')} /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Mr.">Mr.</SelectItem>
                           <SelectItem value="Mrs.">Mrs.</SelectItem>
@@ -641,11 +644,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
-                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="Enter first name" required />
+                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder={msg('Enter first name')} required />
                     </div>
                     <div>
                       <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
-                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder="Enter last name" required />
+                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder={msg('Enter last name')} required />
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
@@ -654,7 +657,7 @@ export function AccountCreation({
                         type="email"
                         value={formData.email}
                         onChange={e => setFormData({...formData, email: e.target.value})}
-                        placeholder="Enter email address"
+                        placeholder={msg('Enter email address')}
                         required
                         style={fieldErrors.email ? { borderColor: '#dc2626', borderWidth: 2 } : undefined}
                       />
@@ -676,7 +679,7 @@ export function AccountCreation({
                       </div>
                       <div className="sm:col-span-2">
                         <Label htmlFor="contactNumber" style={{ marginBottom: 10 }}>Contact Number *</Label>
-                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder="Enter contact number" required />
+                        <Input id="contactNumber" value={formData.contactNumber} onChange={e => setFormData({...formData, contactNumber: filterContactNumber(e.target.value)})} placeholder={msg('Enter contact number')} required />
                       </div>
                     </div>
                     <div>
@@ -689,7 +692,7 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="passportNumber" style={{ marginBottom: 10 }}>First 4 digits of Passport Number (optional)</Label>
-                      <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder="Enter first 4 digits" maxLength={4} />
+                      <Input id="passportNumber" value={formData.passportNumber} onChange={e => setFormData({...formData, passportNumber: e.target.value})} placeholder={msg('Enter first 4 digits')} maxLength={4} />
                     </div>
                   </div>
                 </div>
@@ -703,7 +706,7 @@ export function AccountCreation({
           <>
             <div>
               <Label htmlFor="remarks" style={{ marginBottom: 10 }}>Remarks (optional)</Label>
-              <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder="Enter any additional remarks" />
+              <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder={msg('Enter any additional remarks')} />
             </div>
           </>
         )}

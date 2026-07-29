@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -90,11 +91,12 @@ export function PageHeader({
   rightSlot,
   className = '',
 }: PageHeaderProps) {
+  const msg = useMsg();
   return (
     <header className={`space-y-2 ${className}`}>
       {/* ── Breadcrumbs ── */}
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav aria-label="Breadcrumb">
+        <nav aria-label={msg('Breadcrumb')}>
           <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-500">
             {breadcrumbs.map((crumb, i) => {
               const isLast = i === breadcrumbs.length - 1;

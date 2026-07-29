@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
+import { msg } from '@/i18n/msgFallback';
 // 2026-06-12 (round 6.2.39, M11 fix) — import the shared
 // catalog of add-on services. The pre-6.2.39 hardcoded
 // CREATE_ADDON_SERVICES (4 items) is replaced by this import.
@@ -161,7 +162,7 @@ function Time5MinSelect({
       data-hkial-time-5min-select
     >
       <select
-        aria-label="Hour"
+        aria-label={msg('Hour')}
         value={safeH}
         onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
         required={required}
@@ -174,7 +175,7 @@ function Time5MinSelect({
       </select>
       <span className="opacity-60 text-sm select-none">:</span>
       <select
-        aria-label="Minute"
+        aria-label={msg('Minute')}
         value={safeM}
         onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
         required={required}
@@ -1018,7 +1019,7 @@ function RegionCodeCombobox({
         tabIndex={-1}
         onClick={() => setOpen((o) => !o)}
         className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-        aria-label="Toggle region code list"
+        aria-label={msg('Toggle region code list')}
       >
         <ChevronDown className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -2349,7 +2350,7 @@ export function CreateBooking({
                     value={accountNumber}
                     onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); setFieldErrors((prev) => { if (!prev.accountNumber) return prev; const n = { ...prev }; delete n.accountNumber; return n; }); }}
                     onFocus={() => { onAccountSearch?.(accountNumber); setShowAccountDropdown(true); }}
-                    placeholder="Search account number or name…"
+                    placeholder={msg('Search account number or name…')}
                     className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.accountNumber ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
                   {showAccountDropdown && (
                     <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
@@ -2372,7 +2373,7 @@ export function CreateBooking({
               ) : (
                 <input type="text" id="create-account-number" value={accountNumber}
                   onChange={e => { setAccountNumber(e.target.value); onAccountSearch?.(e.target.value); setFieldErrors((prev) => { if (!prev.accountNumber) return prev; const n = { ...prev }; delete n.accountNumber; return n; }); }}
-                  placeholder="e.g. ACC-2024-0012"
+                  placeholder={msg('e.g. ACC-2024-0012')}
                   className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.accountNumber ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
               )}
               {fieldErrors.accountNumber && (
@@ -2389,7 +2390,7 @@ export function CreateBooking({
                   onChange={e => { setGuestName(e.target.value); onGuestSearch?.(e.target.value); }}
                   onFocus={() => { setGuestSearchFocused(true); setShowGuestDropdown(true); if (guestName.length >= 1) onGuestSearch?.(guestName); }}
                   onBlur={() => setTimeout(() => setGuestSearchFocused(false), 200)}
-                  placeholder="Search by name, phone, or email…"
+                  placeholder={msg('Search by name, phone, or email…')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                 {(showGuestDropdown || guestSearchFocused) && guestSearchResults !== undefined && (
                   <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-30 max-h-52 overflow-y-auto">
@@ -2436,7 +2437,7 @@ export function CreateBooking({
               <div className="col-span-2">
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Company Name</label>
                 <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)}
-                  placeholder="Corporate account company name"
+                  placeholder={msg('Corporate account company name')}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             )}
@@ -2444,7 +2445,7 @@ export function CreateBooking({
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
                 <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)} disabled={!!selectedAccount}>
-                  <SelectTrigger><SelectValue placeholder="Select tier" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={msg('Select tier')} /></SelectTrigger>
                   <SelectContent>
                     {(['Gold', 'Platinum', 'Diamond', 'Sapphire'] as MembershipTier[]).map(t => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -2558,7 +2559,7 @@ export function CreateBooking({
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Remark</label>
               <input type="text" value={accountRemark} onChange={e => setAccountRemark(e.target.value)}
-                placeholder="e.g. VIP Member – Priority Service"
+                placeholder={msg('e.g. VIP Member – Priority Service')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div className="flex items-center gap-3 col-span-2 pt-1">
@@ -2624,7 +2625,7 @@ export function CreateBooking({
                   <Plane className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input type="text" id="create-flight-no" value={flightNo}
                     onChange={e => { setFlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.flightNo) return prev; const n = { ...prev }; delete n.flightNo; return n; }); }}
-                    placeholder="e.g. CX880"
+                    placeholder={msg('e.g. CX880')}
                     className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.flightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`} />
                 </div>
                 {onFlightLookup ? (
@@ -2712,7 +2713,7 @@ export function CreateBooking({
                 id="create-flight-origin"
                 value={flightOrigin}
                 onChange={setFlightOrigin}
-                placeholder="Search IATA or city (e.g. LHR)"
+                placeholder={msg('Search IATA or city (e.g. LHR)')}
                 data-testid="create-flight-origin"
               />
             </div>
@@ -2760,7 +2761,7 @@ export function CreateBooking({
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Class (Main VIP Passenger)</label>
               <Select value={flightClass} onValueChange={v => setFlightClass(v as FlightClass)}>
-                <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={msg('Select class')} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Economy Class">Economy Class</SelectItem>
                   <SelectItem value="Business Class">Business Class</SelectItem>
@@ -2841,7 +2842,7 @@ export function CreateBooking({
                       type="text"
                       value={leg2FlightNo}
                       onChange={e => { setLeg2FlightNo(e.target.value.toUpperCase()); setFieldErrors((prev) => { if (!prev.leg2FlightNo) return prev; const n = { ...prev }; delete n.leg2FlightNo; return n; }); }}
-                      placeholder="e.g. CX889"
+                      placeholder={msg('e.g. CX889')}
                       data-testid="leg2-flightNo"
                       className={`w-full pl-9 pr-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.leg2FlightNo ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
                     />
@@ -3186,7 +3187,7 @@ export function CreateBooking({
                 <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Name</span>
               </label>
               <input type="text" value={contactName} onChange={e => setContactName(e.target.value)}
-                placeholder="Full name of contact person"
+                placeholder={msg('Full name of contact person')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div>
@@ -3194,7 +3195,7 @@ export function CreateBooking({
                 <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Contact Email</span>
               </label>
               <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)}
-                placeholder="e.g. contact@example.com"
+                placeholder={msg('e.g. contact@example.com')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
             <div>
@@ -3213,7 +3214,7 @@ export function CreateBooking({
                     value={regionCode}
                     options={(regionCodes && regionCodes.length > 0) ? regionCodes : FALLBACK_REGION_CODES}
                     onChange={setRegionCode}
-                    placeholder="Region code"
+                    placeholder={msg('Region code')}
                   />
                 </div>
                 <input type="tel" value={contactNo}
@@ -3227,7 +3228,7 @@ export function CreateBooking({
                 <span className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" />Booking Memo</span>
               </label>
               <textarea value={bookingMemo} onChange={e => setBookingMemo(e.target.value)}
-                placeholder="Internal notes or special instructions for this booking…"
+                placeholder={msg('Internal notes or special instructions for this booking…')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
                 rows={3} />
             </div>
@@ -3307,13 +3308,13 @@ export function CreateBooking({
                         <div className="col-span-2">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name</label>
                           <input type="text" value={p.firstName} onChange={e => updatePassenger(idx, 'firstName', e.target.value)}
-                            placeholder="First name"
+                            placeholder={msg('First name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-2">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name</label>
                           <input type="text" value={p.lastName} onChange={e => updatePassenger(idx, 'lastName', e.target.value)}
-                            placeholder="Last name"
+                            placeholder={msg('Last name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-1">
@@ -3328,7 +3329,7 @@ export function CreateBooking({
                         <div className="col-span-1">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Membership No.</label>
                           <input type="text" value={p.membershipNo} onChange={e => updatePassenger(idx, 'membershipNo', e.target.value)}
-                            placeholder="MEM-XXXX"
+                            placeholder={msg('MEM-XXXX')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-2">
@@ -3355,7 +3356,7 @@ export function CreateBooking({
                               {MONTHS.map(m => <option key={m}>{m}</option>)}
                             </select>
                             <input type="number" value={p.birthdayYear} onChange={e => updatePassenger(idx, 'birthdayYear', e.target.value)}
-                              placeholder="Year" min={1900} max={new Date().getFullYear()}
+                              placeholder={msg('Year')} min={1900} max={new Date().getFullYear()}
                               className="w-full px-2 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                           </div>
                         </div>
@@ -3386,7 +3387,7 @@ export function CreateBooking({
                           type="text"
                           value={p.foodAllergies}
                           onChange={e => updatePassenger(idx, 'foodAllergies', e.target.value)}
-                          placeholder="e.g. Shellfish, Peanuts, Dairy — leave blank if none"
+                          placeholder={msg('e.g. Shellfish, Peanuts, Dairy — leave blank if none')}
                           className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${p.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                         />
                         {p.foodAllergies && (
@@ -3454,13 +3455,13 @@ export function CreateBooking({
                         <div>
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>First Name</label>
                           <input type="text" value={g.firstName} onChange={e => updateNonFlying(idx, 'firstName', e.target.value)}
-                            placeholder="First name"
+                            placeholder={msg('First name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div>
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Last Name</label>
                           <input type="text" value={g.lastName} onChange={e => updateNonFlying(idx, 'lastName', e.target.value)}
-                            placeholder="Last name"
+                            placeholder={msg('Last name')}
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div>
@@ -3503,7 +3504,7 @@ export function CreateBooking({
                           type="text"
                           value={g.foodAllergies}
                           onChange={e => updateNonFlying(idx, 'foodAllergies', e.target.value)}
-                          placeholder="e.g. Peanuts, Shellfish — leave blank if none"
+                          placeholder={msg('e.g. Peanuts, Shellfish — leave blank if none')}
                           className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${g.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                         />
                         {g.foodAllergies && (
@@ -3681,7 +3682,7 @@ export function CreateBooking({
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="Search services to add, e.g. Limousine, Fast Track, Shower…"
+                      placeholder={msg('Search services to add, e.g. Limousine, Fast Track, Shower…')}
                       value={addonSearch}
                       onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
                       onFocus={() => setShowAddonDropdown(true)}
@@ -3800,7 +3801,7 @@ export function CreateBooking({
                     </div>
                     <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Passenger Name</label>
                     <input type="text" value={wheelchairPassenger} onChange={e => setWheelchairPassenger(e.target.value)}
-                      placeholder="Name of passenger requiring assistance"
+                      placeholder={msg('Name of passenger requiring assistance')}
                       className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                   </div>
                 )}
@@ -3907,7 +3908,7 @@ export function CreateBooking({
                       handleApplyPromo();
                     }
                   }}
-                  placeholder="e.g. SUMMER2024"
+                  placeholder={msg('e.g. SUMMER2024')}
                   disabled={promoValidating}
                   className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
                 />
@@ -3932,7 +3933,7 @@ export function CreateBooking({
           <h2 className="mb-1">Special Requests &amp; Notes</h2>
           <p className="text-sm text-gray-500 mb-4">Any dietary requirements, accessibility needs, or special instructions for the lounge team.</p>
           <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
-            placeholder="e.g. Birthday celebration, Kosher meal required, Allergy to nuts…"
+            placeholder={msg('e.g. Birthday celebration, Kosher meal required, Allergy to nuts…')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             rows={4} />
         </Card>

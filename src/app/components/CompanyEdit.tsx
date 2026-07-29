@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── MOCK constant (isolated — container replaces via props) ───────────────────
 const MOCK_COMPANY: Company = {
@@ -183,6 +184,7 @@ export function CompanyEdit({
   onCancel,
   isSubmitting = false,
 }: CompanyEditProps) {
+  const msg = useMsg();
   // ── Form field state (controlled inputs) ──────────────────────────────────
   const [formCompanyName, setFormCompanyName] = useState('');
   const [formCompanyCode, setFormCompanyCode] = useState('');
@@ -348,7 +350,7 @@ export function CompanyEdit({
                   value={formCompanyName}
                   onChange={(e) => setFormCompanyName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., Cathay Pacific Airways"
+                  placeholder={msg('e.g., Cathay Pacific Airways')}
                 />
               </div>
               <div>
@@ -358,7 +360,7 @@ export function CompanyEdit({
                   value={formCompanyCode}
                   onChange={(e) => setFormCompanyCode(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., CORP-CX-001"
+                  placeholder={msg('e.g., CORP-CX-001')}
                 />
               </div>
             </div>
@@ -442,7 +444,7 @@ export function CompanyEdit({
                         type="text"
                         value={contact.name}
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'name', e.target.value)}
-                        placeholder="Full name"
+                        placeholder={msg('Full name')}
                         className="h-9"
                       />
                     </div>
@@ -452,7 +454,7 @@ export function CompanyEdit({
                         type="email"
                         value={contact.email}
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'email', e.target.value)}
-                        placeholder="email@company.com"
+                        placeholder={msg('email@company.com')}
                         className="h-9"
                       />
                     </div>
@@ -476,7 +478,7 @@ export function CompanyEdit({
               <Textarea
                 value={formBillingAddress}
                 onChange={(e) => setFormBillingAddress(e.target.value)}
-                placeholder="Enter company billing address..."
+                placeholder={msg('Enter company billing address...')}
                 rows={3}
               />
             </div>
@@ -486,7 +488,7 @@ export function CompanyEdit({
               <Textarea
                 value={formRemarks}
                 onChange={(e) => setFormRemarks(e.target.value)}
-                placeholder="Any additional notes about this company..."
+                placeholder={msg('Any additional notes about this company...')}
                 rows={3}
               />
             </div>
@@ -695,7 +697,7 @@ export function CompanyEdit({
                 <Label htmlFor="customerTitle">Title *</Label>
                 <Select>
                   <SelectTrigger id="customerTitle">
-                    <SelectValue placeholder="Select" />
+                    <SelectValue placeholder={msg('Select')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mr">Mr.</SelectItem>
@@ -709,14 +711,14 @@ export function CompanyEdit({
                 <Label htmlFor="customerFirstName">First Name *</Label>
                 <Input
                   id="customerFirstName"
-                  placeholder="Enter first name"
+                  placeholder={msg('Enter first name')}
                 />
               </div>
               <div>
                 <Label htmlFor="customerLastName">Last Name *</Label>
                 <Input
                   id="customerLastName"
-                  placeholder="Enter last name"
+                  placeholder={msg('Enter last name')}
                 />
               </div>
             </div>
@@ -730,7 +732,7 @@ export function CompanyEdit({
                     id="customerEmail"
                     type="email"
                     className="pl-10"
-                    placeholder="email@company.com"
+                    placeholder={msg('email@company.com')}
                   />
                 </div>
               </div>
@@ -753,7 +755,7 @@ export function CompanyEdit({
                 <Label htmlFor="customerRole">Customer Role</Label>
                 <Select>
                   <SelectTrigger id="customerRole">
-                    <SelectValue placeholder="Select role" />
+                    <SelectValue placeholder={msg('Select role')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="employee">Employee</SelectItem>
@@ -767,7 +769,7 @@ export function CompanyEdit({
                 <Label htmlFor="customerDepartment">Department</Label>
                 <Input
                   id="customerDepartment"
-                  placeholder="e.g., Sales, Marketing"
+                  placeholder={msg('e.g., Sales, Marketing')}
                 />
               </div>
             </div>
@@ -776,7 +778,7 @@ export function CompanyEdit({
               <Label htmlFor="customerRemarks">Customer Remarks</Label>
               <Textarea
                 id="customerRemarks"
-                placeholder="Any notes about this customer..."
+                placeholder={msg('Any notes about this customer...')}
                 rows={2}
               />
             </div>

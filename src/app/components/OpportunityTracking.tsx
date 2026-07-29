@@ -15,6 +15,8 @@ import {
   Building2, Plane, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -82,7 +84,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Corporate', contactName: 'Alice Lam', contactEmail: 'alice.lam@cathaypacific.com',
     stage: 'Renewal Due', estimatedValue: 168000, currency: 'HKD',
     expectedCloseDate: '2025-03-31', assignedTo: 'Kelly Chan', createdDate: '2024-12-01', lastActivityDate: '2025-02-18',
-    description: 'Annual contract renewal. Client is happy but may seek Enterprise upgrade.',
+    description: msg('Annual contract renewal. Client is happy but may seek Enterprise upgrade.'),
     notes: 'Alice mentioned possible headcount growth. Explore Enterprise Bundle.',
     interactions: [
       { id: 1, date: '2025-02-18', type: 'Meeting', summary: 'Renewal discussion. Client satisfied. Interested in upgrade options.', followUpDate: '2025-03-01', conductedBy: 'Kelly Chan' },
@@ -95,7 +97,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Corporate', contactName: 'Michael Yung', contactEmail: 'm.yung@gs.com',
     stage: 'Proposal Sent', estimatedValue: 280000, currency: 'HKD',
     expectedCloseDate: '2025-04-15', assignedTo: 'David Lau', createdDate: '2025-01-10', lastActivityDate: '2025-02-10',
-    description: 'New enterprise prospect. CFO office has 30+ frequent flyers per month.',
+    description: msg('New enterprise prospect. CFO office has 30+ frequent flyers per month.'),
     notes: 'Decision maker is CFO. Proposal sent for Enterprise Bundle.',
     interactions: [
       { id: 1, date: '2025-02-10', type: 'Meeting', summary: 'Presented Enterprise Bundle proposal. Price negotiation expected.', followUpDate: '2025-02-24', conductedBy: 'David Lau' },
@@ -108,7 +110,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Agency', contactName: 'Gary Tsang', contactEmail: 'gary.tsang@fortunetravel.com',
     stage: 'Negotiation', estimatedValue: 160000, currency: 'HKD',
     expectedCloseDate: '2025-03-15', assignedTo: 'Kelly Chan', createdDate: '2025-01-05', lastActivityDate: '2025-02-21',
-    description: 'Upsell from Business to Enterprise Bundle. Balance nearly depleted.',
+    description: msg('Upsell from Business to Enterprise Bundle. Balance nearly depleted.'),
     notes: 'Gary is pushing for 5% discount on Enterprise. Approved by manager.',
     interactions: [
       { id: 1, date: '2025-02-21', type: 'Call', summary: 'Negotiating discount terms. Gary accepted 3%.', followUpDate: '2025-02-28', conductedBy: 'Kelly Chan' },
@@ -120,7 +122,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Agency', contactName: 'Fiona Cheung', contactEmail: 'fiona@pacificworld.hk',
     stage: 'Prospecting', estimatedValue: 32000, currency: 'HKD',
     expectedCloseDate: '2025-05-01', assignedTo: 'David Lau', createdDate: '2025-02-22', lastActivityDate: '2025-02-22',
-    description: 'Newly onboarded. Standard Bundle trial. Assess utilisation for upsell in Q3.',
+    description: msg('Newly onboarded. Standard Bundle trial. Assess utilisation for upsell in Q3.'),
     notes: 'Monitor usage in first 3 months.',
     interactions: [
       { id: 1, date: '2025-02-22', type: 'Email', summary: 'Welcome email sent with onboarding guide.', conductedBy: 'David Lau' },
@@ -131,7 +133,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Corporate', contactName: 'Brian Wong', contactEmail: 'brian.wong@hsbc.com',
     stage: 'Closed Won', estimatedValue: 3800, currency: 'HKD',
     expectedCloseDate: '2024-03-20', assignedTo: 'Kelly Chan', createdDate: '2024-02-15', lastActivityDate: '2024-03-20',
-    description: 'Basic Bundle sold. Entry-level package.',
+    description: msg('Basic Bundle sold. Entry-level package.'),
     notes: 'Watch for utilisation — potential to upgrade to Standard.',
     interactions: [
       { id: 1, date: '2024-03-20', type: 'Call', summary: 'Contract signed. Basic Bundle activated.', conductedBy: 'Kelly Chan' },
@@ -143,7 +145,7 @@ const MOCK_OPPORTUNITIES: Opportunity[] = [
     accountType: 'Corporate', contactName: 'Tom Leung', contactEmail: 't.leung@dhl.com',
     stage: 'Closed Lost', estimatedValue: 56000, currency: 'HKD',
     expectedCloseDate: '2024-11-30', assignedTo: 'David Lau', createdDate: '2024-09-01', lastActivityDate: '2024-11-30',
-    description: 'Lost to competitor — preferred in-terminal lounge contract.',
+    description: msg('Lost to competitor — preferred in-terminal lounge contract.'),
     notes: 'Re-approach Q3 2025 when their contract expires.',
     interactions: [
       { id: 1, date: '2024-11-30', type: 'Email', summary: 'Client confirmed they signed with competitor.', conductedBy: 'David Lau' },
@@ -188,6 +190,7 @@ export function OpportunityTracking({
   onAddInteraction,
   isLoading = false,
 }: OpportunityTrackingProps = {}) {
+  const msg = useMsg();
   const [opportunities, setOpportunities] = useState<Opportunity[]>(
     opportunitiesProp.length > 0 ? opportunitiesProp : MOCK_OPPORTUNITIES,
   );
@@ -257,33 +260,33 @@ export function OpportunityTracking({
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900 mb-1">CRM & Opportunity Tracking</h1>
-          <p className="text-sm text-gray-500">Track deal pipeline, log client interactions, and manage renewal cycles.</p>
+          <h1 className="text-gray-900 mb-1">{msg('CRM & Opportunity Tracking')}</h1>
+          <p className="text-sm text-gray-500">{msg('Track deal pipeline, log client interactions, and manage renewal cycles.')}</p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-          onClick={() => toast.info('New opportunity form coming soon.')}>
-          <Plus className="w-4 h-4 mr-2" />New Opportunity
+          onClick={() => toast.info(msg('New opportunity form coming soon.'))}>
+          <Plus className="w-4 h-4 mr-2" />{msg('New Opportunity')}
         </Button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
-          <p className="text-xs text-blue-200 mb-1">Pipeline Value</p>
+          <p className="text-xs text-blue-200 mb-1">{msg('Pipeline Value')}</p>
           <p className="text-xl text-white">HKD {(totalPipelineValue / 1000).toFixed(0)}K</p>
           <p className="text-xs text-blue-300 mt-1">{opportunities.filter(o => !CLOSED_STAGES.includes(o.stage)).length} open deals</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-1 mb-1"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-xs text-gray-500">Closed Won</p></div>
+          <div className="flex items-center gap-1 mb-1"><CheckCircle className="w-4 h-4 text-green-500" /><p className="text-xs text-gray-500">{msg('Closed Won')}</p></div>
           <p className="text-xl text-green-600">HKD {(closedWonValue / 1000).toFixed(0)}K</p>
         </Card>
         <Card className="p-4 border-2 border-amber-300 bg-amber-50">
-          <div className="flex items-center gap-1 mb-1"><AlertCircle className="w-4 h-4 text-amber-600" /><p className="text-xs text-amber-700">Renewal Due</p></div>
+          <div className="flex items-center gap-1 mb-1"><AlertCircle className="w-4 h-4 text-amber-600" /><p className="text-xs text-amber-700">{msg('Renewal Due')}</p></div>
           <p className="text-2xl text-amber-600">{renewalDueCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Action required</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Action required')}</p>
         </Card>
         <Card className="p-4">
-          <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-4 h-4 text-blue-500" /><p className="text-xs text-gray-500">Total Opportunities</p></div>
+          <div className="flex items-center gap-1 mb-1"><TrendingUp className="w-4 h-4 text-blue-500" /><p className="text-xs text-gray-500">{msg('Total Opportunities')}</p></div>
           <p className="text-2xl text-blue-600">{opportunities.length}</p>
         </Card>
       </div>
@@ -292,34 +295,34 @@ export function OpportunityTracking({
       <Card className="p-4 mb-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Input placeholder="Search by company or opportunity ref..." value={searchTerm}
+            <Input placeholder={msg('Search by company or opportunity ref...')} value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pl-4" />
           </div>
           <Select value={filterStage} onValueChange={(v: any) => setFilterStage(v)}>
-            <SelectTrigger className="w-full md:w-52"><SelectValue placeholder="All Stages" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-52"><SelectValue placeholder={msg('All Stages')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Stages</SelectItem>
+              <SelectItem value="all">{msg('All Stages')}</SelectItem>
               {(['Prospecting','Proposal Sent','Negotiation','Renewal Due','Closed Won','Closed Lost'] as DealStage[]).map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
-            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder={msg('All Types')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Agency">Agency</SelectItem>
+              <SelectItem value="all">{msg('All Types')}</SelectItem>
+              <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+              <SelectItem value="Agency">{msg('Agency')}</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex border rounded-md overflow-hidden">
             <button onClick={() => setViewMode('pipeline')}
               className={`px-3 py-2 text-sm transition-colors ${viewMode === 'pipeline' ? 'bg-[#0f2942] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              Pipeline
+              {msg('Pipeline')}
             </button>
             <button onClick={() => setViewMode('table')}
               className={`px-3 py-2 text-sm transition-colors ${viewMode === 'table' ? 'bg-[#0f2942] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
-              Table
+              {msg('Table')}
             </button>
           </div>
         </div>
@@ -341,7 +344,7 @@ export function OpportunityTracking({
                   </div>
                   <div className="space-y-2">
                     {opps.length === 0
-                      ? <p className="text-xs text-gray-400 text-center py-4">No deals</p>
+                      ? <p className="text-xs text-gray-400 text-center py-4">{msg('No deals')}</p>
                       : opps.map(o => (
                           <div key={o.id} onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}
                             className="bg-white rounded p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100">
@@ -378,7 +381,7 @@ export function OpportunityTracking({
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {opps.length === 0
-                      ? <p className="text-xs text-gray-400 col-span-2 text-center py-3">No deals</p>
+                      ? <p className="text-xs text-gray-400 col-span-2 text-center py-3">{msg('No deals')}</p>
                       : opps.map(o => (
                           <div key={o.id} onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}
                             className="bg-white rounded p-2 shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-gray-100">
@@ -401,15 +404,15 @@ export function OpportunityTracking({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ref</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead>Est. Value</TableHead>
-                  <TableHead>Close Date</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{msg('Ref')}</TableHead>
+                  <TableHead>{msg('Company')}</TableHead>
+                  <TableHead>{msg('Type')}</TableHead>
+                  <TableHead>{msg('Stage')}</TableHead>
+                  <TableHead>{msg('Est. Value')}</TableHead>
+                  <TableHead>{msg('Close Date')}</TableHead>
+                  <TableHead>{msg('Assigned To')}</TableHead>
+                  <TableHead>{msg('Last Activity')}</TableHead>
+                  <TableHead className="text-right">{msg('Actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -422,8 +425,8 @@ export function OpportunityTracking({
                     </TableCell>
                     <TableCell>
                       {o.accountType === 'Corporate'
-                        ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />Corp</span>
-                        : <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Agency</span>}
+                        ? <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />{msg('Corp')}</span>
+                        : <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />{msg('Agency')}</span>}
                     </TableCell>
                     <TableCell><StageBadge stage={o.stage} /></TableCell>
                     <TableCell className="text-sm text-gray-900">HKD {o.estimatedValue.toLocaleString()}</TableCell>
@@ -434,7 +437,7 @@ export function OpportunityTracking({
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="outline" size="sm" className="text-xs px-2"
                           onClick={() => openLogDialog(o)}>
-                          <MessageSquare className="w-3 h-3 mr-1" />Log
+                          <MessageSquare className="w-3 h-3 mr-1" />{msg('Log')}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setSelectedOpp(o); setIsDetailOpen(true); }}>
                           <Eye className="w-4 h-4" />
@@ -479,12 +482,12 @@ export function OpportunityTracking({
                     </div>
                   ))}
                   <div className="bg-gray-50 rounded p-3 col-span-2">
-                    <p className="text-xs text-gray-500 mb-1">Description</p>
+                    <p className="text-xs text-gray-500 mb-1">{msg('Description')}</p>
                     <p className="text-gray-700 text-sm">{selectedOpp.description}</p>
                   </div>
                   {selectedOpp.notes && (
                     <div className="bg-amber-50 rounded p-3 col-span-2 border border-amber-200">
-                      <p className="text-xs text-amber-700 mb-1">Notes / BD Flags</p>
+                      <p className="text-xs text-amber-700 mb-1">{msg('Notes / BD Flags')}</p>
                       <p className="text-amber-800 text-sm">{selectedOpp.notes}</p>
                     </div>
                   )}
@@ -493,10 +496,10 @@ export function OpportunityTracking({
                 {/* Interaction Timeline */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm text-gray-700">Interaction History</p>
+                    <p className="text-sm text-gray-700">{msg('Interaction History')}</p>
                     <Button variant="outline" size="sm" className="text-xs"
                       onClick={() => { openLogDialog(selectedOpp); }}>
-                      <Plus className="w-3 h-3 mr-1" />Log Interaction
+                      <Plus className="w-3 h-3 mr-1" />{msg('Log Interaction')}
                     </Button>
                   </div>
                   <div className="space-y-3">
@@ -521,10 +524,10 @@ export function OpportunityTracking({
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
+                <Button variant="outline" onClick={() => setIsDetailOpen(false)}>{msg('Close')}</Button>
                 <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-                  onClick={() => toast.info('Edit opportunity form coming soon.')}>
-                  <Edit className="w-4 h-4 mr-2" />Edit Stage
+                  onClick={() => toast.info(msg('Edit opportunity form coming soon.'))}>
+                  <Edit className="w-4 h-4 mr-2" />{msg('Edit Stage')}
                 </Button>
               </DialogFooter>
             </>
@@ -536,44 +539,44 @@ export function OpportunityTracking({
       <Dialog open={isLogOpen} onOpenChange={setIsLogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Log Interaction</DialogTitle>
+            <DialogTitle>{msg('Log Interaction')}</DialogTitle>
             <DialogDescription>{opportunities.find(o => o.id === logOppId)?.companyName}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="mb-[10px] block">Interaction Type *</Label>
+              <Label className="mb-[10px] block">{msg('Interaction Type *')}</Label>
               <Select value={logType} onValueChange={(v: any) => setLogType(v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Meeting">Meeting</SelectItem>
-                  <SelectItem value="Call">Call</SelectItem>
-                  <SelectItem value="Email">Email</SelectItem>
-                  <SelectItem value="Site Visit">Site Visit</SelectItem>
+                  <SelectItem value="Meeting">{msg('Meeting')}</SelectItem>
+                  <SelectItem value="Call">{msg('Call')}</SelectItem>
+                  <SelectItem value="Email">{msg('Email')}</SelectItem>
+                  <SelectItem value="Site Visit">{msg('Site Visit')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="mb-[10px] block">Date *</Label>
+              <Label className="mb-[10px] block">{msg('Date *')}</Label>
               <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
             </div>
             <div>
-              <Label className="mb-[10px] block">Summary *</Label>
-              <Textarea rows={3} placeholder="What was discussed / agreed..." value={logSummary} onChange={(e) => setLogSummary(e.target.value)} />
+              <Label className="mb-[10px] block">{msg('Summary *')}</Label>
+              <Textarea rows={3} placeholder={msg('What was discussed / agreed...')} value={logSummary} onChange={(e) => setLogSummary(e.target.value)} />
             </div>
             <div>
-              <Label className="mb-[10px] block">Follow-up Date</Label>
+              <Label className="mb-[10px] block">{msg('Follow-up Date')}</Label>
               <Input type="date" value={logFollowUp} onChange={(e) => setLogFollowUp(e.target.value)} />
             </div>
             <div>
-              <Label className="mb-[10px] block">Conducted By</Label>
+              <Label className="mb-[10px] block">{msg('Conducted By')}</Label>
               <Input value={logBy} onChange={(e) => setLogBy(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsLogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setIsLogOpen(false)}>{msg('Cancel')}</Button>
             <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
               disabled={!logSummary.trim()} onClick={handleLogInteraction}>
-              <CheckCircle className="w-4 h-4 mr-2" />Save Interaction
+              <CheckCircle className="w-4 h-4 mr-2" />{msg('Save Interaction')}
             </Button>
           </DialogFooter>
         </DialogContent>

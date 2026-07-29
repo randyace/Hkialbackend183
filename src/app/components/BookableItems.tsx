@@ -12,6 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -180,6 +181,7 @@ export function BookableItems({
   onDeleteItem,
   onCreateItem,
 }: BookableItemsProps = {}) {
+  const msg = useMsg();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -308,12 +310,12 @@ export function BookableItems({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>All Bookable Items</h1>
-          <p className="text-gray-600">Manage services, suites, and add-ons available for booking</p>
+          <h1>{msg('All Bookable Items')}</h1>
+          <p className="text-gray-600">{msg('Manage services, suites, and add-ons available for booking')}</p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Add New Item
+          {msg('Add New Item')}
         </Button>
       </div>
 
@@ -325,7 +327,7 @@ export function BookableItems({
             <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by name or description..."
+              placeholder={msg('Search by name or description...')}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -334,14 +336,14 @@ export function BookableItems({
 
           {/* Category Filter Buttons */}
           <div>
-            <label className="block mb-2">Filter by Category</label>
+            <label className="block mb-2">{msg('Filter by Category')}</label>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={categoryFilter === 'all' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setCategoryFilter('all')}
               >
-                All Categories
+                {msg('All Categories')}
               </Button>
               <Button
                 variant={categoryFilter === 'Suite' ? 'default' : 'outline'}
@@ -349,7 +351,7 @@ export function BookableItems({
                 onClick={() => setCategoryFilter('Suite')}
                 className={categoryFilter === 'Suite' ? '' : 'border-blue-300 text-blue-700 hover:bg-blue-50'}
               >
-                Suite
+                {msg('Suite')}
               </Button>
               <Button
                 variant={categoryFilter === 'Transfer Services' ? 'default' : 'outline'}
@@ -357,7 +359,7 @@ export function BookableItems({
                 onClick={() => setCategoryFilter('Transfer Services')}
                 className={categoryFilter === 'Transfer Services' ? '' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}
               >
-                Transfer Services
+                {msg('Transfer Services')}
               </Button>
               <Button
                 variant={categoryFilter === 'Food & Beverage' ? 'default' : 'outline'}
@@ -365,7 +367,7 @@ export function BookableItems({
                 onClick={() => setCategoryFilter('Food & Beverage')}
                 className={categoryFilter === 'Food & Beverage' ? '' : 'border-orange-300 text-orange-700 hover:bg-orange-50'}
               >
-                Food & Beverage
+                {msg('Food & Beverage')}
               </Button>
               <Button
                 variant={categoryFilter === 'Shopping' ? 'default' : 'outline'}
@@ -373,7 +375,7 @@ export function BookableItems({
                 onClick={() => setCategoryFilter('Shopping')}
                 className={categoryFilter === 'Shopping' ? '' : 'border-green-300 text-green-700 hover:bg-green-50'}
               >
-                Shopping
+                {msg('Shopping')}
               </Button>
             </div>
           </div>
@@ -381,7 +383,7 @@ export function BookableItems({
           {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <label>Start Date</label>
+              <label>{msg('Start Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -393,7 +395,7 @@ export function BookableItems({
               </div>
             </div>
             <div className="flex-1">
-              <label>End Date</label>
+              <label>{msg('End Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -414,7 +416,7 @@ export function BookableItems({
                   setSearchTerm('');
                 }}
               >
-                Clear Filters
+                {msg('Clear Filters')}
               </Button>
             </div>
           </div>
@@ -435,24 +437,24 @@ export function BookableItems({
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item English Name</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Category</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Description</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Base Price</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Price Cal Equation</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Availability</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Created Date</th>
-                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('ID')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Item English Name')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Category')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Description')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Base Price')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Price Cal Equation')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Discount')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Stock')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Availability')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Created Date')}</th>
+                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
                   <td colSpan={11} className="px-6 py-8 text-center text-sm text-gray-500">
-                    Loading bookable items…
+                    {msg('Loading bookable items…')}
                   </td>
                 </tr>
               ) : null}
@@ -489,7 +491,7 @@ export function BookableItems({
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {item.stock !== undefined ? item.stock : <span className="text-gray-400">Unlimited</span>}
+                    {item.stock !== undefined ? item.stock : <span className="text-gray-400">{msg('Unlimited')}</span>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge className={getAvailabilityColor(item.availability)}>
@@ -506,7 +508,7 @@ export function BookableItems({
                         size="sm"
                         onClick={() => handleEdit(item)}
                         className="h-8 w-8 p-0"
-                        title="Edit Item"
+                        title={msg('Edit Item')}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -516,7 +518,7 @@ export function BookableItems({
                           size="sm"
                           onClick={() => onDeleteItem(item.id)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                          title="Delete Item"
+                          title={msg('Delete Item')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -539,23 +541,23 @@ export function BookableItems({
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Total Items</p>
+          <p className="text-sm text-gray-600">{msg('Total Items')}</p>
           <h2 className="mt-1">{filteredItems.length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Suites</p>
+          <p className="text-sm text-gray-600">{msg('Suites')}</p>
           <h2 className="mt-1">{filteredItems.filter(i => i.category === 'Suite').length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Transfer Services</p>
+          <p className="text-sm text-gray-600">{msg('Transfer Services')}</p>
           <h2 className="mt-1">{filteredItems.filter(i => i.category === 'Transfer Services').length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Food & Beverage</p>
+          <p className="text-sm text-gray-600">{msg('Food & Beverage')}</p>
           <h2 className="mt-1">{filteredItems.filter(i => i.category === 'Food & Beverage').length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Shopping</p>
+          <p className="text-sm text-gray-600">{msg('Shopping')}</p>
           <h2 className="mt-1">{filteredItems.filter(i => i.category === 'Shopping').length}</h2>
         </Card>
       </div>

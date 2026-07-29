@@ -1,5 +1,6 @@
 import { Plane, User, Utensils, Users, Search, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { useMsg } from '@/i18n/useMsg';
 
 interface HistoricalGuest {
   id: number;
@@ -48,6 +49,7 @@ interface BookingGuestsSearcherProps {
 }
 
 export function BookingGuestsSearcher({ open, onClose, searchQuery, setSearchQuery }: BookingGuestsSearcherProps) {
+  const msg = useMsg();
   const q = searchQuery.trim().toLowerCase();
   const results = q
     ? HISTORICAL_GUESTS.filter(g =>
@@ -63,10 +65,10 @@ export function BookingGuestsSearcher({ open, onClose, searchQuery, setSearchQue
       <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />Guests Searcher
+            <Users className="w-5 h-5 text-blue-600" />{msg('Guests Searcher')}
           </DialogTitle>
           <DialogDescription>
-            Search all past guests who have visited the HKIA VIP Lounge — VIP passengers and non-flying guests.
+            {msg('Search all past guests who have visited the HKIA VIP Lounge — VIP passengers and non-flying guests.')}
           </DialogDescription>
         </DialogHeader>
 
@@ -75,7 +77,7 @@ export function BookingGuestsSearcher({ open, onClose, searchQuery, setSearchQue
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search by name, booking no., or food allergy…"
+            placeholder={msg('Search by name, booking no., or food allergy…')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             autoFocus
@@ -108,7 +110,7 @@ export function BookingGuestsSearcher({ open, onClose, searchQuery, setSearchQue
         <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-1">
           {results.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">
-              No guests found matching "<span className="font-medium">{searchQuery}</span>"
+              {msg('No guests found matching "')}<span className="font-medium">{searchQuery}</span>"
             </div>
           ) : results.map(g => {
             const isVip = g.type === 'VIP Passenger';
@@ -127,21 +129,21 @@ export function BookingGuestsSearcher({ open, onClose, searchQuery, setSearchQue
                       {g.type}
                     </span>
                     {g.totalVisits >= 10 && (
-                      <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">Frequent Guest</span>
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">{msg('Frequent Guest')}</span>
                     )}
                   </div>
                   <p className="text-xs text-gray-400">
-                    Last visit: <span className="text-gray-600">{g.lastVisit}</span>
+                    {msg('Last visit:')} <span className="text-gray-600">{g.lastVisit}</span>
                     <span className="mx-1.5 text-gray-300">·</span>
-                    Booking: <span className="font-mono text-gray-600">{g.bookingNo}</span>
+                    {msg('Booking:')} <span className="font-mono text-gray-600">{g.bookingNo}</span>
                     <span className="mx-1.5 text-gray-300">·</span>
                     {g.totalVisits} visit{g.totalVisits !== 1 ? 's' : ''}
                   </p>
                   <div className={`inline-flex items-center gap-1.5 text-xs rounded px-2 py-1 ${g.foodAllergies ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-gray-50 border border-gray-200 text-gray-400'}`}>
                     <Utensils className="w-3 h-3 shrink-0" />
                     {g.foodAllergies
-                      ? <span><span className="font-medium">Allergies:</span> {g.foodAllergies}</span>
-                      : <span>No food allergies recorded</span>}
+                      ? <span><span className="font-medium">{msg('Allergies:')}</span> {g.foodAllergies}</span>
+                      : <span>{msg('No food allergies recorded')}</span>}
                   </div>
                 </div>
               </div>

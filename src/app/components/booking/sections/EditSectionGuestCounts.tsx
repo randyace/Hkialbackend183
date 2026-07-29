@@ -17,6 +17,7 @@
 import { Users } from 'lucide-react';
 import { Card } from '../../ui/card';
 import type { BookingFormData } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionGuestCountsProps {
   formData: BookingFormData;
@@ -27,6 +28,7 @@ export function EditSectionGuestCounts({
   formData,
   onFormChange,
 }: EditSectionGuestCountsProps) {
+  const msg = useMsg();
   const vipPS = formData.vipPassengersInPremiereSuite ?? 0;
   const vipLD = formData.vipPassengersInLoungeDeluxe ?? 0;
   const nonFlyingPS = formData.nonFlyingGuestsInPremiereSuite ?? 0;
@@ -34,12 +36,12 @@ export function EditSectionGuestCounts({
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
-        <Users className="w-4 h-4" /> Guest Counts (per kind)
+        <Users className="w-4 h-4" /> {msg('Guest Counts (per kind)')}
       </h3>
-      <p className="text-xs text-gray-500 mb-4">Per-kind counts drive the pricing breakdown. Edit them here to change the booking's pax mix.</p>
+      <p className="text-xs text-gray-500 mb-4">{msg('Per-kind counts drive the pricing breakdown. Edit them here to change the booking\'s pax mix.')}</p>
       <div className="grid grid-cols-5 gap-6">
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Premiere Suites</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Premiere Suites')}</label>
           <input
             id="edit-num-premiere-suites"
             type="number"
@@ -52,7 +54,7 @@ export function EditSectionGuestCounts({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">PS VIPs</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('PS VIPs')}</label>
           <input
             id="edit-vip-ps"
             type="number"
@@ -65,7 +67,7 @@ export function EditSectionGuestCounts({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">PS NFGs</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('PS NFGs')}</label>
           <input
             id="edit-nfg-ps"
             type="number"
@@ -78,7 +80,7 @@ export function EditSectionGuestCounts({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">LD VIPs</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('LD VIPs')}</label>
           <input
             id="edit-vip-ld"
             type="number"
@@ -91,7 +93,7 @@ export function EditSectionGuestCounts({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">LD NFGs</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('LD NFGs')}</label>
           <input
             id="edit-nfg-ld"
             type="number"
@@ -105,7 +107,7 @@ export function EditSectionGuestCounts({
         </div>
       </div>
       <p className="text-xs text-gray-400 mt-3">
-        Legacy aggregates (read-only): <strong>Total VIPs = {vipPS + vipLD}</strong>,
+        {msg('Legacy aggregates (read-only):')} <strong>Total VIPs = {vipPS + vipLD}</strong>,
         {' '}<strong>Total NFGs = {nonFlyingPS + nonFlyingLD}</strong>.
         Computed from the per-kind fields above per round 6.2.38.
       </p>

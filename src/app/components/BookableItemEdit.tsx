@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Textarea } from './ui/textarea';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface BookableItemFormData {
   nameEn: string;
@@ -29,6 +30,7 @@ export interface BookableItemEditProps {
 }
 
 export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSave }: BookableItemEditProps) {
+  const msg = useMsg();
   const isEditMode = !!itemId;
 
   const [formData, setFormData] = useState<BookableItemFormData>({
@@ -77,7 +79,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Bookable Items
+          {msg('Back to Bookable Items')}
         </Button>
       </div>
 
@@ -100,22 +102,22 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
         <div className="space-y-6">
           {/* Basic Information */}
           <Card className="p-6">
-            <h2 className="mb-4">Basic Information</h2>
+            <h2 className="mb-4">{msg('Basic Information')}</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block mb-2.5">Item English Name</label>
+                  <label className="block mb-2.5">{msg('Item English Name')}</label>
                   <input
                     type="text"
                     value={formData.nameEn}
                     onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., VIP Suite A"
+                    placeholder={msg('e.g., VIP Suite A')}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block mb-2.5">Item Simp Chi Name</label>
+                  <label className="block mb-2.5">{msg('Item Simp Chi Name')}</label>
                   <input
                     type="text"
                     value={formData.nameSimp}
@@ -125,7 +127,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                   />
                 </div>
                 <div>
-                  <label className="block mb-2.5">Item Trad Chi Name</label>
+                  <label className="block mb-2.5">{msg('Item Trad Chi Name')}</label>
                   <input
                     type="text"
                     value={formData.nameTrad}
@@ -138,21 +140,21 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-2.5">Category</label>
+                  <label className="block mb-2.5">{msg('Category')}</label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
                     required
                   >
-                    <option value="Suite">Suite</option>
-                    <option value="Transfer Services">Transfer Services</option>
-                    <option value="Food & Beverage">Food & Beverage</option>
-                    <option value="Shopping">Shopping</option>
+                    <option value="Suite">{msg('Suite')}</option>
+                    <option value="Transfer Services">{msg('Transfer Services')}</option>
+                    <option value="Food & Beverage">{msg('Food & Beverage')}</option>
+                    <option value="Shopping">{msg('Shopping')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block mb-2.5">Priority</label>
+                  <label className="block mb-2.5">{msg('Priority')}</label>
                   <input
                     type="number"
                     value={formData.priority}
@@ -163,7 +165,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                     required
                   />
                   <p className="text-sm text-gray-600 mt-1">
-                    Lower numbers appear first
+                    {msg('Lower numbers appear first')}
                   </p>
                 </div>
               </div>
@@ -172,20 +174,20 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
 
           {/* Descriptions */}
           <Card className="p-6">
-            <h2 className="mb-4">Descriptions</h2>
+            <h2 className="mb-4">{msg('Descriptions')}</h2>
             <div className="space-y-4">
               <div>
-                <label className="block mb-2.5">Description (English)</label>
+                <label className="block mb-2.5">{msg('Description (English)')}</label>
                 <Textarea
                   value={formData.descriptionEn}
                   onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
-                  placeholder="Detailed description of the item in English..."
+                  placeholder={msg('Detailed description of the item in English...')}
                   rows={3}
                   required
                 />
               </div>
               <div>
-                <label className="block mb-2.5">Description (Simplified Chinese)</label>
+                <label className="block mb-2.5">{msg('Description (Simplified Chinese)')}</label>
                 <Textarea
                   value={formData.descriptionSimp}
                   onChange={(e) => setFormData({ ...formData, descriptionSimp: e.target.value })}
@@ -194,7 +196,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                 />
               </div>
               <div>
-                <label className="block mb-2.5">Description (Traditional Chinese)</label>
+                <label className="block mb-2.5">{msg('Description (Traditional Chinese)')}</label>
                 <Textarea
                   value={formData.descriptionTrad}
                   onChange={(e) => setFormData({ ...formData, descriptionTrad: e.target.value })}
@@ -207,11 +209,11 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
 
           {/* Pricing & Availability */}
           <Card className="p-6">
-            <h2 className="mb-4">Pricing & Availability</h2>
+            <h2 className="mb-4">{msg('Pricing & Availability')}</h2>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-2.5">Base Price (HK$)</label>
+                  <label className="block mb-2.5">{msg('Base Price (HK$)')}</label>
                   <input
                     type="number"
                     value={formData.price}
@@ -224,7 +226,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
                   />
                 </div>
                 <div>
-                  <label className="block mb-2.5">Discount Rate (%)</label>
+                  <label className="block mb-2.5">{msg('Discount Rate (%)')}</label>
                   <input
                     type="number"
                     value={formData.discountRate}
@@ -239,46 +241,46 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
               </div>
 
               <div>
-                <label className="block mb-2.5">Price Cal Equation</label>
+                <label className="block mb-2.5">{msg('Price Cal Equation')}</label>
                 <input
                   type="text"
                   value={formData.priceCalEquation}
                   onChange={(e) => setFormData({ ...formData, priceCalEquation: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md font-mono"
-                  placeholder="e.g., unitPrice or (qty * unitPrice) - discount"
+                  placeholder={msg('e.g., unitPrice or (qty * unitPrice) - discount')}
                   required
                 />
                 <p className="text-sm text-gray-600 mt-1">
-                  Define the calculation formula for pricing. Examples: <code className="bg-gray-100 px-1 rounded">unitPrice</code>, <code className="bg-gray-100 px-1 rounded">(qty * unitPrice) - discount</code>
+                  {msg('Define the calculation formula for pricing. Examples:')} <code className="bg-gray-100 px-1 rounded">unitPrice</code>, <code className="bg-gray-100 px-1 rounded">(qty * unitPrice) - discount</code>
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block mb-2.5">Availability</label>
+                  <label className="block mb-2.5">{msg('Availability')}</label>
                   <select
                     value={formData.availability}
                     onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
                     required
                   >
-                    <option value="available">Available</option>
-                    <option value="limited">Limited</option>
-                    <option value="unavailable">Unavailable</option>
+                    <option value="available">{msg('Available')}</option>
+                    <option value="limited">{msg('Limited')}</option>
+                    <option value="unavailable">{msg('Unavailable')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block mb-2.5">Stock Quantity (Optional)</label>
+                  <label className="block mb-2.5">{msg('Stock Quantity (Optional)')}</label>
                   <input
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="Leave blank for unlimited"
+                    placeholder={msg('Leave blank for unlimited')}
                     min="0"
                   />
                   <p className="text-sm text-gray-600 mt-1">
-                    Only applicable for items with limited availability
+                    {msg('Only applicable for items with limited availability')}
                   </p>
                 </div>
               </div>
@@ -289,7 +291,7 @@ export function BookableItemEdit({ itemId, isLoading, initialData, onBack, onSav
           <Card className="p-6">
             <div className="flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={handleCancel}>
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button type="submit" className="gap-2">
                 <Save className="w-4 h-4" />

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { savePreOrder, PreOrderItem } from './preOrderStore';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── Service catalogue (same as POS) ──────────────────────────────────────────
 interface CatalogueItem {
@@ -149,6 +150,7 @@ export function PreOrderPage({
   onSaved,
   isLoading = false,
 }: PreOrderPageProps) {
+  const msg = useMsg();
   const booking = bookingProp ?? MOCK_BOOKING;
   const [items, setItems]               = useState<PreOrderItem[]>([]);
   const [search, setSearch]             = useState('');
@@ -205,7 +207,7 @@ export function PreOrderPage({
 
   const handleSave = () => {
     if (items.length === 0) {
-      toast.error('Please add at least one item to the pre-order.');
+      toast.error(msg('Please add at least one item to the pre-order.'));
       return;
     }
     savePreOrder({
@@ -265,7 +267,7 @@ export function PreOrderPage({
         <div className="w-80 flex flex-col border-r bg-white shrink-0 overflow-y-auto">
           {/* Booking Summary */}
           <div className="p-4 border-b bg-blue-50">
-            <h3 className="text-xs text-blue-600 mb-3 uppercase tracking-wide">Booking Summary</h3>
+            <h3 className="text-xs text-blue-600 mb-3 uppercase tracking-wide">{msg('Booking Summary')}</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2 text-gray-700">
                 <Building2 className="w-3.5 h-3.5 text-gray-400 shrink-0" />
@@ -293,7 +295,7 @@ export function PreOrderPage({
           {/* Order List */}
           <div className="flex-1 p-4 overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs text-gray-500 uppercase tracking-wide">Pre-Order Items</h3>
+              <h3 className="text-xs text-gray-500 uppercase tracking-wide">{msg('Pre-Order Items')}</h3>
               {items.length > 0 && (
                 <Badge className="bg-blue-600 text-white text-xs">{totalItems}</Badge>
               )}
@@ -303,7 +305,7 @@ export function PreOrderPage({
               <div className="flex flex-col items-center justify-center py-12 text-gray-300">
                 <ShoppingCart className="w-10 h-10 mb-2" />
                 <p className="text-sm text-gray-400 text-center">
-                  Search or browse categories<br />to add items
+                  {msg('Search or browse categories')}<br />{msg('to add items')}
                 </p>
               </div>
             ) : (
@@ -356,7 +358,7 @@ export function PreOrderPage({
                 {saved ? 'Saved!' : `Save Pre-Order (${totalItems} item${totalItems !== 1 ? 's' : ''})`}
               </Button>
               <p className="text-xs text-gray-400 text-center mt-2">
-                Items will be loaded automatically when a suite is assigned in POS
+                {msg('Items will be loaded automatically when a suite is assigned in POS')}
               </p>
             </div>
           )}
@@ -372,7 +374,7 @@ export function PreOrderPage({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search items (e.g. Latte, Salmon, Massage…)"
+                  placeholder={msg('Search items (e.g. Latte, Salmon, Massage…)')}
                   value={search}
                   onChange={e => { setSearch(e.target.value); setShowDropdown(true); setActiveCategory(null); }}
                   onFocus={() => setShowDropdown(true)}
@@ -409,7 +411,7 @@ export function PreOrderPage({
               )}
               {showDropdown && search.trim().length > 0 && filteredBySearch.length === 0 && (
                 <div className="mt-1 border border-gray-200 rounded-lg bg-white px-4 py-3 text-sm text-gray-500">
-                  No items found for "<span className="font-medium">{search}</span>"
+                  {msg('No items found for "')}<span className="font-medium">{search}</span>"
                 </div>
               )}
             </div>
@@ -424,7 +426,7 @@ export function PreOrderPage({
                     : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
                 }`}
               >
-                All Categories
+                {msg('All Categories')}
               </button>
               {CATEGORIES.map(cat => (
                 <button
@@ -445,7 +447,7 @@ export function PreOrderPage({
           {/* Items Grid */}
           <div className="flex-1 overflow-y-auto p-5">
             {(activeCategory ? filteredByCategory : SERVICE_CATALOGUE).length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-10">No items in this category.</p>
+              <p className="text-sm text-gray-400 text-center py-10">{msg('No items in this category.')}</p>
             ) : (
               <>
                 {/* Group by category when showing all */}
@@ -477,7 +479,7 @@ export function PreOrderPage({
                           <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{cat.description}</p>
                           <div className="mt-2 flex items-center gap-1 text-blue-600">
                             <Plus className="w-3 h-3" />
-                            <span className="text-xs">Add</span>
+                            <span className="text-xs">{msg('Add')}</span>
                           </div>
                         </button>
                       );
@@ -519,7 +521,7 @@ export function PreOrderPage({
                                   <p className="text-xs text-gray-400 line-clamp-1">{item.description}</p>
                                   <div className="mt-2 flex items-center gap-1 text-blue-600">
                                     <Plus className="w-3 h-3" />
-                                    <span className="text-xs">Add</span>
+                                    <span className="text-xs">{msg('Add')}</span>
                                   </div>
                                 </button>
                               );

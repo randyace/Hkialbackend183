@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { User, Heart, Eye, Star, AlertCircle, History, MessageSquare, Briefcase, Gem, Trophy, Utensils, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -180,6 +181,7 @@ const TYPE_BADGE: Record<string, string> = {
 };
 
 export function BookingCustomerProfile({ open, onClose, customer }: BookingCustomerProfileProps) {
+  const msg = useMsg();
   const [tab, setTab] = useState('overview');
 
   if (!customer) return null;
@@ -217,8 +219,8 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
   return (
     <Dialog open={open} onOpenChange={v => { if (!v) { setTab('overview'); onClose(); } }}>
       <DialogContent className="min-w-[800px] max-w-[960px] h-[85vh] overflow-hidden flex flex-col p-0">
-        <DialogTitle className="sr-only">Customer Profile</DialogTitle>
-        <DialogDescription className="sr-only">Full customer profile.</DialogDescription>
+        <DialogTitle className="sr-only">{msg('Customer Profile')}</DialogTitle>
+        <DialogDescription className="sr-only">{msg('Full customer profile.')}</DialogDescription>
 
         {/* Sticky header */}
         <div className="flex items-center gap-4 px-6 py-4 bg-[#0f2942] shrink-0">
@@ -248,13 +250,13 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
           <div className="border-b bg-white shrink-0 px-2 overflow-x-auto">
             <TabsList className="h-auto bg-transparent p-0 gap-0 flex flex-nowrap min-w-max">
               {[
-                { value: 'overview',  label: 'Overview',       icon: <User className="w-3.5 h-3.5" /> },
-                ...(hasSpouseSection ? [{ value: 'spouse', label: 'Spouse', icon: <Heart className="w-3.5 h-3.5" /> }] : []),
-                { value: 'vip',       label: 'VIP Profile',    icon: <Eye className="w-3.5 h-3.5" /> },
-                { value: 'prefs',     label: 'Preferences',    icon: <Star className="w-3.5 h-3.5" /> },
-                { value: 'allergies', label: 'Food Allergies', icon: <AlertCircle className="w-3.5 h-3.5" /> },
-                { value: 'movements', label: 'Movements',      icon: <History className="w-3.5 h-3.5" /> },
-                { value: 'remarks',   label: 'Remarks',        icon: <MessageSquare className="w-3.5 h-3.5" /> },
+                { value: 'overview',  label: msg('Overview'),       icon: <User className="w-3.5 h-3.5" /> },
+                ...(hasSpouseSection ? [{ value: 'spouse', label: msg('Spouse'), icon: <Heart className="w-3.5 h-3.5" /> }] : []),
+                { value: 'vip',       label: msg('VIP Profile'),    icon: <Eye className="w-3.5 h-3.5" /> },
+                { value: 'prefs',     label: msg('Preferences'),    icon: <Star className="w-3.5 h-3.5" /> },
+                { value: 'allergies', label: msg('Food Allergies'), icon: <AlertCircle className="w-3.5 h-3.5" /> },
+                { value: 'movements', label: msg('Movements'),      icon: <History className="w-3.5 h-3.5" /> },
+                { value: 'remarks',   label: msg('Remarks'),        icon: <MessageSquare className="w-3.5 h-3.5" /> },
               ].map(t => (
                 <TabsTrigger key={t.value} value={t.value}
                   className="flex items-center gap-1.5 px-3 py-3 text-xs rounded-none border-b-2 border-transparent data-[state=active]:border-[#0f2942] data-[state=active]:text-[#0f2942] data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
@@ -270,14 +272,14 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
             <TabsContent value="overview" className="m-0 p-5 space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Account Number', value: customer.accountNo },
-                  { label: 'Account Type',   value: customer.type },
-                  { label: 'Email',          value: customer.email },
-                  { label: 'Phone',          value: customer.phone },
-                  { label: 'Member Since',   value: customer.createdDate },
-                  { label: 'Total Bookings', value: `${customer.totalBookings}` },
-                  ...(customer.company ? [{ label: 'Company', value: customer.company }] : []),
-                  { label: 'Status',         value: customer.status },
+                  { label: msg('Account Number'), value: customer.accountNo },
+                  { label: msg('Account Type'),   value: customer.type },
+                  { label: msg('Email'),          value: customer.email },
+                  { label: msg('Phone'),          value: customer.phone },
+                  { label: msg('Member Since'),   value: customer.createdDate },
+                  { label: msg('Total Bookings'), value: `${customer.totalBookings}` },
+                  ...(customer.company ? [{ label: msg('Company'), value: customer.company }] : []),
+                  { label: msg('Status'),         value: customer.status },
                 ].map(row => (
                   <div key={row.label} className="bg-gray-50 p-3 rounded-lg">
                     <p className="text-xs text-gray-500">{row.label}</p>
@@ -287,7 +289,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               </div>
               {isIndividual && customer.membershipType && (
                 <div className={`p-4 rounded-lg border ${isMember ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
-                  <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">Membership Package</p>
+                  <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">{msg('Membership Package')}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {tierIcon(customer.membershipType)}
@@ -297,8 +299,8 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                       </div>
                     </div>
                     {isMember
-                      ? <span className="px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200">Active</span>
-                      : <span className="px-3 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">Expired</span>}
+                      ? <span className="px-3 py-1 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200">{msg('Active')}</span>
+                      : <span className="px-3 py-1 rounded-full text-xs bg-red-100 text-red-700 border border-red-200">{msg('Expired')}</span>}
                   </div>
                 </div>
               )}
@@ -306,7 +308,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                 <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm text-red-800">Severe allergy on record</p>
+                    <p className="text-sm text-red-800">{msg('Severe allergy on record')}</p>
                     <p className="text-xs text-red-600 mt-0.5">{allergies.filter(a => a.severity === 'Severe').map(a => a.allergen).join(', ')} — see Food Allergies tab.</p>
                   </div>
                 </div>
@@ -330,12 +332,12 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { label: 'Full Name',          value: `${spouse.title} ${spouse.firstName} ${spouse.lastName}` },
-                        { label: 'Email',              value: spouse.email },
-                        { label: 'Phone',              value: spouse.phone },
-                        { label: 'Nationality',        value: spouse.nationality },
-                        { label: 'Passport (first 4)', value: spouse.passportFirst4 },
-                        { label: 'Linked Account',     value: spouse.linkedAccountNo || '—' },
+                        { label: msg('Full Name'),          value: `${spouse.title} ${spouse.firstName} ${spouse.lastName}` },
+                        { label: msg('Email'),              value: spouse.email },
+                        { label: msg('Phone'),              value: spouse.phone },
+                        { label: msg('Nationality'),        value: spouse.nationality },
+                        { label: msg('Passport (first 4)'), value: spouse.passportFirst4 },
+                        { label: msg('Linked Account'),     value: spouse.linkedAccountNo || '—' },
                       ].map(row => (
                         <div key={row.label} className="bg-gray-50 p-3 rounded-lg">
                           <p className="text-xs text-gray-500">{row.label}</p>
@@ -347,7 +349,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                 ) : (
                   <div className="flex flex-col items-center justify-center py-14 text-center">
                     <Heart className="w-10 h-10 text-gray-200 mb-3" />
-                    <p className="text-sm text-gray-400">No spouse / partner on record.</p>
+                    <p className="text-sm text-gray-400">{msg('No spouse / partner on record.')}</p>
                   </div>
                 )}
               </TabsContent>
@@ -358,7 +360,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               {vipProfile ? (
                 <>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />Appearance</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Eye className="w-3.5 h-3.5" />{msg('Appearance')}</p>
                     <div className="grid grid-cols-3 gap-3">
                       {vipProfile.appearance && Object.entries(vipProfile.appearance).map(([k, v]) => (
                         <div key={k} className="bg-gray-50 p-3 rounded-lg">
@@ -369,7 +371,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />Work Information</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" />{msg('Work Information')}</p>
                     <div className="grid grid-cols-2 gap-3">
                       {vipProfile.workInfo && Object.entries(vipProfile.workInfo).map(([k, v]) => (
                         <div key={k} className="bg-gray-50 p-3 rounded-lg">
@@ -380,7 +382,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Observations</p>
+                    <p className="text-xs uppercase tracking-wide text-gray-500 mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{msg('Observations')}</p>
                     <div className="grid grid-cols-3 gap-3">
                       {vipProfile.observations && Object.entries(vipProfile.observations).map(([k, v]) => (
                         <div key={k} className="bg-gray-50 p-3 rounded-lg">
@@ -394,7 +396,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               ) : (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <Eye className="w-10 h-10 text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-400">No VIP profile on record.</p>
+                  <p className="text-sm text-gray-400">{msg('No VIP profile on record.')}</p>
                 </div>
               )}
             </TabsContent>
@@ -404,7 +406,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               {preferences.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <Star className="w-10 h-10 text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-400">No preferences on record.</p>
+                  <p className="text-sm text-gray-400">{msg('No preferences on record.')}</p>
                 </div>
               ) : (
                 preferences.map(pref => (
@@ -427,10 +429,10 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     <User className="w-3.5 h-3.5 text-blue-600" />
                   </div>
                   <p className="text-sm text-gray-700">{customer.name}</p>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Customer</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{msg('Customer')}</span>
                 </div>
                 {allergies.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">No allergies recorded.</p>
+                  <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">{msg('No allergies recorded.')}</p>
                 ) : (
                   <div className="space-y-2">
                     {allergies.map(a => (
@@ -447,7 +449,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                 )}
                 {dietary.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-2"><Utensils className="w-3 h-3" />Dietary Requirements</p>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-2"><Utensils className="w-3 h-3" />{msg('Dietary Requirements')}</p>
                     {dietary.map(d => (
                       <div key={d.id} className="p-3 border border-gray-200 rounded-lg bg-green-50">
                         <p className="text-sm">{d.requirement}</p>
@@ -468,11 +470,11 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                           <Heart className="w-3.5 h-3.5 text-pink-500" />
                         </div>
                         <p className="text-sm text-gray-700">{spouse.title} {spouse.firstName} {spouse.lastName}</p>
-                        <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">Spouse</span>
+                        <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">{msg('Spouse')}</span>
                       </div>
                     )}
                     {spouseAllergies.length === 0 ? (
-                      <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">No allergies recorded for spouse.</p>
+                      <p className="text-sm text-gray-400 py-3 text-center border-2 border-dashed rounded-lg">{msg('No allergies recorded for spouse.')}</p>
                     ) : (
                       <div className="space-y-2">
                         {spouseAllergies.map(a => (
@@ -489,7 +491,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
                     )}
                     {spouseDietary.length > 0 && (
                       <div className="mt-3 space-y-2">
-                        <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-2"><Utensils className="w-3 h-3" />Dietary Requirements</p>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide flex items-center gap-1 mb-2"><Utensils className="w-3 h-3" />{msg('Dietary Requirements')}</p>
                         {spouseDietary.map(d => (
                           <div key={d.id} className="p-3 border border-gray-200 rounded-lg bg-green-50">
                             <p className="text-sm">{d.requirement}</p>
@@ -509,40 +511,40 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               {movements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <History className="w-10 h-10 text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-400">No movements on record.</p>
+                  <p className="text-sm text-gray-400">{msg('No movements on record.')}</p>
                 </div>
               ) : (
               <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="text-xs border-collapse" style={{ minWidth: '3200px' }}>
                   <thead>
                     <tr className="bg-[#0f2942] text-white">
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">Gp No.</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">Movement IC</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">CIC &amp; Support</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Driver</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">Order No.</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Dept Date</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">Arr Date</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt No.</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">Flt Time</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Dest / Origin</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">Lobby / Suite</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">Pax</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">Title</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">First Name</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">Last Name</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">C/I Bag.</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Remarks</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">Nationality</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Non-fly Arr.</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Met VIP at Gate</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Back to HKIAL</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. Start</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Retr. End</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Bag. Arr. HKIAL</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Left HKIAL</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">Process Time</th>
-                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">Admin Remarks</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap sticky left-0 z-20 bg-[#0f2942] border-r border-white/20 min-w-[60px]">{msg('Gp No.')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('Movement IC')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[130px]">{msg('CIC &amp; Support')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Driver')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[170px] bg-[#163a5e]">{msg('Order No.')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Dept Date')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px] bg-[#163a5e]">{msg('Arr Date')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt No.')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[90px] bg-[#163a5e]">{msg('Flt Time')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Dest / Origin')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[120px]">{msg('Lobby / Suite')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[60px]">{msg('Pax')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[70px]">{msg('Title')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('First Name')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[100px]">{msg('Last Name')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[75px]">{msg('C/I Bag.')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Remarks')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px]">{msg('Nationality')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Non-fly Arr.')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Met VIP at Gate')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Back to HKIAL')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. Start')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Retr. End')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Bag. Arr. HKIAL')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Left HKIAL')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[110px] bg-[#163a5e]">{msg('Process Time')}</th>
+                      <th className="px-3 py-2.5 text-left whitespace-nowrap min-w-[140px]">{msg('Admin Remarks')}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
@@ -593,7 +595,7 @@ export function BookingCustomerProfile({ open, onClose, customer }: BookingCusto
               {remarks.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-14 text-center">
                   <MessageSquare className="w-10 h-10 text-gray-200 mb-3" />
-                  <p className="text-sm text-gray-400">No remarks on record.</p>
+                  <p className="text-sm text-gray-400">{msg('No remarks on record.')}</p>
                 </div>
               ) : (
                 remarks.map(r => (

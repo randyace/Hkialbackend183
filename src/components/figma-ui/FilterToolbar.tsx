@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ export function FilterToolbar({
   rightSlot,
   className = '',
 }: FilterToolbarProps) {
+  const msg = useMsg();
   const hasActiveFilters =
     searchValue.trim().length > 0 ||
     filters.some((f) => f.value.trim().length > 0);
@@ -102,7 +104,7 @@ export function FilterToolbar({
               onClick={() => onSearchChange('')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400
                 hover:text-gray-600 transition-colors"
-              aria-label="Clear search"
+              aria-label={msg('Clear search')}
             >
               <ClearIcon />
             </button>

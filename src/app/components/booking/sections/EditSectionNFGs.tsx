@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * EditSectionNFGs.tsx
  *
@@ -23,14 +24,15 @@ import {
 import type {
   BookingFormData, EditNonFlyingGuest,
 } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 const AGE_GROUP_OPTIONS = [
-  { value: 'Adult (13+ years)', label: 'Adult (13+ years)' },
-  { value: 'Children (aged 2-11)', label: 'Children (aged 2-11)' },
-  { value: 'Infants (under 2 years old)', label: 'Infants (under 2 years old)' },
-  { value: 'Adult', label: 'Adult (legacy)' },
-  { value: 'Child', label: 'Child (legacy)' },
-  { value: 'Infant', label: 'Infant (legacy)' },
+  { value: 'Adult (13+ years)', label: msg('Adult (13+ years)') },
+  { value: 'Children (aged 2-11)', label: msg('Children (aged 2-11)') },
+  { value: 'Infants (under 2 years old)', label: msg('Infants (under 2 years old)') },
+  { value: 'Adult', label: msg('Adult (legacy)') },
+  { value: 'Child', label: msg('Child (legacy)') },
+  { value: 'Infant', label: msg('Infant (legacy)') },
 ];
 
 export interface EditSectionNFGsProps {
@@ -42,6 +44,7 @@ export function EditSectionNFGs({
   formData,
   onFormChange,
 }: EditSectionNFGsProps) {
+  const msg = useMsg();
   const nfgs = formData.nonFlyingGuestsList ?? [];
   const nonFlyingPS = formData.nonFlyingGuestsInPremiereSuite ?? 0;
   const nonFlyingLD = formData.nonFlyingGuestsInLoungeDeluxe ?? 0;
@@ -74,24 +77,24 @@ export function EditSectionNFGs({
               </div>
               <div className="grid grid-cols-5 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Title <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Title')} <span className="text-red-500">*</span></label>
                   <Select
                     value={g.title}
                     onValueChange={v => updateNfg(i, { title: v })}
                   >
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Mr">Mr</SelectItem>
-                      <SelectItem value="Mrs">Mrs</SelectItem>
-                      <SelectItem value="Ms">Ms</SelectItem>
-                      <SelectItem value="Miss">Miss</SelectItem>
-                      <SelectItem value="Dr">Dr</SelectItem>
-                      <SelectItem value="Prof">Prof</SelectItem>
+                      <SelectItem value="Mr">{msg('Mr')}</SelectItem>
+                      <SelectItem value="Mrs">{msg('Mrs')}</SelectItem>
+                      <SelectItem value="Ms">{msg('Ms')}</SelectItem>
+                      <SelectItem value="Miss">{msg('Miss')}</SelectItem>
+                      <SelectItem value="Dr">{msg('Dr')}</SelectItem>
+                      <SelectItem value="Prof">{msg('Prof')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">First Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('First Name')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={g.firstName}
@@ -100,7 +103,7 @@ export function EditSectionNFGs({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Last Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Last Name')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={g.lastName}
@@ -109,7 +112,7 @@ export function EditSectionNFGs({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Age Group <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Age Group')} <span className="text-red-500">*</span></label>
                   <Select
                     value={g.ageGroup}
                     onValueChange={v => updateNfg(i, { ageGroup: v as EditNonFlyingGuest['ageGroup'] })}
@@ -123,13 +126,13 @@ export function EditSectionNFGs({
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Food Allergies</label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Food Allergies')}</label>
                   <input
                     type="text"
                     value={g.foodAllergies ?? ''}
                     onChange={e => updateNfg(i, { foodAllergies: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
-                    placeholder="optional"
+                    placeholder={msg('optional')}
                   />
                 </div>
               </div>

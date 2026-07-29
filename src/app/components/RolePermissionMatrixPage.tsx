@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { RolePermissionMatrix } from './RolePermissionMatrix';
 import type { RolePermissionModule, RoleOption } from './RolePermissionMatrix';
+import { useMsg } from '@/i18n/useMsg';
 
 const DEMO_ROLES: RoleOption[] = [
   { id: 1, name: 'Supervisor' },
@@ -14,59 +15,61 @@ const DEMO_ROLES: RoleOption[] = [
   { id: 4, name: 'Super Admin' },
 ];
 
-const DEMO_MODULES: RolePermissionModule[] = [
-  {
-    key: 'booking_management',
-    label: 'Booking Management',
-    features: [
-      {
-        key: 'bookings',
-        label: 'Bookings',
-        actions: [
-          { key: 'read', label: 'Read', name: 'bookings.read', exists: true },
-          { key: 'create', label: 'Create', name: 'bookings.create', exists: true },
-          { key: 'update', label: 'Update', name: 'bookings.update', exists: true },
-          { key: 'delete', label: 'Delete', name: 'bookings.delete', exists: true },
-          { key: 'approve', label: 'Approve', name: 'bookings.approve', exists: true },
-          { key: 'export', label: 'Export', name: 'bookings.export', exists: true },
-        ],
-      },
-      {
-        key: 'booking_schedules',
-        label: 'Schedules',
-        actions: [
-          { key: 'read', label: 'Read', name: 'booking_schedules.read', exists: true },
-          { key: 'scan_entry', label: 'Scan Entry', name: 'booking_schedules.scan_entry', exists: true },
-        ],
-      },
-    ],
-  },
-  {
-    key: 'customer_management',
-    label: 'Customer Management',
-    features: [
-      {
-        key: 'accounts',
-        label: 'Customer Accounts',
-        actions: [
-          { key: 'read', label: 'Read', name: 'accounts.read', exists: true },
-          { key: 'create', label: 'Create', name: 'accounts.create', exists: true },
-          { key: 'update', label: 'Update', name: 'accounts.update', exists: true },
-          { key: 'delete', label: 'Delete', name: 'accounts.delete', exists: true },
-        ],
-      },
-      {
-        key: 'guest_profiles',
-        label: 'Guest Profiles',
-        actions: [
-          { key: 'read', label: 'Read', name: 'guest_profiles.read', exists: true },
-          { key: 'update', label: 'Update', name: 'guest_profiles.update', exists: true },
-          { key: 'merge', label: 'Merge', name: 'guest_profiles.merge', exists: true },
-        ],
-      },
-    ],
-  },
-];
+function buildDemoModules(msg: (s: string) => string): RolePermissionModule[] {
+  return [
+    {
+      key: 'booking_management',
+      label: msg('Booking Management'),
+      features: [
+        {
+          key: 'bookings',
+          label: msg('Bookings'),
+          actions: [
+            { key: 'read', label: msg('Read'), name: 'bookings.read', exists: true },
+            { key: 'create', label: msg('Create'), name: 'bookings.create', exists: true },
+            { key: 'update', label: msg('Update'), name: 'bookings.update', exists: true },
+            { key: 'delete', label: msg('Delete'), name: 'bookings.delete', exists: true },
+            { key: 'approve', label: msg('Approve'), name: 'bookings.approve', exists: true },
+            { key: 'export', label: msg('Export'), name: 'bookings.export', exists: true },
+          ],
+        },
+        {
+          key: 'booking_schedules',
+          label: msg('Schedules'),
+          actions: [
+            { key: 'read', label: msg('Read'), name: 'booking_schedules.read', exists: true },
+            { key: 'scan_entry', label: msg('Scan Entry'), name: 'booking_schedules.scan_entry', exists: true },
+          ],
+        },
+      ],
+    },
+    {
+      key: 'customer_management',
+      label: msg('Customer Management'),
+      features: [
+        {
+          key: 'accounts',
+          label: msg('Customer Accounts'),
+          actions: [
+            { key: 'read', label: msg('Read'), name: 'accounts.read', exists: true },
+            { key: 'create', label: msg('Create'), name: 'accounts.create', exists: true },
+            { key: 'update', label: msg('Update'), name: 'accounts.update', exists: true },
+            { key: 'delete', label: msg('Delete'), name: 'accounts.delete', exists: true },
+          ],
+        },
+        {
+          key: 'guest_profiles',
+          label: msg('Guest Profiles'),
+          actions: [
+            { key: 'read', label: msg('Read'), name: 'guest_profiles.read', exists: true },
+            { key: 'update', label: msg('Update'), name: 'guest_profiles.update', exists: true },
+            { key: 'merge', label: msg('Merge'), name: 'guest_profiles.merge', exists: true },
+          ],
+        },
+      ],
+    },
+  ];
+}
 
 const DEMO_ROLE_PERMS: Record<number, string[]> = {
   1: ['bookings.read', 'bookings.create', 'bookings.update', 'bookings.approve', 'accounts.read'],
@@ -76,6 +79,8 @@ const DEMO_ROLE_PERMS: Record<number, string[]> = {
 };
 
 export function RolePermissionMatrixPage() {
+  const msg = useMsg();
+  const demoModules = buildDemoModules(msg);
   const [selectedRoleId, setSelectedRoleId] = useState<number>(1);
   const [rolePermissions, setRolePermissions] = useState<string[]>(DEMO_ROLE_PERMS[1]);
   const [isSaving, setIsSaving] = useState(false);
@@ -84,7 +89,7 @@ export function RolePermissionMatrixPage() {
     <RolePermissionMatrix
       roles={DEMO_ROLES}
       selectedRoleId={selectedRoleId}
-      groupedPermissions={DEMO_MODULES}
+      groupedPermissions={demoModules}
       rolePermissions={rolePermissions}
       isSaving={isSaving}
       canEdit={selectedRoleId !== 4}

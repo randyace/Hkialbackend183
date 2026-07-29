@@ -27,11 +27,11 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import {
-
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
+import { useMsg } from '@/i18n/useMsg';
 
 
 function ymdLocal(d: Date): string {
@@ -388,6 +388,7 @@ export function BookingManagement({
   getBookingCategoryColor: getBookingCategoryColorProp,
   getFlightTypeColor: getFlightTypeColorProp,
 }: BookingManagementProps = {}) {
+  const msg = useMsg();
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [internalStatusFilter, setInternalStatusFilter] = useState('all');
   const [internalPaymentStatusFilter, setInternalPaymentStatusFilter] = useState('all');
@@ -641,7 +642,7 @@ export function BookingManagement({
             <button
               onClick={dismissDemoInfo}
               className="text-green-600 hover:text-green-800 flex-shrink-0 ml-2"
-              title="Dismiss"
+              title={msg('Dismiss')}
             >
               <X className="w-4 h-4" />
             </button>
@@ -657,7 +658,7 @@ export function BookingManagement({
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by booking number, guest name, account number, or flight number..."
+                placeholder={msg('Search by booking number, guest name, account number, or flight number...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -667,7 +668,7 @@ export function BookingManagement({
           <div className="flex flex-col md:flex-row gap-4">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-56">
-                <SelectValue placeholder="Booking Status" />
+                <SelectValue placeholder={msg('Booking Status')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Booking Status</SelectItem>
@@ -682,7 +683,7 @@ export function BookingManagement({
             </Select>
             <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
               <SelectTrigger className="w-full md:w-56">
-                <SelectValue placeholder="Payment Status" />
+                <SelectValue placeholder={msg('Payment Status')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Payment Status</SelectItem>
@@ -696,7 +697,7 @@ export function BookingManagement({
             </Select>
             <Select value={bookingCategoryFilter} onValueChange={setBookingCategoryFilter}>
               <SelectTrigger className="w-full md:w-56">
-                <SelectValue placeholder="Booking Category" />
+                <SelectValue placeholder={msg('Booking Category')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Booking Category</SelectItem>
@@ -709,7 +710,7 @@ export function BookingManagement({
             </Select>
             <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
               <SelectTrigger className="w-full md:w-48" data-testid="request-type-filter">
-                <SelectValue placeholder="Request Type" />
+                <SelectValue placeholder={msg('Request Type')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Request Types</SelectItem>
@@ -722,7 +723,7 @@ export function BookingManagement({
               <Calendar className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="date"
-                placeholder="From date..."
+                placeholder={msg('From date...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
@@ -732,7 +733,7 @@ export function BookingManagement({
               <Calendar className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="date"
-                placeholder="To date..."
+                placeholder={msg('To date...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
@@ -776,7 +777,7 @@ export function BookingManagement({
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-start gap-2">
                       {booking.isAdHoc && (
-                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" title="Ad-hoc booking (<48hrs)" />
+                        <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" title={msg('Ad-hoc booking (<48hrs)')} />
                       )}
                       <div>
                         <div className="font-mono text-xs font-medium text-gray-900">{booking.bookingNo}</div>
@@ -872,10 +873,10 @@ export function BookingManagement({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex gap-1">
                       {booking.hasLimousine && (
-                        <Car className="w-4 h-4 text-purple-600" title="Limousine Transfer" />
+                        <Car className="w-4 h-4 text-purple-600" title={msg('Limousine Transfer')} />
                       )}
                       {booking.hasShopping && (
-                        <ShoppingBag className="w-4 h-4 text-green-600" title="In-lounge Shopping" />
+                        <ShoppingBag className="w-4 h-4 text-green-600" title={msg('In-lounge Shopping')} />
                       )}
                       {!booking.hasLimousine && !booking.hasShopping && (
                         <span className="text-xs text-gray-400">—</span>
@@ -945,7 +946,7 @@ export function BookingManagement({
                         size="sm"
                         onClick={() => onViewDetail?.(booking.id)}
                         className="h-8 w-8 p-0"
-                        title="View Details"
+                        title={msg('View Details')}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -955,7 +956,7 @@ export function BookingManagement({
                           size="sm"
                           onClick={() => onEditBooking?.(booking.id)}
                           className="h-8 w-8 p-0"
-                          title="Edit Booking"
+                          title={msg('Edit Booking')}
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
@@ -967,7 +968,7 @@ export function BookingManagement({
                           onClick={() => onDeleteBooking?.(booking.id, booking.bookingNo)}
                           disabled={deletingBookingId === booking.id}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50 disabled:opacity-50"
-                          title="Delete Booking"
+                          title={msg('Delete Booking')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

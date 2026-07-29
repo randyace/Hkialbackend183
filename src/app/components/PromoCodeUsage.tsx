@@ -25,6 +25,8 @@ import {
   QrCode, CheckCircle2, LayoutList,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // INV-X18: product calendar day is HKT.
 const localDateStr = (d: Date = new Date()): string =>
@@ -36,7 +38,7 @@ type CodeType = 'Free bookings';
 function TypeBadge({ type }: { type: CodeType }) {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
-      <BookOpen className="w-3 h-3" />Free bookings
+      <BookOpen className="w-3 h-3" />{msg('Free bookings')}
     </span>
   );
 }
@@ -316,6 +318,7 @@ export function PromoCodeUsage({
   onViewBatch,
   onExport,
 }: PromoCodeUsageProps = {}) {
+  const msg = useMsg();
   // Only fall back to MOCK_* for standalone Figma Make (prop omitted).
   // When the container passes data (even `[]` while loading), never flash
   // mock rows — same fix as PromoCodeList "flashing mock data" bug.
@@ -430,10 +433,10 @@ export function PromoCodeUsage({
 
   function StatusBadge({ status }: { status: 'Active' | 'Expired' | 'Inactive' }) {
     if (status === 'Active')
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Active</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">{msg('Active')}</span>;
     if (status === 'Expired')
-      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">Expired</span>;
-    return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">Inactive</span>;
+      return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">{msg('Expired')}</span>;
+    return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700">{msg('Inactive')}</span>;
   }
 
   function renderBatchPagination() {
@@ -483,8 +486,8 @@ export function PromoCodeUsage({
       {/* Header */}
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-gray-900 mb-1">Promo Code Usage</h1>
-          <p className="text-sm text-gray-500">View batch usage statistics and individual unique-code transaction records.</p>
+          <h1 className="text-gray-900 mb-1">{msg('Promo Code Usage')}</h1>
+          <p className="text-sm text-gray-500">{msg('View batch usage statistics and individual unique-code transaction records.')}</p>
         </div>
         <Button
           size="sm"
@@ -493,7 +496,7 @@ export function PromoCodeUsage({
           onClick={activeTab === 'batches' ? handleDownloadExcel : handleDownloadTxnExcel}
         >
           <FileSpreadsheet className="w-4 h-4" />
-          Download Excel
+          {msg('Download Excel')}
         </Button>
       </div>
 
@@ -502,36 +505,36 @@ export function PromoCodeUsage({
         <Card className="p-4 bg-[#0f2942] text-white">
           <div className="flex items-center gap-2 mb-2">
             <Package className="w-4 h-4 text-blue-300" />
-            <span className="text-xs text-blue-200">Total Batches</span>
+            <span className="text-xs text-blue-200">{msg('Total Batches')}</span>
           </div>
           <p className="text-2xl text-white">{totalBatches}</p>
-          <p className="text-xs text-blue-300 mt-1">All time</p>
+          <p className="text-xs text-blue-300 mt-1">{msg('All time')}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-gray-500">Active Batches</span>
+            <span className="text-xs text-gray-500">{msg('Active Batches')}</span>
           </div>
           <p className="text-2xl text-green-600">{activeBatches}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Hash className="w-4 h-4 text-blue-500" />
-            <span className="text-xs text-gray-500">Codes Generated</span>
+            <span className="text-xs text-gray-500">{msg('Codes Generated')}</span>
           </div>
           <p className="text-2xl text-blue-600">{totalCodesGen.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Tag className="w-4 h-4 text-purple-500" />
-            <span className="text-xs text-gray-500">Codes Used</span>
+            <span className="text-xs text-gray-500">{msg('Codes Used')}</span>
           </div>
           <p className="text-2xl text-purple-600">{totalCodesUsed.toLocaleString()}</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-red-500" />
-            <span className="text-xs text-gray-500">Revenue Impact</span>
+            <span className="text-xs text-gray-500">{msg('Revenue Impact')}</span>
           </div>
           <p className="text-base text-red-600">HKD {totalRevImpact.toLocaleString()}</p>
         </Card>
@@ -548,7 +551,7 @@ export function PromoCodeUsage({
           onClick={() => setActiveTab('batches')}
         >
           <LayoutList className="w-4 h-4" />
-          Batch Summary
+          {msg('Batch Summary')}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activeTab === 'batches' ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
             {batchData.length}
           </span>
@@ -562,7 +565,7 @@ export function PromoCodeUsage({
           onClick={() => setActiveTab('transactions')}
         >
           <Receipt className="w-4 h-4" />
-          Transaction Records
+          {msg('Transaction Records')}
           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${activeTab === 'transactions' ? 'bg-emerald-600 text-white' : 'bg-emerald-100 text-emerald-700'}`}>
             {filteredTxns.length}
           </span>
@@ -579,7 +582,7 @@ export function PromoCodeUsage({
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    placeholder="Search by company, batch ref, contract ID, or code prefix..."
+                    placeholder={msg('Search by company, batch ref, contract ID, or code prefix...')}
                     value={searchTerm}
                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                     className="pl-9"
@@ -587,34 +590,34 @@ export function PromoCodeUsage({
                 </div>
                 <Select value={filterStatus} onValueChange={(v: any) => { setFilterStatus(v); setCurrentPage(1); }}>
                   <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Statuses" />
+                    <SelectValue placeholder={msg('All Statuses')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Expired">Expired</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="all">{msg('All Statuses')}</SelectItem>
+                    <SelectItem value="Active">{msg('Active')}</SelectItem>
+                    <SelectItem value="Expired">{msg('Expired')}</SelectItem>
+                    <SelectItem value="Inactive">{msg('Inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                 <div className="flex items-center gap-2 text-sm text-gray-500 shrink-0">
                   <CalendarIcon className="w-4 h-4" />
-                  Created Date:
+                  {msg('Created Date:')}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 flex-1">
                   <div className="flex items-center gap-2 flex-1">
-                    <label className="text-xs text-gray-500 shrink-0">From</label>
+                    <label className="text-xs text-gray-500 shrink-0">{msg('From')}</label>
                     <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }} className="flex-1" />
                   </div>
                   <div className="flex items-center gap-2 flex-1">
-                    <label className="text-xs text-gray-500 shrink-0">To</label>
+                    <label className="text-xs text-gray-500 shrink-0">{msg('To')}</label>
                     <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }} className="flex-1" min={dateFrom || undefined} />
                   </div>
                   {(dateFrom || dateTo) && (
                     <Button size="sm" variant="ghost" className="gap-1 text-gray-500 hover:text-red-600 shrink-0"
                       onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1); }}>
-                      <X className="w-3.5 h-3.5" /> Clear
+                      <X className="w-3.5 h-3.5" /> {msg('Clear')}
                     </Button>
                   )}
                 </div>
@@ -627,26 +630,26 @@ export function PromoCodeUsage({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Batch Ref</TableHead>
-                    <TableHead>Company Name</TableHead>
-                    <TableHead>Contract ID</TableHead>
-                    <TableHead>Code Prefix</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Free Bookings / Code</TableHead>
-                    <TableHead>Total Codes</TableHead>
-                    <TableHead>Codes Used</TableHead>
-                    <TableHead>Codes Remaining</TableHead>
-                    <TableHead>Usage Rate</TableHead>
-                    <TableHead>Total Bookings</TableHead>
-                    <TableHead>Revenue Impact</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Detail</TableHead>
+                    <TableHead>{msg('Batch Ref')}</TableHead>
+                    <TableHead>{msg('Company Name')}</TableHead>
+                    <TableHead>{msg('Contract ID')}</TableHead>
+                    <TableHead>{msg('Code Prefix')}</TableHead>
+                    <TableHead>{msg('Type')}</TableHead>
+                    <TableHead>{msg('Free Bookings / Code')}</TableHead>
+                    <TableHead>{msg('Total Codes')}</TableHead>
+                    <TableHead>{msg('Codes Used')}</TableHead>
+                    <TableHead>{msg('Codes Remaining')}</TableHead>
+                    <TableHead>{msg('Usage Rate')}</TableHead>
+                    <TableHead>{msg('Total Bookings')}</TableHead>
+                    <TableHead>{msg('Revenue Impact')}</TableHead>
+                    <TableHead>{msg('Status')}</TableHead>
+                    <TableHead className="text-right">{msg('Detail')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginated.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={14} className="text-center text-gray-500 py-10">No usage records found.</TableCell>
+                      <TableCell colSpan={14} className="text-center text-gray-500 py-10">{msg('No usage records found.')}</TableCell>
                     </TableRow>
                   ) : (
                     paginated.map((batch) => (
@@ -698,7 +701,7 @@ export function PromoCodeUsage({
           <div className="flex items-start gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg mb-4">
             <Receipt className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-emerald-900">Promo Code Transaction Log</p>
+              <p className="text-sm font-medium text-emerald-900">{msg('Promo Code Transaction Log')}</p>
               <p className="text-sm text-emerald-700 mt-0.5">
                 Each row represents a unique promo code that was redeemed — showing the exact code used, timestamp, linked booking, and free bookings granted.
               </p>
@@ -712,7 +715,7 @@ export function PromoCodeUsage({
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
-                    placeholder="Search by unique code, guest name, booking ref, or company..."
+                    placeholder={msg('Search by unique code, guest name, booking ref, or company...')}
                     value={txnSearch}
                     onChange={(e) => { setTxnSearch(e.target.value); setTxnPage(1); }}
                     className="pl-9"
@@ -720,10 +723,10 @@ export function PromoCodeUsage({
                 </div>
                 <Select value={txnBatch} onValueChange={(v) => { setTxnBatch(v); setTxnPage(1); }}>
                   <SelectTrigger className="w-full md:w-64">
-                    <SelectValue placeholder="All Batches" />
+                    <SelectValue placeholder={msg('All Batches')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Batches</SelectItem>
+                    <SelectItem value="all">{msg('All Batches')}</SelectItem>
                     {batchData.map(b => (
                       <SelectItem key={b.batchRef} value={b.batchRef}>{b.batchRef} — {b.companyName}</SelectItem>
                     ))}
@@ -733,21 +736,21 @@ export function PromoCodeUsage({
               <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
                 <div className="flex items-center gap-2 text-sm text-gray-500 shrink-0">
                   <CalendarIcon className="w-4 h-4" />
-                  Used Date:
+                  {msg('Used Date:')}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 flex-1">
                   <div className="flex items-center gap-2 flex-1">
-                    <label className="text-xs text-gray-500 shrink-0">From</label>
+                    <label className="text-xs text-gray-500 shrink-0">{msg('From')}</label>
                     <Input type="date" value={txnDateFrom} onChange={(e) => { setTxnDateFrom(e.target.value); setTxnPage(1); }} className="flex-1" />
                   </div>
                   <div className="flex items-center gap-2 flex-1">
-                    <label className="text-xs text-gray-500 shrink-0">To</label>
+                    <label className="text-xs text-gray-500 shrink-0">{msg('To')}</label>
                     <Input type="date" value={txnDateTo} onChange={(e) => { setTxnDateTo(e.target.value); setTxnPage(1); }} className="flex-1" min={txnDateFrom || undefined} />
                   </div>
                   {(txnDateFrom || txnDateTo) && (
                     <Button size="sm" variant="ghost" className="gap-1 text-gray-500 hover:text-red-600 shrink-0"
                       onClick={() => { setTxnDateFrom(''); setTxnDateTo(''); setTxnPage(1); }}>
-                      <X className="w-3.5 h-3.5" /> Clear
+                      <X className="w-3.5 h-3.5" /> {msg('Clear')}
                     </Button>
                   )}
                 </div>
@@ -761,25 +764,25 @@ export function PromoCodeUsage({
                 <TableHeader>
                   <TableRow>
                     <TableHead>#</TableHead>
-                    <TableHead>Unique Code</TableHead>
-                    <TableHead>Batch Ref</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Code Prefix</TableHead>
+                    <TableHead>{msg('Unique Code')}</TableHead>
+                    <TableHead>{msg('Batch Ref')}</TableHead>
+                    <TableHead>{msg('Company')}</TableHead>
+                    <TableHead>{msg('Code Prefix')}</TableHead>
                     <TableHead>
                       <div className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5" />
-                        Used At
+                        {msg('Used At')}
                       </div>
                     </TableHead>
-                    <TableHead>Booking Ref</TableHead>
-                    <TableHead>Guest Name</TableHead>
-                    <TableHead className="text-center">Free Bookings Granted</TableHead>
+                    <TableHead>{msg('Booking Ref')}</TableHead>
+                    <TableHead>{msg('Guest Name')}</TableHead>
+                    <TableHead className="text-center">{msg('Free Bookings Granted')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedTxns.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-gray-500 py-10">No transaction records found.</TableCell>
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-10">{msg('No transaction records found.')}</TableCell>
                     </TableRow>
                   ) : (
                     paginatedTxns.map((t, i) => (
@@ -831,49 +834,49 @@ export function PromoCodeUsage({
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Batch Usage Detail</DialogTitle>
+            <DialogTitle>{msg('Batch Usage Detail')}</DialogTitle>
           </DialogHeader>
           {selectedBatch && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Batch Ref</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Batch Ref')}</p>
                   <p className="text-blue-700">{selectedBatch.batchRef}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Company Name</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Company Name')}</p>
                   <p className="text-gray-900">{selectedBatch.companyName}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Contract ID</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Contract ID')}</p>
                   <p className="text-gray-900">{selectedBatch.contractId}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Code Prefix</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Code Prefix')}</p>
                   <p className="font-mono text-gray-900">{selectedBatch.codePrefix}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Code Type</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Code Type')}</p>
                   <TypeBadge type={selectedBatch.codeType} />
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Free Bookings per Code</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Free Bookings per Code')}</p>
                   <p className="text-gray-900">{selectedBatch.freeBookings}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Total Codes</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Total Codes')}</p>
                   <p className="text-gray-900">{selectedBatch.totalCodes}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Codes Used</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Codes Used')}</p>
                   <p className="text-gray-900">{selectedBatch.codesUsed}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Codes Remaining</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Codes Remaining')}</p>
                   <p className="text-gray-900">{selectedBatch.codesRemaining}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Usage Rate</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Usage Rate')}</p>
                   <div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
                       <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min(selectedBatch.usageRate, 100)}%` }} />
@@ -882,26 +885,26 @@ export function PromoCodeUsage({
                   </div>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Total Bookings</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Total Bookings')}</p>
                   <p className="text-gray-900">{selectedBatch.totalBookings}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Revenue Impact</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Revenue Impact')}</p>
                   <p className="text-gray-900">HKD {selectedBatch.totalRevenueImpact.toLocaleString()}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Date Range</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Date Range')}</p>
                   <p className="text-gray-900">{selectedBatch.startDate} → {selectedBatch.endDate}</p>
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Status</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Status')}</p>
                   <StatusBadge status={selectedBatch.status} />
                 </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>{msg('Close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -19,6 +19,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -124,6 +125,7 @@ export function AccountList({
   getStatusTone,
   deletingAccountId = null,
 }: AccountListProps = {}) {
+  const msg = useMsg();
   const today = localDateStr();
 
   const getStatusBadge = (status: string) => {
@@ -202,8 +204,8 @@ export function AccountList({
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1>All Customers</h1>
-          <p className="text-gray-600">View and manage all customer accounts</p>
+          <h1>{msg('All Customers')}</h1>
+          <p className="text-gray-600">{msg('View and manage all customer accounts')}</p>
         </div>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -216,8 +218,8 @@ export function AccountList({
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1>All Customers</h1>
-          <p className="text-gray-600">View and manage all customer accounts</p>
+          <h1>{msg('All Customers')}</h1>
+          <p className="text-gray-600">{msg('View and manage all customer accounts')}</p>
         </div>
         <div className="text-center py-12 text-red-500">{error}</div>
       </div>
@@ -227,8 +229,8 @@ export function AccountList({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1>All Customers</h1>
-        <p className="text-gray-600">View and manage all customer accounts</p>
+        <h1>{msg('All Customers')}</h1>
+        <p className="text-gray-600">{msg('View and manage all customer accounts')}</p>
       </div>
 
       {/* Filters */}
@@ -239,7 +241,7 @@ export function AccountList({
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by account number, name, or email..."
+                placeholder={msg('Search by account number, name, or email...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
                 onChange={(e) => onSearchTermChange?.(e.target.value)}
@@ -247,14 +249,14 @@ export function AccountList({
             </div>
             <Select value={typeFilter} onValueChange={onTypeFilterChange}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by type" />
+                <SelectValue placeholder={msg('Filter by type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Individual">Individual</SelectItem>
-                <SelectItem value="Member">Member</SelectItem>
-                <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Agency">Agency</SelectItem>
+                <SelectItem value="all">{msg('All Types')}</SelectItem>
+                <SelectItem value="Individual">{msg('Individual')}</SelectItem>
+                <SelectItem value="Member">{msg('Member')}</SelectItem>
+                <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+                <SelectItem value="Agency">{msg('Agency')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -262,7 +264,7 @@ export function AccountList({
           {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <label>Start Date</label>
+              <label>{msg('Start Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -274,7 +276,7 @@ export function AccountList({
               </div>
             </div>
             <div className="flex-1">
-              <label>End Date</label>
+              <label>{msg('End Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -290,7 +292,7 @@ export function AccountList({
                 variant="outline"
                 onClick={onClearFilters}
               >
-                Clear Filters
+                {msg('Clear Filters')}
               </Button>
             </div>
           </div>
@@ -305,7 +307,7 @@ export function AccountList({
               Showing {total > 0 ? `${startIndex + 1}-${Math.min(endIndex, total)}` : '0'} of {total} accounts
             </span>
             {isSearching && (
-              <span className="text-blue-600 text-xs animate-pulse">Searching…</span>
+              <span className="text-blue-600 text-xs animate-pulse">{msg('Searching…')}</span>
             )}
           </div>
           <div>
@@ -316,18 +318,18 @@ export function AccountList({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Account Number</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Grouping</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Quota / Credit</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{msg('ID')}</TableHead>
+                <TableHead>{msg('Account Number')}</TableHead>
+                <TableHead>{msg('Type')}</TableHead>
+                <TableHead>{msg('Name')}</TableHead>
+                <TableHead>{msg('Email')}</TableHead>
+                <TableHead>{msg('Phone')}</TableHead>
+                <TableHead>{msg('Grouping')}</TableHead>
+                <TableHead>{msg('Payment')}</TableHead>
+                <TableHead>{msg('Quota / Credit')}</TableHead>
+                <TableHead>{msg('Status')}</TableHead>
+                <TableHead>{msg('Created')}</TableHead>
+                <TableHead className="text-right">{msg('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -338,7 +340,7 @@ export function AccountList({
                   <TableCell>
                     {isMember?.(account) ? (
                       <div className="flex flex-col gap-1">
-                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 w-fit">Member</Badge>
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 w-fit">{msg('Member')}</Badge>
                         <div className="flex flex-col gap-0.5">
                           <span className="text-xs text-gray-500">{account.membershipType}</span>
                           <span className="text-xs text-amber-700">Exp: {account.membershipExpiry}</span>
@@ -414,7 +416,7 @@ export function AccountList({
                         size="sm"
                         onClick={() => onViewDetail?.(account.accountNumber)}
                         className="h-8 w-8 p-0"
-                        title="View/Edit Details"
+                        title={msg('View/Edit Details')}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -424,7 +426,7 @@ export function AccountList({
                           size="sm"
                           onClick={() => onDelete(account.accountNumber)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                          title="Delete Account"
+                          title={msg('Delete Account')}
                           disabled={deletingAccountId !== null}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -440,7 +442,7 @@ export function AccountList({
 
         {accounts.length === 0 && (
           <div className="text-center py-12 text-gray-500">
-            No accounts found matching your search criteria
+            {msg('No accounts found matching your search criteria')}
           </div>
         )}
 

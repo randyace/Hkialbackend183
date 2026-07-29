@@ -12,6 +12,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Loader2, Save, Shield } from 'lucide-react';
 import { mockPermissionMatrixData } from './__fixtures__/PermissionMatrix.mocks';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PermissionActionView {
   key: string;
@@ -80,6 +81,7 @@ export function PermissionMatrix({
   onTogglePermission = mockPermissionMatrixData.onTogglePermission,
   onSave = mockPermissionMatrixData.onSave,
 }: PermissionMatrixProps) {
+  const msg = useMsg();
   const selectedSet = new Set(selectedPermissions);
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
 
@@ -87,7 +89,7 @@ export function PermissionMatrix({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading permission matrix…
+        {msg('Loading permission matrix…')}
       </div>
     );
   }
@@ -98,16 +100,16 @@ export function PermissionMatrix({
         <div>
           <h1 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
             <Shield className="w-6 h-6 text-gray-700" />
-            Role Permission Matrix
+            {msg('Role Permission Matrix')}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Modules → Features → CRUD and special actions. Changes apply to the selected Spatie role.
+            {msg('Modules → Features → CRUD and special actions. Changes apply to the selected Spatie role.')}
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
           <label className="block space-y-1.5 min-w-[220px]">
-            <span className="text-sm font-medium text-gray-700">Role</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Role')}</span>
             <select
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
               value={selectedRoleId ?? ''}
@@ -117,7 +119,7 @@ export function PermissionMatrix({
               }}
               disabled={roles.length === 0 || isSaving}
             >
-              {roles.length === 0 && <option value="">No roles available</option>}
+              {roles.length === 0 && <option value="">{msg('No roles available')}</option>}
               {roles.map((role) => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -150,7 +152,7 @@ export function PermissionMatrix({
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[28%]">
-                  Feature
+                  {msg('Feature')}
                 </th>
                 {CRUD_KEYS.map((key) => (
                   <th
@@ -161,7 +163,7 @@ export function PermissionMatrix({
                   </th>
                 ))}
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Special Actions
+                  {msg('Special Actions')}
                 </th>
               </tr>
             </thead>
@@ -250,7 +252,7 @@ export function PermissionMatrix({
               {modules.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-500">
-                    No permission modules available.
+                    {msg('No permission modules available.')}
                   </td>
                 </tr>
               )}
@@ -261,7 +263,7 @@ export function PermissionMatrix({
 
       {selectedRole && (
         <p className="text-xs text-gray-500">
-          Editing role <span className="font-medium text-gray-700">{selectedRole.name}</span>
+          {msg('Editing role')} <span className="font-medium text-gray-700">{selectedRole.name}</span>
           {' · '}
           {selectedPermissions.length} permission{selectedPermissions.length === 1 ? '' : 's'} selected
           {isDirty ? ' · unsaved changes' : ''}

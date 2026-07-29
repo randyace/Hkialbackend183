@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * BookingApprovalQueueView.tsx
  *
@@ -187,7 +188,7 @@ export function BookingApprovalQueue({
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-center text-gray-400 space-y-2">
           <Clock className="w-8 h-8 mx-auto animate-spin" />
-          <p>Loading booking queue…</p>
+          <p>{msg('Loading booking queue…')}</p>
         </div>
       </div>
     );
@@ -201,7 +202,7 @@ export function BookingApprovalQueue({
         <div>
           <h1 className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-amber-500" />
-            Booking Approval Queue
+            {msg('Booking Approval Queue')}
           </h1>
           <p className="text-gray-500 mt-0.5">
             {filtered.length} pending request{filtered.length !== 1 ? 's' : ''} awaiting review
@@ -216,7 +217,7 @@ export function BookingApprovalQueue({
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search booking no., guest, account, suite or flight…"
+              placeholder={msg('Search booking no., guest, account, suite or flight…')}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm"
@@ -224,24 +225,24 @@ export function BookingApprovalQueue({
           </div>
           <Select value={filterType} onValueChange={v => setFilterType(v as typeof filterType)}>
             <SelectTrigger className="w-[170px]">
-              <SelectValue placeholder="Account type" />
+              <SelectValue placeholder={msg('Account type')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Account Types</SelectItem>
-              <SelectItem value="Individual">Individual</SelectItem>
-              <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Agency">Agency</SelectItem>
+              <SelectItem value="all">{msg('All Account Types')}</SelectItem>
+              <SelectItem value="Individual">{msg('Individual')}</SelectItem>
+              <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+              <SelectItem value="Agency">{msg('Agency')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterRequest} onValueChange={v => setFilterRequest(v as typeof filterRequest)}>
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Request type" />
+              <SelectValue placeholder={msg('Request type')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Request Types</SelectItem>
-              <SelectItem value="New Booking Request">New Booking</SelectItem>
-              <SelectItem value="Edit Booking Request">Edit Booking</SelectItem>
-              <SelectItem value="Cancel">Cancel</SelectItem>
+              <SelectItem value="all">{msg('All Request Types')}</SelectItem>
+              <SelectItem value="New Booking Request">{msg('New Booking')}</SelectItem>
+              <SelectItem value="Edit Booking Request">{msg('Edit Booking')}</SelectItem>
+              <SelectItem value="Cancel">{msg('Cancel')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -253,24 +254,24 @@ export function BookingApprovalQueue({
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Booking No.</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Request</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Guest / Account</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Suite &amp; Flight</th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">{msg('Booking No.')}</th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">{msg('Request')}</th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">{msg('Guest / Account')}</th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">{msg('Suite &amp; Flight')}</th>
                 <th
                   className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide cursor-pointer select-none"
                   onClick={() => toggleSort('dateTime')}
                 >
-                  Visit Date <SortIcon field="dateTime" />
+                  {msg('Visit Date')} <SortIcon field="dateTime" />
                 </th>
-                <th className="text-right px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Amount</th>
+                <th className="text-right px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">{msg('Amount')}</th>
                 <th
                   className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide cursor-pointer select-none"
                   onClick={() => toggleSort('submittedAt')}
                 >
-                  Submitted <SortIcon field="submittedAt" />
+                  {msg('Submitted')} <SortIcon field="submittedAt" />
                 </th>
-                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide text-center">Actions</th>
+                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide text-center">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -278,7 +279,7 @@ export function BookingApprovalQueue({
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-gray-400">
                     <Filter className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <p>No bookings match your current filters.</p>
+                    <p>{msg('No bookings match your current filters.')}</p>
                   </td>
                 </tr>
               ) : filtered.map(booking => (
@@ -293,7 +294,7 @@ export function BookingApprovalQueue({
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono text-xs text-gray-700">{booking.bookingNo}</span>
                         {booking.isAdHoc && (
-                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">Ad-hoc</span>
+                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">{msg('Ad-hoc')}</span>
                         )}
                       </div>
                     </td>
@@ -401,7 +402,7 @@ export function BookingApprovalQueue({
                           className="h-7 px-3 text-blue-600 border-blue-200 hover:bg-blue-50"
                           onClick={() => onViewDetail(booking.id)}
                         >
-                          View
+                          {msg('View')}
                         </Button>
                         {mode === 'supervisor' && (
                           <Button
@@ -409,7 +410,7 @@ export function BookingApprovalQueue({
                             variant="ghost"
                             className="h-7 px-2 text-blue-600 hover:bg-blue-50"
                             onClick={() => onSendBack?.(booking.id)}
-                            title="Send Back"
+                            title={msg('Send Back')}
                           >
                             <RotateCcw className="w-4 h-4" />
                           </Button>
@@ -424,19 +425,19 @@ export function BookingApprovalQueue({
                       <td colSpan={8} className="px-6 py-3">
                         <div className="grid grid-cols-4 gap-4 text-xs text-gray-600">
                           <div>
-                            <label className="block text-gray-400 mb-[10px]">Account Type</label>
+                            <label className="block text-gray-400 mb-[10px]">{msg('Account Type')}</label>
                             <p>{booking.accountType}</p>
                           </div>
                           <div>
-                            <label className="block text-gray-400 mb-[10px]">Payment Mode</label>
+                            <label className="block text-gray-400 mb-[10px]">{msg('Payment Mode')}</label>
                             <p>{booking.paymentMode}</p>
                           </div>
                           <div>
-                            <label className="block text-gray-400 mb-[10px]">Guests</label>
+                            <label className="block text-gray-400 mb-[10px]">{msg('Guests')}</label>
                             <p>{booking.numberOfGuests} VIP · {booking.nonFlyingGuests} Non-Flying</p>
                           </div>
                           <div>
-                            <label className="block text-gray-400 mb-[10px]">Flight</label>
+                            <label className="block text-gray-400 mb-[10px]">{msg('Flight')}</label>
                             <p>{booking.flightNo} @ {booking.flightTime}</p>
                           </div>
                         </div>

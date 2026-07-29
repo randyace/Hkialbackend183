@@ -11,6 +11,7 @@ import {
 } from './ui/dialog';
 import { Search, Plus, Eye, Edit, Building2, Plane, Phone, Mail, FileText, Calendar, Users, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useMsg } from '@/i18n/useMsg';
 
 type AccountType = 'Corporate' | 'Agency';
 
@@ -146,6 +147,7 @@ export function CorporateProfiles({
   onEditProfile,
   onCreateProfile,
 }: CorporateProfilesProps = {}) {
+  const msg = useMsg();
   const profiles: CompanyProfile[] = profilesProp?.length ? profilesProp : MOCK_PROFILES;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
@@ -170,31 +172,31 @@ export function CorporateProfiles({
   const openDetail = (p: CompanyProfile) => { setSelectedProfile(p); setActiveTab('overview'); setIsDetailOpen(true); };
 
   const tabs = [
-    { id: 'overview',   label: 'Overview'         },
-    { id: 'contacts',   label: 'Contacts'          },
-    { id: 'contracts',  label: 'Contracts'         },
-    { id: 'history',    label: 'Booking History'   },
+    { id: 'overview',   label: msg('Overview')         },
+    { id: 'contacts',   label: msg('Contacts')          },
+    { id: 'contracts',  label: msg('Contracts')         },
+    { id: 'history',    label: msg('Booking History')   },
   ] as const;
 
   return (
     <div className="p-4 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900 mb-1">Corporate & Agency Profiles</h1>
-          <p className="text-sm text-gray-500">Centralized profiles with contracts, contacts, and booking history.</p>
+          <h1 className="text-gray-900 mb-1">{msg('Corporate & Agency Profiles')}</h1>
+          <p className="text-sm text-gray-500">{msg('Centralized profiles with contracts, contacts, and booking history.')}</p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0"
           onClick={() => onCreateProfile && onCreateProfile()}>
-          <Plus className="w-4 h-4 mr-2" />Add Profile
+          <Plus className="w-4 h-4 mr-2" />{msg('Add Profile')}
         </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-4 bg-[#0f2942] text-white"><p className="text-xs text-blue-200 mb-1">Total Profiles</p><p className="text-2xl text-white">{profiles.length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Active</p><p className="text-2xl text-green-600">{profiles.filter(p => p.status === 'Active').length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Corporate</p><p className="text-2xl text-blue-600">{profiles.filter(p => p.accountType === 'Corporate').length}</p></Card>
-        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">Agency</p><p className="text-2xl text-purple-600">{profiles.filter(p => p.accountType === 'Agency').length}</p></Card>
+        <Card className="p-4 bg-[#0f2942] text-white"><p className="text-xs text-blue-200 mb-1">{msg('Total Profiles')}</p><p className="text-2xl text-white">{profiles.length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">{msg('Active')}</p><p className="text-2xl text-green-600">{profiles.filter(p => p.status === 'Active').length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">{msg('Corporate')}</p><p className="text-2xl text-blue-600">{profiles.filter(p => p.accountType === 'Corporate').length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-gray-500 mb-1">{msg('Agency')}</p><p className="text-2xl text-purple-600">{profiles.filter(p => p.accountType === 'Agency').length}</p></Card>
       </div>
 
       {/* Filters */}
@@ -202,24 +204,24 @@ export function CorporateProfiles({
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input placeholder="Search by company name or account number..." value={searchTerm}
+            <Input placeholder={msg('Search by company name or account number...')} value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
           </div>
           <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
-            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder={msg('All Types')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Corporate">Corporate</SelectItem>
-              <SelectItem value="Agency">Agency</SelectItem>
+              <SelectItem value="all">{msg('All Types')}</SelectItem>
+              <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+              <SelectItem value="Agency">{msg('Agency')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
-            <SelectTrigger className="w-full md:w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-44"><SelectValue placeholder={msg('All Statuses')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
+              <SelectItem value="all">{msg('All Statuses')}</SelectItem>
+              <SelectItem value="Active">{msg('Active')}</SelectItem>
+              <SelectItem value="Pending">{msg('Pending')}</SelectItem>
+              <SelectItem value="Inactive">{msg('Inactive')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -250,7 +252,7 @@ export function CorporateProfiles({
               {/* Session Balance */}
               <div className="mb-3">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-500">Sessions Remaining</span>
+                  <span className="text-gray-500">{msg('Sessions Remaining')}</span>
                   <span className="text-gray-900">{remaining}/{profile.totalSessionsAllotted}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5">
@@ -262,7 +264,7 @@ export function CorporateProfiles({
               <div className="flex items-center justify-between text-xs text-gray-500">
                 <span className="flex items-center gap-1"><Users className="w-3 h-3" />{profile.contacts.length} contacts</span>
                 <span className="flex items-center gap-1"><FileText className="w-3 h-3" />{profile.contracts.length} contract{profile.contracts.length !== 1 ? 's' : ''}</span>
-                <span className="flex items-center gap-1 text-blue-600">View <ChevronRight className="w-3 h-3" /></span>
+                <span className="flex items-center gap-1 text-blue-600">{msg('View')} <ChevronRight className="w-3 h-3" /></span>
               </div>
             </Card>
           );
@@ -313,12 +315,12 @@ export function CorporateProfiles({
                       </div>
                     ))}
                     <div className="bg-gray-50 rounded p-3 col-span-2">
-                      <p className="text-xs text-gray-500 mb-1">Address</p>
+                      <p className="text-xs text-gray-500 mb-1">{msg('Address')}</p>
                       <p className="text-gray-900">{selectedProfile.address}</p>
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded p-4">
-                    <p className="text-xs text-gray-500 mb-2">Session Balance</p>
+                    <p className="text-xs text-gray-500 mb-2">{msg('Session Balance')}</p>
                     <div className="flex justify-between text-sm mb-1">
                       <span>{selectedProfile.totalSessionsAllotted - selectedProfile.currentSessions}/{selectedProfile.totalSessionsAllotted} remaining</span>
                     </div>
@@ -329,7 +331,7 @@ export function CorporateProfiles({
                   </div>
                   {selectedProfile.notes && (
                     <div className="bg-gray-50 rounded p-3">
-                      <p className="text-xs text-gray-500 mb-1">Notes</p>
+                      <p className="text-xs text-gray-500 mb-1">{msg('Notes')}</p>
                       <p className="text-sm text-gray-700">{selectedProfile.notes}</p>
                     </div>
                   )}
@@ -344,7 +346,7 @@ export function CorporateProfiles({
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-sm text-gray-900">{c.name}</p>
-                            {c.isPrimary && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Primary</span>}
+                            {c.isPrimary && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{msg('Primary')}</span>}
                           </div>
                           <p className="text-xs text-gray-500 mb-2">{c.role}</p>
                           <div className="flex flex-col gap-1">
@@ -367,8 +369,8 @@ export function CorporateProfiles({
                         <span className="text-sm text-gray-900">HKD {c.value.toLocaleString()}</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                        <div><p className="text-gray-500">Start</p><p className="text-gray-900">{c.startDate}</p></div>
-                        <div><p className="text-gray-500">End</p><p className="text-gray-900">{c.endDate}</p></div>
+                        <div><p className="text-gray-500">{msg('Start')}</p><p className="text-gray-900">{c.startDate}</p></div>
+                        <div><p className="text-gray-500">{msg('End')}</p><p className="text-gray-900">{c.endDate}</p></div>
                       </div>
                       <p className="text-xs text-gray-600 bg-gray-50 rounded p-2">{c.terms}</p>
                     </Card>
@@ -379,15 +381,15 @@ export function CorporateProfiles({
               {activeTab === 'history' && (
                 <div>
                   {selectedProfile.bookingHistory.length === 0
-                    ? <p className="text-sm text-gray-500 text-center py-8">No booking history yet.</p>
+                    ? <p className="text-sm text-gray-500 text-center py-8">{msg('No booking history yet.')}</p>
                     : (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Month</TableHead>
-                            <TableHead>Bookings</TableHead>
-                            <TableHead>Sessions Used</TableHead>
-                            <TableHead>Revenue (HKD)</TableHead>
+                            <TableHead>{msg('Month')}</TableHead>
+                            <TableHead>{msg('Bookings')}</TableHead>
+                            <TableHead>{msg('Sessions Used')}</TableHead>
+                            <TableHead>{msg('Revenue (HKD)')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -407,10 +409,10 @@ export function CorporateProfiles({
             </>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>{msg('Close')}</Button>
             <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
               onClick={() => { onEditProfile && onEditProfile(selectedProfile?.id || 0); }}>
-              <Edit className="w-4 h-4 mr-2" />Edit Profile
+              <Edit className="w-4 h-4 mr-2" />{msg('Edit Profile')}
             </Button>
           </DialogFooter>
         </DialogContent>

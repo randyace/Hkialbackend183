@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { msg } from '@/i18n/msgFallback';
 
 interface OrderItem {
   id: number;
@@ -274,7 +275,7 @@ export function POSCheckout({
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="mb-2">Expiry Date</Label>
-                      <Input placeholder="MM/YY" />
+                      <Input placeholder={msg('MM/YY')} />
                     </div>
                     <div>
                       <Label className="mb-2">CVV</Label>
@@ -301,7 +302,7 @@ export function POSCheckout({
 
               <div>
                 <Label className="mb-2">Remarks / Notes</Label>
-                <Textarea placeholder="Optional payment notes..." rows={2} />
+                <Textarea placeholder={msg('Optional payment notes...')} rows={2} />
               </div>
             </div>
           </Card>

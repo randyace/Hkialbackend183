@@ -23,6 +23,7 @@ import {
   MOCK_ACCOUNTS, INITIAL_RECORDS, BUNDLE_COLORS,
   TierBadge, CategoryBadge, StatusBadge,
 } from './PurchaseCreate';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -57,6 +58,7 @@ export function PurchaseManagement({
   onCreateNew,
   isLoading = false,
 }: PurchaseManagementProps = {}) {
+  const msg = useMsg();
   const [view, setView] = useState<'list' | 'create'>('list');
   const [records, setRecords]   = useState<PurchaseRecord[]>(
     purchasesProp.length > 0 ? purchasesProp : INITIAL_RECORDS,
@@ -184,16 +186,16 @@ export function PurchaseManagement({
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-gray-900 mb-1">Purchase Management</h1>
+          <h1 className="text-gray-900 mb-1">{msg('Purchase Management')}</h1>
           <p className="text-sm text-gray-500">
-            Manage grading package purchases for Individual members and session bundle purchases for Corporate & Agency accounts.
+            {msg('Manage grading package purchases for Individual members and session bundle purchases for Corporate & Agency accounts.')}
           </p>
         </div>
         <Button
           className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0"
           onClick={() => setView('create')}
         >
-          <Plus className="w-4 h-4 mr-2" />New Contract
+          <Plus className="w-4 h-4 mr-2" />{msg('New Contract')}
         </Button>
       </div>
 
@@ -202,39 +204,39 @@ export function PurchaseManagement({
         <Card className="p-4 col-span-2 md:col-span-1 bg-[#0f2942] text-white">
           <div className="flex items-center gap-2 mb-2">
             <Receipt className="w-5 h-5 text-blue-300" />
-            <span className="text-sm text-blue-200">Invoiced Revenue</span>
+            <span className="text-sm text-blue-200">{msg('Invoiced Revenue')}</span>
           </div>
           <p className="text-xl text-white">HKD {totalRevenue.toLocaleString()}</p>
           <p className="text-xs text-blue-300 mt-1">{records.length} total records</p>
         </Card>
         <Card className="p-4 border-2 border-amber-300 bg-amber-50">
-          <div className="flex items-center gap-1 mb-2"><Clock className="w-4 h-4 text-amber-600" /><span className="text-xs text-amber-700">Pending Invoice</span></div>
+          <div className="flex items-center gap-1 mb-2"><Clock className="w-4 h-4 text-amber-600" /><span className="text-xs text-amber-700">{msg('Pending Invoice')}</span></div>
           <p className="text-xl text-amber-700">{pendingCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Awaiting invoice</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Awaiting invoice')}</p>
         </Card>
         <Card className="p-4 border-2 border-green-200 bg-green-50">
-          <div className="flex items-center gap-1 mb-2"><User className="w-4 h-4 text-green-600" /><span className="text-xs text-gray-600">Individual</span></div>
+          <div className="flex items-center gap-1 mb-2"><User className="w-4 h-4 text-green-600" /><span className="text-xs text-gray-600">{msg('Individual')}</span></div>
           <p className="text-xl text-green-700">{indivCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Grading packages</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Grading packages')}</p>
         </Card>
         <Card className="p-4 border-2 border-blue-200 bg-blue-50">
-          <div className="flex items-center gap-1 mb-2"><Building2 className="w-4 h-4 text-blue-600" /><span className="text-xs text-gray-600">Corporate</span></div>
+          <div className="flex items-center gap-1 mb-2"><Building2 className="w-4 h-4 text-blue-600" /><span className="text-xs text-gray-600">{msg('Corporate')}</span></div>
           <p className="text-xl text-blue-700">{corpCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Session bundles</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Session bundles')}</p>
         </Card>
         <Card className="p-4 border-2 border-purple-200 bg-purple-50">
-          <div className="flex items-center gap-1 mb-2"><Plane className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-600">Agency</span></div>
+          <div className="flex items-center gap-1 mb-2"><Plane className="w-4 h-4 text-purple-600" /><span className="text-xs text-gray-600">{msg('Agency')}</span></div>
           <p className="text-xl text-purple-700">{taCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Session bundles</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Session bundles')}</p>
         </Card>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
         {([
-          { key: 'all',        label: 'All Purchases' },
-          { key: 'individual', label: 'Individual (Grading Package)' },
-          { key: 'corporate',  label: 'Corporate & Agency' },
+          { key: 'all',        label: msg('All Purchases') },
+          { key: 'individual', label: msg('Individual (Grading Package)') },
+          { key: 'corporate',  label: msg('Corporate & Agency') },
         ] as { key: TabView; label: string }[]).map(tab => (
           <button
             key={tab.key}
@@ -256,37 +258,37 @@ export function PurchaseManagement({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search by name, account no. or purchase ref..."
+              placeholder={msg('Search by name, account no. or purchase ref...')}
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-9"
             />
           </div>
           <Select value={filterStatus} onValueChange={(v: any) => { setFilterStatus(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectTrigger className="w-full md:w-48"><SelectValue placeholder={msg('All Statuses')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Pending Invoice">Pending Invoice</SelectItem>
-              <SelectItem value="Invoice Sent">Invoice Sent</SelectItem>
+              <SelectItem value="all">{msg('All Statuses')}</SelectItem>
+              <SelectItem value="Pending Invoice">{msg('Pending Invoice')}</SelectItem>
+              <SelectItem value="Invoice Sent">{msg('Invoice Sent')}</SelectItem>
             </SelectContent>
           </Select>
           {activeTab === 'individual' && (
             <Select value={filterTier} onValueChange={(v: any) => { setFilterTier(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder="All Tiers" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder={msg('All Tiers')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Tiers</SelectItem>
+                <SelectItem value="all">{msg('All Tiers')}</SelectItem>
                 {TIERS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
           {(activeTab === 'corporate' || activeTab === 'all') && (
             <Select value={filterCat} onValueChange={(v: any) => { setFilterCat(v); setCurrentPage(1); }}>
-              <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Types" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-48"><SelectValue placeholder={msg('All Types')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{activeTab === 'all' ? 'All Account Types' : 'All Types'}</SelectItem>
-                {activeTab === 'all' && <SelectItem value="Individual">Individual</SelectItem>}
-                <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Agency">Agency</SelectItem>
+                {activeTab === 'all' && <SelectItem value="Individual">{msg('Individual')}</SelectItem>}
+                <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+                <SelectItem value="Agency">{msg('Agency')}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -299,22 +301,22 @@ export function PurchaseManagement({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Purchase Ref</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Account</TableHead>
-                {activeTab === 'all' && <TableHead>Type</TableHead>}
+                <TableHead>{msg('Purchase Ref')}</TableHead>
+                <TableHead>{msg('Date')}</TableHead>
+                <TableHead>{msg('Account')}</TableHead>
+                {activeTab === 'all' && <TableHead>{msg('Type')}</TableHead>}
                 <TableHead>{activeTab === 'corporate' ? 'Bundle' : activeTab === 'individual' ? 'Tier' : 'Package / Tier'}</TableHead>
-                <TableHead>Credits / Sessions</TableHead>
-                <TableHead>Price (HKD)</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>{msg('Credits / Sessions')}</TableHead>
+                <TableHead>{msg('Price (HKD)')}</TableHead>
+                <TableHead>{msg('Status')}</TableHead>
+                <TableHead className="text-right">{msg('Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={activeTab === 'all' ? 9 : 8} className="text-center text-gray-500 py-10">
-                    No purchase records found.
+                    {msg('No purchase records found.')}
                   </TableCell>
                 </TableRow>
               ) : paginated.map(record => (
@@ -360,7 +362,7 @@ export function PurchaseManagement({
                         </>
                       )
                     ) : (
-                      <span className="text-gray-400 text-xs">Pending</span>
+                      <span className="text-gray-400 text-xs">{msg('Pending')}</span>
                     )}
                   </TableCell>
 
@@ -374,7 +376,7 @@ export function PurchaseManagement({
                           className="text-[#0f2942] border-[#0f2942] hover:bg-[#0f2942] hover:text-white text-xs px-2"
                           onClick={() => { setInvoiceTarget(record); setIsInvoiceOpen(true); }}
                         >
-                          <FileText className="w-3 h-3 mr-1" />Generate Invoice
+                          <FileText className="w-3 h-3 mr-1" />{msg('Generate Invoice')}
                         </Button>
                       )}
                       <Button variant="ghost" size="sm" onClick={() => { setSelectedRecord(record); setIsDetailOpen(true); }}>
@@ -415,27 +417,27 @@ export function PurchaseManagement({
       <Dialog open={isInvoiceOpen} onOpenChange={o => { setIsInvoiceOpen(o); if (!o) setInvoiceTarget(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Invoice Preview</DialogTitle>
-            <DialogDescription>Review the invoice before sending it to the customer.</DialogDescription>
+            <DialogTitle>{msg('Invoice Preview')}</DialogTitle>
+            <DialogDescription>{msg('Review the invoice before sending it to the customer.')}</DialogDescription>
           </DialogHeader>
 
           {invoiceTarget && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <div className="bg-[#0f2942] text-white p-6 flex items-start justify-between">
                 <div>
-                  <p className="text-lg text-white">HKIA VIP Lounge</p>
-                  <p className="text-xs text-blue-200 mt-1">Hong Kong International Airport</p>
-                  <p className="text-xs text-blue-200">Terminal 1, Departure Level</p>
+                  <p className="text-lg text-white">{msg('HKIA VIP Lounge')}</p>
+                  <p className="text-xs text-blue-200 mt-1">{msg('Hong Kong International Airport')}</p>
+                  <p className="text-xs text-blue-200">{msg('Terminal 1, Departure Level')}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg text-white">INVOICE</p>
+                  <p className="text-lg text-white">{msg('INVOICE')}</p>
                   <p className="text-sm text-blue-200 mt-1">{invoiceTarget.purchaseRef}</p>
                   <p className="text-xs text-blue-300 mt-1">Date: {fmt(invoiceTarget.purchaseDate)}</p>
                 </div>
               </div>
 
               <div className="p-6 border-b border-gray-200">
-                <p className="text-xs text-gray-500 mb-2">BILL TO</p>
+                <p className="text-xs text-gray-500 mb-2">{msg('BILL TO')}</p>
                 <p className="text-sm text-gray-900">{invoiceTarget.primaryName}</p>
                 <p className="text-xs text-gray-500">{invoiceTarget.primaryEmail}</p>
                 <p className="text-xs text-gray-500">{invoiceTarget.accountNumber}</p>
@@ -445,8 +447,8 @@ export function PurchaseManagement({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left pb-2 text-xs text-gray-500">Description</th>
-                      <th className="text-right pb-2 text-xs text-gray-500">Amount (HKD)</th>
+                      <th className="text-left pb-2 text-xs text-gray-500">{msg('Description')}</th>
+                      <th className="text-right pb-2 text-xs text-gray-500">{msg('Amount (HKD)')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -466,7 +468,7 @@ export function PurchaseManagement({
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-gray-200">
-                      <td className="pt-3 text-gray-900">Total</td>
+                      <td className="pt-3 text-gray-900">{msg('Total')}</td>
                       <td className="pt-3 text-right text-gray-900">HKD {invoiceTarget.packagePrice.toLocaleString()}</td>
                     </tr>
                   </tfoot>
@@ -475,11 +477,11 @@ export function PurchaseManagement({
 
               <div className="p-6 grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Payment Method')}</p>
                   <p className="text-gray-900">{invoiceTarget.paymentMethod}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Transaction Ref</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Transaction Ref')}</p>
                   <p className="text-gray-900">{invoiceTarget.transactionRef}</p>
                 </div>
                 <div>
@@ -493,7 +495,7 @@ export function PurchaseManagement({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Package Expiry</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Package Expiry')}</p>
                   <p className="text-gray-900">{fmt(invoiceTarget.expiryDate)}</p>
                 </div>
               </div>
@@ -501,9 +503,9 @@ export function PurchaseManagement({
           )}
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setIsInvoiceOpen(false); setInvoiceTarget(null); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setIsInvoiceOpen(false); setInvoiceTarget(null); }}>{msg('Cancel')}</Button>
             <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white" onClick={handleSendInvoice}>
-              <Send className="w-4 h-4 mr-2" />Send Invoice
+              <Send className="w-4 h-4 mr-2" />{msg('Send Invoice')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -512,7 +514,7 @@ export function PurchaseManagement({
       {/* ── Detail Dialog ───────────────────────────────────────────────────── */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Purchase Detail</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{msg('Purchase Detail')}</DialogTitle></DialogHeader>
           {selectedRecord && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -545,30 +547,30 @@ export function PurchaseManagement({
                   </div>
                 ))}
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Type</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Type')}</p>
                   <CategoryBadge cat={selectedRecord.purchaseCategory} />
                 </div>
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Status</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Status')}</p>
                   <StatusBadge status={selectedRecord.status} />
                 </div>
               </div>
               {selectedRecord.notes && (
                 <div className="bg-gray-50 rounded p-3">
-                  <p className="text-xs text-gray-500 mb-1">Notes</p>
+                  <p className="text-xs text-gray-500 mb-1">{msg('Notes')}</p>
                   <p className="text-sm text-gray-700">{selectedRecord.notes}</p>
                 </div>
               )}
               {selectedRecord.status === 'Pending Invoice' && (
                 <Button className="w-full bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
                   onClick={() => { setIsDetailOpen(false); setInvoiceTarget(selectedRecord); setIsInvoiceOpen(true); }}>
-                  <FileText className="w-4 h-4 mr-2" />Generate Invoice
+                  <FileText className="w-4 h-4 mr-2" />{msg('Generate Invoice')}
                 </Button>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>{msg('Close')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -577,9 +579,9 @@ export function PurchaseManagement({
       <Dialog open={isSuccessDialogOpen} onOpenChange={setIsSuccessDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Contract Created Successfully</DialogTitle>
+            <DialogTitle>{msg('Contract Created Successfully')}</DialogTitle>
             <DialogDescription>
-              The contract has been created and added to the management list.
+              {msg('The contract has been created and added to the management list.')}
             </DialogDescription>
           </DialogHeader>
           
@@ -590,9 +592,9 @@ export function PurchaseManagement({
                   <CheckCircle className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-green-900 mb-1">VIP Account Creation Request Sent</p>
+                  <p className="text-sm font-medium text-green-900 mb-1">{msg('VIP Account Creation Request Sent')}</p>
                   <p className="text-sm text-green-800">
-                    VIP accounts creation request is sent to VIP Lounge team.
+                    {msg('VIP accounts creation request is sent to VIP Lounge team.')}
                   </p>
                 </div>
               </div>
@@ -604,7 +606,7 @@ export function PurchaseManagement({
               className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
               onClick={() => setIsSuccessDialogOpen(false)}
             >
-              OK
+              {msg('OK')}
             </Button>
           </DialogFooter>
         </DialogContent>

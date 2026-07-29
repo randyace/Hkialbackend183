@@ -11,6 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 type CodeType = 'Discount' | 'Free bookings';
 
@@ -267,6 +268,7 @@ const UsageBar = ({ batch }: { batch: PromoCode }) => {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, onDelete }: PromoCodeListProps) {
+  const msg = useMsg();
   // Only fall back to MOCK_CODES for standalone figma Make (prop omitted).
   // When the container passes `codes` (even `[]` while loading), never flash
   // mock rows — that was the user-visible "flashing mock data" bug.
@@ -416,7 +418,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search by prefix, title, or company…"
+              placeholder={msg('Search by prefix, title, or company…')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
@@ -424,7 +426,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           </div>
           <Select value={filterCompany} onValueChange={(v: any) => setFilterCompany(v)}>
             <SelectTrigger className="w-full md:w-52">
-              <SelectValue placeholder="All Companies" />
+              <SelectValue placeholder={msg('All Companies')} />
             </SelectTrigger>
             <SelectContent className="max-h-60">
               <SelectItem value="all">All Companies</SelectItem>
@@ -437,7 +439,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           </Select>
           <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
             <SelectTrigger className="w-full md:w-44">
-              <SelectValue placeholder="All Types" />
+              <SelectValue placeholder={msg('All Types')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
@@ -447,7 +449,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           </Select>
           <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
             <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder={msg('All Statuses')} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
@@ -646,7 +648,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                       e.stopPropagation();
                                       onEdit?.(batch.id);
                                     }}
-                                    title="Edit batch"
+                                    title={msg('Edit batch')}
                                   >
                                     <Edit className="w-3 h-3 mr-1" />
                                     Edit
@@ -657,7 +659,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                                       size="sm"
                                       className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50 border-red-200"
                                       onClick={(e) => { e.stopPropagation(); onDelete(batch.id); }}
-                                      title="Delete batch"
+                                      title={msg('Delete batch')}
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </Button>

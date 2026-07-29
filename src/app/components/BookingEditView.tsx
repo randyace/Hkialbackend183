@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * BookingEditView.tsx
  *
@@ -85,7 +86,7 @@ export type BookingStatusValue =
   | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
   | 'Rejected' | 'Cancelled' | 'No-show';
 export type PaymentStatusValue =
-  | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+  | 'Not Required' | 'Pending' | 'Invoice Sent' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded' | 'Non Paid' | 'Payment Failed' | 'Partially Refunded';
 
 export interface EditPassenger {
   title: string;
@@ -445,8 +446,8 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   vipPassengersInLoungeDeluxe: 1,
   nonFlyingGuestsInLoungeDeluxe: 0,
   passengers: [
-    { title: 'Mr', firstName: 'James', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P1234567', membershipNo: 'CX-DIA-001' },
-    { title: 'Mrs', firstName: 'Sarah', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P7654321' },
+    { title: msg('Mr'), firstName: 'James', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P1234567', membershipNo: 'CX-DIA-001' },
+    { title: msg('Mrs'), firstName: 'Sarah', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P7654321' },
   ],
   nonFlyingGuestsList: [],
   hasLimousine:     true,
@@ -635,12 +636,12 @@ export function BookingEdit({
                 <Badge className="bg-blue-100 text-blue-700 text-sm ml-1">{seed.bookingNo}</Badge>
               )}
             </h1>
-            <p className="text-gray-500 mt-0.5">Modify booking details below. Changes will be saved after clicking "Save Changes".</p>
+            <p className="text-gray-500 mt-0.5">{msg('Modify booking details below. Changes will be saved after clicking "Save Changes".')}</p>
           </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
-            <X className="w-4 h-4 mr-1.5" /> Cancel
+            <X className="w-4 h-4 mr-1.5" /> {msg('Cancel')}
           </Button>
           <Button
             onClick={handleSave}
@@ -656,24 +657,24 @@ export function BookingEdit({
       {/* Account info (read-only summary) */}
       <Card className="p-5">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <User className="w-4 h-4" /> Account Information
+          <User className="w-4 h-4" /> {msg('Account Information')}
         </h3>
         <div className="grid grid-cols-3 gap-6 text-sm">
           <div>
-            <label className="block text-gray-500 mb-[10px]">Account No.</label>
+            <label className="block text-gray-500 mb-[10px]">{msg('Account No.')}</label>
             <p className="font-mono text-gray-700 bg-gray-50 px-3 py-2 rounded border">{seed.accountNo}</p>
           </div>
           <div>
-            <label className="block text-gray-500 mb-[10px]">Guest Name</label>
+            <label className="block text-gray-500 mb-[10px]">{msg('Guest Name')}</label>
             <p className="text-gray-700 bg-gray-50 px-3 py-2 rounded border">{seed.guestName}</p>
           </div>
           <div>
-            <label className="block text-gray-500 mb-[10px]">Account Type</label>
+            <label className="block text-gray-500 mb-[10px]">{msg('Account Type')}</label>
             <p className="text-gray-700 bg-gray-50 px-3 py-2 rounded border">{seed.accountType}</p>
           </div>
           {seed.companyName && (
             <div>
-              <label className="block text-gray-500 mb-[10px]">Company</label>
+              <label className="block text-gray-500 mb-[10px]">{msg('Company')}</label>
               <p className="text-gray-700 bg-gray-50 px-3 py-2 rounded border flex items-center gap-1.5">
                 <Building2 className="w-3.5 h-3.5 text-gray-400" />{seed.companyName}
               </p>
@@ -681,7 +682,7 @@ export function BookingEdit({
           )}
           {seed.agencyName && (
             <div>
-              <label className="block text-gray-500 mb-[10px]">Agency</label>
+              <label className="block text-gray-500 mb-[10px]">{msg('Agency')}</label>
               <p className="text-gray-700 bg-gray-50 px-3 py-2 rounded border">{seed.agencyName}</p>
             </div>
           )}
@@ -734,15 +735,15 @@ export function BookingEdit({
       {/* Special requests */}
       <Card className="p-5">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-          <MessageSquare className="w-4 h-4" /> Special Requests
+          <MessageSquare className="w-4 h-4" /> {msg('Special Requests')}
         </h3>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Notes for lounge staff</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Notes for lounge staff')}</label>
           <textarea
             rows={4}
             value={formData.specialRequests ?? ''}
             onChange={e => onFormChange({ specialRequests: e.target.value })}
-            placeholder="e.g. Birthday celebration, kosher meal required, guest requires extra privacy…"
+            placeholder={msg('e.g. Birthday celebration, kosher meal required, guest requires extra privacy…')}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
           />
         </div>
@@ -751,7 +752,7 @@ export function BookingEdit({
       {/* Bottom action bar */}
       <div className="flex justify-end gap-3 pb-4">
         <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          <X className="w-4 h-4 mr-1.5" /> Cancel
+          <X className="w-4 h-4 mr-1.5" /> {msg('Cancel')}
         </Button>
         <Button
           onClick={handleSave}

@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -214,6 +215,7 @@ export function Sidebar({
   onEditProfile,
   menuItems,
 }: SidebarProps) {
+  const msg = useMsg();
   // Use prop-supplied menu items; fall back to mock for standalone demo
   const displayMenuItems = menuItems && menuItems.length > 0 ? menuItems : MOCK_MENU_ITEMS;
   const displayUser      = user ?? MOCK_USER;
@@ -246,7 +248,7 @@ export function Sidebar({
 
       {/* Logo */}
       <div className="p-6 border-b border-gray-700 shrink-0">
-        <img src={logoImage} alt="HKIA VIP Lounge" className="h-10" />
+        <img src={logoImage} alt={msg('HKIA VIP Lounge')} className="h-10" />
       </div>
 
       {/* Navigation */}
@@ -345,12 +347,12 @@ export function Sidebar({
             {onEditProfile && (
               <DropdownMenuItem onClick={onEditProfile}>
                 <UserCog className="mr-2 h-4 w-4" />
-                <span>My Account</span>
+                <span>{msg('My Account')}</span>
               </DropdownMenuItem>
             )}
             <DropdownMenuItem onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Logout</span>
+              <span>{msg('Logout')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

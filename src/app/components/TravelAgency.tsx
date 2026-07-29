@@ -29,6 +29,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { useMsg } from '@/i18n/useMsg';
 
 interface TravelAgency {
   id: number;
@@ -67,6 +68,7 @@ export interface TravelAgencyProps {
 }
 
 export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete, isLoading = false, isSubmitting = false, fieldErrors = {} }: TravelAgencyProps = {}) {
+  const msg = useMsg();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
@@ -135,12 +137,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>Agency Management</h1>
-          <p className="text-gray-600">Manage agency partnerships and credit accounts</p>
+          <h1>{msg('Agency Management')}</h1>
+          <p className="text-gray-600">{msg('Manage agency partnerships and credit accounts')}</p>
         </div>
         <Button type="button" onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Agency
+          {msg('Add Agency')}
         </Button>
       </div>
 
@@ -149,7 +151,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-green-700">Active Agencies</p>
+              <p className="text-sm text-green-700">{msg('Active Agencies')}</p>
               <p className="text-2xl text-green-900">{agencies.filter(a => a.status === 'active').length}</p>
             </div>
             <Building2 className="w-8 h-8 text-green-600" />
@@ -159,7 +161,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <Card className="p-4 bg-blue-50 border-blue-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-700">Total Members</p>
+              <p className="text-sm text-blue-700">{msg('Total Members')}</p>
               <p className="text-2xl text-blue-900">{agencies.reduce((sum, a) => sum + a.memberCount, 0)}</p>
             </div>
             <Users className="w-8 h-8 text-blue-600" />
@@ -169,7 +171,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <Card className="p-4 bg-purple-50 border-purple-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-purple-700">Total Bookings</p>
+              <p className="text-sm text-purple-700">{msg('Total Bookings')}</p>
               <p className="text-2xl text-purple-900">{agencies.reduce((sum, a) => sum + a.totalBookings, 0)}</p>
             </div>
             <Calendar className="w-8 h-8 text-purple-600" />
@@ -179,7 +181,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <Card className="p-4 bg-orange-50 border-orange-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-orange-700">Overdraft In Use</p>
+              <p className="text-sm text-orange-700">{msg('Overdraft In Use')}</p>
               <p className="text-2xl text-orange-900">
                 HKD {agencies.reduce((sum, a) => sum + Math.max(0, -a.creditBalance), 0).toLocaleString()}
               </p>
@@ -196,7 +198,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search by agency name, code, or contact..."
+                placeholder={msg('Search by agency name, code, or contact...')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -206,26 +208,26 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder={msg('Status')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="all">{msg('All Status')}</SelectItem>
+              <SelectItem value="active">{msg('Active')}</SelectItem>
+              <SelectItem value="inactive">{msg('Inactive')}</SelectItem>
+              <SelectItem value="suspended">{msg('Suspended')}</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={paymentFilter} onValueChange={setPaymentFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Payment Method" />
+              <SelectValue placeholder={msg('Payment Method')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Payment Methods</SelectItem>
-              <SelectItem value="Upfront">Upfront</SelectItem>
-              <SelectItem value="Net Upfront">Net Upfront</SelectItem>
-              <SelectItem value="On-Credit">On-Credit</SelectItem>
-              <SelectItem value="Monthly Invoice">Monthly Invoice</SelectItem>
+              <SelectItem value="all">{msg('All Payment Methods')}</SelectItem>
+              <SelectItem value="Upfront">{msg('Upfront')}</SelectItem>
+              <SelectItem value="Net Upfront">{msg('Net Upfront')}</SelectItem>
+              <SelectItem value="On-Credit">{msg('On-Credit')}</SelectItem>
+              <SelectItem value="Monthly Invoice">{msg('Monthly Invoice')}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -236,13 +238,13 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             setStartDate('');
             setEndDate('');
           }}>
-            Reset Filters
+            {msg('Reset Filters')}
           </Button>
         </div>
 
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
-            <Label className="mb-2">Start Date</Label>
+            <Label className="mb-2">{msg('Start Date')}</Label>
             <Input
               type="date"
               value={startDate}
@@ -250,7 +252,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             />
           </div>
           <div>
-            <Label className="mb-2">End Date</Label>
+            <Label className="mb-2">{msg('End Date')}</Label>
             <Input
               type="date"
               value={endDate}
@@ -266,13 +268,13 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agency Info</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credit Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statistics</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Agency Info')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Contact')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Payment')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Credit Status')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Statistics')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Status')}</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -280,7 +282,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 <tr>
                   <td colSpan={7} className="px-4 py-16 text-center text-gray-600">
                     <Loader2 className="w-8 h-8 animate-spin inline-block text-gray-400" aria-hidden />
-                    <p className="mt-3 text-sm">Loading agencies…</p>
+                    <p className="mt-3 text-sm">{msg('Loading agencies…')}</p>
                   </td>
                 </tr>
               ) : paginatedAgencies.length === 0 ? (
@@ -375,20 +377,20 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                     <td className="px-4 py-4">
                       <div className="space-y-1 min-w-[160px]">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Available to spend:</span>
+                          <span className="text-gray-600">{msg('Available to spend:')}</span>
                           <span className={availableClass}>
                             HKD {money(availableToSpend)}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>Balance:</span>
+                          <span>{msg('Balance:')}</span>
                           <span className={balance < 0 ? 'font-medium text-red-600' : 'font-medium text-gray-800'}>
                             HKD {money(balance)}
                             {balance < 0 ? ' (overdrawn)' : ''}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-gray-600">
-                          <span>Overdraft limit:</span>
+                          <span>{msg('Overdraft limit:')}</span>
                           <span className="font-medium text-gray-800">HKD {money(overdraftLimit)}</span>
                         </div>
                         <div
@@ -526,9 +528,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             )}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Agency Name</Label>
+                <Label className="mb-2">{msg('Agency Name')}</Label>
                 <Input
-                  placeholder="Enter agency name"
+                  placeholder={msg('Enter agency name')}
                   value={formDataProp?.agency_name ?? ''}
                   onChange={e => onFormChange?.('agency_name', e.target.value)}
                   aria-invalid={!!fieldErrors.agency_name}
@@ -539,9 +541,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 )}
               </div>
               <div>
-                <Label className="mb-2">Agency Code</Label>
+                <Label className="mb-2">{msg('Agency Code')}</Label>
                 <Input
-                  placeholder="TA-XXX-001"
+                  placeholder={msg('TA-XXX-001')}
                   value={formDataProp?.agency_code ?? ''}
                   onChange={e => onFormChange?.('agency_code', e.target.value)}
                   aria-invalid={!!fieldErrors.agency_code}
@@ -555,9 +557,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Contact Person</Label>
+                <Label className="mb-2">{msg('Contact Person')}</Label>
                 <Input
-                  placeholder="Enter contact name"
+                  placeholder={msg('Enter contact name')}
                   value={formDataProp?.contact_person ?? ''}
                   onChange={e => onFormChange?.('contact_person', e.target.value)}
                   aria-invalid={!!fieldErrors.contact_person}
@@ -568,9 +570,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                 )}
               </div>
               <div>
-                <Label className="mb-2">Phone Number</Label>
+                <Label className="mb-2">{msg('Phone Number')}</Label>
                 <Input
-                  placeholder="+852 XXXX XXXX"
+                  placeholder={msg('+852 XXXX XXXX')}
                   value={formDataProp?.contact_phone ?? ''}
                   onChange={e => onFormChange?.('contact_phone', e.target.value)}
                   aria-invalid={!!fieldErrors.contact_phone}
@@ -583,10 +585,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             </div>
 
             <div>
-              <Label className="mb-2">Email Address</Label>
+              <Label className="mb-2">{msg('Email Address')}</Label>
               <Input
                 type="email"
-                placeholder="contact@agency.com"
+                placeholder={msg('contact@agency.com')}
                 value={formDataProp?.contact_email ?? ''}
                 onChange={e => onFormChange?.('contact_email', e.target.value)}
                 aria-invalid={!!fieldErrors.contact_email}
@@ -599,21 +601,21 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Payment Method</Label>
+                <Label className="mb-2">{msg('Payment Method')}</Label>
                 <Select value={formDataProp?.payment_method ?? 'On-Credit'} onValueChange={v => onFormChange?.('payment_method', v)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Upfront">Upfront</SelectItem>
-                    <SelectItem value="Net Upfront">Net Upfront</SelectItem>
-                    <SelectItem value="On-Credit">On-Credit</SelectItem>
-                    <SelectItem value="Monthly Invoice">Monthly Invoice</SelectItem>
+                    <SelectItem value="Upfront">{msg('Upfront')}</SelectItem>
+                    <SelectItem value="Net Upfront">{msg('Net Upfront')}</SelectItem>
+                    <SelectItem value="On-Credit">{msg('On-Credit')}</SelectItem>
+                    <SelectItem value="Monthly Invoice">{msg('Monthly Invoice')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="mb-2">Discount Rate (%)</Label>
+                <Label className="mb-2">{msg('Discount Rate (%)')}</Label>
                 <Input
                   type="number"
                   placeholder="0-30"
@@ -632,7 +634,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="mb-2">Overdraft Limit (HKD)</Label>
+                <Label className="mb-2">{msg('Overdraft Limit (HKD)')}</Label>
                 <Input
                   type="number"
                   placeholder="100000"
@@ -642,14 +644,14 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                   style={fieldErrors.credit_limit ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Max amount the agency may overdraw on On-Credit (available = balance + this limit).
+                  {msg('Max amount the agency may overdraw on On-Credit (available = balance + this limit).')}
                 </p>
                 {fieldErrors.credit_limit && (
                   <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.credit_limit}</p>
                 )}
               </div>
               <div>
-                <Label className="mb-2">Status</Label>
+                <Label className="mb-2">{msg('Status')}</Label>
                 <Select
                   value={(() => {
                     const s = formDataProp?.status;
@@ -668,8 +670,8 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Active">{msg('Active')}</SelectItem>
+                    <SelectItem value="Inactive">{msg('Inactive')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {fieldErrors.status && (
@@ -679,9 +681,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
             </div>
 
             <div>
-              <Label className="mb-2">Remarks / Notes</Label>
+              <Label className="mb-2">{msg('Remarks / Notes')}</Label>
               <Textarea
-                placeholder="Additional information about this agency..."
+                placeholder={msg('Additional information about this agency...')}
                 rows={3}
                 value={formDataProp?.remarks ?? ''}
                 onChange={e => onFormChange?.('remarks', e.target.value)}
@@ -691,7 +693,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setIsDialogOpen(false)}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               type="button"

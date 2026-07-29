@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * SystemUserEdit.tsx — Pure presentational create/edit page for system users.
  *
@@ -122,7 +123,7 @@ function GroupSelectAllCheckbox({
       checked={checked}
       disabled={disabled}
       onChange={onChange}
-      aria-label="Select all permissions in this group"
+      aria-label={msg('Select all permissions in this group')}
     />
   );
 }
@@ -347,7 +348,7 @@ export function SystemUserEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading user…
+        {msg('Loading user…')}
       </div>
     );
   }
@@ -357,7 +358,7 @@ export function SystemUserEdit({
       <div className="flex items-center gap-4">
         <Button type="button" variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
@@ -377,34 +378,34 @@ export function SystemUserEdit({
           onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
           className="flex min-h-0 flex-col space-y-4"
         >          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profile &amp; Security</TabsTrigger>
-            <TabsTrigger value="permissions">Permissions</TabsTrigger>
+            <TabsTrigger value="profile">{msg('Profile &amp; Security')}</TabsTrigger>
+            <TabsTrigger value="permissions">{msg('Permissions')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">
             <Card className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="su-full-name" className="mb-[10px] block text-sm text-gray-700">Full Name</label>
+                  <label htmlFor="su-full-name" className="mb-[10px] block text-sm text-gray-700">{msg('Full Name')}</label>
                   <input
                     id="su-full-name"
                     type="text"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="e.g., Wong Chi Ming"
+                    placeholder={msg('e.g., Wong Chi Ming')}
                     required
                   />
                 </div>
                 <div>
-                  <label htmlFor="su-email" className="mb-[10px] block text-sm text-gray-700">Email Address</label>
+                  <label htmlFor="su-email" className="mb-[10px] block text-sm text-gray-700">{msg('Email Address')}</label>
                   <input
                     id="su-email"
                     type="email"
                     value={formEmail}
                     onChange={(e) => setFormEmail(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="email@hkial.com"
+                    placeholder={msg('email@hkial.com')}
                     required
                   />
                 </div>
@@ -412,7 +413,7 @@ export function SystemUserEdit({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-[10px] block text-sm text-gray-700">Role</label>
+                  <label className="mb-[10px] block text-sm text-gray-700">{msg('Role')}</label>
                   <select
                     value={formRole}
                     onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
@@ -424,38 +425,38 @@ export function SystemUserEdit({
                     ))}
                   </select>
                   {roleSelectDisabled ? (
-                    <p className="mt-1 text-xs text-amber-700">You cannot change your own role.</p>
+                    <p className="mt-1 text-xs text-amber-700">{msg('You cannot change your own role.')}</p>
                   ) : null}
                 </div>
                 <div>
-                  <label className="mb-[10px] block text-sm text-gray-700">Department</label>
+                  <label className="mb-[10px] block text-sm text-gray-700">{msg('Department')}</label>
                   <select
                     value={formDepartment}
                     onChange={(e) => setFormDepartment(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   >
-                    <option value="IT Department">IT Department</option>
-                    <option value="Lounge Operations">Lounge Operations</option>
-                    <option value="Guest Services">Guest Services</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Management">Management</option>
-                    <option value="Security">Security</option>
-                    <option value="Housekeeping">Housekeeping</option>
-                    <option value="F&B Services">F&amp;B Services</option>
+                    <option value="IT Department">{msg('IT Department')}</option>
+                    <option value="Lounge Operations">{msg('Lounge Operations')}</option>
+                    <option value="Guest Services">{msg('Guest Services')}</option>
+                    <option value="Finance">{msg('Finance')}</option>
+                    <option value="Management">{msg('Management')}</option>
+                    <option value="Security">{msg('Security')}</option>
+                    <option value="Housekeeping">{msg('Housekeeping')}</option>
+                    <option value="F&B Services">{msg('F&amp;B Services')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-[10px] block text-sm text-gray-700">Status</label>
+                  <label className="mb-[10px] block text-sm text-gray-700">{msg('Status')}</label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as SystemUserStatus)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">{msg('Active')}</option>
+                    <option value="Inactive">{msg('Inactive')}</option>
                   </select>
                 </div>
                 <div>
@@ -468,7 +469,7 @@ export function SystemUserEdit({
                     value={formPassword}
                     onChange={(e) => setFormPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder={isEditMode ? '••••••••' : 'Minimum 8 characters'}
+                    placeholder={msg('isEditMode ? \'••••••••\' : \'Minimum 8 characters\'')}
                     required={!isEditMode}
                     minLength={isEditMode ? undefined : 8}
                   />
@@ -485,7 +486,7 @@ export function SystemUserEdit({
               <div className="shrink-0 space-y-6">
                 <div>
                   <label htmlFor="su-role-permissions" className="mb-[10px] block text-sm text-gray-700">
-                    Role
+                    {msg('Role')}
                   </label>
                   <select
                     id="su-role-permissions"
@@ -507,7 +508,7 @@ export function SystemUserEdit({
 
                 <div>
                   <h3 className="text-base font-semibold text-gray-900">
-                    Additional Direct Permissions
+                    {msg('Additional Direct Permissions')}
                   </h3>
                   <p className="text-sm text-gray-500 mt-1">
                     Role defaults are checked and locked. Toggle extras on top of the role — changing
@@ -583,7 +584,7 @@ export function SystemUserEdit({
                                   {permission.label}
                                   {isInherited ? (
                                     <span className="ml-1.5 text-xs font-normal text-gray-400">
-                                      (Role Default)
+                                      {msg('(Role Default)')}
                                     </span>
                                   ) : null}
                                 </span>
@@ -600,7 +601,7 @@ export function SystemUserEdit({
                 })}
                 {groups.length === 0 && (
                   <div className="py-8 text-sm text-gray-500 text-center">
-                    No permissions available.
+                    {msg('No permissions available.')}
                   </div>
                 )}
               </div>
@@ -610,7 +611,7 @@ export function SystemUserEdit({
 
         <div className="flex gap-3 justify-end">
           <Button type="button" variant="outline" onClick={onBack} disabled={isSaving}>
-            Cancel
+            {msg('Cancel')}
           </Button>
           <Button type="submit" disabled={isSaving} className="gap-2">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

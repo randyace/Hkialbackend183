@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * DataTable.tsx
  * Purely presentational, fully generic data table component.
@@ -8,6 +9,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -142,7 +144,7 @@ export function DataTable<TRow = Record<string, unknown>>({
                   }}
                   onChange={(e) => onSelectAll?.(e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 text-[#0f2942] focus:ring-[#0f2942] cursor-pointer"
-                  aria-label="Select all rows"
+                  aria-label={msg('Select all rows')}
                 />
               </th>
             )}

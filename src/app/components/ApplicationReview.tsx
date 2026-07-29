@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 import { toast } from 'sonner@2.0.3';
 import { CheckCircle, XCircle, Clock, Mail, Phone, FileText } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 interface Application {
   id: string;
@@ -90,6 +91,7 @@ export function ApplicationReview({
   onViewDetail,
   isLoading = false,
 }: ApplicationReviewProps) {
+  const msg = useMsg();
   const [applications, setApplications] = useState<Application[]>([]);
 
   useEffect(() => {
@@ -317,7 +319,7 @@ export function ApplicationReview({
                     id="accountNumber"
                     value={accountNumber}
                     onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="System generated"
+                    placeholder={msg('System generated')}
                   />
                   <p className="text-xs text-gray-500 mt-1">Can be manually amended</p>
                 </div>
@@ -326,7 +328,7 @@ export function ApplicationReview({
                   <Label htmlFor="internalGrouping">Internal Grouping *</Label>
                   <Select value={internalGrouping} onValueChange={setInternalGrouping}>
                     <SelectTrigger id="internalGrouping">
-                      <SelectValue placeholder="Select grouping" />
+                      <SelectValue placeholder={msg('Select grouping')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="vip">VIP</SelectItem>
@@ -342,7 +344,7 @@ export function ApplicationReview({
                     id="companyCode"
                     value={companyCode}
                     onChange={(e) => setCompanyCode(e.target.value)}
-                    placeholder="Enter company code"
+                    placeholder={msg('Enter company code')}
                   />
                 </div>
 
@@ -366,7 +368,7 @@ export function ApplicationReview({
                     id="bulkPurchaseCode"
                     value={bulkPurchaseCode}
                     onChange={(e) => setBulkPurchaseCode(e.target.value)}
-                    placeholder="Optional"
+                    placeholder={msg('Optional')}
                   />
                 </div>
               </div>
@@ -377,7 +379,7 @@ export function ApplicationReview({
                   id="remarks"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  placeholder="Enter any additional remarks"
+                  placeholder={msg('Enter any additional remarks')}
                   rows={3}
                 />
               </div>
@@ -423,7 +425,7 @@ export function ApplicationReview({
                   id="rejectionReason"
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Please provide a reason for rejection"
+                  placeholder={msg('Please provide a reason for rejection')}
                   rows={4}
                   required
                 />

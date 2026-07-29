@@ -12,6 +12,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner@2.0.3';
+import { msg } from '@/i18n/msgFallback';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -164,19 +165,19 @@ interface PendingBooking {
 // ── Supplementary Mock Data ───────────────────────────────────────────────────
 
 const PASSENGER_SEEDS = [
-  { title: 'Mr',   firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adults (aged 12 and above)', day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021' },
-  { title: 'Mrs',  firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adults (aged 12 and above)', day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '' },
-  { title: 'Mr',   firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adults (aged 12 and above)', day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087' },
-  { title: 'Miss', firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2-11)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
-  { title: 'Mr',   firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adults (aged 12 and above)', day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145' },
-  { title: 'Mrs',  firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adults (aged 12 and above)', day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '' },
+  { title: msg('Mr'),   firstName: 'John',   lastName: 'Smith',   ageGroup: 'Adults (aged 12 and above)', day: '14', month: 'March',     year: '1980', doc: 'K12345678', mem: 'MEM-0021' },
+  { title: msg('Mrs'),  firstName: 'Mary',   lastName: 'Johnson', ageGroup: 'Adults (aged 12 and above)', day: '22', month: 'July',      year: '1975', doc: 'H98765432', mem: '' },
+  { title: msg('Mr'),   firstName: 'David',  lastName: 'Lee',     ageGroup: 'Adults (aged 12 and above)', day: '05', month: 'November',  year: '1990', doc: 'A11223344', mem: 'MEM-0087' },
+  { title: msg('Miss'), firstName: 'Sarah',  lastName: 'Chen',    ageGroup: 'Children (aged 2-11)',day: '30', month: 'January',   year: '2014', doc: 'B55667788', mem: '' },
+  { title: msg('Mr'),   firstName: 'Robert', lastName: 'Wang',    ageGroup: 'Adults (aged 12 and above)', day: '18', month: 'September', year: '1968', doc: 'C99001122', mem: 'MEM-0145' },
+  { title: msg('Mrs'),  firstName: 'Emma',   lastName: 'Wilson',  ageGroup: 'Adults (aged 12 and above)', day: '07', month: 'April',     year: '1983', doc: 'D33445566', mem: '' },
 ];
 
 const NON_FLYING_SEEDS = [
-  { title: 'Mrs',  firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adults (aged 12 and above)'  },
-  { title: 'Mr',   firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adults (aged 12 and above)'  },
-  { title: 'Miss', firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2-11)' },
-  { title: 'Mr',   firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adults (aged 12 and above)'  },
+  { title: msg('Mrs'),  firstName: 'Linda',  lastName: 'Brown',  ageGroup: 'Adults (aged 12 and above)'  },
+  { title: msg('Mr'),   firstName: 'James',  lastName: 'Taylor', ageGroup: 'Adults (aged 12 and above)'  },
+  { title: msg('Miss'), firstName: 'Sophie', lastName: 'Martin', ageGroup: 'Children (aged 2-11)' },
+  { title: msg('Mr'),   firstName: 'Kevin',  lastName: 'Zhang',  ageGroup: 'Adults (aged 12 and above)'  },
 ];
 
 const CONTACT_SEEDS = [
@@ -471,7 +472,7 @@ export function BookingReviewPage({
     onApprove?.(booking.id);
     if (reviewStage === 'staff') {
       toast.success(`Booking ${booking.bookingNo} forwarded for supervisor approval`, {
-        description: 'A supervisor or manager must give final approval before the booking is confirmed.',
+        description: msg('A supervisor or manager must give final approval before the booking is confirmed.'),
       });
     } else {
       toast.success(`Booking ${booking.bookingNo} confirmed`, {
@@ -486,7 +487,7 @@ export function BookingReviewPage({
     onReject?.(booking.id, customReason ? `${selectedReason} - ${customReason}` : selectedReason);
     setShowRejectDialog(false);
     toast.info(`Booking ${booking.bookingNo} rejection submitted`, {
-      description: 'The rejection has been sent to AM / Manager to review',
+      description: msg('The rejection has been sent to AM / Manager to review'),
     });
     onBack();
   };
@@ -501,7 +502,7 @@ export function BookingReviewPage({
     setShowPushBackDialog(false);
     setPushBackReason('');
     toast.info(`Booking ${booking.bookingNo} sent back to staff review`, {
-      description: 'The booking has been moved back to Step 1: Staff Review for revision.',
+      description: msg('The booking has been moved back to Step 1: Staff Review for revision.'),
     });
     onBack();
   };
@@ -521,7 +522,7 @@ export function BookingReviewPage({
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1>Review Booking Request</h1>
+            <h1>{msg('Review Booking Request')}</h1>
             <Badge className={`text-sm ${
               booking.requestType === 'New Booking Request'
                 ? 'bg-green-100 text-green-700 border border-green-200'
@@ -534,13 +535,13 @@ export function BookingReviewPage({
             </Badge>
             {booking.isAdHoc && (
               <Badge className="text-sm bg-amber-100 text-amber-700 border border-amber-200">
-                Ad-hoc / Urgent
+                {msg('Ad-hoc / Urgent')}
               </Badge>
             )}
             <span className="text-sm font-mono text-gray-500">{booking.bookingNo}</span>
           </div>
           <p className="text-gray-600 mt-1">
-            Review the full booking details and choose to approve or reject.
+            {msg('Review the full booking details and choose to approve or reject.')}
           </p>
         </div>
       </div>
@@ -551,14 +552,14 @@ export function BookingReviewPage({
           reviewStage === 'staff' ? 'bg-blue-600 text-white shadow-sm' : 'bg-green-100 text-green-700'
         }`}>
           {reviewStage === 'supervisor' ? <CheckCircle className="w-4 h-4" /> : <ClipboardCheck className="w-4 h-4" />}
-          <span>Step 1: Staff Review</span>
+          <span>{msg('Step 1: Staff Review')}</span>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
         <div className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium flex-shrink-0 ${
           reviewStage === 'supervisor' ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-200 text-gray-400'
         }`}>
           <ShieldCheck className="w-4 h-4" />
-          <span>Step 2: Supervisor / Manager Approval</span>
+          <span>{msg('Step 2: Supervisor / Manager Approval')}</span>
         </div>
         <div className="ml-auto text-xs text-gray-500 hidden md:block">
           {reviewStage === 'staff'
@@ -578,9 +579,9 @@ export function BookingReviewPage({
             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-amber-900">Ad-hoc Booking Alert</p>
+                <p className="text-sm font-medium text-amber-900">{msg('Ad-hoc Booking Alert')}</p>
                 <p className="text-sm text-amber-800 mt-0.5">
-                  This booking was submitted within the cut-off period and requires immediate attention.
+                  {msg('This booking was submitted within the cut-off period and requires immediate attention.')}
                 </p>
               </div>
             </div>
@@ -595,12 +596,12 @@ export function BookingReviewPage({
             <Card className="p-6 border-2 border-blue-300 bg-blue-50">
               <div className="flex items-center gap-2 mb-4">
                 <FileEdit className="w-5 h-5 text-blue-700" />
-                <h2 className="text-lg font-medium text-blue-900">Changes Requested</h2>
+                <h2 className="text-lg font-medium text-blue-900">{msg('Changes Requested')}</h2>
               </div>
               {booking.changeRows && booking.changeRows.length > 0 ? (
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">Original</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">{msg('Original')}</p>
                   <div className="space-y-3">
                     {booking.changeRows.map((row) => (
                       <div key={`from-${row.field}-${row.label}`}>
@@ -611,7 +612,7 @@ export function BookingReviewPage({
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">Changed To</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">{msg('Changed To')}</p>
                   <div className="space-y-3">
                     {booking.changeRows.map((row) => (
                       <div key={`to-${row.field}-${row.label}`}>
@@ -625,10 +626,10 @@ export function BookingReviewPage({
               ) : (
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">Original</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">{msg('Original')}</p>
                   <div className="space-y-3">
                     {booking.originalData?.guestName !== undefined && booking.originalData.guestName !== booking.guestName && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Guest Name</p><p className="line-through text-red-600 font-medium">{booking.originalData.guestName}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Guest Name')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.guestName}</p></div>
                     )}
                     {booking.originalData?.contactPerson && (
                       (booking.originalData.contactPerson.name ?? '') !== (booking.contactPerson?.name ?? '')
@@ -636,7 +637,7 @@ export function BookingReviewPage({
                       || (booking.originalData.contactPerson.phone ?? '') !== (booking.contactPerson?.phone ?? '')
                     ) && (
                       <div>
-                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Contact Person</p>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Contact Person')}</p>
                         <p className="line-through text-red-600 font-medium">
                           {[booking.originalData.contactPerson.name, booking.originalData.contactPerson.email, booking.originalData.contactPerson.phone]
                             .filter(Boolean)
@@ -645,42 +646,42 @@ export function BookingReviewPage({
                       </div>
                     )}
                     {booking.originalData?.flightType && booking.originalData.flightType !== booking.flightType && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Type</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightType}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight Type')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightType}</p></div>
                     )}
                     {booking.originalData?.suite && booking.originalData.suite !== booking.suite && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Suite</p><p className="line-through text-red-600 font-medium">{booking.originalData.suite}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Suite')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.suite}</p></div>
                     )}
                     {booking.originalData?.dateTime && booking.originalData.dateTime !== booking.dateTime && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Visit Date/Time</p><p className="line-through text-red-600 font-medium">{booking.originalData.dateTime}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Visit Date/Time')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.dateTime}</p></div>
                     )}
                     {booking.originalData?.flightNo && booking.originalData.flightNo !== booking.flightNo && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight No.</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightNo}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight No.')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightNo}</p></div>
                     )}
                     {booking.originalData?.flightTime && booking.originalData.flightTime !== booking.flightTime && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Time</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightTime}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight Time')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.flightTime}</p></div>
                     )}
                     {booking.originalData?.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Number of Guests</p><p className="line-through text-red-600 font-medium">{booking.originalData.numberOfGuests} pax</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Number of Guests')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.numberOfGuests} pax</p></div>
                     )}
                     {booking.originalData?.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Non-flying Guests</p><p className="line-through text-red-600 font-medium">{booking.originalData.nonFlyingGuests}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Non-flying Guests')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.nonFlyingGuests}</p></div>
                     )}
                     {booking.originalData?.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Limousine Service</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasLimousine ? 'Yes' : 'No'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Limousine Service')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasLimousine ? 'Yes' : 'No'}</p></div>
                     )}
                     {booking.originalData?.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Shopping Service</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasShopping ? 'Yes' : 'No'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Shopping Service')}</p><p className="line-through text-red-600 font-medium">{booking.originalData.hasShopping ? 'Yes' : 'No'}</p></div>
                     )}
                     {booking.originalData?.specialRequests !== booking.specialRequests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Special Request</p><p className="line-through text-red-600 text-sm">{booking.originalData?.specialRequests || '(none)'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Special Request')}</p><p className="line-through text-red-600 text-sm">{booking.originalData?.specialRequests || '(none)'}</p></div>
                     )}
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">Changed To</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">{msg('Changed To')}</p>
                   <div className="space-y-3">
                     {booking.originalData?.guestName !== undefined && booking.originalData.guestName !== booking.guestName && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Guest Name</p><p className="text-green-700 font-medium">{booking.guestName}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Guest Name')}</p><p className="text-green-700 font-medium">{booking.guestName}</p></div>
                     )}
                     {booking.originalData?.contactPerson && (
                       (booking.originalData.contactPerson.name ?? '') !== (booking.contactPerson?.name ?? '')
@@ -688,7 +689,7 @@ export function BookingReviewPage({
                       || (booking.originalData.contactPerson.phone ?? '') !== (booking.contactPerson?.phone ?? '')
                     ) && (
                       <div>
-                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Contact Person</p>
+                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Contact Person')}</p>
                         <p className="text-green-700 font-medium">
                           {[booking.contactPerson?.name, booking.contactPerson?.email, booking.contactPerson?.phone]
                             .filter(Boolean)
@@ -697,34 +698,34 @@ export function BookingReviewPage({
                       </div>
                     )}
                     {booking.originalData?.flightType && booking.originalData.flightType !== booking.flightType && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Type</p><p className="text-green-700 font-medium">{booking.flightType}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight Type')}</p><p className="text-green-700 font-medium">{booking.flightType}</p></div>
                     )}
                     {booking.originalData?.suite && booking.originalData.suite !== booking.suite && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Suite</p><p className="text-green-700 font-medium">{booking.suite}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Suite')}</p><p className="text-green-700 font-medium">{booking.suite}</p></div>
                     )}
                     {booking.originalData?.dateTime && booking.originalData.dateTime !== booking.dateTime && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Visit Date/Time</p><p className="text-green-700 font-medium">{booking.dateTime}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Visit Date/Time')}</p><p className="text-green-700 font-medium">{booking.dateTime}</p></div>
                     )}
                     {booking.originalData?.flightNo && booking.originalData.flightNo !== booking.flightNo && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight No.</p><p className="text-green-700 font-medium">{booking.flightNo}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight No.')}</p><p className="text-green-700 font-medium">{booking.flightNo}</p></div>
                     )}
                     {booking.originalData?.flightTime && booking.originalData.flightTime !== booking.flightTime && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Flight Time</p><p className="text-green-700 font-medium">{booking.flightTime}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Flight Time')}</p><p className="text-green-700 font-medium">{booking.flightTime}</p></div>
                     )}
                     {booking.originalData?.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Number of Guests</p><p className="text-green-700 font-medium">{booking.numberOfGuests} pax</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Number of Guests')}</p><p className="text-green-700 font-medium">{booking.numberOfGuests} pax</p></div>
                     )}
                     {booking.originalData?.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Non-flying Guests</p><p className="text-green-700 font-medium">{booking.nonFlyingGuests}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Non-flying Guests')}</p><p className="text-green-700 font-medium">{booking.nonFlyingGuests}</p></div>
                     )}
                     {booking.originalData?.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Limousine Service</p><p className="text-green-700 font-medium">{booking.hasLimousine ? 'Yes' : 'No'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Limousine Service')}</p><p className="text-green-700 font-medium">{booking.hasLimousine ? 'Yes' : 'No'}</p></div>
                     )}
                     {booking.originalData?.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Shopping Service</p><p className="text-green-700 font-medium">{booking.hasShopping ? 'Yes' : 'No'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Shopping Service')}</p><p className="text-green-700 font-medium">{booking.hasShopping ? 'Yes' : 'No'}</p></div>
                     )}
                     {booking.originalData?.specialRequests !== booking.specialRequests && (
-                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Special Request</p><p className="text-green-700 font-medium text-sm">{booking.specialRequests || '(none)'}</p></div>
+                      <div><p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Special Request')}</p><p className="text-green-700 font-medium text-sm">{booking.specialRequests || '(none)'}</p></div>
                     )}
                   </div>
                 </div>
@@ -735,7 +736,7 @@ export function BookingReviewPage({
 
           {/* ── 1. Guest Information ── */}
           <Card className="p-6">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Guest Information</h2>
+            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">{msg('Guest Information')}</h2>
             <div className="grid grid-cols-3 gap-6">
               <Field label="Guest Name">
                 <span className="font-medium">{booking.guestName}</span>
@@ -810,16 +811,16 @@ export function BookingReviewPage({
 
           {/* ── 2. Flight Information ── */}
           <Card className="p-6">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Flight Information</h2>
+            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">{msg('Flight Information')}</h2>
             <div className="grid grid-cols-4 gap-6">
               <Field label="Flight Type">
                 {booking.flightType === 'Arrival' ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200">
-                    <Plane className="w-3.5 h-3.5 -rotate-45" /> Arrival
+                    <Plane className="w-3.5 h-3.5 -rotate-45" /> {msg('Arrival')}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border border-purple-200">
-                    <Plane className="w-3.5 h-3.5 rotate-45" /> Departure
+                    <Plane className="w-3.5 h-3.5 rotate-45" /> {msg('Departure')}
                   </span>
                 )}
               </Field>
@@ -861,7 +862,7 @@ export function BookingReviewPage({
 
           {/* ── 3. Booking Details ── */}
           <Card className="p-6">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Booking Details</h2>
+            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">{msg('Booking Details')}</h2>
 
             {/* Basic booking info */}
             <div className="grid grid-cols-3 gap-6 mb-6">
@@ -871,7 +872,7 @@ export function BookingReviewPage({
                   <div className="mt-1.5 space-y-1">
                     {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Suites</span>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{msg('Suites')}</span>
                         {booking.assignedSuiteNames.map(name => (
                           <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 border border-purple-200">{name}</span>
                         ))}
@@ -879,7 +880,7 @@ export function BookingReviewPage({
                     )}
                     {booking.assignedLoungeNames && booking.assignedLoungeNames.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 items-center">
-                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Lounges</span>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">{msg('Lounges')}</span>
                         {booking.assignedLoungeNames.map(name => (
                           <span key={name} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">{name}</span>
                         ))}
@@ -895,7 +896,7 @@ export function BookingReviewPage({
               <Field label="Booking Type"><span>{booking.bookingType}</span></Field>
               {booking.isAdHoc && (
                 <Field label="Ad-hoc Booking">
-                  <span className="text-amber-600 flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> Yes — within cut-off period</span>
+                  <span className="text-amber-600 flex items-center gap-1.5"><AlertCircle className="w-4 h-4" /> {msg('Yes — within cut-off period')}</span>
                 </Field>
               )}
             </div>
@@ -904,8 +905,8 @@ export function BookingReviewPage({
             <div className="border border-gray-200 rounded-lg p-4 mb-4 bg-purple-50/30">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-800">Part 1 — Premiere Suite</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Max 6 guests (VIP + Non-Flying) per suite</p>
+                  <h4 className="text-sm font-semibold text-gray-800">{msg('Part 1 — Premiere Suite')}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">{msg('Max 6 guests (VIP + Non-Flying) per suite')}</p>
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full font-medium bg-purple-100 text-purple-700">
                   {vipPS + nonFlyingPS} / {numPremiereSuites * 6 || '—'} guests used
@@ -928,8 +929,8 @@ export function BookingReviewPage({
             <div className="border border-gray-200 rounded-lg p-4 bg-blue-50/30">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-800">Part 2 — Lounge Deluxe</h4>
-                  <p className="text-xs text-gray-500 mt-0.5">Max 3 Non-Flying Guests per booking</p>
+                  <h4 className="text-sm font-semibold text-gray-800">{msg('Part 2 — Lounge Deluxe')}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">{msg('Max 3 Non-Flying Guests per booking')}</p>
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">
                   {nonFlyingLD} / 3 non-flying used
@@ -950,7 +951,7 @@ export function BookingReviewPage({
           <Card className="p-6">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-sm uppercase tracking-wide text-gray-500">VIP Passenger Details</h2>
+                <h2 className="text-sm uppercase tracking-wide text-gray-500">{msg('VIP Passenger Details')}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {passengers.length} passenger{passengers.length !== 1 ? 's' : ''} —
                   {vipPS > 0 && ` ${vipPS} from Premiere Suite`}
@@ -962,7 +963,7 @@ export function BookingReviewPage({
 
             {passengers.length === 0 ? (
               <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-                <p className="text-sm">No VIP passengers assigned.</p>
+                <p className="text-sm">{msg('No VIP passengers assigned.')}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -970,12 +971,12 @@ export function BookingReviewPage({
                   <thead>
                     <tr className="border-b bg-gray-50">
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">#</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Section</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Name</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Travel Doc No.</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Membership No.</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Age Group</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Birthday</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Section')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Name')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Travel Doc No.')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Membership No.')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Age Group')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Birthday')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1007,7 +1008,7 @@ export function BookingReviewPage({
           {booking.nonFlyingGuests > 0 && (
             <Card className="p-6">
               <div className="mb-5">
-                <h2 className="text-sm uppercase tracking-wide text-gray-500">Non-Flying Guest Details</h2>
+                <h2 className="text-sm uppercase tracking-wide text-gray-500">{msg('Non-Flying Guest Details')}</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {nonFlyingGuestList.length} guest{nonFlyingGuestList.length !== 1 ? 's' : ''} —
                   {nonFlyingPS > 0 && ` ${nonFlyingPS} from Premiere Suite`}
@@ -1020,9 +1021,9 @@ export function BookingReviewPage({
                   <thead>
                     <tr className="border-b bg-gray-50">
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">#</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Section</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Name</th>
-                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Age Group</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Section')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Name')}</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">{msg('Age Group')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -1049,12 +1050,12 @@ export function BookingReviewPage({
 
           {/* ── 6. Services Included ── */}
           <Card className="p-6">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Services Included</h2>
+            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">{msg('Services Included')}</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${booking.hasLimousine ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
                 <Car className={`w-5 h-5 ${booking.hasLimousine ? 'text-purple-600' : 'text-gray-400'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${booking.hasLimousine ? 'text-purple-800' : 'text-gray-400'}`}>Limousine Transfer</p>
+                  <p className={`text-sm font-medium ${booking.hasLimousine ? 'text-purple-800' : 'text-gray-400'}`}>{msg('Limousine Transfer')}</p>
                   <p className="text-xs text-gray-500">{booking.hasLimousine ? 'Included' : 'Not included'}</p>
                 </div>
                 {booking.hasLimousine && <CheckCircle className="w-4 h-4 text-purple-500 ml-auto" />}
@@ -1062,7 +1063,7 @@ export function BookingReviewPage({
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${booking.hasShopping ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
                 <ShoppingBag className={`w-5 h-5 ${booking.hasShopping ? 'text-green-600' : 'text-gray-400'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${booking.hasShopping ? 'text-green-800' : 'text-gray-400'}`}>In-lounge Shopping</p>
+                  <p className={`text-sm font-medium ${booking.hasShopping ? 'text-green-800' : 'text-gray-400'}`}>{msg('In-lounge Shopping')}</p>
                   <p className="text-xs text-gray-500">{booking.hasShopping ? 'Included' : 'Not included'}</p>
                 </div>
                 {booking.hasShopping && <CheckCircle className="w-4 h-4 text-green-500 ml-auto" />}
@@ -1086,7 +1087,7 @@ export function BookingReviewPage({
                   <div className="flex items-center gap-2 p-3 rounded-lg border bg-amber-50 border-amber-200">
                     <Clock className="w-5 h-5 text-amber-600" />
                     <div>
-                      <p className="text-sm font-medium text-amber-800">Lounge Extension</p>
+                      <p className="text-sm font-medium text-amber-800">{msg('Lounge Extension')}</p>
                       <p className="text-xs text-gray-500">{hours} additional hour{hours !== 1 ? 's' : ''}</p>
                     </div>
                     <CheckCircle className="w-4 h-4 text-amber-500 ml-auto" />
@@ -1096,7 +1097,7 @@ export function BookingReviewPage({
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasWheelchair ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
                 <Accessibility className={`w-5 h-5 ${hasWheelchair ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${hasWheelchair ? 'text-blue-800' : 'text-gray-400'}`}>Wheelchair Assistance</p>
+                  <p className={`text-sm font-medium ${hasWheelchair ? 'text-blue-800' : 'text-gray-400'}`}>{msg('Wheelchair Assistance')}</p>
                   <p className="text-xs text-gray-500">{hasWheelchair ? 'Requested' : 'Not required'}</p>
                 </div>
                 {hasWheelchair && <CheckCircle className="w-4 h-4 text-blue-500 ml-auto" />}
@@ -1104,7 +1105,7 @@ export function BookingReviewPage({
               <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasPrivateSales ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
                 <Star className={`w-5 h-5 ${hasPrivateSales ? 'text-amber-600' : 'text-gray-400'}`} />
                 <div>
-                  <p className={`text-sm font-medium ${hasPrivateSales ? 'text-amber-800' : 'text-gray-400'}`}>Private Sales</p>
+                  <p className={`text-sm font-medium ${hasPrivateSales ? 'text-amber-800' : 'text-gray-400'}`}>{msg('Private Sales')}</p>
                   <p className="text-xs text-gray-500">{hasPrivateSales ? 'Requested' : 'Not requested'}</p>
                 </div>
                 {hasPrivateSales && <CheckCircle className="w-4 h-4 text-amber-500 ml-auto" />}
@@ -1114,21 +1115,21 @@ export function BookingReviewPage({
 
           {/* ── 7. Contact Person ── */}
           <Card className="p-6">
-            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Contact Person</h2>
+            <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">{msg('Contact Person')}</h2>
             <div className="grid grid-cols-3 gap-6">
-              <Field label={<span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />Name</span>}>
+              <Field label={<span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5" />{msg('Name')}</span>}>
                 <span>{contact.name}</span>
               </Field>
-              <Field label={<span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />Contact Email</span>}>
+              <Field label={<span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" />{msg('Contact Email')}</span>}>
                 <span className="text-blue-600">{contact.email}</span>
               </Field>
-              <Field label={<span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />Contact No.</span>}>
+              <Field label={<span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{msg('Contact No.')}</span>}>
                 <span>{contact.phone}</span>
               </Field>
               {contact.memo && (
                 <div className="col-span-3">
                   <p className="text-xs text-gray-500 flex items-center gap-1.5" style={{ marginBottom: '10px' }}>
-                    <MessageSquare className="w-3.5 h-3.5" />Booking Memo
+                    <MessageSquare className="w-3.5 h-3.5" />{msg('Booking Memo')}
                   </p>
                   <div className="p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-700">
                     {contact.memo}
@@ -1144,7 +1145,7 @@ export function BookingReviewPage({
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="font-medium text-yellow-900 mb-1">Special Request</h3>
+                  <h3 className="font-medium text-yellow-900 mb-1">{msg('Special Request')}</h3>
                   <p className="text-sm text-yellow-800">{booking.specialRequests}</p>
                 </div>
               </div>
@@ -1159,16 +1160,16 @@ export function BookingReviewPage({
 
           {/* Payment Information */}
           <Card className="p-6">
-            <h2 className="text-lg font-medium mb-4">Payment Information</h2>
+            <h2 className="text-lg font-medium mb-4">{msg('Payment Information')}</h2>
             <div className="space-y-4">
               <div>
-                <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Payment Mode</p>
+                <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Payment Mode')}</p>
                 <Badge className={`text-sm ${paymentModeBadgeClass(booking.paymentMode)}`}>
                   {formatPaymentLabel(booking)}
                 </Badge>
               </div>
               <div>
-                <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>Amount</p>
+                <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{msg('Amount')}</p>
                 {booking.agencyDiscountRate && booking.originalAmountValue ? (
                   <div className="space-y-1">
                     <p className="text-sm text-gray-400 line-through">HK${booking.originalAmountValue.toLocaleString()}</p>
@@ -1187,7 +1188,7 @@ export function BookingReviewPage({
 
           {/* Review Actions */}
           <Card className="p-6 sticky top-6">
-            <h2 className="text-lg font-medium mb-4">Review Actions</h2>
+            <h2 className="text-lg font-medium mb-4">{msg('Review Actions')}</h2>
 
             {reviewMode === 'view' && (
               <div className="space-y-3">
@@ -1211,7 +1212,7 @@ export function BookingReviewPage({
                     onClick={() => setShowPushBackDialog(true)}
                   >
                     <Undo2 className="w-5 h-5" />
-                    Push Back to Staff Review
+                    {msg('Push Back to Staff Review')}
                   </Button>
                 )}
                 <Button
@@ -1228,7 +1229,7 @@ export function BookingReviewPage({
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block" style={{ marginBottom: '10px' }}>
-                    Rejection Reason <span className="text-red-500">*</span>
+                    {msg('Rejection Reason')} <span className="text-red-500">*</span>
                   </label>
                   <div className="space-y-2">
                     {REJECTION_REASONS.map(reason => (
@@ -1249,7 +1250,7 @@ export function BookingReviewPage({
                     <textarea
                       className="w-full border border-gray-300 rounded-md p-2 text-sm mt-2"
                       rows={3}
-                      placeholder="Please describe the rejection reason…"
+                      placeholder={msg('Please describe the rejection reason…')}
                       value={customReason}
                       onChange={e => setCustomReason(e.target.value)}
                     />
@@ -1257,7 +1258,7 @@ export function BookingReviewPage({
                 </div>
                 <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded text-sm text-orange-800">
                   <MailCheck className="w-4 h-4 flex-shrink-0" />
-                  <span>The guest will be notified of this rejection and the reason via email.</span>
+                  <span>{msg('The guest will be notified of this rejection and the reason via email.')}</span>
                 </div>
                 <div className="space-y-2">
                   <Button
@@ -1266,10 +1267,10 @@ export function BookingReviewPage({
                     onClick={handleReject}
                   >
                     <XCircle className="w-5 h-5" />
-                    Confirm Rejection
+                    {msg('Confirm Rejection')}
                   </Button>
                   <Button variant="outline" className="w-full h-10" onClick={() => setReviewMode('view')}>
-                    Cancel
+                    {msg('Cancel')}
                   </Button>
                 </div>
               </div>
@@ -1282,15 +1283,15 @@ export function BookingReviewPage({
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Reject Booking Request</DialogTitle>
+            <DialogTitle>{msg('Reject Booking Request')}</DialogTitle>
             <DialogDescription>
-              Please select a rejection reason below.
+              {msg('Please select a rejection reason below.')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
               <label className="text-sm font-medium mb-2 block" style={{ marginBottom: '10px' }}>
-                Rejection Reason <span className="text-red-500">*</span>
+                {msg('Rejection Reason')} <span className="text-red-500">*</span>
               </label>
               <div className="space-y-2">
                 {REJECTION_REASONS.map(reason => (
@@ -1310,12 +1311,12 @@ export function BookingReviewPage({
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block" style={{ marginBottom: '10px' }}>
-                Additional Details (Optional)
+                {msg('Additional Details (Optional)')}
               </label>
               <textarea
                 className="w-full border border-gray-300 rounded-md p-2 text-sm"
                 rows={3}
-                placeholder="Add any additional notes about the rejection..."
+                placeholder={msg('Add any additional notes about the rejection...')}
                 value={customReason}
                 onChange={e => setCustomReason(e.target.value)}
               />
@@ -1323,7 +1324,7 @@ export function BookingReviewPage({
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="bg-red-600 hover:bg-red-700 text-white gap-2"
@@ -1331,7 +1332,7 @@ export function BookingReviewPage({
               onClick={handleReject}
             >
               <XCircle className="w-4 h-4" />
-              Confirm Rejection
+              {msg('Confirm Rejection')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1350,7 +1351,7 @@ export function BookingReviewPage({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Undo2 className="w-5 h-5 text-yellow-600" />
-              Push Back to Staff Review
+              {msg('Push Back to Staff Review')}
             </DialogTitle>
             <DialogDescription>
               Send this booking back to Step 1: Staff Review for revision.
@@ -1360,7 +1361,7 @@ export function BookingReviewPage({
           <div className="space-y-4 py-4">
             <div>
               <label className="text-sm font-medium mb-2 block" style={{ marginBottom: '10px' }}>
-                Reason <span className="text-red-500">*</span>
+                {msg('Reason')} <span className="text-red-500">*</span>
               </label>
               <textarea
                 className="w-full border border-gray-300 rounded-md p-2 text-sm"
@@ -1372,7 +1373,7 @@ export function BookingReviewPage({
             </div>
             <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
               <Info className="w-4 h-4 flex-shrink-0" />
-              <span>The staff member will see this reason and revise the booking before re-submitting.</span>
+              <span>{msg('The staff member will see this reason and revise the booking before re-submitting.')}</span>
             </div>
           </div>
           <DialogFooter className="gap-2">
@@ -1380,7 +1381,7 @@ export function BookingReviewPage({
               setShowPushBackDialog(false);
               setPushBackReason('');
             }}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="bg-yellow-500 hover:bg-yellow-600 text-white gap-2"
@@ -1388,7 +1389,7 @@ export function BookingReviewPage({
               onClick={handlePushBack}
             >
               <Undo2 className="w-4 h-4" />
-              Push Back to Staff
+              {msg('Push Back to Staff')}
             </Button>
           </DialogFooter>
         </DialogContent>

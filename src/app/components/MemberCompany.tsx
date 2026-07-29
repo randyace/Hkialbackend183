@@ -21,6 +21,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -95,6 +96,7 @@ export interface MemberCompanyProps {
 }
 
 export function MemberCompany({ companies: companiesProp, onEditCompany, onCreateCompany, onDeleteCompany }: MemberCompanyProps = {}) {
+  const msg = useMsg();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
@@ -212,12 +214,12 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1>Customer Company Management</h1>
-          <p className="text-gray-600">Manage corporate and agency accounts</p>
+          <h1>{msg('Customer Company Management')}</h1>
+          <p className="text-gray-600">{msg('Manage corporate and agency accounts')}</p>
         </div>
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-2" />
-          Add New Company
+          {msg('Add New Company')}
         </Button>
       </div>
 
@@ -229,7 +231,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by company name, code, or contact person..."
+                placeholder={msg('Search by company name, code, or contact person...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -237,12 +239,12 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={msg('Filter by status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="all">{msg('All Status')}</SelectItem>
+                <SelectItem value="active">{msg('Active')}</SelectItem>
+                <SelectItem value="inactive">{msg('Inactive')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -250,7 +252,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
           {/* Date Range Filter */}
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <label>Start Date</label>
+              <label>{msg('Start Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -262,7 +264,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
               </div>
             </div>
             <div className="flex-1">
-              <label>End Date</label>
+              <label>{msg('End Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -283,7 +285,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
                   setSearchTerm('');
                 }}
               >
-                Clear Filters
+                {msg('Clear Filters')}
               </Button>
             </div>
           </div>
@@ -304,16 +306,16 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Company Name</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Company Code</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Contact Person</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Contact Info</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Payment Method</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Customers</th>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('ID')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Company Name')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Company Code')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Contact Person')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Contact Info')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Payment Method')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Discount')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Customers')}</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Status')}</th>
+                <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -358,7 +360,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
                         size="sm"
                         onClick={() => handleEdit(company)}
                         className="h-8 w-8 p-0"
-                        title="Edit Company"
+                        title={msg('Edit Company')}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
@@ -368,7 +370,7 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
                           size="sm"
                           onClick={() => onDeleteCompany(company.id)}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
-                          title="Delete Company"
+                          title={msg('Delete Company')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

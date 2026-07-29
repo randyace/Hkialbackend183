@@ -34,6 +34,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import React from 'react';
 import { BookingReviewPage } from './BookingReviewPage';
+import { useMsg } from '@/i18n/useMsg';
 
 
 function ymdLocal(d: Date): string {
@@ -280,6 +281,7 @@ export function BookingApproval({
   onViewDetail,
   isLoading = false,
 }: BookingApprovalProps) {
+  const msg = useMsg();
   const [bookings] = useState<PendingBooking[]>(
     bookingsProp.length > 0 ? bookingsProp : MOCK_BOOKINGS,
   );
@@ -394,7 +396,7 @@ export function BookingApproval({
       });
       setActiveTab('supervisor');
       toast.success(`${ids.length} booking${ids.length > 1 ? 's' : ''} forwarded to supervisor`, {
-        description: 'These bookings are now awaiting supervisor/manager final approval.',
+        description: msg('These bookings are now awaiting supervisor/manager final approval.'),
       });
     } else if (activeTab === 'supervisor') {
       setBookingStatuses(prev => {
@@ -403,7 +405,7 @@ export function BookingApproval({
         return next;
       });
       toast.success(`${ids.length} booking${ids.length > 1 ? 's' : ''} confirmed`, {
-        description: 'Final approval granted. Guests will be notified by email.',
+        description: msg('Final approval granted. Guests will be notified by email.'),
       });
     }
     setSelectedIds(new Set());
@@ -501,8 +503,8 @@ export function BookingApproval({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>Approve Booking Request</h1>
-          <p className="text-gray-600">Two-step approval: staff review followed by supervisor/manager final confirmation</p>
+          <h1>{msg('Approve Booking Request')}</h1>
+          <p className="text-gray-600">{msg('Two-step approval: staff review followed by supervisor/manager final confirmation')}</p>
         </div>
         {selectedIds.size > 0 && (
           <Button
@@ -577,7 +579,7 @@ export function BookingApproval({
         <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-amber-900">Awaiting Supervisor / Manager Final Approval</p>
+            <p className="text-sm font-medium text-amber-900">{msg('Awaiting Supervisor / Manager Final Approval')}</p>
             <p className="text-sm text-amber-700 mt-0.5">
               The following bookings have been reviewed and approved by staff. A supervisor or manager must give final confirmation before bookings are confirmed and guests are notified.
             </p>
@@ -591,7 +593,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-blue-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Pending Staff Review</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Pending Staff Review')}</p>
                 <p className="text-2xl text-blue-600">{staffPendingBookings.length}</p>
               </div>
               <ClipboardCheck className="w-8 h-8 text-blue-200" />
@@ -600,7 +602,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-amber-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Ad-hoc / Urgent</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Ad-hoc / Urgent')}</p>
                 <p className="text-2xl text-amber-600">{adHocCount}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-amber-200" />
@@ -609,7 +611,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-indigo-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Individual</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Individual')}</p>
                 <p className="text-2xl text-indigo-600">{indCount}</p>
               </div>
               <User className="w-8 h-8 text-indigo-200" />
@@ -618,7 +620,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-blue-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Corporate</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Corporate')}</p>
                 <p className="text-2xl text-blue-600">{corpCount}</p>
               </div>
               <Building2 className="w-8 h-8 text-blue-200" />
@@ -627,7 +629,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-purple-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Agency</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Agency')}</p>
                 <p className="text-2xl text-purple-600">{agencyCount}</p>
               </div>
               <Building2 className="w-8 h-8 text-purple-200" />
@@ -641,7 +643,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-amber-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Awaiting Final Approval</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Awaiting Final Approval')}</p>
                 <p className="text-2xl text-amber-600">{supervisorPendingBookings.length}</p>
               </div>
               <ShieldCheck className="w-8 h-8 text-amber-200" />
@@ -650,7 +652,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-red-400">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Urgent / Ad-hoc</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Urgent / Ad-hoc')}</p>
                 <p className="text-2xl text-red-500">{supAdHocCount}</p>
               </div>
               <AlertCircle className="w-8 h-8 text-red-200" />
@@ -659,7 +661,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-indigo-400">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Individual Accounts</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Individual Accounts')}</p>
                 <p className="text-2xl text-indigo-500">{supervisorPendingBookings.filter(b => b.accountType === 'Individual').length}</p>
               </div>
               <User className="w-8 h-8 text-indigo-200" />
@@ -668,7 +670,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-blue-400">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Corp / Agency</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Corp / Agency')}</p>
                 <p className="text-2xl text-blue-500">{supervisorPendingBookings.filter(b => b.accountType !== 'Individual').length}</p>
               </div>
               <Building2 className="w-8 h-8 text-blue-200" />
@@ -682,7 +684,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-green-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Confirmed Bookings</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Confirmed Bookings')}</p>
                 <p className="text-2xl text-green-600">{confirmedCount}</p>
               </div>
               <CheckCircle className="w-8 h-8 text-green-200" />
@@ -691,7 +693,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-red-500">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Rejected Bookings</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Rejected Bookings')}</p>
                 <p className="text-2xl text-red-600">{rejectedCount}</p>
               </div>
               <XCircle className="w-8 h-8 text-red-200" />
@@ -700,7 +702,7 @@ export function BookingApproval({
           <Card className="p-4 border-l-4 border-l-gray-400">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 mb-1">Total Processed</p>
+                <p className="text-xs text-gray-500 mb-1">{msg('Total Processed')}</p>
                 <p className="text-2xl text-gray-600">{processedBookings.length}</p>
               </div>
               <ClipboardCheck className="w-8 h-8 text-gray-200" />
@@ -716,7 +718,7 @@ export function BookingApproval({
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by booking no., guest name, account no., flight no., company or agency name…"
+              placeholder={msg('Search by booking no., guest name, account no., flight no., company or agency name…')}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm"
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -725,35 +727,35 @@ export function BookingApproval({
           <div className="flex flex-col md:flex-row gap-3">
             <Select value={accountTypeFilter} onValueChange={v => { setAccountTypeFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-52">
-                <SelectValue placeholder="Account Type" />
+                <SelectValue placeholder={msg('Account Type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Account Types</SelectItem>
-                <SelectItem value="Individual">Individual</SelectItem>
-                <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Agency">Agency</SelectItem>
+                <SelectItem value="all">{msg('All Account Types')}</SelectItem>
+                <SelectItem value="Individual">{msg('Individual')}</SelectItem>
+                <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+                <SelectItem value="Agency">{msg('Agency')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={paymentModeFilter} onValueChange={v => { setPaymentModeFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-64">
-                <SelectValue placeholder="Payment Mode" />
+                <SelectValue placeholder={msg('Payment Mode')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Payment Modes</SelectItem>
-                <SelectItem value="Upfront">Upfront</SelectItem>
-                <SelectItem value="Net Upfront">Net Upfront</SelectItem>
-                <SelectItem value="On-Credit">On-Credit</SelectItem>
-                <SelectItem value="Bulk Purchase/Monthly Invoice">Bulk Purchase / Monthly Invoice</SelectItem>
+                <SelectItem value="all">{msg('All Payment Modes')}</SelectItem>
+                <SelectItem value="Upfront">{msg('Upfront')}</SelectItem>
+                <SelectItem value="Net Upfront">{msg('Net Upfront')}</SelectItem>
+                <SelectItem value="On-Credit">{msg('On-Credit')}</SelectItem>
+                <SelectItem value="Bulk Purchase/Monthly Invoice">{msg('Bulk Purchase / Monthly Invoice')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={adHocFilter} onValueChange={v => { setAdHocFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-44">
-                <SelectValue placeholder="Booking Type" />
+                <SelectValue placeholder={msg('Booking Type')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Bookings</SelectItem>
-                <SelectItem value="adhoc">Ad-hoc / Urgent</SelectItem>
-                <SelectItem value="regular">Regular</SelectItem>
+                <SelectItem value="all">{msg('All Bookings')}</SelectItem>
+                <SelectItem value="adhoc">{msg('Ad-hoc / Urgent')}</SelectItem>
+                <SelectItem value="regular">{msg('Regular')}</SelectItem>
               </SelectContent>
             </Select>
             <div className="flex gap-3 flex-1">
@@ -776,20 +778,20 @@ export function BookingApproval({
           {activeTab === 'staff' ? (
             <>
               <CheckCircle className="w-16 h-16 text-green-300 mb-4" />
-              <p className="text-gray-700 mb-1">No pending bookings for staff review</p>
-              <p className="text-sm text-gray-500">All bookings have been processed or forwarded to supervisor.</p>
+              <p className="text-gray-700 mb-1">{msg('No pending bookings for staff review')}</p>
+              <p className="text-sm text-gray-500">{msg('All bookings have been processed or forwarded to supervisor.')}</p>
             </>
           ) : activeTab === 'supervisor' ? (
             <>
               <ShieldCheck className="w-16 h-16 text-amber-300 mb-4" />
-              <p className="text-gray-700 mb-1">No bookings awaiting supervisor approval</p>
-              <p className="text-sm text-gray-500">All staff-approved bookings have been reviewed by a supervisor.</p>
+              <p className="text-gray-700 mb-1">{msg('No bookings awaiting supervisor approval')}</p>
+              <p className="text-sm text-gray-500">{msg('All staff-approved bookings have been reviewed by a supervisor.')}</p>
             </>
           ) : (
             <>
               <ClipboardCheck className="w-16 h-16 text-gray-300 mb-4" />
-              <p className="text-gray-700 mb-1">No processed bookings found</p>
-              <p className="text-sm text-gray-500">Confirmed and rejected bookings will appear here.</p>
+              <p className="text-gray-700 mb-1">{msg('No processed bookings found')}</p>
+              <p className="text-sm text-gray-500">{msg('Confirmed and rejected bookings will appear here.')}</p>
             </>
           )}
         </Card>
@@ -818,18 +820,18 @@ export function BookingApproval({
                       />
                     </th>
                   )}
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Booking No.</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guest / Account</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Suite & Visit Date</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Flight</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guests</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Services</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Payment</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Booking No.')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Guest / Account')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Suite & Visit Date')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Flight')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Guests')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Services')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Payment')}</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Amount')}</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
                     {activeTab === 'processed' ? 'Status' : 'Submitted'}
                   </th>
-                  <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
@@ -856,7 +858,7 @@ export function BookingApproval({
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center gap-1.5">
                             {booking.isAdHoc && (
-                              <span title="Ad-hoc booking — submitted within cut-off period">
+                              <span title={msg('Ad-hoc booking — submitted within cut-off period')}>
                                 <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
                               </span>
                             )}
@@ -865,15 +867,15 @@ export function BookingApproval({
                           
                           <div className="mt-1 flex flex-wrap gap-1">
                             {booking.requestType === 'New Booking Request' ? (
-                              <Badge className="text-xs bg-green-100 text-green-700 border border-green-200">New</Badge>
+                              <Badge className="text-xs bg-green-100 text-green-700 border border-green-200">{msg('New')}</Badge>
                             ) : booking.requestType === 'Cancel' ? (
-                              <Badge className="text-xs bg-red-100 text-red-700 border border-red-200">Cancel</Badge>
+                              <Badge className="text-xs bg-red-100 text-red-700 border border-red-200">{msg('Cancel')}</Badge>
                             ) : (
-                              <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-200">Edit</Badge>
+                              <Badge className="text-xs bg-orange-100 text-orange-700 border border-orange-200">{msg('Edit')}</Badge>
                             )}
                             {activeTab === 'supervisor' && (
                               <Badge className="text-xs bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5">
-                                <ShieldCheck className="w-3 h-3" /> Awaiting Final
+                                <ShieldCheck className="w-3 h-3" /> {msg('Awaiting Final')}
                               </Badge>
                             )}
                           </div>
@@ -958,8 +960,8 @@ export function BookingApproval({
                         {/* Services */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex gap-1.5">
-                            {booking.hasLimousine && <Car className="w-4 h-4 text-purple-500" title="Limousine Transfer" />}
-                            {booking.hasShopping && <ShoppingBag className="w-4 h-4 text-green-500" title="In-lounge Shopping" />}
+                            {booking.hasLimousine && <Car className="w-4 h-4 text-purple-500" title={msg('Limousine Transfer')} />}
+                            {booking.hasShopping && <ShoppingBag className="w-4 h-4 text-green-500" title={msg('In-lounge Shopping')} />}
                             {!booking.hasLimousine && !booking.hasShopping && <span className="text-xs text-gray-400">—</span>}
                           </div>
                         </td>
@@ -992,12 +994,12 @@ export function BookingApproval({
                             statusRecord.status === 'confirmed' ? (
                               <div className="flex items-center gap-1.5 text-green-700">
                                 <CheckCircle className="w-4 h-4" />
-                                <span className="font-medium">Confirmed</span>
+                                <span className="font-medium">{msg('Confirmed')}</span>
                               </div>
                             ) : (
                               <div className="flex items-center gap-1.5 text-red-600">
                                 <XCircle className="w-4 h-4" />
-                                <span className="font-medium">Rejected</span>
+                                <span className="font-medium">{msg('Rejected')}</span>
                               </div>
                             )
                           ) : (
@@ -1018,7 +1020,7 @@ export function BookingApproval({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-gray-500 hover:text-gray-800"
-                              title="Toggle Details"
+                              title={msg('Toggle Details')}
                               onClick={() => setExpandedId(expandedId === booking.id ? null : booking.id)}
                             >
                               {expandedId === booking.id
@@ -1030,7 +1032,7 @@ export function BookingApproval({
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600"
-                                title="View Full Detail"
+                                title={msg('View Full Detail')}
                                 onClick={() => onViewDetail(booking.id)}
                               >
                                 <Eye className="w-4 h-4" />
@@ -1047,8 +1049,8 @@ export function BookingApproval({
                                 onClick={() => startReview(booking, activeTab === 'supervisor' ? 'supervisor' : 'staff')}
                               >
                                 {activeTab === 'supervisor'
-                                  ? <><ShieldCheck className="w-3 h-3" /> Final Review</>
-                                  : <><FileEdit className="w-3 h-3" /> Review</>}
+                                  ? <><ShieldCheck className="w-3 h-3" /> {msg('Final Review')}</>
+                                  : <><FileEdit className="w-3 h-3" /> {msg('Review')}</>}
                               </Button>
                             )}
                           </div>
@@ -1062,11 +1064,11 @@ export function BookingApproval({
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                               {/* Booking Info */}
                               <div className="space-y-2">
-                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Booking Info</p>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Booking No.:</span><span>{booking.bookingNo}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Booking Type:</span><span>{booking.bookingType}</span></div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{msg('Booking Info')}</p>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Booking No.:')}</span><span>{booking.bookingNo}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Booking Type:')}</span><span>{booking.bookingType}</span></div>
                                 <div className="flex gap-2 items-start">
-                                  <span className="text-gray-500 w-28 flex-shrink-0">Suite:</span>
+                                  <span className="text-gray-500 w-28 flex-shrink-0">{msg('Suite:')}</span>
                                   <span className="font-medium flex-1">
                                     {booking.suite}
                                     {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
@@ -1085,25 +1087,25 @@ export function BookingApproval({
                                     )}
                                   </span>
                                 </div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Visit Date/Time:</span><span>{booking.dateTime}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Ad-hoc:</span><span>{booking.isAdHoc ? <span className="text-amber-600">Yes — within cut-off period</span> : 'No'}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Visit Date/Time:')}</span><span>{booking.dateTime}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Ad-hoc:')}</span><span>{booking.isAdHoc ? <span className="text-amber-600">{msg('Yes — within cut-off period')}</span> : 'No'}</span></div>
                               </div>
                               {/* Guest & Account */}
                               <div className="space-y-2">
-                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Guest & Account</p>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Guest Name:</span><span>{booking.guestName}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Account No.:</span><span>{booking.accountNo}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Account Type:</span><span>{booking.accountType}</span></div>
-                                {booking.membershipTier && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Membership:</span><span>{booking.membershipTier}</span></div>}
-                                {booking.companyName && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Company:</span><span>{booking.companyName}</span></div>}
-                                {booking.agencyName && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Agency:</span><span>{booking.agencyName} ({booking.agencyDiscountRate}% off)</span></div>}
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Total Guests:</span><span>{booking.numberOfGuests} pax{booking.nonFlyingGuests > 0 ? ` (${booking.nonFlyingGuests} non-flying)` : ''}</span></div>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{msg('Guest & Account')}</p>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Guest Name:')}</span><span>{booking.guestName}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Account No.:')}</span><span>{booking.accountNo}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Account Type:')}</span><span>{booking.accountType}</span></div>
+                                {booking.membershipTier && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Membership:')}</span><span>{booking.membershipTier}</span></div>}
+                                {booking.companyName && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Company:')}</span><span>{booking.companyName}</span></div>}
+                                {booking.agencyName && <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Agency:')}</span><span>{booking.agencyName} ({booking.agencyDiscountRate}% off)</span></div>}
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Total Guests:')}</span><span>{booking.numberOfGuests} pax{booking.nonFlyingGuests > 0 ? ` (${booking.nonFlyingGuests} non-flying)` : ''}</span></div>
                               </div>
                               {/* Payment & Special */}
                               <div className="space-y-2">
-                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Payment & Notes</p>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Payment Mode:</span><span>{booking.paymentMode}</span></div>
-                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">Amount:</span>
+                                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{msg('Payment & Notes')}</p>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Payment Mode:')}</span><span>{booking.paymentMode}</span></div>
+                                <div className="flex gap-2"><span className="text-gray-500 w-28 flex-shrink-0">{msg('Amount:')}</span>
                                   <span>
                                     {booking.agencyDiscountRate && booking.originalAmountValue
                                       ? `${booking.amount} (orig. HK$${booking.originalAmountValue.toLocaleString()})`
@@ -1111,7 +1113,7 @@ export function BookingApproval({
                                   </span>
                                 </div>
                                 <div className="flex gap-2">
-                                  <span className="text-gray-500 w-28 flex-shrink-0">Services:</span>
+                                  <span className="text-gray-500 w-28 flex-shrink-0">{msg('Services:')}</span>
                                   <span>
                                     {[booking.hasLimousine && 'Limousine', booking.hasShopping && 'Shopping'].filter(Boolean).join(', ') || '—'}
                                   </span>
@@ -1119,7 +1121,7 @@ export function BookingApproval({
                                 {activeTab === 'supervisor' && (
                                   <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex gap-2">
                                     <ShieldCheck className="w-4 h-4 flex-shrink-0 text-amber-600 mt-0.5" />
-                                    <span><strong>Staff Review:</strong> Approved — awaiting your final confirmation.</span>
+                                    <span><strong>{msg('Staff Review:')}</strong> {msg('Approved — awaiting your final confirmation.')}</span>
                                   </div>
                                 )}
                                 {activeTab === 'processed' && statusRecord && (
@@ -1136,7 +1138,7 @@ export function BookingApproval({
                                 {booking.specialRequests && (
                                   <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800 flex gap-2">
                                     <Info className="w-4 h-4 flex-shrink-0 text-yellow-600 mt-0.5" />
-                                    <span><strong>Special Request:</strong> {booking.specialRequests}</span>
+                                    <span><strong>{msg('Special Request:')}</strong> {booking.specialRequests}</span>
                                   </div>
                                 )}
                               </div>
@@ -1167,7 +1169,7 @@ export function BookingApproval({
             </DialogTitle>
             {isSupervisorTab && (
               <DialogDescription>
-                The following bookings will be confirmed and guests notified by email.
+                {msg('The following bookings will be confirmed and guests notified by email.')}
               </DialogDescription>
             )}
           </DialogHeader>
@@ -1191,14 +1193,14 @@ export function BookingApproval({
             </div>
           )}
           <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setBatchApproveOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setBatchApproveOpen(false)}>{msg('Cancel')}</Button>
             <Button
               className={`gap-2 text-white ${isSupervisorTab ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}`}
               onClick={handleBatchApprove}
             >
               {isSupervisorTab
-                ? <><CheckCircle className="w-4 h-4" /> Confirm Final Approval</>
-                : <><ShieldCheck className="w-4 h-4" /> Forward to Supervisor</>}
+                ? <><CheckCircle className="w-4 h-4" /> {msg('Confirm Final Approval')}</>
+                : <><ShieldCheck className="w-4 h-4" /> {msg('Forward to Supervisor')}</>}
             </Button>
           </div>
         </DialogContent>

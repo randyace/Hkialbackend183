@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { QREntryScanner } from './QREntryScanner';
 import { getPreOrder } from './preOrderStore';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const VENUES = [
@@ -199,6 +200,7 @@ export function BookingSchedules({
   pageTitle = 'Booking Schedules',
   pageSubtitle = 'Daily schedule view across all suites and lounge areas',
 }: BookingSchedulesProps = {}) {
+  const msg = useMsg();
   const bookings: ScheduleBooking[] = bookingsProp?.length ? bookingsProp : ALL_BOOKINGS;
   const today = todayISO();
   const [selectedDate, setSelectedDate]   = useState(today);
@@ -292,7 +294,7 @@ export function BookingSchedules({
           onClick={() => setQrScannerOpen(true)}
         >
           <QrCode className="w-4 h-4" />
-          Scan QR for Entry
+          {msg('Scan QR for Entry')}
         </Button>
       </div>
 
@@ -334,7 +336,7 @@ export function BookingSchedules({
                 className="h-9 text-blue-600 border-blue-300 hover:bg-blue-50"
                 onClick={() => setSelectedDate(today)}
               >
-                Today
+                {msg('Today')}
               </Button>
             )}
           </div>
@@ -351,12 +353,12 @@ export function BookingSchedules({
               }}
             >
               <SelectTrigger className="w-40">
-                <SelectValue placeholder="All Types" />
+                <SelectValue placeholder={msg('All Types')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="suites">Suites</SelectItem>
-                <SelectItem value="tables">Tables</SelectItem>
+                <SelectItem value="all">{msg('All Types')}</SelectItem>
+                <SelectItem value="suites">{msg('Suites')}</SelectItem>
+                <SelectItem value="tables">{msg('Tables')}</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -364,10 +366,10 @@ export function BookingSchedules({
           {/* Venue filter */}
           <Select value={venueFilter} onValueChange={setVenueFilter}>
             <SelectTrigger className="w-52">
-              <SelectValue placeholder="All Venues" />
+              <SelectValue placeholder={msg('All Venues')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Venues</SelectItem>
+              <SelectItem value="all">{msg('All Venues')}</SelectItem>
               {filteredVenuePool.map(v => (
                 <SelectItem key={v} value={v}>{v}</SelectItem>
               ))}
@@ -377,10 +379,10 @@ export function BookingSchedules({
           {/* Status filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-52">
-              <SelectValue placeholder="All Statuses" />
+              <SelectValue placeholder={msg('All Statuses')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Booking Statuses</SelectItem>
+              <SelectItem value="all">{msg('All Booking Statuses')}</SelectItem>
               {ALL_STATUSES.map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
@@ -398,19 +400,19 @@ export function BookingSchedules({
         <div className="grid grid-cols-4 gap-4">
           <Card className="p-4 bg-blue-50 border-blue-200">
             <p className="text-2xl text-blue-700">{total}</p>
-            <p className="text-sm text-blue-600">Total Bookings</p>
+            <p className="text-sm text-blue-600">{msg('Total Bookings')}</p>
           </Card>
           <Card className="p-4 bg-emerald-50 border-emerald-200">
             <p className="text-2xl text-emerald-700">{confirmed}</p>
-            <p className="text-sm text-emerald-600">Confirmed</p>
+            <p className="text-sm text-emerald-600">{msg('Confirmed')}</p>
           </Card>
           <Card className="p-4 bg-amber-50 border-amber-200">
             <p className="text-2xl text-amber-700">{pending}</p>
-            <p className="text-sm text-amber-600">Pending</p>
+            <p className="text-sm text-amber-600">{msg('Pending')}</p>
           </Card>
           <Card className="p-4 bg-gray-50 border-gray-200">
             <p className="text-2xl text-gray-700">{other}</p>
-            <p className="text-sm text-gray-600">Other</p>
+            <p className="text-sm text-gray-600">{msg('Other')}</p>
           </Card>
         </div>
       )}
@@ -419,19 +421,19 @@ export function BookingSchedules({
         <div className="grid grid-cols-4 gap-4">
           <Card className="p-4 bg-blue-50 border-blue-200">
             <p className="text-2xl text-blue-700">{total}</p>
-            <p className="text-sm text-blue-600">Total Suite Bookings</p>
+            <p className="text-sm text-blue-600">{msg('Total Suite Bookings')}</p>
           </Card>
           <Card className="p-4 bg-violet-50 border-violet-200">
             <p className="text-2xl text-violet-700">{vipCount}</p>
-            <p className="text-sm text-violet-600">VIP Suite Bookings</p>
+            <p className="text-sm text-violet-600">{msg('VIP Suite Bookings')}</p>
           </Card>
           <Card className="p-4 bg-indigo-50 border-indigo-200">
             <p className="text-2xl text-indigo-700">{execCount}</p>
-            <p className="text-sm text-indigo-600">Executive Suite Bookings</p>
+            <p className="text-sm text-indigo-600">{msg('Executive Suite Bookings')}</p>
           </Card>
           <Card className="p-4 bg-sky-50 border-sky-200">
             <p className="text-2xl text-sky-700">{busOtherCount}</p>
-            <p className="text-sm text-sky-600">Business / Other Suites</p>
+            <p className="text-sm text-sky-600">{msg('Business / Other Suites')}</p>
           </Card>
         </div>
       )}
@@ -440,26 +442,26 @@ export function BookingSchedules({
         <div className="grid grid-cols-4 gap-4">
           <Card className="p-4 bg-blue-50 border-blue-200">
             <p className="text-2xl text-blue-700">{total}</p>
-            <p className="text-sm text-blue-600">Total Table Bookings</p>
+            <p className="text-sm text-blue-600">{msg('Total Table Bookings')}</p>
           </Card>
           <Card className="p-4 bg-teal-50 border-teal-200">
             <p className="text-2xl text-teal-700">{totalPax}</p>
-            <p className="text-sm text-teal-600">Total Pax</p>
+            <p className="text-sm text-teal-600">{msg('Total Pax')}</p>
           </Card>
           <Card className="p-4 bg-orange-50 border-orange-200">
             <p className="text-2xl text-orange-700">{travelAgencyCount}</p>
-            <p className="text-sm text-orange-600">Agency Groups</p>
+            <p className="text-sm text-orange-600">{msg('Agency Groups')}</p>
           </Card>
           <Card className="p-4 bg-emerald-50 border-emerald-200">
             <p className="text-2xl text-emerald-700">{avgGroupSize}</p>
-            <p className="text-sm text-emerald-600">Avg. Group Size</p>
+            <p className="text-sm text-emerald-600">{msg('Avg. Group Size')}</p>
           </Card>
         </div>
       )}
 
       {/* ── Status legend ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-xs text-gray-500 mr-1">Legend:</span>
+        <span className="text-xs text-gray-500 mr-1">{msg('Legend:')}</span>
         {ALL_STATUSES.map(s => (
           <span
             key={s}
@@ -493,7 +495,7 @@ export function BookingSchedules({
                   className="flex-shrink-0 sticky left-0 z-30 bg-gray-50 border-r border-gray-200 flex items-center justify-center"
                   style={{ width: TIME_WIDTH, minHeight: 52 }}
                 >
-                  <span className="text-xs text-gray-400 uppercase tracking-wide">Time</span>
+                  <span className="text-xs text-gray-400 uppercase tracking-wide">{msg('Time')}</span>
                 </div>
 
                 {/* Venue headers */}
@@ -628,7 +630,7 @@ export function BookingSchedules({
             {/* Header */}
             <div className="flex items-start justify-between px-5 py-4 border-b">
               <div>
-                <p className="text-xs text-gray-500 mb-0.5">Booking Details</p>
+                <p className="text-xs text-gray-500 mb-0.5">{msg('Booking Details')}</p>
                 <p className="font-mono text-sm text-blue-700">{activeBooking.bookingNo}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -663,45 +665,45 @@ export function BookingSchedules({
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {/* Venue */}
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Venue</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Venue')}</label>
                   <p className="text-gray-800">{activeBooking.venue}</p>
                 </div>
                 {/* Date */}
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Date</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Date')}</label>
                   <p className="text-gray-800">{formatDate(activeBooking.date)}</p>
                 </div>
                 {/* Time */}
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Duration
+                    <Clock className="w-3 h-3" /> {msg('Duration')}
                   </label>
                   <p className="text-gray-800">{activeBooking.startTime} – {activeBooking.endTime}</p>
                 </div>
                 {/* Guests */}
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Users className="w-3 h-3" /> Guests
+                    <Users className="w-3 h-3" /> {msg('Guests')}
                   </label>
                   <p className="text-gray-800">{activeBooking.numberOfGuests} pax</p>
                 </div>
                 {/* Flight */}
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Plane className="w-3 h-3" /> Flight
+                    <Plane className="w-3 h-3" /> {msg('Flight')}
                   </label>
                   <p className="text-gray-800">{activeBooking.flightNo} · {activeBooking.flightTime}</p>
                 </div>
                 {/* Payment */}
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" /> Payment
+                    <CreditCard className="w-3 h-3" /> {msg('Payment')}
                   </label>
                   <p className="text-gray-800">{activeBooking.paymentMode}</p>
                 </div>
                 {/* Amount */}
                 <div className="col-span-2">
-                  <label className="text-xs text-gray-500 mb-[10px] block">Amount</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Amount')}</label>
                   <p className="text-gray-800">{activeBooking.amount}</p>
                 </div>
               </div>
@@ -710,7 +712,7 @@ export function BookingSchedules({
             {/* Footer */}
             <div className="px-5 py-3 border-t bg-gray-50 rounded-b-xl flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setActiveBooking(null)}>
-                Close
+                {msg('Close')}
               </Button>
               {/* Pre Order button */}
               <Button
@@ -727,7 +729,7 @@ export function BookingSchedules({
                 Pre Order
                 {getPreOrder(activeBooking.bookingNo) && (
                   <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px]">
-                    Saved
+                    {msg('Saved')}
                   </span>
                 )}
               </Button>
@@ -740,7 +742,7 @@ export function BookingSchedules({
                 }}
               >
                 <ExternalLink className="w-3.5 h-3.5" />
-                View Booking Details
+                {msg('View Booking Details')}
               </Button>
             </div>
           </div>

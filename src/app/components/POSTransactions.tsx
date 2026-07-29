@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Search, ChevronDown, ChevronRight, Clock, Pencil } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosTransactionGuestRow {
   name: string;
@@ -144,15 +145,16 @@ function toggleExpandedRow(expandedRows: number[], bookingId: number): number[] 
 }
 
 function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow }) {
+  const msg = useMsg();
   return (
     <div className="px-6 py-5 space-y-6">
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-          Guest Information &amp; Dietary
+          {msg('Guest Information &amp; Dietary')}
         </h3>
 
         {booking.guests.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-500">No guest information recorded for this booking.</p>
+          <p className="mt-3 text-sm text-gray-500">{msg('No guest information recorded for this booking.')}</p>
         ) : (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {booking.guests.map((guest, index) => {
@@ -171,9 +173,9 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                       <p className="text-sm text-gray-500 mt-0.5">Age: {formatGuestAge(guest)}</p>
                     </div>
                     {guest.isMainMember ? (
-                      <Badge variant="outline" className="text-xs shrink-0">Main Member</Badge>
+                      <Badge variant="outline" className="text-xs shrink-0">{msg('Main Member')}</Badge>
                     ) : guest.isSpouse ? (
-                      <Badge variant="outline" className="text-xs shrink-0">Spouse</Badge>
+                      <Badge variant="outline" className="text-xs shrink-0">{msg('Spouse')}</Badge>
                     ) : null}
                   </div>
 
@@ -205,7 +207,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                     ) : null}
 
                     {!hasDietaryNeeds ? (
-                      <p className="text-sm text-gray-400">No dietary restrictions</p>
+                      <p className="text-sm text-gray-400">{msg('No dietary restrictions')}</p>
                     ) : null}
                   </div>
                 </div>
@@ -217,11 +219,11 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
 
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-          Suites &amp; Order Items
+          {msg('Suites &amp; Order Items')}
         </h3>
 
         {booking.posOrders.length === 0 ? (
-          <p className="text-sm text-gray-500">No POS orders for this booking.</p>
+          <p className="text-sm text-gray-500">{msg('No POS orders for this booking.')}</p>
         ) : (
           <div className="space-y-4">
             {booking.posOrders.map((order) => (
@@ -236,16 +238,16 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                   <thead className="bg-gray-50 border-b border-gray-100">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Item Name
+                        {msg('Item Name')}
                       </th>
                       <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                        Qty
+                        {msg('Qty')}
                       </th>
                       <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
-                        Status
+                        {msg('Status')}
                       </th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                        Time
+                        {msg('Time')}
                       </th>
                     </tr>
                   </thead>
@@ -253,7 +255,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                     {order.items.length === 0 ? (
                       <tr>
                         <td colSpan={4} className="px-4 py-3 text-center text-gray-400">
-                          No items
+                          {msg('No items')}
                         </td>
                       </tr>
                     ) : (
@@ -292,7 +294,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                             <td className="px-4 py-2.5 text-center align-top">
                               {isCancelled ? (
                                 <Badge className="bg-gray-100 text-gray-600 border border-gray-200">
-                                  Cancelled
+                                  {msg('Cancelled')}
                                 </Badge>
                               ) : (
                                 <Badge className={getKitchenStatusBadgeClass(item.kitchenStatus)}>
@@ -337,14 +339,15 @@ export function PosTransactions({
   onSearchQueryChange,
   onFilter,
 }: PosTransactionsViewProps) {
+  const msg = useMsg();
   const [expandedRows, setExpandedRows] = useState<number[]>([]);
 
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">POS Transactions</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">{msg('POS Transactions')}</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Audit historical POS orders with booking context and line-item detail.
+          {msg('Audit historical POS orders with booking context and line-item detail.')}
         </p>
       </div>
 
@@ -353,7 +356,7 @@ export function PosTransactions({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
             <div>
               <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
+                {msg('Start Date')}
               </label>
               <input
                 id="start-date"
@@ -365,7 +368,7 @@ export function PosTransactions({
             </div>
             <div>
               <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
+                {msg('End Date')}
               </label>
               <input
                 id="end-date"
@@ -379,7 +382,7 @@ export function PosTransactions({
 
           <div className="flex-1">
             <label htmlFor="transaction-search" className="block text-sm font-medium text-gray-700 mb-1">
-              Search
+              {msg('Search')}
             </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -393,7 +396,7 @@ export function PosTransactions({
                     onFilter?.();
                   }
                 }}
-                placeholder="Guest name or booking ref..."
+                placeholder={msg('Guest name or booking ref...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -401,7 +404,7 @@ export function PosTransactions({
 
           <Button onClick={onFilter} className="gap-2 shrink-0">
             <Search className="w-4 h-4" />
-            Filter / Search
+            {msg('Filter / Search')}
           </Button>
         </div>
       </Card>
@@ -414,11 +417,11 @@ export function PosTransactions({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Date</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Booking Ref</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Main Guest</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Total Suites</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Total Orders</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Date')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Booking Ref')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Main Guest')}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">{msg('Total Suites')}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">{msg('Total Orders')}</th>
                 <th className="px-4 py-3 w-12" />
               </tr>
             </thead>
@@ -426,13 +429,13 @@ export function PosTransactions({
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
-                    Loading transactions...
+                    {msg('Loading transactions...')}
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
-                    No transactions found.
+                    {msg('No transactions found.')}
                   </td>
                 </tr>
               ) : (

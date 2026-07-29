@@ -29,6 +29,7 @@ import { MergeCheckoutModal } from '@/components/common/MergeCheckoutModal';
 import { ReservedSuitePreorderPanel } from '@/components/pos/ReservedSuitePreorderPanel';
 import { getApiErrorMessage } from '@/lib/api/errors';
 import { toast } from 'sonner';
+import { msg } from '@/i18n/msgFallback';
 
 type SidebarView =
   | 'LIST'
@@ -574,7 +575,7 @@ export function SuiteSidebar({
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-            aria-label="Close sidebar"
+            aria-label={msg('Close sidebar')}
           >
             <X className="h-5 w-5" />
           </button>
@@ -637,7 +638,7 @@ export function SuiteSidebar({
 
                   <Input
                     type="text"
-                    placeholder="e.g. Latte, Massage, Fast Track"
+                    placeholder={msg('e.g. Latte, Massage, Fast Track')}
                     value={serviceSearch}
                     onChange={(event) => setServiceSearch(event.target.value)}
                     className="mt-4"

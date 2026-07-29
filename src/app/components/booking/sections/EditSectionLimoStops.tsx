@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../ui/select';
 import type { BookingFormData, EditLimoStop } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionLimoStopsProps {
   formData: BookingFormData;
@@ -32,6 +33,7 @@ export function EditSectionLimoStops({
   formData,
   onFormChange,
 }: EditSectionLimoStopsProps) {
+  const msg = useMsg();
   const stops = formData.limoStops ?? [];
 
   const addStop = () => {
@@ -54,7 +56,7 @@ export function EditSectionLimoStops({
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
-        <Car className="w-4 h-4" /> Limousine Stops
+        <Car className="w-4 h-4" /> {msg('Limousine Stops')}
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-row Pick-up / Destination with location. The first stop should be a Pick-up;
@@ -73,12 +75,12 @@ export function EditSectionLimoStops({
             onClick={addStop}
             className="text-xs"
           >
-            <Plus className="w-3 h-3 mr-1" /> Add Stop
+            <Plus className="w-3 h-3 mr-1" /> {msg('Add Stop')}
           </Button>
         </div>
         {stops.length === 0 ? (
           <p className="text-xs text-gray-400 italic">
-            No limo stops. Click "Add Stop" to add a pick-up or destination.
+            {msg('No limo stops. Click "Add Stop" to add a pick-up or destination.')}
           </p>
         ) : (
           <div className="space-y-2">
@@ -91,15 +93,15 @@ export function EditSectionLimoStops({
                 >
                   <SelectTrigger className="w-[130px] shrink-0"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Pick-up">Pick-up</SelectItem>
-                    <SelectItem value="Destination">Destination</SelectItem>
+                    <SelectItem value="Pick-up">{msg('Pick-up')}</SelectItem>
+                    <SelectItem value="Destination">{msg('Destination')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <input
                   type="text"
                   value={s.location}
                   onChange={e => updateStop(s.id, { location: e.target.value })}
-                  placeholder="Location (e.g. HKG Terminal 1)"
+                  placeholder={msg('Location (e.g. HKG Terminal 1)')}
                   className="flex-1 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
                 />
                 <Button

@@ -10,6 +10,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,7 @@ export function SupervisingApprovalReview({
   onRequestRevision = () => {},
   onReject = () => {},
 }: SupervisingApprovalReviewProps = {}) {
+  const msg = useMsg();
   // Fallback mock booking so the component renders standalone
   const booking: SupervisingBooking = bookingProp ?? {
     id: 1,
@@ -244,7 +246,7 @@ export function SupervisingApprovalReview({
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1>Review Staff Decision</h1>
+            <h1>{msg('Review Staff Decision')}</h1>
             <Badge className={`text-sm ${
               booking.requestType === 'New Booking'
                 ? 'bg-green-100 text-green-700 border border-green-200'
@@ -256,7 +258,7 @@ export function SupervisingApprovalReview({
             </Badge>
             {booking.isAdHoc && (
               <Badge className="text-sm bg-amber-100 text-amber-700 border border-amber-200">
-                Ad-hoc / Urgent
+                {msg('Ad-hoc / Urgent')}
               </Badge>
             )}
             <Badge className={`text-sm border ${staffApproved ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
@@ -289,12 +291,12 @@ export function SupervisingApprovalReview({
         {/* Step 2 — Supervisor review (active) */}
         <div className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium bg-[#0f2942] text-white shadow-sm flex-shrink-0">
           <ShieldCheck className="w-4 h-4" />
-          <span>Step 2: Supervisor Approval</span>
+          <span>{msg('Step 2: Supervisor Approval')}</span>
         </div>
         <div className="ml-auto text-xs hidden md:flex flex-col items-end gap-0.5"
           style={{ color: staffApproved ? '#166534' : '#991b1b' }}
         >
-          <span>Decision by <strong>{staffDecision.by}</strong> on {staffDecision.at}</span>
+          <span>{msg('Decision by')} <strong>{staffDecision.by}</strong> on {staffDecision.at}</span>
           {staffDecision.reason && (
             <span className="text-xs opacity-75">Reason: {staffDecision.reason}</span>
           )}
@@ -308,7 +310,7 @@ export function SupervisingApprovalReview({
           : <ThumbsDown className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />}
         <div>
           <p className={`text-sm font-medium ${staffApproved ? 'text-emerald-900' : 'text-red-900'}`}>
-            Staff Decision: <span className="font-semibold">{staffDecision.decision}</span>
+            {msg('Staff Decision:')} <span className="font-semibold">{staffDecision.decision}</span>
             {' '}— {staffApproved
               ? 'Staff has approved this booking request. Supervisor confirmation is required to finalise.'
               : 'Staff has rejected this booking request. Supervisor must endorse or override this decision.'}
@@ -333,14 +335,14 @@ export function SupervisingApprovalReview({
             {/* Invoice Header */}
             <div className="bg-[#0f2942] text-white px-8 py-6 flex items-start justify-between">
               <div>
-                <p className="text-xl font-semibold tracking-wide">HKIA VIP LOUNGE</p>
-                <p className="text-blue-200 text-sm mt-0.5">Hong Kong International Airport</p>
-                <p className="text-blue-200 text-sm">Terminal 1, Departures Level 7</p>
+                <p className="text-xl font-semibold tracking-wide">{msg('HKIA VIP LOUNGE')}</p>
+                <p className="text-blue-200 text-sm mt-0.5">{msg('Hong Kong International Airport')}</p>
+                <p className="text-blue-200 text-sm">{msg('Terminal 1, Departures Level 7')}</p>
               </div>
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end mb-1">
                   <Receipt className="w-4 h-4 text-blue-300" />
-                  <span className="text-blue-200 text-sm">TAX INVOICE</span>
+                  <span className="text-blue-200 text-sm">{msg('TAX INVOICE')}</span>
                 </div>
                 <p className="text-lg font-mono font-semibold">{booking.invoiceNo}</p>
                 <p className="text-blue-300 text-xs mt-1">Invoice Date: {booking.invoiceDate}</p>
@@ -351,7 +353,7 @@ export function SupervisingApprovalReview({
             {/* Bill To + Booking Details */}
             <div className="px-8 py-5 grid grid-cols-2 gap-6 bg-gray-50 border-b">
               <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Bill To</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">{msg('Bill To')}</p>
                 <p className="font-semibold text-gray-900">{booking.guestName}</p>
                 {booking.companyName && <p className="text-sm text-gray-600">{booking.companyName}</p>}
                 {booking.agencyName && <p className="text-sm text-purple-600">{booking.agencyName}</p>}
@@ -368,10 +370,10 @@ export function SupervisingApprovalReview({
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Service Details</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">{msg('Service Details')}</p>
                 <div className="space-y-1 text-sm">
                   <div className="flex gap-2 items-start">
-                    <span className="text-gray-500 w-24 flex-shrink-0">Suite:</span>
+                    <span className="text-gray-500 w-24 flex-shrink-0">{msg('Suite:')}</span>
                     <span className="font-medium flex-1">
                       {booking.suite}
                       {booking.assignedSuiteNames && booking.assignedSuiteNames.length > 0 && (
@@ -391,18 +393,18 @@ export function SupervisingApprovalReview({
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-500 w-24 flex-shrink-0">Visit Date:</span>
+                    <span className="text-gray-500 w-24 flex-shrink-0">{msg('Visit Date:')}</span>
                     <span>{booking.dateTime}</span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-500 w-24 flex-shrink-0">Flight:</span>
+                    <span className="text-gray-500 w-24 flex-shrink-0">{msg('Flight:')}</span>
                     <span className="flex items-center gap-1">
                       <Plane className={`w-3 h-3 text-gray-400 ${booking.flightType === 'Arrival' ? 'rotate-[-45deg]' : 'rotate-45'}`} />
                       {booking.flightNo} · {booking.flightTime}
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    <span className="text-gray-500 w-24 flex-shrink-0">Payment:</span>
+                    <span className="text-gray-500 w-24 flex-shrink-0">{msg('Payment:')}</span>
                     <Badge className={`text-xs ${paymentModeBadgeClass(booking.paymentMode)}`}>
                       {booking.paymentMode}
                     </Badge>
@@ -416,10 +418,10 @@ export function SupervisingApprovalReview({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-200">
-                    <th className="text-left py-2 text-xs text-gray-500 uppercase tracking-wider font-medium">Description</th>
-                    <th className="text-center py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-12">Qty</th>
-                    <th className="text-right py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-28">Unit Price</th>
-                    <th className="text-right py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-28">Amount</th>
+                    <th className="text-left py-2 text-xs text-gray-500 uppercase tracking-wider font-medium">{msg('Description')}</th>
+                    <th className="text-center py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-12">{msg('Qty')}</th>
+                    <th className="text-right py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-28">{msg('Unit Price')}</th>
+                    <th className="text-right py-2 text-xs text-gray-500 uppercase tracking-wider font-medium w-28">{msg('Amount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -439,7 +441,7 @@ export function SupervisingApprovalReview({
             <div className="px-8 pb-6">
               <div className="ml-auto w-72 space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Subtotal</span>
+                  <span>{msg('Subtotal')}</span>
                   <span>HK${booking.subtotal.toLocaleString()}</span>
                 </div>
                 {booking.agencyDiscount > 0 && (
@@ -462,16 +464,16 @@ export function SupervisingApprovalReview({
                 )}
                 {(booking.agencyDiscount > 0 || booking.membershipDiscount > 0) && (
                   <div className="flex justify-between text-sm text-gray-600 border-t pt-2">
-                    <span>After Discount</span>
+                    <span>{msg('After Discount')}</span>
                     <span>HK${(booking.subtotal - booking.agencyDiscount - booking.membershipDiscount).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Service Charge (10%)</span>
+                  <span>{msg('Service Charge (10%)')}</span>
                   <span>+HK${booking.serviceCharge.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between border-t-2 border-gray-300 pt-2 mt-2">
-                  <span className="font-semibold text-gray-900 text-base">TOTAL</span>
+                  <span className="font-semibold text-gray-900 text-base">{msg('TOTAL')}</span>
                   <span className="font-bold text-[#0f2942] text-xl">HK${booking.totalAmount.toLocaleString()}</span>
                 </div>
               </div>
@@ -479,8 +481,8 @@ export function SupervisingApprovalReview({
 
             {/* Invoice Footer */}
             <div className="px-8 py-4 bg-gray-50 border-t text-xs text-gray-400 flex items-center justify-between">
-              <span>This invoice is computer-generated. No signature required.</span>
-              <span>HKIA VIP Lounge · hkiavip@hkairport.com · (852) 2188 0000</span>
+              <span>{msg('This invoice is computer-generated. No signature required.')}</span>
+              <span>{msg('HKIA VIP Lounge · hkiavip@hkairport.com · (852) 2188 0000')}</span>
             </div>
           </Card>
 
@@ -488,11 +490,11 @@ export function SupervisingApprovalReview({
           <Card className="p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-gray-400" />
-              Booking Summary
+              {msg('Booking Summary')}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Guests</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Guests')}</p>
                 <div className="flex items-center gap-1">
                   <User className="w-4 h-4 text-gray-400" />
                   <span>{booking.numberOfGuests} pax
@@ -501,42 +503,42 @@ export function SupervisingApprovalReview({
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Limousine Transfer</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Limousine Transfer')}</p>
                 {booking.hasLimousine
-                  ? <span className="flex items-center gap-1 text-purple-600"><Car className="w-4 h-4" /> Included</span>
-                  : <span className="text-gray-400">Not included</span>}
+                  ? <span className="flex items-center gap-1 text-purple-600"><Car className="w-4 h-4" /> {msg('Included')}</span>
+                  : <span className="text-gray-400">{msg('Not included')}</span>}
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>In-lounge Shopping</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('In-lounge Shopping')}</p>
                 {booking.hasShopping
-                  ? <span className="flex items-center gap-1 text-green-600"><ShoppingBag className="w-4 h-4" /> Included</span>
-                  : <span className="text-gray-400">Not included</span>}
+                  ? <span className="flex items-center gap-1 text-green-600"><ShoppingBag className="w-4 h-4" /> {msg('Included')}</span>
+                  : <span className="text-gray-400">{msg('Not included')}</span>}
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Booking Type</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Booking Type')}</p>
                 <span>{booking.bookingType}</span>
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Ad-hoc Booking</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Ad-hoc Booking')}</p>
                 {booking.isAdHoc
-                  ? <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> Yes</span>
-                  : <span className="text-gray-500">No</span>}
+                  ? <span className="text-amber-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" /> {msg('Yes')}</span>
+                  : <span className="text-gray-500">{msg('No')}</span>}
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Route</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Route')}</p>
                 <p>{booking.flightOrigin || '—'} → {booking.flightDestination || '—'}</p>
               </div>
             </div>
             {booking.staffNotes && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800 flex gap-2">
                 <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-600" />
-                <div><strong className="block mb-0.5">Staff Notes:</strong>{booking.staffNotes}</div>
+                <div><strong className="block mb-0.5">{msg('Staff Notes:')}</strong>{booking.staffNotes}</div>
               </div>
             )}
             {booking.specialRequests && (
               <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 flex gap-2">
                 <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600" />
-                <div><strong className="block mb-0.5">Special Request:</strong>{booking.specialRequests}</div>
+                <div><strong className="block mb-0.5">{msg('Special Request:')}</strong>{booking.specialRequests}</div>
               </div>
             )}
           </Card>
@@ -548,16 +550,16 @@ export function SupervisingApprovalReview({
           <Card className="p-6">
             <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-gray-400" />
-              Price Summary
+              {msg('Price Summary')}
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Subtotal</span>
+                <span className="text-gray-500">{msg('Subtotal')}</span>
                 <span className="font-medium">HK${booking.subtotal.toLocaleString()}</span>
               </div>
               {booking.agencyDiscount > 0 && (
                 <div className="flex justify-between text-sm text-purple-600">
-                  <span>Agency Discount</span>
+                  <span>{msg('Agency Discount')}</span>
                   <span>−HK${booking.agencyDiscount.toLocaleString()}</span>
                 </div>
               )}
@@ -568,15 +570,15 @@ export function SupervisingApprovalReview({
                 </div>
               )}
               <div className="flex justify-between text-sm text-gray-500">
-                <span>Service Charge (10%)</span>
+                <span>{msg('Service Charge (10%)')}</span>
                 <span>+HK${booking.serviceCharge.toLocaleString()}</span>
               </div>
               <div className="border-t pt-3 flex justify-between">
-                <span className="font-semibold text-gray-900">Total Payable</span>
+                <span className="font-semibold text-gray-900">{msg('Total Payable')}</span>
                 <span className="font-bold text-[#0f2942] text-xl">HK${booking.totalAmount.toLocaleString()}</span>
               </div>
               <div className="pt-2">
-                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>Payment Mode</p>
+                <p className="text-xs text-gray-500 mb-1" style={{ marginBottom: '10px' }}>{msg('Payment Mode')}</p>
                 <Badge className={`text-sm ${paymentModeBadgeClass(booking.paymentMode)}`}>
                   {booking.paymentMode}
                 </Badge>
@@ -586,7 +588,7 @@ export function SupervisingApprovalReview({
 
           {/* Action Panel */}
           <Card className="p-6 sticky top-6">
-            <h2 className="text-lg font-medium mb-1">Supervisor Actions</h2>
+            <h2 className="text-lg font-medium mb-1">{msg('Supervisor Actions')}</h2>
             <p className="text-xs text-gray-500 mb-4">
               {staffApproved
                 ? 'Endorse or override the staff\'s approval of this booking.'
@@ -607,7 +609,7 @@ export function SupervisingApprovalReview({
                   className="w-full bg-amber-500 hover:bg-amber-600 text-white gap-2 h-11"
                   onClick={() => setReviewMode('revision')}
                 >
-                  <RefreshCcw className="w-4 h-4" /> Request Revision
+                  <RefreshCcw className="w-4 h-4" /> {msg('Request Revision')}
                 </Button>
                 <Button
                   className="w-full bg-red-600 hover:bg-red-700 text-white gap-2 h-11"
@@ -632,12 +634,12 @@ export function SupervisingApprovalReview({
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                    Supervisor Note <span className="text-gray-400 font-normal">(optional)</span>
+                    {msg('Supervisor Note')} <span className="text-gray-400 font-normal">{msg('(optional)')}</span>
                   </label>
                   <textarea
                     className="w-full border border-gray-300 rounded-md p-2 text-sm"
                     rows={3}
-                    placeholder="Add an optional note for the record…"
+                    placeholder={msg('Add an optional note for the record…')}
                     value={supervisorNote}
                     onChange={e => setSupervisorNote(e.target.value)}
                   />
@@ -651,7 +653,7 @@ export function SupervisingApprovalReview({
                     {staffApproved ? 'Confirm Approval' : 'Confirm Endorsement'}
                   </Button>
                   <Button variant="outline" className="w-full h-10" onClick={() => setReviewMode('view')}>
-                    Cancel
+                    {msg('Cancel')}
                   </Button>
                 </div>
               </div>
@@ -662,7 +664,7 @@ export function SupervisingApprovalReview({
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
-                    Revision Reason <span className="text-red-500">*</span>
+                    {msg('Revision Reason')} <span className="text-red-500">*</span>
                   </label>
                   <div className="space-y-2">
                     {REVISION_REASONS.map(reason => (
@@ -683,7 +685,7 @@ export function SupervisingApprovalReview({
                     <textarea
                       className="w-full border border-gray-300 rounded-md p-2 text-sm mt-2"
                       rows={3}
-                      placeholder="Describe the required revision…"
+                      placeholder={msg('Describe the required revision…')}
                       value={customRevisionReason}
                       onChange={e => setCustomRevisionReason(e.target.value)}
                     />
@@ -691,7 +693,7 @@ export function SupervisingApprovalReview({
                 </div>
                 <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
                   <RefreshCcw className="w-4 h-4 flex-shrink-0" />
-                  <span>Staff will be asked to revise and resubmit this invoice.</span>
+                  <span>{msg('Staff will be asked to revise and resubmit this invoice.')}</span>
                 </div>
                 <div className="space-y-2">
                   <Button
@@ -699,10 +701,10 @@ export function SupervisingApprovalReview({
                     disabled={!revisionValid}
                     onClick={handleRevision}
                   >
-                    <RefreshCcw className="w-4 h-4" /> Submit Revision Request
+                    <RefreshCcw className="w-4 h-4" /> {msg('Submit Revision Request')}
                   </Button>
                   <Button variant="outline" className="w-full h-10" onClick={() => setReviewMode('view')}>
-                    Cancel
+                    {msg('Cancel')}
                   </Button>
                 </div>
               </div>
@@ -714,7 +716,7 @@ export function SupervisingApprovalReview({
                 {staffApproved && (
                   <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
                     <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
-                    <span>You are <strong>overriding</strong> the staff's approval. This will reject the booking.</span>
+                    <span>{msg('You are')} <strong>overriding</strong> {msg('the staff\'s approval. This will reject the booking.')}</span>
                   </div>
                 )}
                 <div>
@@ -740,7 +742,7 @@ export function SupervisingApprovalReview({
                     <textarea
                       className="w-full border border-gray-300 rounded-md p-2 text-sm mt-2"
                       rows={3}
-                      placeholder="Describe the rejection reason…"
+                      placeholder={msg('Describe the rejection reason…')}
                       value={customRejectionReason}
                       onChange={e => setCustomRejectionReason(e.target.value)}
                     />
@@ -756,7 +758,7 @@ export function SupervisingApprovalReview({
                     {staffApproved ? 'Confirm Override & Reject' : 'Confirm Rejection'}
                   </Button>
                   <Button variant="outline" className="w-full h-10" onClick={() => setReviewMode('view')}>
-                    Cancel
+                    {msg('Cancel')}
                   </Button>
                 </div>
               </div>

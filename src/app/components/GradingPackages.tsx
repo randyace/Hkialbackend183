@@ -28,6 +28,7 @@ import {
 } from './ui/dialog';
 import { toast } from 'sonner';
 import { mockGradingPackagesData } from './__fixtures__/GradingPackages.mocks';
+import { useMsg } from '@/i18n/useMsg';
 
 // Suppress unused-import warning for Award (kept for future tiers)
 void Award;
@@ -89,6 +90,7 @@ export function GradingPackages({
   onSavePackage  = () => {},
   onToggleActive = () => {},
 }: GradingPackagesProps) {
+  const msg = useMsg();
 
   // ── Pure UI state (dialog / in-progress edits) ─────────────────────────────
   const [isDialogOpen,   setIsDialogOpen]   = useState(false);
@@ -155,9 +157,9 @@ export function GradingPackages({
     <div className="p-4 md:p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-gray-900 mb-1">Grading Package Management</h1>
+        <h1 className="text-gray-900 mb-1">{msg('Grading Package Management')}</h1>
         <p className="text-sm text-gray-500">
-          Configure membership tiers, pricing, booking credits, and benefits for individual customers.
+          {msg('Configure membership tiers, pricing, booking credits, and benefits for individual customers.')}
         </p>
       </div>
 
@@ -194,24 +196,24 @@ export function GradingPackages({
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <DollarSign className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                   <p className="text-sm text-gray-900">{pkg.currency} {pkg.price.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500">Price</p>
+                  <p className="text-xs text-gray-500">{msg('Price')}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <CreditCard className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                   <p className="text-sm text-gray-900">{pkg.bookingCredits === -1 ? '∞' : pkg.bookingCredits}</p>
-                  <p className="text-xs text-gray-500">Entries</p>
+                  <p className="text-xs text-gray-500">{msg('Entries')}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <Clock className="w-4 h-4 text-gray-500 mx-auto mb-1" />
                   <p className="text-sm text-gray-900">{pkg.validityMonths}mo</p>
-                  <p className="text-xs text-gray-500">Validity</p>
+                  <p className="text-xs text-gray-500">{msg('Validity')}</p>
                 </div>
               </div>
 
               {/* Benefits */}
               <div className="mb-4">
                 <p className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-                  <Gift className="w-3 h-3" /> Benefits
+                  <Gift className="w-3 h-3" /> {msg('Benefits')}
                 </p>
                 <ul className="space-y-1">
                   {pkg.benefits.map((benefit) => (
@@ -226,7 +228,7 @@ export function GradingPackages({
               {/* Edit action */}
               <Button variant="outline" size="sm" className="w-full" onClick={() => openEdit(pkg)}>
                 <Edit className="w-4 h-4 mr-2" />
-                Edit Package
+                {msg('Edit Package')}
               </Button>
             </div>
           </Card>
@@ -253,7 +255,7 @@ export function GradingPackages({
             <div className="space-y-5 py-2">
               {/* Description */}
               <div>
-                <Label htmlFor="edit-desc" className="mb-[10px] block">Package Description</Label>
+                <Label htmlFor="edit-desc" className="mb-[10px] block">{msg('Package Description')}</Label>
                 <Textarea
                   id="edit-desc"
                   value={editingPackage.description}
@@ -267,7 +269,7 @@ export function GradingPackages({
               {/* Pricing & Credits */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-price" className="mb-[10px] block">Price (HKD)</Label>
+                  <Label htmlFor="edit-price" className="mb-[10px] block">{msg('Price (HKD)')}</Label>
                   <Input
                     id="edit-price"
                     type="number"
@@ -279,7 +281,7 @@ export function GradingPackages({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
+                  <Label htmlFor="edit-validity" className="mb-[10px] block">{msg('Validity (Months)')}</Label>
                   <Input
                     id="edit-validity"
                     type="number"
@@ -293,7 +295,7 @@ export function GradingPackages({
                 </div>
                 <div>
                   <Label htmlFor="edit-credits" className="mb-[10px] block">
-                    Lounge Deluxe Entries (-1 = Unlimited)
+                    {msg('Lounge Deluxe Entries (-1 = Unlimited)')}
                   </Label>
                   <Input
                     id="edit-credits"
@@ -306,7 +308,7 @@ export function GradingPackages({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-ps-upgrades" className="mb-[10px] block">Free Premiere Suite Upgrades</Label>
+                  <Label htmlFor="edit-ps-upgrades" className="mb-[10px] block">{msg('Free Premiere Suite Upgrades')}</Label>
                   <Input
                     id="edit-ps-upgrades"
                     type="number"
@@ -321,7 +323,7 @@ export function GradingPackages({
 
               {/* Benefits */}
               <div>
-                <Label className="mb-[10px] block">Package Benefits</Label>
+                <Label className="mb-[10px] block">{msg('Package Benefits')}</Label>
                 <div className="space-y-2 mb-3">
                   {editingPackage.benefits.map((benefit) => (
                     <div key={benefit.id} className="flex gap-2 items-center">
@@ -345,13 +347,13 @@ export function GradingPackages({
                 {/* Add Benefit */}
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Add new benefit..."
+                    placeholder={msg('Add new benefit...')}
                     value={newBenefitText}
                     onChange={(e) => setNewBenefitText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addBenefit(); } }}
                   />
                   <Button variant="outline" size="sm" onClick={addBenefit} className="shrink-0">
-                    <Plus className="w-4 h-4 mr-1" /> Add
+                    <Plus className="w-4 h-4 mr-1" /> {msg('Add')}
                   </Button>
                 </div>
               </div>
@@ -365,15 +367,15 @@ export function GradingPackages({
                     setEditingPackage({ ...editingPackage, isActive: val })
                   }
                 />
-                <Label htmlFor="edit-active">Package is Active</Label>
+                <Label htmlFor="edit-active">{msg('Package is Active')}</Label>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Cancel</Button>
+            <Button variant="outline" onClick={closeDialog}>{msg('Cancel')}</Button>
             <Button onClick={handleSave} className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white">
-              Save Changes
+              {msg('Save Changes')}
             </Button>
           </DialogFooter>
         </DialogContent>

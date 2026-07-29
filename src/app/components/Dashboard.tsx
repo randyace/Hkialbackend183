@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * Dashboard.tsx — Integration-Ready Dumb UI Component
  *
@@ -26,6 +27,7 @@ import {
   DialogHeader, DialogTitle, DialogFooter,
 } from './ui/dialog';
 import { mockDashboardData } from './__fixtures__/Dashboard.mocks';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Union Types (all possible values — must match CI4 enum/string values) ────
 
@@ -226,10 +228,10 @@ const APPROVAL_TYPE_BADGE: Record<ApprovalType, string> = {
 };
 
 const LOUNGE_OCCUPANCY_CONFIG = [
-  { key: 'available'  as const, label: 'Available',   icon: CheckCircle, bg: 'bg-green-500',  ring: 'bg-green-50 border-green-200',  text: 'text-green-700'  },
-  { key: 'occupied'   as const, label: 'Occupied',    icon: Users,       bg: 'bg-red-500',    ring: 'bg-red-50 border-red-200',      text: 'text-red-700'    },
-  { key: 'foodServed' as const, label: 'Food Served', icon: Package,     bg: 'bg-yellow-500', ring: 'bg-yellow-50 border-yellow-200',text: 'text-yellow-700' },
-  { key: 'cleaning'   as const, label: 'Cleaning',    icon: Clock,       bg: 'bg-orange-500', ring: 'bg-orange-50 border-orange-200',text: 'text-orange-700' },
+  { key: 'available'  as const, label: msg('Available'),   icon: CheckCircle, bg: 'bg-green-500',  ring: 'bg-green-50 border-green-200',  text: 'text-green-700'  },
+  { key: 'occupied'   as const, label: msg('Occupied'),    icon: Users,       bg: 'bg-red-500',    ring: 'bg-red-50 border-red-200',      text: 'text-red-700'    },
+  { key: 'foodServed' as const, label: msg('Food Served'), icon: Package,     bg: 'bg-yellow-500', ring: 'bg-yellow-50 border-yellow-200',text: 'text-yellow-700' },
+  { key: 'cleaning'   as const, label: msg('Cleaning'),    icon: Clock,       bg: 'bg-orange-500', ring: 'bg-orange-50 border-orange-200',text: 'text-orange-700' },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -276,8 +278,8 @@ export function Dashboard({
 
       {/* ── Page heading ── */}
       <div>
-        <h1>Dashboard</h1>
-        <p className="text-gray-600">Welcome to HKIA VIP Lounge Backend System</p>
+        <h1>{msg('Dashboard')}</h1>
+        <p className="text-gray-600">{msg('Welcome to HKIA VIP Lounge Backend System')}</p>
       </div>
 
       {/* ── KPI Stats Grid ── */}
@@ -312,7 +314,7 @@ export function Dashboard({
 
       {/* ── Booking Status Overview ── */}
       <Card className="p-6">
-        <h3 className="mb-4">Booking Status Overview</h3>
+        <h3 className="mb-4">{msg('Booking Status Overview')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {bookingStatusStats.map((stat, i) => {
             const cfg  = BOOKING_STATUS_CONFIG[stat.variant];
@@ -341,12 +343,12 @@ export function Dashboard({
         {/* Recent Bookings */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3>Recent Bookings</h3>
+            <h3>{msg('Recent Bookings')}</h3>
             <button
               onClick={onViewAllBookings}
               className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
             >
-              View All
+              {msg('View All')}
             </button>
           </div>
           <div className="space-y-3">
@@ -375,7 +377,7 @@ export function Dashboard({
                       {booking.isAdHoc && (
                         <AlertCircle
                           className="w-3 h-3 text-amber-600"
-                          title="Ad-hoc booking"
+                          title={msg('Ad-hoc booking')}
                         />
                       )}
                     </div>
@@ -408,12 +410,12 @@ export function Dashboard({
         {/* Pending Approvals */}
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3>Pending Approvals</h3>
+            <h3>{msg('Pending Approvals')}</h3>
             <button
               onClick={onViewAllApprovals}
               className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
             >
-              View All
+              {msg('View All')}
             </button>
           </div>
           <div className="space-y-3">
@@ -431,7 +433,7 @@ export function Dashboard({
                     <div className="flex items-center gap-2">
                       <p className="text-sm">{item.id}</p>
                       {item.priority === 'urgent' && (
-                        <AlertCircle className="w-3 h-3 text-red-600" title="Urgent" />
+                        <AlertCircle className="w-3 h-3 text-red-600" title={msg('Urgent')} />
                       )}
                       <Badge className={APPROVAL_TYPE_BADGE[item.type]}>
                         {item.type}
@@ -464,7 +466,7 @@ export function Dashboard({
                     className="flex-1 text-xs px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                   >
                     <Eye className="w-3 h-3 inline mr-1" />
-                    Review
+                    {msg('Review')}
                   </button>
                 </div>
               </div>
@@ -478,7 +480,7 @@ export function Dashboard({
 
         {/* Lounge Occupancy */}
         <Card className="p-6">
-          <h3 className="mb-4">Current Lounge Status</h3>
+          <h3 className="mb-4">{msg('Current Lounge Status')}</h3>
           <div className="grid grid-cols-2 gap-4">
             {LOUNGE_OCCUPANCY_CONFIG.map(({ key, label, icon: Icon, bg, ring, text }) => (
               <div key={key} className={`text-center p-4 rounded-lg border ${ring}`}>
@@ -494,7 +496,7 @@ export function Dashboard({
 
         {/* Upcoming Arrivals */}
         <Card className="p-6">
-          <h3 className="mb-4">Upcoming Arrivals (Next 4 Hours)</h3>
+          <h3 className="mb-4">{msg('Upcoming Arrivals (Next 4 Hours)')}</h3>
           <div className="space-y-3">
             {upcomingArrivals.map((arrival, i) => (
               <div
@@ -510,7 +512,7 @@ export function Dashboard({
                 </div>
                 <div className="text-right">
                   <p className="text-2xl text-blue-600">{arrival.guestCount}</p>
-                  <p className="text-xs text-gray-500">guests</p>
+                  <p className="text-xs text-gray-500">{guests}</p>
                 </div>
               </div>
             ))}
@@ -529,7 +531,7 @@ export function Dashboard({
               Booking Details — {selectedApproval?.type} Approval
             </DialogTitle>
             <DialogDescription>
-              Review the booking details before making a decision
+              {msg('Review the booking details before making a decision')}
             </DialogDescription>
           </DialogHeader>
 
@@ -542,7 +544,7 @@ export function Dashboard({
               onClick={() => setSelectedApproval(null)}
               className="px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
             >
-              Close
+              {msg('Close')}
             </button>
             {selectedApproval && (
               <>
@@ -551,14 +553,14 @@ export function Dashboard({
                   className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
                 >
                   <XCircle className="w-4 h-4 inline mr-1" />
-                  Reject
+                  {msg('Reject')}
                 </button>
                 <button
                   onClick={() => handleApprove(selectedApproval.id)}
                   className="px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
                 >
                   <CheckCircle className="w-4 h-4 inline mr-1" />
-                  Approve
+                  {msg('Approve')}
                 </button>
               </>
             )}
@@ -574,6 +576,7 @@ export function Dashboard({
 //  implementation detail of the Dialog and has no independent use.)
 
 function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
+  const msg = useMsg();
   const isEdit   = approval.type === 'Edit';
   const orig     = approval.original;
 
@@ -595,7 +598,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
       {/* Booking ID + Type badge */}
       <div className="flex items-center gap-3 pb-3 border-b">
         <div>
-          <p className="text-sm text-gray-600">Booking ID</p>
+          <p className="text-sm text-gray-600">{msg('Booking ID')}</p>
           <p className="font-medium">{approval.id}</p>
         </div>
         <Badge className={APPROVAL_TYPE_BADGE[approval.type]}>
@@ -604,7 +607,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
         {approval.priority === 'urgent' && (
           <Badge className="bg-red-100 text-red-700">
             <AlertCircle className="w-3 h-3 inline mr-1" />
-            Urgent
+            {msg('Urgent')}
           </Badge>
         )}
       </div>
@@ -620,7 +623,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
       {/* Edit diff view */}
       {isEdit && orig ? (
         <div className="pt-3 border-t space-y-3">
-          <Badge className="bg-amber-100 text-amber-700">Changes Requested</Badge>
+          <Badge className="bg-amber-100 text-amber-700">{msg('Changes Requested')}</Badge>
 
           {changed('suite') && (
             <DiffRow label="Suite / Room"
@@ -672,7 +675,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
           </div>
           <div className="grid grid-cols-2 gap-4 pt-3 border-t">
             <div>
-              <p className="text-sm text-gray-600">Flight Number</p>
+              <p className="text-sm text-gray-600">{msg('Flight Number')}</p>
               <p className="font-medium flex items-center gap-2">
                 <Plane className="w-4 h-4 text-gray-500" />
                 {approval.flightNo}
@@ -686,7 +689,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
       {/* Special requests */}
       {approval.specialRequests && (
         <div className="pt-3 border-t">
-          <p className="text-sm text-gray-600">Special Requests / Notes</p>
+          <p className="text-sm text-gray-600">{msg('Special Requests / Notes')}</p>
           <p className="mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm">
             {approval.specialRequests}
           </p>
@@ -695,7 +698,7 @@ function ApprovalDialogBody({ approval }: { approval: PendingApproval }) {
 
       {/* Submission info */}
       <div className="pt-3 border-t">
-        <p className="text-sm text-gray-600">Submitted</p>
+        <p className="text-sm text-gray-600">{msg('Submitted')}</p>
         <p className="text-sm">{approval.submittedAgo}</p>
       </div>
     </div>
@@ -714,17 +717,18 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function DiffRow({ label, from, to }: { label: string; from: string; to: string }) {
+  const msg = useMsg();
   return (
     <div className="p-3 bg-amber-50 border border-amber-200 rounded">
       <p className="text-sm text-gray-600 mb-2">{label}</p>
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <p className="text-xs text-gray-500">Original</p>
+          <p className="text-xs text-gray-500">{msg('Original')}</p>
           <p className="font-medium line-through text-gray-500">{from}</p>
         </div>
         <ArrowRight className="w-4 h-4 text-amber-600 flex-shrink-0" />
         <div className="flex-1">
-          <p className="text-xs text-gray-500">New</p>
+          <p className="text-xs text-gray-500">{msg('New')}</p>
           <p className="font-medium text-amber-700">{to}</p>
         </div>
       </div>

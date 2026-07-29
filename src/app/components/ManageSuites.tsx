@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Plus, Edit2, Trash2, Search, Check, X } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export type SuiteKind = 'suite' | 'lounge';
 
@@ -34,14 +35,14 @@ function KindBadge({ kind }: { kind: SuiteKind }) {
   if (kind === 'lounge') {
     return (
       <Badge className="bg-teal-100 text-teal-800 hover:bg-teal-100 capitalize">
-        lounge
+        {lounge}
       </Badge>
     );
   }
 
   return (
     <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100 capitalize">
-      suite
+      {suite}
     </Badge>
   );
 }
@@ -68,6 +69,7 @@ export function ManageSuites({
   onEditSuite,
   onDeleteSuite,
 }: ManageSuitesViewProps) {
+  const msg = useMsg();
   const [search, setSearch] = useState('');
 
   const filtered = suites.filter((suite) => {
@@ -85,12 +87,12 @@ export function ManageSuites({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Manage Suites</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage physical VIP suites and lounge seats.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{msg('Manage Suites')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{msg('Manage physical VIP suites and lounge seats.')}</p>
         </div>
         <Button onClick={onCreateSuite} className="gap-2">
           <Plus className="w-4 h-4" />
-          Create Suite
+          {msg('Create Suite')}
         </Button>
       </div>
 
@@ -101,7 +103,7 @@ export function ManageSuites({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, floor, type, or status..."
+            placeholder={msg('Search by name, floor, type, or status...')}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -112,27 +114,27 @@ export function ManageSuites({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Suite Name</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Capacity</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Floor</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Operational Status</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Active</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('ID')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Suite Name')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Type')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Capacity')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Floor')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Operational Status')}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">{msg('Active')}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
-                    Loading suites...
+                    {msg('Loading suites...')}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
-                    No suites found.
+                    {msg('No suites found.')}
                   </td>
                 </tr>
               ) : (
@@ -150,9 +152,9 @@ export function ManageSuites({
                     </td>
                     <td className="px-4 py-3 text-center">
                       {suite.isActive ? (
-                        <Check className="w-4 h-4 text-green-600 inline-block" aria-label="Active" />
+                        <Check className="w-4 h-4 text-green-600 inline-block" aria-label={msg('Active')} />
                       ) : (
-                        <X className="w-4 h-4 text-red-500 inline-block" aria-label="Inactive" />
+                        <X className="w-4 h-4 text-red-500 inline-block" aria-label={msg('Inactive')} />
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -164,7 +166,7 @@ export function ManageSuites({
                           className="gap-1"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
-                          Edit
+                          {msg('Edit')}
                         </Button>
                         <Button
                           variant="outline"
@@ -173,7 +175,7 @@ export function ManageSuites({
                           className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          Delete
+                          {msg('Delete')}
                         </Button>
                       </div>
                     </td>

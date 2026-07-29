@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Plus, Edit2, Trash2, Search, Printer } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosPrinterRow {
   id: number;
@@ -33,6 +34,7 @@ export function PosPrinters({
   onDeletePrinter,
   onTestPrint,
 }: PosPrintersViewProps) {
+  const msg = useMsg();
   const [search, setSearch] = useState('');
 
   const filtered = printers.filter((printer) => {
@@ -48,12 +50,12 @@ export function PosPrinters({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">POS Printers</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage kitchen and bar receipt printers for the VIP lounge POS.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{msg('POS Printers')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{msg('Manage kitchen and bar receipt printers for the VIP lounge POS.')}</p>
         </div>
         <Button onClick={onCreatePrinter} className="gap-2">
           <Plus className="w-4 h-4" />
-          Create Printer
+          {msg('Create Printer')}
         </Button>
       </div>
 
@@ -64,7 +66,7 @@ export function PosPrinters({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or host IP..."
+            placeholder={msg('Search by name or host IP...')}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -75,27 +77,27 @@ export function PosPrinters({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Printer Name</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Host IP</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Port</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Beep Count</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Status</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('ID')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Printer Name')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Host IP')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Port')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Beep Count')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Role')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Status')}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
-                    Loading printers...
+                    {msg('Loading printers...')}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-10 text-center text-gray-500">
-                    No printers found.
+                    {msg('No printers found.')}
                   </td>
                 </tr>
               ) : (
@@ -139,7 +141,7 @@ export function PosPrinters({
                           className="gap-1"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
-                          Edit
+                          {msg('Edit')}
                         </Button>
                         <Button
                           variant="outline"
@@ -148,7 +150,7 @@ export function PosPrinters({
                           className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          Delete
+                          {msg('Delete')}
                         </Button>
                       </div>
                     </td>

@@ -18,6 +18,8 @@ import {
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { useTranslation } from '../../lib/useTranslation';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 export interface OrderCartItem {
   /** Stable cart-row identity (not the menu item id). */
@@ -262,7 +264,7 @@ export function OrderCartItemRow({
           <Textarea
             value={draftRemarks}
             onChange={(event) => setDraftRemarks(event.target.value)}
-            placeholder={t('pos.custom_request_placeholder', 'e.g. Less ice, Extra hot')}
+            placeholder={msg('t(\'pos.custom_request_placeholder\', \'e.g. Less ice, Extra hot\')')}
             rows={4}
             autoFocus
           />

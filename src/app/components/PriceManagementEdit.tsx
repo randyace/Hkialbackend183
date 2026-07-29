@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * PriceManagementEdit.tsx — Pure presentational component.
  *
@@ -126,7 +127,7 @@ function ProductEditForm({
   function handleSave() {
     const parsedBase = parseInt(basePrice.replace(/[^\d]/g, ''), 10);
     if (isNaN(parsedBase) || parsedBase < 0) {
-      toast.error('Base price must be a valid positive number');
+      toast.error(msg('Base price must be a valid positive number'));
       return;
     }
     const updated: ProductPricing = {
@@ -149,7 +150,7 @@ function ProductEditForm({
             className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            Price Management
+            {msg('Price Management')}
           </button>
           <span className="text-gray-300">/</span>
           <div className={`flex items-center gap-2 ${accentText} font-semibold`}>
@@ -160,18 +161,18 @@ function ProductEditForm({
         <div className="flex items-center gap-3">
           {hasUnsaved && (
             <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-              Unsaved changes
+              {msg('Unsaved changes')}
             </span>
           )}
           <Button variant="outline" onClick={onBack}>
-            Cancel
+            {msg('Cancel')}
           </Button>
           <Button
             onClick={handleSave}
             className={`${accentBg} hover:opacity-90 text-white`}
           >
             <Save className="w-4 h-4 mr-2" />
-            Save Changes
+            {msg('Save Changes')}
           </Button>
         </div>
       </div>
@@ -180,7 +181,7 @@ function ProductEditForm({
       <Card className={`border ${accentBorder} shadow-none`}>
         <div className="px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Product</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wide">{msg('Product')}</p>
             <p className={`font-semibold mt-0.5 ${accentText}`}>{product.productName}</p>
             <p className="text-xs text-gray-500 mt-0.5">{product.freeAllowanceNote}</p>
           </div>
@@ -193,15 +194,15 @@ function ProductEditForm({
 
       {/* Base Price */}
       <Section
-        title="Base Price"
+        title={msg('Base Price')}
         subtitle="The flat charge applied to every booking before any add-ons."
       >
         <Card className="border-0 shadow-md p-6">
           <Label className="mb-[10px] block text-gray-700">
-            Base Price <span className="text-gray-400 font-normal">(HKD)</span>
+            {msg('Base Price')} <span className="text-gray-400 font-normal">{msg('(HKD)')}</span>
           </Label>
           <div className="flex items-center gap-3">
-            <span className="text-gray-500 text-sm w-10">HKD</span>
+            <span className="text-gray-500 text-sm w-10">{msg('HKD')}</span>
             <Input
               type="number"
               min={0}
@@ -216,16 +217,16 @@ function ProductEditForm({
 
       {/* Add-on Rates */}
       <Section
-        title="Add-on Rates"
+        title={msg('Add-on Rates')}
         subtitle='Enter the per-unit price in HKD. Leave blank or enter "0" for FREE. "N/A" add-ons are shown as not offered.'
       >
         <Card className="border-0 shadow-md overflow-hidden">
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_160px_180px_1fr] gap-4 px-6 py-3 bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            <span>Add-on</span>
-            <span>Price (HKD)</span>
-            <span>Unit</span>
-            <span>Notes</span>
+            <span>{msg('Add-on')}</span>
+            <span>{msg('Price (HKD)')}</span>
+            <span>{msg('Unit')}</span>
+            <span>{msg('Notes')}</span>
           </div>
 
           <div className="divide-y divide-gray-100">
@@ -241,14 +242,14 @@ function ProductEditForm({
                     <p className="text-sm text-gray-800">{addon.label}</p>
                     {isNA && (
                       <Badge className="mt-1 bg-gray-200 text-gray-500 border-0 text-xs">
-                        Not offered
+                        {msg('Not offered')}
                       </Badge>
                     )}
                   </div>
 
                   {/* Price input */}
                   <div>
-                    <Label className="mb-[10px] block text-xs text-gray-400">HKD amount</Label>
+                    <Label className="mb-[10px] block text-xs text-gray-400">{msg('HKD amount')}</Label>
                     {isNA ? (
                       <Input value="N/A" disabled className="w-full bg-gray-100 text-gray-400 font-mono" />
                     ) : (
@@ -256,7 +257,7 @@ function ProductEditForm({
                         type="number"
                         min={0}
                         value={displayPrice(addon.price)}
-                        placeholder={addon.price === null ? 'N/A' : '0 = FREE'}
+                        placeholder={msg('addon.price === null ? \'N/A\' : \'0 = FREE\'')}
                         onChange={(e) =>
                           updateAddOn(addon.id, 'price', parsePrice(e.target.value))
                         }
@@ -265,7 +266,7 @@ function ProductEditForm({
                     )}
                     {addon.price === 0 && !isNA && (
                       <span className="mt-1 inline-flex items-center gap-1 text-xs text-green-600">
-                        <CheckCircle2 className="w-3 h-3" /> FREE
+                        <CheckCircle2 className="w-3 h-3" /> {msg('FREE')}
                       </span>
                     )}
                   </div>
@@ -277,11 +278,11 @@ function ProductEditForm({
 
                   {/* Notes */}
                   <div>
-                    <Label className="mb-[10px] block text-xs text-gray-400">Notes</Label>
+                    <Label className="mb-[10px] block text-xs text-gray-400">{msg('Notes')}</Label>
                     <Input
                       value={addon.notes ?? ''}
                       onChange={(e) => updateAddOn(addon.id, 'notes', e.target.value)}
-                      placeholder="Optional clarification"
+                      placeholder={msg('Optional clarification')}
                       className="w-full text-sm"
                       disabled={isNA}
                     />
@@ -295,7 +296,7 @@ function ProductEditForm({
 
       {/* Capacity Caps (read-only — controlled by rules, not free-form prices) */}
       <Section
-        title="Capacity Caps"
+        title={msg('Capacity Caps')}
         subtitle="These limits are enforced by the booking engine and cannot be overridden here."
       >
         <Card className="border-0 shadow-md overflow-hidden">
@@ -321,7 +322,7 @@ function ProductEditForm({
 
       {/* Included services (read-only reference) */}
       <Section
-        title="Included Services"
+        title={msg('Included Services')}
         subtitle="Services bundled in the base price. Contact tech team to change the service list."
       >
         <Card className="border-0 shadow-md p-5">
@@ -338,14 +339,14 @@ function ProductEditForm({
       {/* Bottom action bar */}
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
         <Button variant="outline" onClick={onBack}>
-          Cancel
+          {msg('Cancel')}
         </Button>
         <Button
           onClick={handleSave}
           className={`${accentBg} hover:opacity-90 text-white`}
         >
           <Save className="w-4 h-4 mr-2" />
-          Save Changes
+          {msg('Save Changes')}
         </Button>
       </div>
     </div>
@@ -373,16 +374,16 @@ function ComboEditForm({
 
   function handleSave() {
     if (draft.discountPercent < 0 || draft.discountPercent > 100) {
-      toast.error('Discount must be between 0% and 100%');
+      toast.error(msg('Discount must be between 0% and 100%'));
       return;
     }
     if (draft.maxCombinedHours < 1) {
-      toast.error('Max combined hours must be at least 1');
+      toast.error(msg('Max combined hours must be at least 1'));
       return;
     }
     onSave(draft);
     setHasUnsaved(false);
-    toast.success('Combo discount rule saved');
+    toast.success(msg('Combo discount rule saved'));
   }
 
   return (
@@ -395,7 +396,7 @@ function ComboEditForm({
             className="flex items-center gap-2 text-gray-500 hover:text-gray-800 transition-colors text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
-            Price Management
+            {msg('Price Management')}
           </button>
           <span className="text-gray-300">/</span>
           <div className="flex items-center gap-2 text-amber-600 font-semibold">
@@ -406,15 +407,15 @@ function ComboEditForm({
         <div className="flex items-center gap-3">
           {hasUnsaved && (
             <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-              Unsaved changes
+              {msg('Unsaved changes')}
             </span>
           )}
           <Button variant="outline" onClick={onBack}>
-            Cancel
+            {msg('Cancel')}
           </Button>
           <Button onClick={handleSave} className="bg-amber-500 hover:bg-amber-600 text-white">
             <Save className="w-4 h-4 mr-2" />
-            Save Changes
+            {msg('Save Changes')}
           </Button>
         </div>
       </div>
@@ -435,11 +436,11 @@ function ComboEditForm({
 
       {/* Discount % */}
       <Section
-        title="Discount Percentage"
+        title={msg('Discount Percentage')}
         subtitle="Applied to the entire computed total of the 2nd leg (base price + all add-ons)."
       >
         <Card className="border-0 shadow-md p-6">
-          <Label className="mb-[10px] block text-gray-700">Discount on 2nd leg</Label>
+          <Label className="mb-[10px] block text-gray-700">{msg('Discount on 2nd leg')}</Label>
           <div className="flex items-center gap-3">
             <Input
               type="number"
@@ -450,10 +451,10 @@ function ComboEditForm({
               className="w-28 font-mono text-xl text-amber-700 focus:ring-2 focus:ring-amber-400"
             />
             <span className="text-2xl text-gray-400">%</span>
-            <span className="text-sm text-gray-500">off the 2nd leg total</span>
+            <span className="text-sm text-gray-500">{msg('off the 2nd leg total')}</span>
           </div>
           <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-            <strong>Note:</strong> This discount is NOT applied to the 1st leg. The 1st leg is always
+            <strong>{msg('Note:')}</strong> This discount is NOT applied to the 1st leg. The 1st leg is always
             billed at the full computed total.
           </div>
         </Card>
@@ -461,11 +462,11 @@ function ComboEditForm({
 
       {/* Max combined hours */}
       <Section
-        title="Maximum Combined Hours"
+        title={msg('Maximum Combined Hours')}
         subtitle="The combo discount only applies if the total stay across both legs does not exceed this limit."
       >
         <Card className="border-0 shadow-md p-6">
-          <Label className="mb-[10px] block text-gray-700">Max combined stay</Label>
+          <Label className="mb-[10px] block text-gray-700">{msg('Max combined stay')}</Label>
           <div className="flex items-center gap-3">
             <Input
               type="number"
@@ -475,7 +476,7 @@ function ComboEditForm({
               onChange={(e) => update('maxCombinedHours', parseInt(e.target.value) || 1)}
               className="w-24 font-mono text-xl focus:ring-2 focus:ring-amber-400"
             />
-            <span className="text-gray-500 text-sm">hours (arrival + departure combined)</span>
+            <span className="text-gray-500 text-sm">{msg('hours (arrival + departure combined)')}</span>
           </div>
           <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
             <Clock className="w-4 h-4 text-amber-500" />
@@ -486,11 +487,11 @@ function ComboEditForm({
 
       {/* Description */}
       <Section
-        title="Rule Description"
+        title={msg('Rule Description')}
         subtitle="Displayed in the admin UI and on booking detail pages for staff reference."
       >
         <Card className="border-0 shadow-md p-6">
-          <Label className="mb-[10px] block text-gray-700">Description</Label>
+          <Label className="mb-[10px] block text-gray-700">{msg('Description')}</Label>
           <textarea
             value={draft.description}
             onChange={(e) => update('description', e.target.value)}
@@ -515,11 +516,11 @@ function ComboEditForm({
       {/* Bottom action bar */}
       <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
         <Button variant="outline" onClick={onBack}>
-          Cancel
+          {msg('Cancel')}
         </Button>
         <Button onClick={handleSave} className="bg-amber-500 hover:bg-amber-600 text-white">
           <Save className="w-4 h-4 mr-2" />
-          Save Changes
+          {msg('Save Changes')}
         </Button>
       </div>
     </div>

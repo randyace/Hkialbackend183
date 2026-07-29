@@ -6,6 +6,7 @@ import {
   type PosCategoryOption,
 } from './PosCategoryTabs';
 import { MenuCard, type MenuCardItem } from './MenuCard';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosOrderingMenuItem extends MenuCardItem {
   categoryId: number;
@@ -31,6 +32,7 @@ export function PosOrderingMenu({
   onSearchChange,
   onAddToCart,
 }: PosOrderingMenuProps) {
+  const msg = useMsg();
   const [selectedTab, setSelectedTab] = useState<string>('All');
   const [internalSearch, setInternalSearch] = useState('');
   const searchQuery = controlledSearch ?? internalSearch;
@@ -67,7 +69,7 @@ export function PosOrderingMenu({
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search menu items..."
+            placeholder={msg('Search menu items...')}
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 text-sm"
@@ -83,9 +85,9 @@ export function PosOrderingMenu({
 
       <div className="mt-4 flex-1 overflow-y-auto">
         {isLoading ? (
-          <p className="py-10 text-center text-sm text-gray-500">Loading menu...</p>
+          <p className="py-10 text-center text-sm text-gray-500">{msg('Loading menu...')}</p>
         ) : filteredItems.length === 0 ? (
-          <p className="py-10 text-center text-sm text-gray-500">No menu items in this category.</p>
+          <p className="py-10 text-center text-sm text-gray-500">{msg('No menu items in this category.')}</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
             {filteredItems.map((item) => (

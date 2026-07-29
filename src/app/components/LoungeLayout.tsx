@@ -16,6 +16,8 @@ import {
   layoutNeedsPosNormalization,
   prepareLayoutForEditor,
 } from '@/utils/floorPlanLayoutScale';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 export type LayoutItemType = 'suite' | 'static';
 
@@ -41,10 +43,10 @@ export interface LayoutSuiteOption {
 }
 
 const STATIC_ELEMENTS = [
-  { label: 'Reception' },
-  { label: 'Dining Area' },
-  { label: 'Restrooms' },
-  { label: 'Entrance' },
+  { label: msg('Reception') },
+  { label: msg('Dining Area') },
+  { label: msg('Restrooms') },
+  { label: msg('Entrance') },
 ] as const;
 
 const DEFAULT_SUITE_SIZE = FLOOR_PLAN_SUITE_SIZE;
@@ -110,6 +112,7 @@ export function LoungeLayout({
   isSaving = false,
   onSaveLayout,
 }: LoungeLayoutProps) {
+  const msg = useMsg();
   const [items, setItems] = useState<LayoutItem[]>(initialItems);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -298,7 +301,7 @@ export function LoungeLayout({
     return (
       <div className="flex items-center justify-center h-[calc(100vh-8rem)] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading floor plan...
+        {msg('Loading floor plan...')}
       </div>
     );
   }
@@ -308,7 +311,7 @@ export function LoungeLayout({
       <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-lg font-semibold text-gray-900">Lounge Floor Plan Builder</h1>
+            <h1 className="text-lg font-semibold text-gray-900">{msg('Lounge Floor Plan Builder')}</h1>
             <p className="text-sm text-gray-500">
               Drag suites onto the canvas at POS size ({FLOOR_PLAN_SUITE_WIDTH}×{FLOOR_PLAN_SUITE_HEIGHT}px).
               What you see here matches the POS floor plan.
@@ -328,9 +331,9 @@ export function LoungeLayout({
                 )}
                 {isPaletteOpen ? 'Hide Palette' : 'Show Palette'}
               </Button>
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Canvas</span>
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{msg('Canvas')}</span>
               <label className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-600">Width</span>
+                <span className="text-xs font-medium text-gray-600">{msg('Width')}</span>
                 <input
                   type="number"
                   min={500}
@@ -340,7 +343,7 @@ export function LoungeLayout({
                 />
               </label>
               <label className="flex items-center gap-2">
-                <span className="text-xs font-medium text-gray-600">Height</span>
+                <span className="text-xs font-medium text-gray-600">{msg('Height')}</span>
                 <input
                   type="number"
                   min={500}
@@ -350,7 +353,7 @@ export function LoungeLayout({
                 />
               </label>
               <Button type="button" size="sm" onClick={handleApplyCanvasSize}>
-                Apply
+                {msg('Apply')}
               </Button>
               <span className="text-xs text-gray-400">
                 Default {FLOOR_PLAN_DEFAULT_CANVAS_WIDTH}×{FLOOR_PLAN_DEFAULT_CANVAS_HEIGHT}px
@@ -360,7 +363,7 @@ export function LoungeLayout({
           <div className="flex shrink-0 items-center gap-2">
             {needsSaveAfterNormalize ? (
               <span className="hidden text-xs text-amber-700 sm:inline">
-                Layout scaled to POS size — save to persist
+                {msg('Layout scaled to POS size — save to persist')}
               </span>
             ) : null}
             {selectedId ? (
@@ -371,7 +374,7 @@ export function LoungeLayout({
                   setSelectedId(null);
                 }}
               >
-                Remove Selected
+                {msg('Remove Selected')}
               </Button>
             ) : null}
             <Button onClick={handleSave} disabled={isSaving} className="gap-2">
@@ -387,10 +390,10 @@ export function LoungeLayout({
           <aside className="w-72 shrink-0 border-r border-gray-200 bg-white overflow-y-auto">
             <div className="p-4 space-y-6">
               <section>
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Suites</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">{msg('Suites')}</h2>
                 <div className="space-y-2">
                   {availableSuites.length === 0 ? (
-                    <p className="text-sm text-gray-400">All suites are already on the canvas.</p>
+                    <p className="text-sm text-gray-400">{msg('All suites are already on the canvas.')}</p>
                   ) : (
                     availableSuites.map((suite) => (
                       <div
@@ -423,7 +426,7 @@ export function LoungeLayout({
               </section>
 
               <section>
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Static Areas</h2>
+                <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">{msg('Static Areas')}</h2>
                 <div className="space-y-2">
                   {STATIC_ELEMENTS.map((element) => (
                     <div
@@ -453,7 +456,7 @@ export function LoungeLayout({
 
         <div className="flex-1 min-w-0 p-4">
           <FloorPlanCanvasWorkspace
-            title="HKIA VIP Lounge — Floor Plan Canvas"
+            title={msg('HKIA VIP Lounge — Floor Plan Canvas')}
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
             onDrop={handleDrop}
@@ -462,7 +465,7 @@ export function LoungeLayout({
               items.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 pointer-events-none">
                   <Building2 className="w-10 h-10 mb-2 opacity-40" />
-                  <p className="text-sm">Drag suites or static areas here to begin</p>
+                  <p className="text-sm">{msg('Drag suites or static areas here to begin')}</p>
                 </div>
               ) : null
             }
@@ -510,7 +513,7 @@ export function LoungeLayout({
                           handleResizeStart(e, item.id, api.zoom, api.canvasWidth, api.canvasHeight)
                         }
                         className="absolute right-0 bottom-0 w-4 h-4 bg-blue-600 rounded-tl-md rounded-br-md cursor-se-resize"
-                        title="Resize"
+                        title={msg('Resize')}
                       />
                     ) : null}
                   </div>

@@ -5,6 +5,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 interface InvoiceBooking {
   bookingNo: string;
@@ -113,6 +114,7 @@ export function BookingInvoiceDialog({
   authToken,
   onInvoiceSent,
 }: BookingInvoiceDialogProps) {
+  const msg = useMsg();
   // 2026-06-17 (round 6.2.47) — action handlers. The dialog
   // now hits the new backend endpoints (POST send-invoice,
   // GET invoice.pdf) instead of being a toast-stub. Errors
@@ -150,7 +152,7 @@ export function BookingInvoiceDialog({
   const handleSendInvoiceAndPaymentLink = async () => {
     if (isSendingInvoice) return;
     if (!token) {
-      toast.error('Not signed in. Please log in to send.');
+      toast.error(msg('Not signed in. Please log in to send.'));
       return;
     }
     setIsSendingInvoice(true);
@@ -193,7 +195,7 @@ export function BookingInvoiceDialog({
 
   const handleDownloadPdf = async () => {
     if (!token) {
-      toast.error('Not signed in. Please log in to download.');
+      toast.error(msg('Not signed in. Please log in to download.'));
       return;
     }
     // 2026-06-17 (round 6.2.47 follow-up, user-reported:
@@ -231,7 +233,7 @@ export function BookingInvoiceDialog({
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      toast.success('Invoice downloaded');
+      toast.success(msg('Invoice downloaded'));
     } catch (err) {
       toast.error('Failed to download PDF', {
         description: err instanceof Error ? err.message : 'Unknown error',
@@ -265,7 +267,7 @@ export function BookingInvoiceDialog({
       <DialogContent className="!max-w-none sm:!max-w-none !w-[1700px] max-w-[95vw] min-w-[650px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invoice - {booking.bookingNo}</DialogTitle>
-          <DialogDescription>Review and send invoice for this booking</DialogDescription>
+          <DialogDescription>{msg('Review and send invoice for this booking')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -273,12 +275,12 @@ export function BookingInvoiceDialog({
           <div className="bg-[#0f2942] text-white p-6 rounded-lg">
             <div className="flex items-start justify-between">
               <div>
-                <h2 className="text-2xl mb-2">HKIA VIP Lounge</h2>
-                <p className="text-sm text-gray-300">Email: vip@hkia-lounge.com</p>
-                <p className="text-sm text-gray-300">Tel: +852 2345 6789</p>
+                <h2 className="text-2xl mb-2">{msg('HKIA VIP Lounge')}</h2>
+                <p className="text-sm text-gray-300">{msg('Email: vip@hkia-lounge.com')}</p>
+                <p className="text-sm text-gray-300">{msg('Tel: +852 2345 6789')}</p>
               </div>
               <div className="text-right">
-                <h3 className="text-xl mb-2">INVOICE</h3>
+                <h3 className="text-xl mb-2">{msg('INVOICE')}</h3>
                 <p className="text-sm text-gray-300">Invoice No: INV-{booking.bookingNo}</p>
                 <p className="text-sm text-gray-300">Date: {new Date().toLocaleDateString()}</p>
                 <p className="text-sm text-gray-300">Booking: {booking.bookingNo}</p>
@@ -289,7 +291,7 @@ export function BookingInvoiceDialog({
           {/* Bill To & Booking Info */}
           <div className="grid grid-cols-2 gap-6">
             <Card className="p-4">
-              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Bill To</h3>
+              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">{msg('Bill To')}</h3>
               <div className="space-y-2">
                 <p className="font-medium">{booking.guestName}</p>
                 <p className="text-sm text-gray-600">Account: {booking.accountNo}</p>
@@ -298,12 +300,12 @@ export function BookingInvoiceDialog({
             </Card>
 
             <Card className="p-4">
-              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Booking Information</h3>
+              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">{msg('Booking Information')}</h3>
               <div className="space-y-2">
-                <p className="text-sm"><span className="text-gray-600">Suite:</span> {booking.suite}</p>
-                <p className="text-sm"><span className="text-gray-600">Date/Time:</span> {booking.dateTime}</p>
-                <p className="text-sm"><span className="text-gray-600">Flight:</span> {booking.flightNo} at {booking.flightTime}</p>
-                <p className="text-sm"><span className="text-gray-600">Guests:</span> {booking.numberOfGuests} pax</p>
+                <p className="text-sm"><span className="text-gray-600">{msg('Suite:')}</span> {booking.suite}</p>
+                <p className="text-sm"><span className="text-gray-600">{msg('Date/Time:')}</span> {booking.dateTime}</p>
+                <p className="text-sm"><span className="text-gray-600">{msg('Flight:')}</span> {booking.flightNo} at {booking.flightTime}</p>
+                <p className="text-sm"><span className="text-gray-600">{msg('Guests:')}</span> {booking.numberOfGuests} pax</p>
                 {voucherCount > 0 && (
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-amber-100">
                     <Ticket className="w-4 h-4 text-amber-600 shrink-0" />
@@ -322,10 +324,10 @@ export function BookingInvoiceDialog({
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Unit Price</th>
-                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Description')}</th>
+                  <th className="px-6 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">{msg('Quantity')}</th>
+                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Unit Price')}</th>
+                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">{msg('Amount')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -401,16 +403,16 @@ export function BookingInvoiceDialog({
                     <div className="flex items-center gap-2">
                       <Utensils className="w-4 h-4 text-green-600" />
                       <div>
-                        <p className="font-medium">Food &amp; Beverage (incl. Pre-order)</p>
-                        <p className="text-sm text-gray-500">Premium selection — all food &amp; drinks included</p>
+                        <p className="font-medium">{msg('Food &amp; Beverage (incl. Pre-order)')}</p>
+                        <p className="text-sm text-gray-500">{msg('Premium selection — all food &amp; drinks included')}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center text-sm text-gray-500">—</td>
                   <td className="px-6 py-4 text-right">
-                    <span className="text-sm text-green-600 font-medium">Complimentary</span>
+                    <span className="text-sm text-green-600 font-medium">{msg('Complimentary')}</span>
                   </td>
-                  <td className="px-6 py-4 text-right font-medium text-green-600">HK$0</td>
+                  <td className="px-6 py-4 text-right font-medium text-green-600">{msg('HK$0')}</td>
                 </tr>
               </tbody>
               <tfoot className="border-t-2">
@@ -430,19 +432,19 @@ export function BookingInvoiceDialog({
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-green-700">
                     <span className="inline-flex items-center gap-1.5">
                       <Utensils className="w-3.5 h-3.5" />
-                      Food &amp; Beverage (incl. pre-order):
+                      {msg('Food &amp; Beverage (incl. pre-order):')}
                     </span>
                   </td>
-                  <td className="px-6 py-2 text-right text-sm font-medium text-green-600">Complimentary</td>
+                  <td className="px-6 py-2 text-right text-sm font-medium text-green-600">{msg('Complimentary')}</td>
                 </tr>
                 {serviceSubtotal > 0 && (
                   <tr className="bg-gray-50">
-                    <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">Services Subtotal:</td>
+                    <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">{msg('Services Subtotal:')}</td>
                     <td className="px-6 py-2 text-right font-medium text-gray-800">HK${Math.round(serviceSubtotal).toLocaleString()}</td>
                   </tr>
                 )}
                 <tr className="bg-gray-50">
-                  <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600 font-medium">Subtotal:</td>
+                  <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600 font-medium">{msg('Subtotal:')}</td>
                   <td className="px-6 py-2 text-right font-medium text-gray-800">
                     {/* Round 6.2.13: use `livePreviewTotal` (the
                      * backend's authoritative total) instead of
@@ -460,8 +462,8 @@ export function BookingInvoiceDialog({
                   </td>
                 </tr>
                 <tr className="bg-gray-50">
-                  <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">Tax (0%):</td>
-                  <td className="px-6 py-2 text-right text-gray-600">HK$0</td>
+                  <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">{msg('Tax (0%):')}</td>
+                  <td className="px-6 py-2 text-right text-gray-600">{msg('HK$0')}</td>
                 </tr>
                 {voucherCount > 0 && (
                   <tr className="bg-amber-50">
@@ -509,26 +511,26 @@ export function BookingInvoiceDialog({
 
           {/* Payment Information */}
           <Card className="p-4 bg-blue-50 border-blue-200">
-            <h3 className="text-sm uppercase tracking-wide text-blue-900 mb-3">Payment Information</h3>
+            <h3 className="text-sm uppercase tracking-wide text-blue-900 mb-3">{msg('Payment Information')}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-blue-900"><span className="font-medium">Payment Mode:</span> {booking.paymentMode}</p>
-                <p className="text-sm text-blue-900"><span className="font-medium">Payment Status:</span> <Badge className={getPaymentStatusColor(booking.paymentStatus)}>{booking.paymentStatus}</Badge></p>
+                <p className="text-sm text-blue-900"><span className="font-medium">{msg('Payment Mode:')}</span> {booking.paymentMode}</p>
+                <p className="text-sm text-blue-900"><span className="font-medium">{msg('Payment Status:')}</span> <Badge className={getPaymentStatusColor(booking.paymentStatus)}>{booking.paymentStatus}</Badge></p>
               </div>
               <div>
-                <p className="text-sm text-blue-900"><span className="font-medium">Booking Type:</span> {booking.bookingType}</p>
-                <p className="text-sm text-blue-900"><span className="font-medium">Booking Status:</span> <Badge className={getStatusColor('Confirmed')}>Confirmed</Badge></p>
+                <p className="text-sm text-blue-900"><span className="font-medium">{msg('Booking Type:')}</span> {booking.bookingType}</p>
+                <p className="text-sm text-blue-900"><span className="font-medium">{msg('Booking Status:')}</span> <Badge className={getStatusColor('Confirmed')}>{msg('Confirmed')}</Badge></p>
               </div>
             </div>
           </Card>
 
           {/* Terms */}
           <Card className="p-4 bg-gray-50">
-            <h3 className="text-sm uppercase tracking-wide text-gray-700 mb-2">Terms & Conditions</h3>
+            <h3 className="text-sm uppercase tracking-wide text-gray-700 mb-2">{msg('Terms & Conditions')}</h3>
             <ul className="text-xs text-gray-600 space-y-1">
-              <li>• Payment is due upon receipt of this invoice</li>
-              <li>• Cancellation must be made at least 24 hours in advance for full refund</li>
-              <li>• Late cancellation or no-show may result in charges</li>
+              <li>{msg('• Payment is due upon receipt of this invoice')}</li>
+              <li>{msg('• Cancellation must be made at least 24 hours in advance for full refund')}</li>
+              <li>{msg('• Late cancellation or no-show may result in charges')}</li>
               <li>• All prices are in Hong Kong Dollars (HKD)</li>
             </ul>
           </Card>
@@ -540,9 +542,9 @@ export function BookingInvoiceDialog({
               onClick={handleDownloadPdf}
               data-testid="invoice-download-pdf-button"
             >
-              <Download className="w-4 h-4 mr-2" />Download PDF
+              <Download className="w-4 h-4 mr-2" />{msg('Download PDF')}
             </Button>
-            <Button variant="outline" onClick={onClose}>Close</Button>
+            <Button variant="outline" onClick={onClose}>{msg('Close')}</Button>
           </div>
 
           {/* 2026-06-27 — Send Invoice + Send Payment Link merged

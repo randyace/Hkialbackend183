@@ -9,6 +9,8 @@ import {
   ArrowLeft, Search, User, Building2, Plane, Star, Gem, Award, Trophy,
   CheckCircle, TrendingUp, Package, CreditCard, Info, FileText, X,
 } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -114,10 +116,10 @@ export const GRADING_PACKAGES: GradingPackage[] = [
 ];
 
 export const SESSION_BUNDLES: SessionBundle[] = [
-  { kind: 'bundle', id: 'basic',      label: 'Basic Bundle',      sessions: 10,  price: 3800,  validityMonths: 6  },
-  { kind: 'bundle', id: 'standard',   label: 'Standard Bundle',   sessions: 20,  price: 7000,  validityMonths: 12 },
-  { kind: 'bundle', id: 'business',   label: 'Business Bundle',   sessions: 50,  price: 16000, validityMonths: 12 },
-  { kind: 'bundle', id: 'enterprise', label: 'Enterprise Bundle', sessions: 100, price: 28000, validityMonths: 24 },
+  { kind: 'bundle', id: 'basic',      label: msg('Basic Bundle'),      sessions: 10,  price: 3800,  validityMonths: 6  },
+  { kind: 'bundle', id: 'standard',   label: msg('Standard Bundle'),   sessions: 20,  price: 7000,  validityMonths: 12 },
+  { kind: 'bundle', id: 'business',   label: msg('Business Bundle'),   sessions: 50,  price: 16000, validityMonths: 12 },
+  { kind: 'bundle', id: 'enterprise', label: msg('Enterprise Bundle'), sessions: 100, price: 28000, validityMonths: 24 },
 ];
 
 export const MOCK_ACCOUNTS: AccountOption[] = [
@@ -174,6 +176,7 @@ export const BUNDLE_COLORS: Record<string, string> = {
 };
 
 export function TierIcon({ name, className }: { name: TierMeta['iconName']; className?: string }) {
+  const msg = useMsg();
   const cls = className ?? 'w-4 h-4';
   if (name === 'award')  return <Award  className={cls} />;
   if (name === 'star')   return <Star   className={cls} />;
@@ -193,16 +196,16 @@ export function TierBadge({ tier }: { tier: TierOrNone }) {
 
 export function CategoryBadge({ cat }: { cat: PurchaseCategory }) {
   if (cat === 'Individual')
-    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><User className="w-3 h-3" />Individual</span>;
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><User className="w-3 h-3" />{msg('Individual')}</span>;
   if (cat === 'Corporate')
-    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />Corporate</span>;
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />Agency</span>;
+    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700"><Building2 className="w-3 h-3" />{msg('Corporate')}</span>;
+  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700"><Plane className="w-3 h-3" />{msg('Agency')}</span>;
 }
 
 export function StatusBadge({ status }: { status: PurchaseStatus }) {
   return status === 'Pending Invoice'
-    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">Pending Invoice</span>
-    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><CheckCircle className="w-3 h-3" />Invoice Sent</span>;
+    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">{msg('Pending Invoice')}</span>
+    : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700"><CheckCircle className="w-3 h-3" />{msg('Invoice Sent')}</span>;
 }
 
 // ─── Section header helper ───────────────────────────────────────────────────
@@ -512,11 +515,11 @@ export function PurchaseCreate({
           className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#0f2942] transition-colors mb-3"
         >
           <ArrowLeft className="w-4 h-4" />
-          Contract Management
+          {msg('Contract Management')}
         </button>
-        <h1 className="text-gray-900 mb-1">New Contract</h1>
+        <h1 className="text-gray-900 mb-1">{msg('New Contract')}</h1>
         <p className="text-sm text-gray-500">
-          Select an account, choose a package, fill in payment details, then confirm.
+          {msg('Select an account, choose a package, fill in payment details, then confirm.')}
         </p>
       </div>
 
@@ -527,7 +530,7 @@ export function PurchaseCreate({
 
           {/* ── Section 1: Select Account ── */}
           <Card className="p-6">
-            <SectionHeader num={1} title="Select Account" done={!!selectedAccount} />
+            <SectionHeader num={1} title={msg('Select Account')} done={!!selectedAccount} />
 
             {/* ── 2026-07-05 round 6.2.105 ── drop 'All Types' pill per Sky directive.
                  2026-07-05 round 6.2.106 ── default catFilter narrowed from 'all'
@@ -564,7 +567,7 @@ export function PurchaseCreate({
             <div className="relative mb-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="Search by name, account number or email..."
+                placeholder={msg('Search by name, account number or email...')}
                 value={acctSearch}
                 onChange={e => {
                   const value = e.target.value;
@@ -575,7 +578,7 @@ export function PurchaseCreate({
               />
               {isAccountSearching && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                  Searching…
+                  {msg('Searching…')}
                 </span>
               )}
             </div>
@@ -632,14 +635,14 @@ export function PurchaseCreate({
                 );
               })}
               {filteredAccounts.length === 0 && (
-                <p className="text-center text-gray-400 text-sm py-6">No accounts found.</p>
+                <p className="text-center text-gray-400 text-sm py-6">{msg('No accounts found.')}</p>
               )}
             </div>
           </Card>
 
           {/* ── Section 2: Select Package ── */}
           <Card className="p-6">
-            <SectionHeader num={2} title="Select Package" done={!!selectedPackage} />
+            <SectionHeader num={2} title={msg('Select Package')} done={!!selectedPackage} />
 
             {/* Individual → Grading packages (2-column grid) */}
             {showIndividualPackages && (
@@ -682,23 +685,23 @@ export function PurchaseCreate({
             {showCorporateForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Enter contract details for Corporate account.
+                  {msg('Enter contract details for Corporate account.')}
                 </p>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="promoCodeName" className="mb-[10px] block">
-                      Promo Code Name <span className="text-gray-400 text-xs">(optional)</span>
+                      {msg('Promo Code Name')} <span className="text-gray-400 text-xs">{msg('(optional)')}</span>
                     </Label>
                     <Input
                       id="promoCodeName"
-                      placeholder="e.g. SUMMER2025"
+                      placeholder={msg('e.g. SUMMER2025')}
                       value={promoCodeName}
                       onChange={e => setPromoCodeName(e.target.value)}
                     />
                   </div>
                   <div>
                     <Label htmlFor="promoCodeQty" className="mb-[10px] block">
-                      Promo Code Quantity <span className="text-red-500">*</span>
+                      {msg('Promo Code Quantity')} <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — sibling fix to Total Price
                         hardening: same three-layered treatment (spinner hide /
@@ -711,7 +714,7 @@ export function PurchaseCreate({
                       step="1"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="e.g. 100"
+                      placeholder={msg('e.g. 100')}
                       value={promoCodeQuantity}
                       onChange={e => setPromoCodeQuantity(e.target.value.replace(/[^0-9]/g, ''))}
                       onWheel={e => e.currentTarget.blur()}
@@ -721,7 +724,7 @@ export function PurchaseCreate({
                   {showVipAccounts && (
                     <div>
                       <Label htmlFor="vipAccountQty" className="mb-[10px] block">
-                        VIP Accounts to Create <span className="text-gray-400 text-xs">(optional)</span>
+                        {msg('VIP Accounts to Create')} <span className="text-gray-400 text-xs">{msg('(optional)')}</span>
                       </Label>
                       {/* 2026-07-05 round 6.2.110 — sibling fix (same three-layered
                           treatment as Total Price). Currently feature-flagged off
@@ -735,20 +738,20 @@ export function PurchaseCreate({
                         step="1"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        placeholder="e.g. 10"
+                        placeholder={msg('e.g. 10')}
                         value={vipAccountQuantity}
                         onChange={e => setVipAccountQuantity(e.target.value.replace(/[^0-9]/g, ''))}
                         onWheel={e => e.currentTarget.blur()}
                         className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Number of new VIP accounts to be created for this corporate customer.
+                        {msg('Number of new VIP accounts to be created for this corporate customer.')}
                       </p>
                     </div>
                   )}
                   <div>
                     <Label htmlFor="totalPrice" className="mb-[10px] block">
-                      Billing Amount (HKD) <span className="text-red-500">*</span>
+                      {msg('Billing Amount (HKD)')} <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening:
                         (a) hide native number-input spinner (Tailwind arbitrary
@@ -768,7 +771,7 @@ export function PurchaseCreate({
                       step="1"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="e.g. 50000"
+                      placeholder={msg('e.g. 50000')}
                       value={totalPrice}
                       onChange={e => setTotalPrice(e.target.value.replace(/[^0-9]/g, ''))}
                       onWheel={e => e.currentTarget.blur()}
@@ -783,12 +786,12 @@ export function PurchaseCreate({
             {showAgencyForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Enter contract details for Agency account.
+                  {msg('Enter contract details for Agency account.')}
                 </p>
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="creditBalance" className="mb-[10px] block">
-                      Credit Balance Charging (HKD) <span className="text-red-500">*</span>
+                      {msg('Credit Balance Charging (HKD)')} <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — sibling fix to Total Price
                         hardening: same three-layered treatment (spinner hide /
@@ -801,7 +804,7 @@ export function PurchaseCreate({
                       step="1"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="e.g. 50000"
+                      placeholder={msg('e.g. 50000')}
                       value={creditBalance}
                       onChange={e => setCreditBalance(e.target.value.replace(/[^0-9]/g, ''))}
                       onWheel={e => e.currentTarget.blur()}
@@ -810,7 +813,7 @@ export function PurchaseCreate({
                   </div>
                   <div>
                     <Label htmlFor="totalPriceTA" className="mb-[10px] block">
-                      Billing Amount (HKD) <span className="text-red-500">*</span>
+                      {msg('Billing Amount (HKD)')} <span className="text-red-500">*</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening (Travel
                         Agency branch; mirrors the Corporate branch above). See
@@ -824,7 +827,7 @@ export function PurchaseCreate({
                       step="1"
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      placeholder="e.g. 50000"
+                      placeholder={msg('e.g. 50000')}
                       value={totalPrice}
                       onChange={e => setTotalPrice(e.target.value.replace(/[^0-9]/g, ''))}
                       onWheel={e => e.currentTarget.blur()}
@@ -838,28 +841,28 @@ export function PurchaseCreate({
 
           {/* ── Section 3: Payment Details ── */}
           <Card className="p-6">
-            <SectionHeader num={3} title="Payment Details" done={false} />
+            <SectionHeader num={3} title={msg('Payment Details')} done={false} />
 
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <Label htmlFor="pm" className="mb-[10px] block">
-                    Payment Method <span className="text-red-500">*</span>
+                    {msg('Payment Method')} <span className="text-red-500">*</span>
                   </Label>
                   <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
                     <SelectTrigger id="pm"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="Branch Transfer">Branch Transfer</SelectItem>
-                      <SelectItem value="Corporate Account">Corporate Account</SelectItem>
+                      <SelectItem value="Bank Transfer">{msg('Bank Transfer')}</SelectItem>
+                      <SelectItem value="Branch Transfer">{msg('Branch Transfer')}</SelectItem>
+                      <SelectItem value="Corporate Account">{msg('Corporate Account')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="txn" className="mb-[10px] block">Transaction Reference</Label>
+                  <Label htmlFor="txn" className="mb-[10px] block">{msg('Transaction Reference')}</Label>
                   <Input
                     id="txn"
-                    placeholder="e.g. TXN-CC-12345 (auto-generated if blank)"
+                    placeholder={msg('e.g. TXN-CC-12345 (auto-generated if blank)')}
                     value={transactionRef}
                     onChange={e => setTransactionRef(e.target.value)}
                   />
@@ -867,11 +870,11 @@ export function PurchaseCreate({
               </div>
 
               <div>
-                <Label htmlFor="notes" className="mb-[10px] block">Notes / Remarks</Label>
+                <Label htmlFor="notes" className="mb-[10px] block">{msg('Notes / Remarks')}</Label>
                 <Textarea
                   id="notes"
                   rows={3}
-                  placeholder="Add any notes about this purchase..."
+                  placeholder={msg('Add any notes about this purchase...')}
                   value={purchaseNotes}
                   onChange={e => setPurchaseNotes(e.target.value)}
                 />
@@ -880,7 +883,7 @@ export function PurchaseCreate({
               {/* ── 2026-07-02 — payment proof upload (image / PDF) ── */}
               <div>
                 <Label htmlFor="paymentProof" className="mb-[10px] block">
-                  Payment Proof <span className="text-gray-400 font-normal">(image or PDF, optional)</span>
+                  {msg('Payment Proof')} <span className="text-gray-400 font-normal">{msg('(image or PDF, optional)')}</span>
                 </Label>
                 {paymentProofFile ? (
                   <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
@@ -897,7 +900,7 @@ export function PurchaseCreate({
                       type="button"
                       onClick={() => { setPaymentProofFile(null); setPaymentProofError(null); }}
                       className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                      aria-label="Remove payment proof"
+                      aria-label={msg('Remove payment proof')}
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -925,14 +928,14 @@ export function PurchaseCreate({
                   <p className="text-xs text-red-600 mt-1">{paymentProofError}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Uploaded to Azure Blob Storage after you confirm the purchase.
+                  {msg('Uploaded to Azure Blob Storage after you confirm the purchase.')}
                 </p>
               </div>
 
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                 <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-800">
-                  <span className="font-medium">Pending Invoice:</span>{' '}
+                  <span className="font-medium">{msg('Pending Invoice:')}</span>{' '}
                   {selectedPackage?.kind === 'grading'
                     ? 'Booking credits and tier upgrade are applied only after the invoice is generated and sent.'
                     : selectedPackage?.kind === 'bundle'
@@ -947,7 +950,7 @@ export function PurchaseCreate({
           <div className="flex items-center justify-between pb-6">
             <Button variant="outline" onClick={onBack} className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button
               className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -964,21 +967,21 @@ export function PurchaseCreate({
         <div className="lg:col-span-1">
           <div className="sticky top-6">
             <Card className="p-5">
-              <h3 className="text-gray-900 mb-4">Order Summary</h3>
+              <h3 className="text-gray-900 mb-4">{msg('Order Summary')}</h3>
 
               {!selectedAccount ? (
                 <div className="flex flex-col items-center justify-center text-center py-8 px-2">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
                     <Info className="w-5 h-5 text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-400">Select an account and package to preview the order.</p>
+                  <p className="text-sm text-gray-400">{msg('Select an account and package to preview the order.')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">
 
                   {/* Account */}
                   <div>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Account</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">{msg('Account')}</p>
                     <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shrink-0">
                         {selectedAccount.purchaseCategory === 'Individual'
@@ -994,7 +997,7 @@ export function PurchaseCreate({
                     </div>
                     {selectedAccount.purchaseCategory === 'Individual' ? (
                       <div className="flex items-center justify-between mt-2 px-1">
-                        <span className="text-xs text-gray-400">Current tier</span>
+                        <span className="text-xs text-gray-400">{msg('Current tier')}</span>
                         <TierBadge tier={selectedAccount.currentTier ?? 'None'} />
                       </div>
                     ) : (
@@ -1002,7 +1005,7 @@ export function PurchaseCreate({
                       // show HKD credit balance (M51 pattern) instead of bogus
                       // "Current sessions" derived from `credit_balance`.
                       <div className="flex items-center justify-between mt-2 px-1">
-                        <span className="text-xs text-gray-400">Credit balance</span>
+                        <span className="text-xs text-gray-400">{msg('Credit balance')}</span>
                         <span className="text-xs text-gray-600">
                           HKD {(selectedAccount.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
@@ -1046,7 +1049,7 @@ export function PurchaseCreate({
                     </div>
                   ) : isCorporate && (promoCodeQuantity || totalPrice) ? (
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Custom Contract</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">{msg('Custom Contract')}</p>
                       <div className="p-3 rounded-lg border-2 border-blue-200 bg-blue-50">
                         {promoCodeName && (
                           <div className="flex items-center gap-2 mb-2">
@@ -1064,11 +1067,11 @@ export function PurchaseCreate({
                     </div>
                   ) : isTravelAgency && (creditBalance || totalPrice) ? (
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Credit Balance Contract</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">{msg('Credit Balance Contract')}</p>
                       <div className="p-3 rounded-lg border-2 border-purple-200 bg-purple-50">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="w-4 h-4 text-purple-600" />
-                          <span className="text-sm text-gray-900">Credit Balance</span>
+                          <span className="text-sm text-gray-900">{msg('Credit Balance')}</span>
                         </div>
                         {creditBalance && (
                           <p className="text-xs text-gray-500">Amount: HKD {parseFloat(creditBalance).toLocaleString()}</p>
@@ -1099,7 +1102,7 @@ export function PurchaseCreate({
                       </span>
                     </div>
                     <div className="flex items-center justify-between border-t pt-2">
-                      <span className="text-sm text-gray-900">Total</span>
+                      <span className="text-sm text-gray-900">{msg('Total')}</span>
                       <span className="text-gray-900">
                         {isIndividual && selectedPackage 
                           ? `HKD ${selectedPackage.price.toLocaleString()}`
@@ -1112,7 +1115,7 @@ export function PurchaseCreate({
 
                   {/* Payment method */}
                   <div className="border-t pt-3">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Payment</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">{msg('Payment')}</p>
                     <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                       <CreditCard className="w-3.5 h-3.5 text-gray-400" />
                       <span className="text-sm text-gray-700">{paymentMethod}</span>

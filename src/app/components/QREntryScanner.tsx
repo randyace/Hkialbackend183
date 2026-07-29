@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   ScanLine,
 } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── Types shared with BookingSchedules ───────────────────────────────────────
 type BookingStatus =
@@ -77,6 +78,7 @@ export interface QREntryScannerProps {
 }
 
 export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QREntryScannerProps) {
+  const msg = useMsg();
   const videoRef       = useRef<HTMLVideoElement>(null);
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const streamRef      = useRef<MediaStream | null>(null);
@@ -244,8 +246,8 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
               <QrCode className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="text-white text-sm">QR Entry Scanner</p>
-              <p className="text-white/60 text-xs">Scan guest booking QR code for lounge entry</p>
+              <p className="text-white text-sm">{msg('QR Entry Scanner')}</p>
+              <p className="text-white/60 text-xs">{msg('Scan guest booking QR code for lounge entry')}</p>
             </div>
           </div>
           <button
@@ -272,9 +274,9 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <Camera className="w-10 h-10 text-blue-400" />
               </div>
               <div className="text-center">
-                <p className="text-gray-700 mb-1">Ready to scan</p>
+                <p className="text-gray-700 mb-1">{msg('Ready to scan')}</p>
                 <p className="text-xs text-gray-400">
-                  Point the camera at the guest's booking QR code to verify entry.
+                  {msg('Point the camera at the guest\'s booking QR code to verify entry.')}
                 </p>
               </div>
               <Button
@@ -282,7 +284,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 onClick={() => startCamera(facingMode)}
               >
                 <Camera className="w-4 h-4" />
-                Open Camera
+                {msg('Open Camera')}
               </Button>
             </div>
           )}
@@ -337,7 +339,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                   <div className="absolute bottom-3 left-0 right-0 flex justify-center">
                     <span className="bg-black/60 text-white/90 text-xs px-3 py-1 rounded-full flex items-center gap-1.5">
                       <ScanLine className="w-3 h-3" />
-                      Align QR code within frame
+                      {msg('Align QR code within frame')}
                     </span>
                   </div>
                 </div>
@@ -348,7 +350,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                   <div className="text-center text-white">
                     <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-2" />
-                    <p className="text-sm">Starting camera…</p>
+                    <p className="text-sm">{msg('Starting camera…')}</p>
                   </div>
                 </div>
               )}
@@ -364,7 +366,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
                   <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
                   <div>
-                    <p className="text-emerald-800 text-sm">Entry Granted</p>
+                    <p className="text-emerald-800 text-sm">{msg('Entry Granted')}</p>
                     <p className="text-emerald-600 text-xs">{entryNote || 'Guest has been admitted to the lounge.'}</p>
                   </div>
                 </div>
@@ -373,7 +375,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
                   <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
                   <div>
-                    <p className="text-red-800 text-sm">Entry Denied</p>
+                    <p className="text-red-800 text-sm">{msg('Entry Denied')}</p>
                     <p className="text-red-600 text-xs">{entryNote || 'Guest has been turned away.'}</p>
                   </div>
                 </div>
@@ -384,7 +386,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm text-amber-800">
                   <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" />
                   <span>
-                    This booking status is <strong>{foundBooking.status}</strong>. Entry is only permitted for Confirmed or Approved bookings.
+                    {msg('This booking status is')} <strong>{foundBooking.status}</strong>. Entry is only permitted for Confirmed or Approved bookings.
                   </span>
                 </div>
               )}
@@ -412,43 +414,43 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
               {/* Booking info grid */}
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Booking No.</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Booking No.')}</label>
                   <p className="font-mono text-blue-700 text-xs">{foundBooking.bookingNo}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Venue</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Venue')}</label>
                   <p className="text-gray-800">{foundBooking.venue}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Date</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Date')}</label>
                   <p className="text-gray-800 text-xs">{formatDate(foundBooking.date)}</p>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Duration
+                    <Clock className="w-3 h-3" /> {msg('Duration')}
                   </label>
                   <p className="text-gray-800">{foundBooking.startTime} – {foundBooking.endTime}</p>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Users className="w-3 h-3" /> Guests
+                    <Users className="w-3 h-3" /> {msg('Guests')}
                   </label>
                   <p className="text-gray-800">{foundBooking.numberOfGuests} pax</p>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <Plane className="w-3 h-3" /> Flight
+                    <Plane className="w-3 h-3" /> {msg('Flight')}
                   </label>
                   <p className="text-gray-800">{foundBooking.flightNo} · {foundBooking.flightTime}</p>
                 </div>
                 <div>
                   <label className="text-xs text-gray-500 mb-[10px] block flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" /> Payment
+                    <CreditCard className="w-3 h-3" /> {msg('Payment')}
                   </label>
                   <p className="text-gray-800">{foundBooking.paymentMode}</p>
                 </div>
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Amount</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Amount')}</label>
                   <p className="text-gray-800">{foundBooking.amount}</p>
                 </div>
               </div>
@@ -456,11 +458,11 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
               {/* Note field for pending decisions */}
               {scanState === 'found' && (
                 <div>
-                  <label className="text-xs text-gray-500 mb-[10px] block">Note (optional)</label>
+                  <label className="text-xs text-gray-500 mb-[10px] block">{msg('Note (optional)')}</label>
                   <textarea
                     value={entryNote}
                     onChange={e => setEntryNote(e.target.value)}
-                    placeholder="Add an entry note…"
+                    placeholder={msg('Add an entry note…')}
                     rows={2}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                   />
@@ -476,10 +478,10 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 <XCircle className="w-8 h-8 text-red-400" />
               </div>
               <div className="text-center">
-                <p className="text-gray-700 mb-1">Booking Not Found</p>
+                <p className="text-gray-700 mb-1">{msg('Booking Not Found')}</p>
                 <p className="text-xs text-gray-400">
-                  No matching booking found for this QR code.<br />
-                  Please check the booking number or try again.
+                  {msg('No matching booking found for this QR code.')}<br />
+                  {msg('Please check the booking number or try again.')}
                 </p>
                 {lastRawQR && (
                   <p className="mt-2 font-mono text-xs text-gray-400 bg-gray-100 rounded px-2 py-1 inline-block break-all">
@@ -504,7 +506,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 onClick={handleReset}
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Scan Again
+                {msg('Scan Again')}
               </Button>
             )}
             {scanState === 'scanning' && (
@@ -515,7 +517,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 onClick={handleFlipCamera}
               >
                 <CameraOff className="w-3.5 h-3.5" />
-                Flip Camera
+                {msg('Flip Camera')}
               </Button>
             )}
           </div>
@@ -524,7 +526,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
           <div className="flex gap-2">
             {scanState === 'idle' && (
               <Button variant="outline" size="sm" onClick={handleClose}>
-                Cancel
+                {msg('Cancel')}
               </Button>
             )}
 
@@ -534,7 +536,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 size="sm"
                 onClick={() => { stopCamera(true); }}
               >
-                Stop Camera
+                {msg('Stop Camera')}
               </Button>
             )}
 
@@ -549,7 +551,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                       onViewDetail(foundBooking!.id);
                     }}
                   >
-                    View Details
+                    {msg('View Details')}
                   </Button>
                 )}
                 <Button
@@ -560,7 +562,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                   onClick={handleDenyEntry}
                 >
                   <XCircle className="w-3.5 h-3.5" />
-                  Deny
+                  {msg('Deny')}
                 </Button>
                 <Button
                   size="sm"
@@ -569,7 +571,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                   onClick={handleGrantEntry}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Grant Entry
+                  {msg('Grant Entry')}
                 </Button>
               </>
             )}
@@ -580,7 +582,7 @@ export function QREntryScanner({ open = false, onScan, onClose, onCheckIn }: QRE
                 className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
                 onClick={handleClose}
               >
-                Done
+                {msg('Done')}
               </Button>
             )}
           </div>

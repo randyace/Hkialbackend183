@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface AuditLog {
   id: string | number;
@@ -93,6 +94,7 @@ export function AuditLogs({
   onStartDateChange,
   onEndDateChange,
 }: AuditLogsProps = {}) {
+  const msg = useMsg();
   // Only fall back to MOCK when the prop is omitted (standalone figma Make).
   // An empty array from the container must not flash mock rows.
   const logs: AuditLog[] = auditsProp !== undefined ? auditsProp : MOCK_AUDIT_LOGS;
@@ -170,8 +172,8 @@ export function AuditLogs({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1>Audit Logs</h1>
-        <p className="text-gray-600">Track all system activities and user actions</p>
+        <h1>{msg('Audit Logs')}</h1>
+        <p className="text-gray-600">{msg('Track all system activities and user actions')}</p>
       </div>
 
       {/* Filters */}
@@ -182,7 +184,7 @@ export function AuditLogs({
               <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by user, action, module, or details..."
+                placeholder={msg('Search by user, action, module, or details...')}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -190,7 +192,7 @@ export function AuditLogs({
             </div>
             <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by module" />
+                <SelectValue placeholder={msg('Filter by module')} />
               </SelectTrigger>
               <SelectContent>
                 {moduleOptions.map((module) => (
@@ -202,7 +204,7 @@ export function AuditLogs({
             </Select>
             <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by action" />
+                <SelectValue placeholder={msg('Filter by action')} />
               </SelectTrigger>
               <SelectContent>
                 {actionOptions.map((action) => (
@@ -214,20 +216,20 @@ export function AuditLogs({
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={msg('Filter by status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="success">Success</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-                <SelectItem value="warning">Warning</SelectItem>
+                <SelectItem value="all">{msg('All Status')}</SelectItem>
+                <SelectItem value="success">{msg('Success')}</SelectItem>
+                <SelectItem value="failed">{msg('Failed')}</SelectItem>
+                <SelectItem value="warning">{msg('Warning')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
+              <label className="mb-[10px] block text-sm text-gray-700">{msg('Start Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -239,7 +241,7 @@ export function AuditLogs({
               </div>
             </div>
             <div className="flex-1">
-              <label className="mb-[10px] block text-sm text-gray-700">End Date</label>
+              <label className="mb-[10px] block text-sm text-gray-700">{msg('End Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -256,7 +258,7 @@ export function AuditLogs({
                 onClick={clearFilters}
                 className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
               >
-                Clear Filters
+                {msg('Clear Filters')}
               </button>
             </div>
           </div>
@@ -266,19 +268,19 @@ export function AuditLogs({
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Total Activities</p>
+          <p className="text-sm text-gray-600">{msg('Total Activities')}</p>
           <h2 className="mt-1">{logs.length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Successful Actions</p>
+          <p className="text-sm text-gray-600">{msg('Successful Actions')}</p>
           <h2 className="mt-1 text-green-600">{logs.filter((l) => l.status === 'success').length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Failed Actions</p>
+          <p className="text-sm text-gray-600">{msg('Failed Actions')}</p>
           <h2 className="mt-1 text-red-600">{logs.filter((l) => l.status === 'failed').length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Warnings</p>
+          <p className="text-sm text-gray-600">{msg('Warnings')}</p>
           <h2 className="mt-1 text-yellow-600">{logs.filter((l) => l.status === 'warning').length}</h2>
         </Card>
       </div>
@@ -289,19 +291,19 @@ export function AuditLogs({
           {isLoading ? (
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              <span className="ml-2 text-gray-500">Loading audit logs…</span>
+              <span className="ml-2 text-gray-500">{msg('Loading audit logs…')}</span>
             </div>
           ) : (
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Timestamp</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Module</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Action</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Details</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">IP Address</th>
-                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Timestamp')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('User')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Module')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Action')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Details')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('IP Address')}</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">{msg('Status')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -344,7 +346,7 @@ export function AuditLogs({
             disabled={safePage <= 1}
             className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
           >
-            Previous
+            {msg('Previous')}
           </button>
           <span className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm">
             {safePage} / {totalPages}
@@ -355,7 +357,7 @@ export function AuditLogs({
             disabled={safePage >= totalPages}
             className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
           >
-            Next
+            {msg('Next')}
           </button>
         </div>
       </div>

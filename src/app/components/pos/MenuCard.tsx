@@ -3,6 +3,7 @@ import { AlertTriangle, ImageOff } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { cn } from '../ui/utils';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface MenuCardItem {
   id: number;
@@ -56,6 +57,7 @@ export function MenuCard({
   itemAllergens,
   onAddToCart,
 }: MenuCardProps) {
+  const msg = useMsg();
   const isSoldOut = item.availability === 'unavailable';
 
   const matchedAllergens = useMemo(
@@ -90,7 +92,7 @@ export function MenuCard({
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-gray-400">
               <ImageOff className="h-8 w-8" />
-              <span className="text-xs">No image</span>
+              <span className="text-xs">{msg('No image')}</span>
             </div>
           )}
         </div>
@@ -166,7 +168,7 @@ export function MenuCard({
       {isSoldOut ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <span className="rounded-full bg-gray-900/85 px-4 py-1.5 text-sm font-semibold tracking-wide text-white shadow-md">
-            Sold Out
+            {msg('Sold Out')}
           </span>
         </div>
       ) : null}

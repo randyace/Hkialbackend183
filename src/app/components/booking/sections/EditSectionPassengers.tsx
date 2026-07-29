@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * EditSectionPassengers.tsx
  *
@@ -21,6 +22,7 @@ import {
 import type {
   BookingFormData, EditPassenger,
 } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 // 2026-06-08 round 6.2.1 — Age group dropdown options. The form
 // accepts BOTH the Q-B long-form strings ('Adult (13+ years)',
@@ -29,13 +31,13 @@ import type {
 // back-compat with legacy bookings. The orchestrator's
 // `applyGuestCountFieldsToData` reads both (per round 6.2.53).
 const AGE_GROUP_OPTIONS = [
-  { value: 'Adult (13+ years)', label: 'Adult (13+ years)' },
-  { value: 'Children (aged 2-11)', label: 'Children (aged 2-11)' },
-  { value: 'Infants (under 2 years old)', label: 'Infants (under 2 years old)' },
+  { value: 'Adult (13+ years)', label: msg('Adult (13+ years)') },
+  { value: 'Children (aged 2-11)', label: msg('Children (aged 2-11)') },
+  { value: 'Infants (under 2 years old)', label: msg('Infants (under 2 years old)') },
   // Back-compat aliases (pre-Q-B figma-ui data may still use these)
-  { value: 'Adult', label: 'Adult (legacy)' },
-  { value: 'Child', label: 'Child (legacy)' },
-  { value: 'Infant', label: 'Infant (legacy)' },
+  { value: 'Adult', label: msg('Adult (legacy)') },
+  { value: 'Child', label: msg('Child (legacy)') },
+  { value: 'Infant', label: msg('Infant (legacy)') },
 ];
 
 export interface EditSectionPassengersProps {
@@ -47,6 +49,7 @@ export function EditSectionPassengers({
   formData,
   onFormChange,
 }: EditSectionPassengersProps) {
+  const msg = useMsg();
   const passengers = formData.passengers ?? [];
   const vipPS = formData.vipPassengersInPremiereSuite ?? 0;
   const vipLD = formData.vipPassengersInLoungeDeluxe ?? 0;
@@ -79,25 +82,25 @@ export function EditSectionPassengers({
               </div>
               <div className="grid grid-cols-4 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Title <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Title')} <span className="text-red-500">*</span></label>
                   <Select
                     value={p.title}
                     onValueChange={v => updatePassenger(i, { title: v })}
                   >
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Mr">Mr</SelectItem>
-                      <SelectItem value="Mrs">Mrs</SelectItem>
-                      <SelectItem value="Ms">Ms</SelectItem>
-                      <SelectItem value="Miss">Miss</SelectItem>
-                      <SelectItem value="Dr">Dr</SelectItem>
-                      <SelectItem value="Prof">Prof</SelectItem>
-                      <SelectItem value="Mstr">Mstr</SelectItem>
+                      <SelectItem value="Mr">{msg('Mr')}</SelectItem>
+                      <SelectItem value="Mrs">{msg('Mrs')}</SelectItem>
+                      <SelectItem value="Ms">{msg('Ms')}</SelectItem>
+                      <SelectItem value="Miss">{msg('Miss')}</SelectItem>
+                      <SelectItem value="Dr">{msg('Dr')}</SelectItem>
+                      <SelectItem value="Prof">{msg('Prof')}</SelectItem>
+                      <SelectItem value="Mstr">{msg('Mstr')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">First Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('First Name')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={p.firstName}
@@ -106,7 +109,7 @@ export function EditSectionPassengers({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Last Name <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Last Name')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={p.lastName}
@@ -115,7 +118,7 @@ export function EditSectionPassengers({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Age Group <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Age Group')} <span className="text-red-500">*</span></label>
                   <Select
                     value={p.ageGroup}
                     onValueChange={v => updatePassenger(i, { ageGroup: v as EditPassenger['ageGroup'] })}
@@ -129,7 +132,7 @@ export function EditSectionPassengers({
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Travel Doc No. <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Travel Doc No.')} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={p.travelDocNo}
@@ -138,7 +141,7 @@ export function EditSectionPassengers({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Membership No.</label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Membership No.')}</label>
                   <input
                     type="text"
                     value={p.membershipNo ?? ''}
@@ -147,13 +150,13 @@ export function EditSectionPassengers({
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">Food Allergies</label>
+                  <label className="block text-xs text-gray-600 mb-1">{msg('Food Allergies')}</label>
                   <input
                     type="text"
                     value={p.foodAllergies ?? ''}
                     onChange={e => updatePassenger(i, { foodAllergies: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
-                    placeholder="e.g. shellfish, peanuts"
+                    placeholder={msg('e.g. shellfish, peanuts')}
                   />
                 </div>
               </div>

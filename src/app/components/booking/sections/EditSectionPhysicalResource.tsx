@@ -32,6 +32,7 @@ import { Building2 } from 'lucide-react';
 import { Card } from '../../ui/card';
 import { Checkbox } from '../../ui/checkbox';
 import type { BookingFormData, EditSuiteOption } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionPhysicalResourceProps {
   formData: BookingFormData;
@@ -44,6 +45,7 @@ export function EditSectionPhysicalResource({
   onFormChange,
   suiteOptions,
 }: EditSectionPhysicalResourceProps) {
+  const msg = useMsg();
   const assignedSuiteIds = new Set(formData.assignedSuiteIds ?? []);
   const assignedLoungeIds = new Set(formData.assignedLoungeIds ?? []);
   const suiteOpts = suiteOptions.filter(s => s.kind === 'suite');
@@ -73,7 +75,7 @@ export function EditSectionPhysicalResource({
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-2 flex items-center gap-2">
-        <Building2 className="w-4 h-4" /> Physical Resources
+        <Building2 className="w-4 h-4" /> {msg('Physical Resources')}
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Select at least one suite OR lounge. Pricing is routed to the matching product
@@ -84,7 +86,7 @@ export function EditSectionPhysicalResource({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-            Premiere Suites (CIP 1-6, Function Room)
+            {msg('Premiere Suites (CIP 1-6, Function Room)')}
           </h4>
           {psCap > 0 && (
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -98,7 +100,7 @@ export function EditSectionPhysicalResource({
         </div>
         {psCap === 0 ? (
           <p className="text-xs text-gray-400 italic">
-            Set Quantity of Premiere Suite above to enable suite assignment.
+            {msg('Set Quantity of Premiere Suite above to enable suite assignment.')}
           </p>
         ) : suiteOpts.length === 0 ? (
           <p className="text-xs text-gray-400 italic">
@@ -140,7 +142,7 @@ export function EditSectionPhysicalResource({
       <div>
         <div className="flex items-center justify-between mb-2">
           <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-            Lounge Deluxe (Lobby 1-8)
+            {msg('Lounge Deluxe (Lobby 1-8)')}
           </h4>
           {ldCap > 0 && (
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
@@ -154,10 +156,10 @@ export function EditSectionPhysicalResource({
         </div>
         {ldCap === 0 ? (
           <p className="text-xs text-gray-400 italic">
-            Set Quantity of VIP Passengers (LD) above to enable lounge assignment.
+            {msg('Set Quantity of VIP Passengers (LD) above to enable lounge assignment.')}
           </p>
         ) : loungeOpts.length === 0 ? (
-          <p className="text-xs text-gray-400 italic">No lounge options loaded.</p>
+          <p className="text-xs text-gray-400 italic">{msg('No lounge options loaded.')}</p>
         ) : (
           <div className="grid grid-cols-4 gap-2">
             {loungeOpts.map(l => {

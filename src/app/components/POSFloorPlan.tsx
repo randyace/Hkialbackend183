@@ -6,6 +6,7 @@ import { X, Plane, Clock, User, ShoppingCart, Search, Plus, Minus, AlertTriangle
 import { getPreOrder, clearPreOrder, PreOrderEntry } from './preOrderStore';
 import { toast } from 'sonner';
 import { isWithinPosReserveWindow } from '../../../../../lib/pos/posReserveWindow';
+import { useMsg } from '@/i18n/useMsg';
 
 // ── Module-level: bookings that could match an available/reserved suite ────────
 interface MatchingBooking {
@@ -214,6 +215,7 @@ export function POSFloorPlan({
   todayBookings: _todayBookingsProp,
   isLoading = false,
 }: POSFloorPlanExtendedProps) {
+  const msg = useMsg();
   // ── Suites are stateful so we can promote reserved/available → occupied ──
   const [suites, setSuites] = useState<Suite[]>([
     {
@@ -446,31 +448,31 @@ export function POSFloorPlan({
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1>POS Floor Plan</h1>
-        <p className="text-gray-600">Real-time suite status and guest management</p>
+        <h1>{msg('POS Floor Plan')}</h1>
+        <p className="text-gray-600">{msg('Real-time suite status and guest management')}</p>
       </div>
 
       {/* ── Status Summary ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-5 gap-4">
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="text-2xl text-green-700">{statusCounts.available}</div>
-          <div className="text-sm text-green-600">Available</div>
+          <div className="text-sm text-green-600">{msg('Available')}</div>
         </Card>
         <Card className="p-4 bg-indigo-50 border-indigo-200">
           <div className="text-2xl text-indigo-700">{statusCounts.reserved}</div>
-          <div className="text-sm text-indigo-600">Reserved</div>
+          <div className="text-sm text-indigo-600">{msg('Reserved')}</div>
         </Card>
         <Card className="p-4 bg-red-50 border-red-200">
           <div className="text-2xl text-red-700">{statusCounts.occupied}</div>
-          <div className="text-sm text-red-600">Occupied</div>
+          <div className="text-sm text-red-600">{msg('Occupied')}</div>
         </Card>
         <Card className="p-4 bg-yellow-50 border-yellow-200">
           <div className="text-2xl text-yellow-700">{statusCounts.foodServed}</div>
-          <div className="text-sm text-yellow-600">Food Served</div>
+          <div className="text-sm text-yellow-600">{msg('Food Served')}</div>
         </Card>
         <Card className="p-4 bg-orange-50 border-orange-200">
           <div className="text-2xl text-orange-700">{statusCounts.cleaning}</div>
-          <div className="text-sm text-orange-600">Cleaning</div>
+          <div className="text-sm text-orange-600">{msg('Cleaning')}</div>
         </Card>
       </div>
 
@@ -478,10 +480,10 @@ export function POSFloorPlan({
       <Card className="p-6">
         <div className="relative bg-gray-50 rounded-lg" style={{ height: '600px' }}>
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-lg text-gray-700">
-            HKIA VIP Lounge — Floor Plan
+            {msg('HKIA VIP Lounge — Floor Plan')}
           </div>
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-blue-100 text-blue-700 rounded border-2 border-blue-300">
-            Entrance ↓
+            {msg('Entrance ↓')}
           </div>
 
           {suites.map(suite => (
@@ -522,20 +524,20 @@ export function POSFloorPlan({
             </button>
           ))}
 
-          <div className="absolute right-8 top-12 px-3 py-2 bg-blue-50 border-2 border-blue-200 rounded text-sm text-blue-700">Reception</div>
-          <div className="absolute right-8 top-44 px-3 py-2 bg-purple-50 border-2 border-purple-200 rounded text-sm text-purple-700">Dining Area</div>
-          <div className="absolute left-8 bottom-24 px-3 py-2 bg-indigo-50 border-2 border-indigo-200 rounded text-sm text-indigo-700">Restrooms</div>
+          <div className="absolute right-8 top-12 px-3 py-2 bg-blue-50 border-2 border-blue-200 rounded text-sm text-blue-700">{msg('Reception')}</div>
+          <div className="absolute right-8 top-44 px-3 py-2 bg-purple-50 border-2 border-purple-200 rounded text-sm text-purple-700">{msg('Dining Area')}</div>
+          <div className="absolute left-8 bottom-24 px-3 py-2 bg-indigo-50 border-2 border-indigo-200 rounded text-sm text-indigo-700">{msg('Restrooms')}</div>
         </div>
       </Card>
 
       {/* Status Legend */}
       <div className="flex flex-wrap gap-3 text-xs">
         {([
-          { key: 'available',   bg: 'bg-green-100  border-green-400',  dot: 'bg-green-500',  label: 'Available' },
-          { key: 'reserved',    bg: 'bg-indigo-100 border-indigo-400', dot: 'bg-indigo-500', label: 'Reserved (booking assigned)' },
-          { key: 'occupied',    bg: 'bg-red-100    border-red-400',    dot: 'bg-red-500',    label: 'Occupied' },
-          { key: 'food-served', bg: 'bg-yellow-100 border-yellow-400', dot: 'bg-yellow-500', label: 'Food Served' },
-          { key: 'cleaning',    bg: 'bg-orange-100 border-orange-400', dot: 'bg-orange-500', label: 'Cleaning' },
+          { key: 'available',   bg: 'bg-green-100  border-green-400',  dot: 'bg-green-500',  label: msg('Available') },
+          { key: 'reserved',    bg: 'bg-indigo-100 border-indigo-400', dot: 'bg-indigo-500', label: msg('Reserved (booking assigned)') },
+          { key: 'occupied',    bg: 'bg-red-100    border-red-400',    dot: 'bg-red-500',    label: msg('Occupied') },
+          { key: 'food-served', bg: 'bg-yellow-100 border-yellow-400', dot: 'bg-yellow-500', label: msg('Food Served') },
+          { key: 'cleaning',    bg: 'bg-orange-100 border-orange-400', dot: 'bg-orange-500', label: msg('Cleaning') },
         ] as const).map(item => (
           <span key={item.key} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border ${item.bg} text-gray-700`}>
             <span className={`w-2 h-2 rounded-full ${item.dot}`} />
@@ -576,7 +578,7 @@ export function POSFloorPlan({
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <CalendarDays className="w-4 h-4 text-indigo-600" />
-                      <p className="text-sm text-indigo-900 font-medium">Reserved Booking</p>
+                      <p className="text-sm text-indigo-900 font-medium">{msg('Reserved Booking')}</p>
                     </div>
                     <p className="font-mono text-indigo-700 mb-1">{rb.bookingNo}</p>
                     <p className="text-sm text-indigo-800 mb-3">{rb.guestName}</p>
@@ -600,7 +602,7 @@ export function POSFloorPlan({
                   {preOrder ? (
                     !submittedToKitchen ? (
                       <div className="space-y-3">
-                        <h3 className="text-xs text-gray-500 uppercase tracking-wide">Pre-Order Items</h3>
+                        <h3 className="text-xs text-gray-500 uppercase tracking-wide">{msg('Pre-Order Items')}</h3>
                         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                           <p className="text-sm text-amber-800 font-medium mb-2 flex items-center gap-2">
                             <ShoppingCart className="w-4 h-4" />
@@ -616,7 +618,7 @@ export function POSFloorPlan({
                           </ul>
                         </div>
                         <p className="text-sm text-gray-700 text-center font-medium">
-                          Do you want to submit those items to kitchen now?
+                          {msg('Do you want to submit those items to kitchen now?')}
                         </p>
                         <Button
                           className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
@@ -630,17 +632,17 @@ export function POSFloorPlan({
                           }}
                         >
                           <CheckCheck className="w-4 h-4" />
-                          Yes, Send to Kitchen
+                          {msg('Yes, Send to Kitchen')}
                         </Button>
                         <Button variant="outline" className="w-full" onClick={() => setSelectedSuiteId(null)}>
-                          Not Now — Close
+                          {msg('Not Now — Close')}
                         </Button>
                       </div>
                     ) : (
                       <div className="bg-emerald-100 border border-emerald-300 rounded-lg p-4 text-center">
                         <CheckCheck className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                        <p className="text-sm text-emerald-800 font-medium">Items sent to kitchen!</p>
-                        <p className="text-xs text-emerald-600 mt-1">Suite updated to Occupied.</p>
+                        <p className="text-sm text-emerald-800 font-medium">{msg('Items sent to kitchen!')}</p>
+                        <p className="text-xs text-emerald-600 mt-1">{msg('Suite updated to Occupied.')}</p>
                       </div>
                     )
                   ) : (
@@ -648,8 +650,8 @@ export function POSFloorPlan({
                     <div className="space-y-3">
                       <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-4 text-center">
                         <ShoppingCart className="w-7 h-7 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No pre-order for this booking.</p>
-                        <p className="text-xs text-gray-400 mt-1">Guest may order on arrival.</p>
+                        <p className="text-sm text-gray-500">{msg('No pre-order for this booking.')}</p>
+                        <p className="text-xs text-gray-400 mt-1">{msg('Guest may order on arrival.')}</p>
                       </div>
                       <Button
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
@@ -660,7 +662,7 @@ export function POSFloorPlan({
                         }}
                       >
                         <CheckCheck className="w-4 h-4" />
-                        Check In Guest &amp; Assign Suite
+                        {msg('Check In Guest &amp; Assign Suite')}
                       </Button>
                     </div>
                   )}
@@ -673,14 +675,14 @@ export function POSFloorPlan({
               <>
                 {/* Guest info */}
                 <div className="space-y-4">
-                  <h3 className="text-sm uppercase tracking-wide text-gray-500">Guest Information</h3>
+                  <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Guest Information')}</h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm text-gray-600 mb-[10px] block">Booking Number</label>
+                      <label className="text-sm text-gray-600 mb-[10px] block">{msg('Booking Number')}</label>
                       <p className="text-lg">{selectedSuite.booking.bookingNo}</p>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600 mb-[10px] block">Guest Name</label>
+                      <label className="text-sm text-gray-600 mb-[10px] block">{msg('Guest Name')}</label>
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
                         <p className="text-lg">{selectedSuite.booking.guestName}</p>
@@ -688,14 +690,14 @@ export function POSFloorPlan({
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-sm text-gray-600 mb-[10px] block">Check-in Time</label>
+                        <label className="text-sm text-gray-600 mb-[10px] block">{msg('Check-in Time')}</label>
                         <div className="flex items-center gap-2">
                           <Clock className="w-4 h-4 text-gray-400" />
                           <p>{selectedSuite.booking.checkIn}</p>
                         </div>
                       </div>
                       <div>
-                        <label className="text-sm text-gray-600 mb-[10px] block">Flight Number</label>
+                        <label className="text-sm text-gray-600 mb-[10px] block">{msg('Flight Number')}</label>
                         <div className="flex items-center gap-2">
                           <Plane className="w-4 h-4 text-gray-400" />
                           <p>{selectedSuite.booking.flightNo}</p>
@@ -703,7 +705,7 @@ export function POSFloorPlan({
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm text-gray-600 mb-[10px] block">Flight Departure Time</label>
+                      <label className="text-sm text-gray-600 mb-[10px] block">{msg('Flight Departure Time')}</label>
                       <p className="text-lg text-blue-600">{selectedSuite.booking.flightTime}</p>
                     </div>
                   </div>
@@ -715,7 +717,7 @@ export function POSFloorPlan({
                   return (
                     <div className="border-t pt-5 space-y-3">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm uppercase tracking-wide text-gray-500">Food Allergies &amp; Dietary</h3>
+                        <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Food Allergies &amp; Dietary')}</h3>
                         {withInfo.length > 0 && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs border border-red-200">
                             <AlertTriangle className="w-3 h-3" />
@@ -742,7 +744,7 @@ export function POSFloorPlan({
                               </div>
                               {guest.foodAllergies.length > 0 && (
                                 <div className="mb-1.5">
-                                  <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-red-500" /> Allergies</p>
+                                  <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 text-red-500" /> {msg('Allergies')}</p>
                                   <div className="flex flex-wrap gap-1.5">
                                     {guest.foodAllergies.map(a => <span key={a} className="px-2 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-200 text-xs">{a}</span>)}
                                   </div>
@@ -750,13 +752,13 @@ export function POSFloorPlan({
                               )}
                               {guest.dietaryRequirements.length > 0 && (
                                 <div>
-                                  <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1"><Heart className="w-3 h-3 text-green-500" /> Dietary</p>
+                                  <p className="text-xs text-gray-500 mb-1.5 flex items-center gap-1"><Heart className="w-3 h-3 text-green-500" /> {msg('Dietary')}</p>
                                   <div className="flex flex-wrap gap-1.5">
                                     {guest.dietaryRequirements.map(d => <span key={d} className="px-2 py-0.5 rounded-full bg-green-100 text-green-800 border border-green-200 text-xs">{d}</span>)}
                                   </div>
                                 </div>
                               )}
-                              {!hasReqs && <p className="text-xs text-gray-400 italic">No known allergies or dietary requirements</p>}
+                              {!hasReqs && <p className="text-xs text-gray-400 italic">{msg('No known allergies or dietary requirements')}</p>}
                             </div>
                           );
                         })}
@@ -768,7 +770,7 @@ export function POSFloorPlan({
                 {/* Ordered Items */}
                 <div className="space-y-3 border-t pt-6">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-sm uppercase tracking-wide text-gray-500">Ordered Items</h3>
+                    <h3 className="text-sm uppercase tracking-wide text-gray-500">{msg('Ordered Items')}</h3>
                     <ShoppingCart className="w-5 h-5 text-gray-400" />
                   </div>
                   {getOrderedItems(selectedSuite.booking.bookingNo).map((item, idx) => (
@@ -782,7 +784,7 @@ export function POSFloorPlan({
 
                   {getBookingAddedItems(selectedSuite.booking.bookingNo).length > 0 && (
                     <div className="space-y-2 mt-1">
-                      <p className="text-xs text-blue-600 font-medium px-1">+ Newly Added</p>
+                      <p className="text-xs text-blue-600 font-medium px-1">{msg('+ Newly Added')}</p>
                       {getBookingAddedItems(selectedSuite.booking.bookingNo).map(item => (
                         <div key={item.id} className="flex items-center justify-between p-3 bg-blue-50 rounded border border-blue-200">
                           <div className="flex-1 min-w-0 mr-3">
@@ -801,11 +803,11 @@ export function POSFloorPlan({
                   )}
 
                   <div className="mt-4" ref={searchRef}>
-                    <label className="text-xs text-gray-500 mb-[10px] block">Search &amp; Add Service / Item</label>
+                    <label className="text-xs text-gray-500 mb-[10px] block">{msg('Search &amp; Add Service / Item')}</label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input
-                        type="text" placeholder="e.g. Latte, Massage, Fast Track…"
+                        type="text" placeholder={msg('e.g. Latte, Massage, Fast Track…')}
                         value={serviceSearch}
                         onChange={e => { setServiceSearch(e.target.value); setShowServiceDropdown(true); }}
                         onFocus={() => setShowServiceDropdown(true)}
@@ -835,7 +837,7 @@ export function POSFloorPlan({
                     )}
                     {showServiceDropdown && serviceSearch.trim().length > 0 && filteredServices.length === 0 && (
                       <div className="mt-1 border border-gray-200 rounded-md bg-white px-4 py-3 text-sm text-gray-500">
-                        No services found for "<span className="font-medium">{serviceSearch}</span>"
+                        {msg('No services found for "')}<span className="font-medium">{serviceSearch}</span>"
                       </div>
                     )}
                   </div>
@@ -843,10 +845,10 @@ export function POSFloorPlan({
 
                 <div className="flex gap-3 pt-4 border-t">
                   <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={() => { setSelectedSuiteId(null); onViewBookingDetail?.(selectedSuite.booking!.bookingNo); }}>
-                    View Full Details
+                    {msg('View Full Details')}
                   </Button>
                   <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => { setSelectedSuiteId(null); onCheckout?.(selectedSuite.booking!.bookingNo); }}>
-                    Checkout
+                    {msg('Checkout')}
                   </Button>
                 </div>
               </>
@@ -856,9 +858,9 @@ export function POSFloorPlan({
             {selectedSuite.status === 'available' && (
               <div className="space-y-5">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800 font-medium mb-1">Is there any assigned booking?</p>
+                  <p className="text-sm text-blue-800 font-medium mb-1">{msg('Is there any assigned booking?')}</p>
                   <p className="text-xs text-blue-600">
-                    Select a booking below to assign it to this suite, or click <strong>Create Booking</strong> to proceed without one.
+                    {msg('Select a booking below to assign it to this suite, or click')} <strong>{msg('Create Booking')}</strong> to proceed without one.
                   </p>
                 </div>
 
@@ -885,7 +887,7 @@ export function POSFloorPlan({
                                 <p className="text-sm font-medium text-gray-900 truncate">{b.guestName}</p>
                                 {preOrder && (
                                   <span className="shrink-0 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs border border-emerald-200">
-                                    <ShoppingCart className="w-3 h-3" /> Pre-order
+                                    <ShoppingCart className="w-3 h-3" /> {msg('Pre-order')}
                                   </span>
                                 )}
                               </div>
@@ -907,7 +909,7 @@ export function POSFloorPlan({
                 ) : (
                   <div className="text-center py-6 text-gray-400 border border-dashed border-gray-200 rounded-lg">
                     <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">No unassigned bookings for the current time window.</p>
+                    <p className="text-sm">{msg('No unassigned bookings for the current time window.')}</p>
                   </div>
                 )}
 
@@ -938,7 +940,7 @@ export function POSFloorPlan({
                                 ))}
                               </ul>
                             </div>
-                            <p className="text-sm text-gray-700 text-center font-medium">Do you want to submit those items to kitchen now?</p>
+                            <p className="text-sm text-gray-700 text-center font-medium">{msg('Do you want to submit those items to kitchen now?')}</p>
                             <div className="flex gap-2">
                               <Button
                                 className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
@@ -952,7 +954,7 @@ export function POSFloorPlan({
                                 }}
                               >
                                 <CheckCheck className="w-4 h-4" />
-                                Yes, Send to Kitchen
+                                {msg('Yes, Send to Kitchen')}
                               </Button>
                               <Button
                                 variant="outline" className="flex-1"
@@ -964,24 +966,24 @@ export function POSFloorPlan({
                                   }));
                                   clearPreOrder(bookingNo);
                                   assignBookingToSuite(selectedSuite.id, selectedMatchingBooking);
-                                  toast.info('Pre-order loaded — suite assigned. Review items above.');
+                                  toast.info(msg('Pre-order loaded — suite assigned. Review items above.'));
                                   setSelectedSuiteId(null);
                                 }}
                               >
-                                No, Review First
+                                {msg('No, Review First')}
                               </Button>
                             </div>
                           </div>
                         ) : (
                           <div className="bg-emerald-100 border border-emerald-300 rounded-lg p-4 text-center">
                             <CheckCheck className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                            <p className="text-sm text-emerald-800 font-medium">Items sent to kitchen!</p>
+                            <p className="text-sm text-emerald-800 font-medium">{msg('Items sent to kitchen!')}</p>
                           </div>
                         )
                       ) : (
                         <div className="space-y-3">
                           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-                            <p className="text-sm text-gray-500">No pre-order for this booking.</p>
+                            <p className="text-sm text-gray-500">{msg('No pre-order for this booking.')}</p>
                           </div>
                           <Button
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
@@ -992,7 +994,7 @@ export function POSFloorPlan({
                             }}
                           >
                             <CheckCheck className="w-4 h-4" />
-                            Assign Booking to Suite
+                            {msg('Assign Booking to Suite')}
                           </Button>
                         </div>
                       )}
@@ -1001,12 +1003,12 @@ export function POSFloorPlan({
                 })()}
 
                 <div className="border-t pt-4">
-                  <p className="text-xs text-center text-gray-400 mb-3">— or —</p>
+                  <p className="text-xs text-center text-gray-400 mb-3">{msg('— or —')}</p>
                   <Button
                     className="w-full bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
-                    onClick={() => { toast.info('Proceeding to create a new booking for this suite.'); setSelectedSuiteId(null); }}
+                    onClick={() => { toast.info(msg('Proceeding to create a new booking for this suite.')); setSelectedSuiteId(null); }}
                   >
-                    Create Booking
+                    {msg('Create Booking')}
                   </Button>
                 </div>
               </div>
@@ -1018,8 +1020,8 @@ export function POSFloorPlan({
                 <div className="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-3">
                   <span className="text-2xl">🧹</span>
                 </div>
-                <p className="font-medium">Suite is being cleaned</p>
-                <p className="text-xs text-gray-400 mt-1">It will be marked available once cleaning is complete.</p>
+                <p className="font-medium">{msg('Suite is being cleaned')}</p>
+                <p className="text-xs text-gray-400 mt-1">{msg('It will be marked available once cleaning is complete.')}</p>
               </div>
             )}
 

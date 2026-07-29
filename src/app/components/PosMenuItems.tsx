@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Plus, Edit2, Trash2, Search, Check, ImageIcon } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosMenuItemRow {
   id: number;
@@ -31,6 +32,7 @@ export function PosMenuItems({
   onEditItem,
   onDeleteItem,
 }: PosMenuItemsViewProps) {
+  const msg = useMsg();
   const [search, setSearch] = useState('');
 
   const filtered = items.filter((item) => {
@@ -48,12 +50,12 @@ export function PosMenuItems({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">POS Menu Items</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage F&B menu products for the VIP lounge POS.</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{msg('POS Menu Items')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{msg('Manage F&B menu products for the VIP lounge POS.')}</p>
         </div>
         <Button onClick={onCreateItem} className="gap-2">
           <Plus className="w-4 h-4" />
-          Create Menu Item
+          {msg('Create Menu Item')}
         </Button>
       </div>
 
@@ -64,7 +66,7 @@ export function PosMenuItems({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, category, or printer..."
+            placeholder={msg('Search by name, category, or printer...')}
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -75,25 +77,25 @@ export function PosMenuItems({
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Image</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Product Name</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Category</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Prep Time</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Printer</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Availability</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-600">Published</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('ID')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Image')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Product Name')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Category')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Prep Time')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Printer')}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">{msg('Availability')}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-600">{msg('Published')}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">{msg('Actions')}</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">Loading menu items...</td>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">{msg('Loading menu items...')}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">No menu items found.</td>
+                  <td colSpan={9} className="px-4 py-10 text-center text-gray-500">{msg('No menu items found.')}</td>
                 </tr>
               ) : (
                 filtered.map((item) => (
@@ -141,7 +143,7 @@ export function PosMenuItems({
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => onEditItem?.(item.id)} className="gap-1">
                           <Edit2 className="w-3.5 h-3.5" />
-                          Edit
+                          {msg('Edit')}
                         </Button>
                         {onDeleteItem && (
                           <Button
@@ -151,7 +153,7 @@ export function PosMenuItems({
                             className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            Delete
+                            {msg('Delete')}
                           </Button>
                         )}
                       </div>

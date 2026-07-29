@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { Checkbox } from './ui/checkbox';
 import { ArrowLeft, Loader2, Save, Upload, X, ImageIcon } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosMenuCategoryOption {
   id: number;
@@ -70,6 +71,7 @@ export function PosMenuItemEdit({
   onBack,
   onSave,
 }: PosMenuItemEditProps) {
+  const msg = useMsg();
   const isEditMode = !!itemId;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<PosMenuItemFormData>(defaultFormData);
@@ -123,7 +125,7 @@ export function PosMenuItemEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading menu item...
+        {msg('Loading menu item...')}
       </div>
     );
   }
@@ -133,23 +135,23 @@ export function PosMenuItemEdit({
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Menu Item' : 'Create Menu Item'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure POS F&B product details.</p>
+          <p className="text-sm text-gray-500 mt-1">{msg('Configure POS F&B product details.')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card className="p-6 space-y-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Product Details</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{msg('Product Details')}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Product Name EN</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Product Name EN')}</span>
               <input
                 required
                 value={formData.nameEn}
@@ -158,7 +160,7 @@ export function PosMenuItemEdit({
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Product Name ZH</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Product Name ZH')}</span>
               <input
                 required
                 value={formData.nameZh}
@@ -167,11 +169,11 @@ export function PosMenuItemEdit({
               />
             </label>
             <label className="space-y-1.5 md:col-span-2">
-              <span className="text-sm font-medium text-gray-700">Print Name</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Print Name')}</span>
               <input
                 value={formData.printName}
                 onChange={(e) => updateField('printName', e.target.value)}
-                placeholder="Optional shorter name for kitchen printer"
+                placeholder={msg('Optional shorter name for kitchen printer')}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
             </label>
@@ -179,21 +181,21 @@ export function PosMenuItemEdit({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Category</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Category')}</span>
               <select
                 required
                 value={formData.categoryId}
                 onChange={(e) => updateField('categoryId', e.target.value ? Number(e.target.value) : '')}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
               >
-                <option value="">Select category</option>
+                <option value="">{msg('Select category')}</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={cat.id}>{cat.name}</option>
                 ))}
               </select>
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Expected Prep Time (minutes)</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Expected Prep Time (minutes)')}</span>
               <input
                 required
                 type="number"
@@ -204,35 +206,35 @@ export function PosMenuItemEdit({
               />
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Target Printer</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Target Printer')}</span>
               <select
                 value={formData.printerId}
                 onChange={(e) => updateField('printerId', e.target.value ? Number(e.target.value) : '')}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
               >
-                <option value="">No printer</option>
+                <option value="">{msg('No printer')}</option>
                 {printers.map((printer) => (
                   <option key={printer.id} value={printer.id}>{printer.name}</option>
                 ))}
               </select>
             </label>
             <label className="space-y-1.5">
-              <span className="text-sm font-medium text-gray-700">Availability</span>
+              <span className="text-sm font-medium text-gray-700">{msg('Availability')}</span>
               <select
                 value={formData.availability}
                 onChange={(e) => updateField('availability', e.target.value as 'available' | 'unavailable')}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
               >
-                <option value="available">available</option>
-                <option value="unavailable">unavailable</option>
+                <option value="available">{available}</option>
+                <option value="unavailable">{unavailable}</option>
               </select>
             </label>
           </div>
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Published</p>
-              <p className="text-xs text-gray-500">Show this item on the POS menu.</p>
+              <p className="text-sm font-medium text-gray-800">{msg('Published')}</p>
+              <p className="text-xs text-gray-500">{msg('Show this item on the POS menu.')}</p>
             </div>
             <Switch
               checked={formData.published}
@@ -242,7 +244,7 @@ export function PosMenuItemEdit({
         </Card>
 
         <Card className="p-6 space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Image Upload</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{msg('Image Upload')}</h2>
           <div
             className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
               isDragging ? 'border-indigo-400 bg-indigo-50' : 'border-gray-300 bg-gray-50'
@@ -257,15 +259,15 @@ export function PosMenuItemEdit({
           >
             {imagePreview ? (
               <div className="space-y-3">
-                <img src={imagePreview} alt="Preview" className="mx-auto max-h-48 rounded-lg object-cover border" />
+                <img src={imagePreview} alt={msg('Preview')} className="mx-auto max-h-48 rounded-lg object-cover border" />
                 <div className="flex items-center justify-center gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                    Replace Image
+                    {msg('Replace Image')}
                   </Button>
                   {imageFile && (
                     <Button type="button" variant="outline" size="sm" onClick={clearImage}>
                       <X className="w-4 h-4 mr-1" />
-                      Clear Selection
+                      {msg('Clear Selection')}
                     </Button>
                   )}
                 </div>
@@ -273,10 +275,10 @@ export function PosMenuItemEdit({
             ) : (
               <div className="space-y-3">
                 <ImageIcon className="w-10 h-10 text-gray-400 mx-auto" />
-                <p className="text-sm text-gray-600">Drag and drop an image here, or click to browse.</p>
+                <p className="text-sm text-gray-600">{msg('Drag and drop an image here, or click to browse.')}</p>
                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-2">
                   <Upload className="w-4 h-4" />
-                  Choose File
+                  {msg('Choose File')}
                 </Button>
               </div>
             )}
@@ -291,13 +293,13 @@ export function PosMenuItemEdit({
         </Card>
 
         <Card className="p-6 space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Allergens and Dietary</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{msg('Allergens and Dietary')}</h2>
           {allergens.length === 0 ? (
-            <p className="text-sm text-gray-500">No allergens configured yet.</p>
+            <p className="text-sm text-gray-500">{msg('No allergens configured yet.')}</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500 mb-3">Allergies</p>
+                <p className="text-xs font-semibold uppercase text-gray-500 mb-3">{msg('Allergies')}</p>
                 <div className="space-y-2">
                   {allergyOptions.map((allergen) => (
                     <label key={allergen.id} className="flex items-center gap-3 text-sm text-gray-700">
@@ -311,7 +313,7 @@ export function PosMenuItemEdit({
                 </div>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500 mb-3">Dietary</p>
+                <p className="text-xs font-semibold uppercase text-gray-500 mb-3">{msg('Dietary')}</p>
                 <div className="space-y-2">
                   {dietaryOptions.map((allergen) => (
                     <label key={allergen.id} className="flex items-center gap-3 text-sm text-gray-700">

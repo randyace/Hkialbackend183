@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ export function DetailInfoCard({
   onCopy,
   className = '',
 }: DetailInfoCardProps) {
+  const msg = useMsg();
   // Normalise input: either a flat `fields` list or an array of `sections`
   const resolvedSections: DetailSection[] = sections
     ? sections

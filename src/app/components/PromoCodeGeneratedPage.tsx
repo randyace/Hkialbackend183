@@ -8,6 +8,7 @@ import {
   Clock, CheckCircle2, ToggleLeft, ToggleRight,
 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { msg } from '@/i18n/msgFallback';
 
 // INV-X18: product calendar day is HKT.
 const localDateStr = (d: Date = new Date()): string =>
@@ -123,7 +124,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
 
   const handleCopyAll = () => {
     navigator.clipboard.writeText(codes.join('\n')).catch(() => {});
-    toast.success('All codes copied to clipboard!');
+    toast.success(msg('All codes copied to clipboard!'));
   };
 
   const handleDownloadExcel = () => {
@@ -146,7 +147,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
     a.click();
     URL.revokeObjectURL(url);
     setCsvLoading(false);
-    toast.success('Excel / CSV file downloaded!');
+    toast.success(msg('Excel / CSV file downloaded!'));
   };
 
   const handleDownloadPDF = async () => {
@@ -213,7 +214,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
       toast.success(`PDF downloaded with ${codes.length} QR codes!`);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to generate PDF. Please try again.');
+      toast.error(msg('Failed to generate PDF. Please try again.'));
     } finally {
       setPdfLoading(false);
     }
@@ -263,7 +264,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
       toast.success(`ZIP downloaded with ${codes.length} QR PNG files!`);
     } catch (err) {
       console.error(err);
-      toast.error('Failed to generate ZIP. Please try again.');
+      toast.error(msg('Failed to generate ZIP. Please try again.'));
     } finally {
       setZipLoading(false);
     }
@@ -308,7 +309,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
         <div className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-3 shrink-0">
           <CheckCheck className="w-5 h-5 text-green-600 shrink-0" />
           <p className="text-sm text-green-800">
-            <span className="font-medium">VIP Account Creation Request Sent.</span>{' '}
+            <span className="font-medium">{msg('VIP Account Creation Request Sent.')}</span>{' '}
             VIP accounts creation request is sent to the VIP Lounge team.
           </p>
         </div>
@@ -318,26 +319,26 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
       <div className="bg-white border-b px-6 py-3 flex items-center gap-6 shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
           <QrCode className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-600">Total</span>
+          <span className="text-sm text-gray-600">{msg('Total')}</span>
           <Badge className="bg-[#0f2942] text-white">{codes.length}</Badge>
         </div>
         <div className="flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span className="text-sm text-gray-600">Available</span>
+          <span className="text-sm text-gray-600">{msg('Available')}</span>
           <Badge className="bg-emerald-100 text-emerald-700">{availableCount}</Badge>
         </div>
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-600">Used</span>
+          <span className="text-sm text-gray-600">{msg('Used')}</span>
           <Badge className="bg-gray-200 text-gray-600">{usedCount}</Badge>
         </div>
         {companyName && (
           <div className="text-sm text-gray-600">
-            Company: <span className="font-medium text-gray-900">{companyName}</span>
+            {msg('Company:')} <span className="font-medium text-gray-900">{companyName}</span>
           </div>
         )}
         <div className="text-sm text-gray-600">
-          Prefix: <span className="font-mono font-medium text-[#0f2942]">{prefix}</span>
+          {msg('Prefix:')} <span className="font-mono font-medium text-[#0f2942]">{prefix}</span>
         </div>
         <div className="ml-auto flex items-center gap-3 flex-wrap">
           <button
@@ -360,7 +361,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
           </button>
           <Button size="sm" variant="outline" className="gap-1.5" onClick={handleCopyAll}>
             <Copy className="w-3.5 h-3.5" />
-            Copy All
+            {msg('Copy All')}
           </Button>
         </div>
       </div>
@@ -372,7 +373,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search codes…"
+            placeholder={msg('Search codes…')}
             className="pl-9"
           />
         </div>
@@ -403,12 +404,12 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
                 {usedAt ? (
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5">
-                      <Clock className="w-2.5 h-2.5" /> Used
+                      <Clock className="w-2.5 h-2.5" /> {msg('Used')}
                     </span>
                     <span className="text-[9px] text-gray-400">{usedAt}</span>
                   </div>
                 ) : (
-                  <span className="text-[10px] text-emerald-600">Available</span>
+                  <span className="text-[10px] text-emerald-600">{msg('Available')}</span>
                 )}
                 {!usedAt && (
                   <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -441,12 +442,12 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
                       {usedAt}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-emerald-600">Available</span>
+                    <span className="text-[10px] text-emerald-600">{msg('Available')}</span>
                   )}
                 </div>
                 <div className="shrink-0">
                   {usedAt ? (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-gray-300" title="Already used" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-gray-300" title={msg('Already used')} />
                   ) : copiedIdx === idx ? (
                     <CheckCheck className="w-3.5 h-3.5 text-green-500" />
                   ) : (
@@ -460,7 +461,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <Search className="w-10 h-10 mb-2 opacity-30" />
-            <p className="text-sm">No codes match your current filters.</p>
+            <p className="text-sm">{msg('No codes match your current filters.')}</p>
           </div>
         )}
       </div>
@@ -473,7 +474,7 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
           {search && ` matching "${search}"`}
         </p>
         <Button variant="outline" size="sm" onClick={onBack}>
-          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> Back to Form
+          <ArrowLeft className="w-3.5 h-3.5 mr-1.5" /> {msg('Back to Form')}
         </Button>
       </div>
     </div>

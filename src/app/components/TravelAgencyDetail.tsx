@@ -21,6 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 interface TravelAgency {
   id: number;
@@ -101,11 +103,11 @@ function getBalanceStatus(used: number, total: number): BalanceStatus {
 }
 
 const STATUS_CONFIG: Record<BalanceStatus, { label: string; barColor: string; textColor: string; bg: string; icon: ReactNode }> = {
-  full:     { label: 'Full',     barColor: 'bg-blue-500',   textColor: 'text-blue-700',  bg: 'bg-blue-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  ok:       { label: 'OK',       barColor: 'bg-green-500',  textColor: 'text-green-700', bg: 'bg-green-50',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  low:      { label: 'Low',      barColor: 'bg-amber-500',  textColor: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  critical: { label: 'Critical', barColor: 'bg-red-500',    textColor: 'text-red-700',   bg: 'bg-red-50',    icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  depleted: { label: 'Depleted', barColor: 'bg-gray-300',   textColor: 'text-gray-500',  bg: 'bg-gray-50',   icon: <XCircle className="w-3.5 h-3.5" /> },
+  full:     { label: msg('Full'),     barColor: 'bg-blue-500',   textColor: 'text-blue-700',  bg: 'bg-blue-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  ok:       { label: msg('OK'),       barColor: 'bg-green-500',  textColor: 'text-green-700', bg: 'bg-green-50',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  low:      { label: msg('Low'),      barColor: 'bg-amber-500',  textColor: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  critical: { label: msg('Critical'), barColor: 'bg-red-500',    textColor: 'text-red-700',   bg: 'bg-red-50',    icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  depleted: { label: msg('Depleted'), barColor: 'bg-gray-300',   textColor: 'text-gray-500',  bg: 'bg-gray-50',   icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 
 function CreditBar({ used, total }: { used: number; total: number }) {
@@ -163,6 +165,7 @@ export function TravelAgencyDetail({
   onAddMember,
   onDeleteMember,
 }: TravelAgencyDetailProps) {
+  const msg = useMsg();
   const contracts = contractsProp ?? [];
   const members = membersProp ?? [];
 
@@ -256,11 +259,11 @@ export function TravelAgencyDetail({
           <Button variant="ghost" size="icon" onClick={onBack} type="button">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1>Agency</h1>
+          <h1>{msg('Agency')}</h1>
         </div>
         <div className="flex flex-col items-center justify-center min-h-[240px] text-gray-600 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" aria-hidden />
-          <p className="text-sm">Loading agency details…</p>
+          <p className="text-sm">{msg('Loading agency details…')}</p>
         </div>
       </div>
     );
@@ -292,42 +295,42 @@ export function TravelAgencyDetail({
         >
           {/* Agency Information Section */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Agency Information</h4>
+            <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">{msg('Agency Information')}</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label>Agency Name</label>
+                <label>{msg('Agency Name')}</label>
                 <input
                   type="text"
                   defaultValue={agency?.agencyName}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., Wings Agency"
+                  placeholder={msg('e.g., Wings Agency')}
                 />
               </div>
               <div>
-                <label>Agency Code</label>
+                <label>{msg('Agency Code')}</label>
                 <input
                   type="text"
                   defaultValue={agency?.agencyCode}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                  placeholder="e.g., TA-WG-001"
+                  placeholder={msg('e.g., TA-WG-001')}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label>Payment Method</label>
+                <label>{msg('Payment Method')}</label>
                 <select
                   defaultValue={agency?.paymentMethod}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="Upfront">Upfront Payment</option>
-                  <option value="On-Credit">On Credit</option>
-                  <option value="Monthly Invoice">Monthly Invoice</option>
+                  <option value="Upfront">{msg('Upfront Payment')}</option>
+                  <option value="On-Credit">{msg('On Credit')}</option>
+                  <option value="Monthly Invoice">{msg('Monthly Invoice')}</option>
                 </select>
               </div>
               <div>
-                <label>Discount Rate (%)</label>
+                <label>{msg('Discount Rate (%)')}</label>
                 <input
                   type="number"
                   defaultValue={agency?.discountRate}
@@ -338,7 +341,7 @@ export function TravelAgencyDetail({
                 />
               </div>
               <div>
-                <label>Status</label>
+                <label>{msg('Status')}</label>
                 <div className="flex items-center gap-3 pt-2">
                   <Switch
                     checked={agencyStatus}
@@ -354,7 +357,7 @@ export function TravelAgencyDetail({
             {/* Contact Persons Section */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-gray-700">Contact Persons</h4>
+                <h4 className="text-sm font-semibold text-gray-700">{msg('Contact Persons')}</h4>
                 <Button
                   type="button"
                   variant="outline"
@@ -363,7 +366,7 @@ export function TravelAgencyDetail({
                   className="h-8"
                 >
                   <Plus className="w-4 h-4 mr-1" />
-                  Add Contact Person
+                  {msg('Add Contact Person')}
                 </Button>
               </div>
 
@@ -385,27 +388,27 @@ export function TravelAgencyDetail({
                   </div>
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs">Name</label>
+                      <label className="text-xs">{msg('Name')}</label>
                       <Input
                         type="text"
                         value={contact.name}
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'name', e.target.value)}
-                        placeholder="Full name"
+                        placeholder={msg('Full name')}
                         className="h-9"
                       />
                     </div>
                     <div>
-                      <label className="text-xs">Email Address</label>
+                      <label className="text-xs">{msg('Email Address')}</label>
                       <Input
                         type="email"
                         value={contact.email}
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'email', e.target.value)}
-                        placeholder="email@agency.com"
+                        placeholder={msg('email@agency.com')}
                         className="h-9"
                       />
                     </div>
                     <div>
-                      <label className="text-xs">Phone Number</label>
+                      <label className="text-xs">{msg('Phone Number')}</label>
                       <Input
                         type="tel"
                         value={contact.phone}
@@ -420,17 +423,17 @@ export function TravelAgencyDetail({
             </div>
 
             <div>
-              <label>Business Address</label>
+              <label>{msg('Business Address')}</label>
               <Textarea
-                placeholder="Enter agency business address..."
+                placeholder={msg('Enter agency business address...')}
                 rows={3}
               />
             </div>
 
             <div>
-              <label>Remarks / Notes</label>
+              <label>{msg('Remarks / Notes')}</label>
               <Textarea
-                placeholder="Any additional notes about this agency..."
+                placeholder={msg('Any additional notes about this agency...')}
                 rows={3}
               />
             </div>
@@ -438,7 +441,7 @@ export function TravelAgencyDetail({
 
           <div className="flex gap-3 justify-end pt-4 border-t">
             <Button type="button" variant="outline" onClick={onBack}>
-              Cancel
+              {msg('Cancel')}
             </Button>
             <Button type="submit">
               <Save className="w-4 h-4 mr-2" />
@@ -453,12 +456,12 @@ export function TravelAgencyDetail({
         <Card className="p-6">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Active Contracts</h2>
-              <p className="text-sm text-gray-600">View and manage all contracts for this travel agency</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">{msg('Active Contracts')}</h2>
+              <p className="text-sm text-gray-600">{msg('View and manage all contracts for this travel agency')}</p>
             </div>
             {onAddContract && (
               <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onAddContract}>
-                Add contract
+                {msg('Add contract')}
               </Button>
             )}
           </div>
@@ -466,16 +469,16 @@ export function TravelAgencyDetail({
           {/* Contract Summary */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
-              <p className="text-xs text-blue-700 mb-1">Total Contracts</p>
+              <p className="text-xs text-blue-700 mb-1">{msg('Total Contracts')}</p>
               <p className="text-2xl font-semibold text-blue-900">{contracts.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
-              <p className="text-xs text-green-700 mb-1">Total Credit Limit</p>
+              <p className="text-xs text-green-700 mb-1">{msg('Total Credit Limit')}</p>
               <p className="text-2xl font-semibold text-green-900">HKD {totalCredit.toLocaleString()}</p>
               <p className="text-xs text-green-600 mt-1">HKD {remainingCredit.toLocaleString()} remaining</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
-              <p className="text-xs text-gray-700 mb-1">Overall Balance</p>
+              <p className="text-xs text-gray-700 mb-1">{msg('Overall Balance')}</p>
               <div className="mt-2">
                 <BalanceBadge used={usedCredit} total={totalCredit} />
               </div>
@@ -485,7 +488,7 @@ export function TravelAgencyDetail({
           {/* Contracts List */}
           <div className="space-y-4">
             {contracts.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4">No contracts found for this agency.</p>
+              <p className="text-sm text-gray-500 py-4">{msg('No contracts found for this agency.')}</p>
             ) : (
             contracts.map((contract) => {
               const days = daysUntilExpiry(contract.expiryDate);
@@ -519,7 +522,7 @@ export function TravelAgencyDetail({
 
                     {/* Balance */}
                     <div className="col-span-3">
-                      <p className="text-xs text-gray-500 mb-1">Credit Balance</p>
+                      <p className="text-xs text-gray-500 mb-1">{msg('Credit Balance')}</p>
                       <CreditBar used={contract.creditUsed} total={contract.creditLimit} />
                     </div>
 
@@ -535,7 +538,7 @@ export function TravelAgencyDetail({
                           onClick={() => handleEditContract(contract)}
                         >
                           <Edit2 className="w-3 h-3 mr-1" />
-                          Edit
+                          {msg('Edit')}
                         </Button>
                         {onDeleteContract && (
                           <Button
@@ -567,12 +570,12 @@ export function TravelAgencyDetail({
         <Card className="p-6">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Agency Members</h2>
-              <p className="text-sm text-gray-600">All customer accounts associated with this travel agency</p>
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">{msg('Agency Members')}</h2>
+              <p className="text-sm text-gray-600">{msg('All customer accounts associated with this travel agency')}</p>
             </div>
             {onAddMember && (
               <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onAddMember}>
-                Add member
+                {msg('Add member')}
               </Button>
             )}
           </div>
@@ -580,19 +583,19 @@ export function TravelAgencyDetail({
           {/* Members Summary */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
-              <p className="text-xs text-blue-700 mb-1">Total Members</p>
+              <p className="text-xs text-blue-700 mb-1">{msg('Total Members')}</p>
               <p className="text-2xl font-semibold text-blue-900">{members.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
-              <p className="text-xs text-green-700 mb-1">Active</p>
+              <p className="text-xs text-green-700 mb-1">{msg('Active')}</p>
               <p className="text-2xl font-semibold text-green-900">{members.filter(m => m.status === 'active').length}</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
-              <p className="text-xs text-gray-700 mb-1">Inactive</p>
+              <p className="text-xs text-gray-700 mb-1">{msg('Inactive')}</p>
               <p className="text-2xl font-semibold text-gray-900">{members.filter(m => m.status === 'inactive').length}</p>
             </Card>
             <Card className="p-4 bg-red-50 border-red-200">
-              <p className="text-xs text-red-700 mb-1">Suspended</p>
+              <p className="text-xs text-red-700 mb-1">{msg('Suspended')}</p>
               <p className="text-2xl font-semibold text-red-900">{members.filter(m => m.status === 'suspended').length}</p>
             </Card>
           </div>
@@ -602,16 +605,16 @@ export function TravelAgencyDetail({
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account #</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Travel Group</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Account #')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Name')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Email')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Phone')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Travel Group')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Member Type')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Status')}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{msg('Last Login')}</th>
                   {onDeleteMember && (
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{msg('Actions')}</th>
                   )}
                 </tr>
               </thead>
@@ -619,7 +622,7 @@ export function TravelAgencyDetail({
                 {members.length === 0 ? (
                   <tr>
                     <td colSpan={onDeleteMember ? 9 : 8} className="px-4 py-8 text-center text-sm text-gray-500">
-                      No members linked to this agency yet.
+                      {msg('No members linked to this agency yet.')}
                     </td>
                   </tr>
                 ) : (
@@ -675,7 +678,7 @@ export function TravelAgencyDetail({
       <Dialog open={!!editingContract} onOpenChange={() => setEditingContract(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Contract</DialogTitle>
+            <DialogTitle>{msg('Edit Contract')}</DialogTitle>
             <DialogDescription>
               Update contract details for {editingContract?.contractNumber}
             </DialogDescription>
@@ -683,7 +686,7 @@ export function TravelAgencyDetail({
           
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="mb-[10px] block">Expiry Date *</Label>
+              <Label className="mb-[10px] block">{msg('Expiry Date *')}</Label>
               <Input
                 type="date"
                 value={editForm.expiryDate}
@@ -692,7 +695,7 @@ export function TravelAgencyDetail({
             </div>
 
             <div>
-              <Label className="mb-[10px] block">Credit Limit (HKD) *</Label>
+              <Label className="mb-[10px] block">{msg('Credit Limit (HKD) *')}</Label>
               <Input
                 type="number"
                 value={editForm.creditLimit}
@@ -701,7 +704,7 @@ export function TravelAgencyDetail({
             </div>
 
             <div>
-              <Label className="mb-[10px] block">Credit Used (HKD) *</Label>
+              <Label className="mb-[10px] block">{msg('Credit Used (HKD) *')}</Label>
               <Input
                 type="number"
                 value={editForm.creditUsed}
@@ -711,10 +714,10 @@ export function TravelAgencyDetail({
 
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setEditingContract(null)}>
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button className="bg-[#0f2942] hover:bg-[#1a3d5c]" onClick={handleSaveContract}>
-                Save Changes
+                {msg('Save Changes')}
               </Button>
             </div>
           </div>

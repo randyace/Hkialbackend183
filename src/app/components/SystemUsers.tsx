@@ -1,3 +1,4 @@
+import { msg } from '@/i18n/msgFallback';
 /**
  * SystemUsers.tsx — Pure presentational list component.
  *
@@ -218,13 +219,13 @@ export function SystemUsers({
     <div className="flex min-h-full w-full flex-col gap-6 p-6">
       <div className="flex shrink-0 items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">System Users Management</h1>
-          <p className="mt-1 text-sm text-gray-600">Manage staff accounts, roles, and permissions</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{msg('System Users Management')}</h1>
+          <p className="mt-1 text-sm text-gray-600">{msg('Manage staff accounts, roles, and permissions')}</p>
         </div>
         {canCreate && (
           <Button onClick={onCreateUser} className="shrink-0">
             <Plus className="w-4 h-4 mr-2" />
-            Add New User
+            {msg('Add New User')}
           </Button>
         )}
       </div>
@@ -236,7 +237,7 @@ export function SystemUsers({
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name, email, or role..."
+                placeholder={msg('Search by name, email, or role...')}
                 className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -244,10 +245,10 @@ export function SystemUsers({
             </div>
             <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by role" />
+                <SelectValue placeholder={msg('Filter by role')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="all">{msg('All Roles')}</SelectItem>
                 {allRoleEntries.map(([value, label]) => (
                   <SelectItem key={value} value={value}>{label}</SelectItem>
                 ))}
@@ -255,19 +256,19 @@ export function SystemUsers({
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
+                <SelectValue placeholder={msg('Filter by status')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
+                <SelectItem value="all">{msg('All Status')}</SelectItem>
+                <SelectItem value="Active">{msg('Active')}</SelectItem>
+                <SelectItem value="Inactive">{msg('Inactive')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex flex-col gap-4 md:flex-row">
             <div className="flex-1">
-              <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
+              <label className="mb-[10px] block text-sm text-gray-700">{msg('Start Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -279,7 +280,7 @@ export function SystemUsers({
               </div>
             </div>
             <div className="flex-1">
-              <label className="mb-[10px] block text-sm text-gray-700">End Date</label>
+              <label className="mb-[10px] block text-sm text-gray-700">{msg('End Date')}</label>
               <div className="relative">
                 <input
                   type="date"
@@ -291,7 +292,7 @@ export function SystemUsers({
               </div>
             </div>
             <div className="flex items-end">
-              <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+              <Button variant="outline" onClick={clearFilters}>{msg('Clear Filters')}</Button>
             </div>
           </div>
         </div>
@@ -310,7 +311,7 @@ export function SystemUsers({
           {isLoading ? (
             <div className="flex items-center justify-center p-12">
               <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
-              <span className="ml-2 text-gray-500">Loading users…</span>
+              <span className="ml-2 text-gray-500">{msg('Loading users…')}</span>
             </div>
           ) : (
             <table className="w-full table-fixed">
@@ -326,14 +327,14 @@ export function SystemUsers({
               </colgroup>
               <thead className="border-b bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">ID</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Name</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Email</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Role</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Department</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Status</th>
-                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">Last Login</th>
-                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-gray-500">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('ID')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Name')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Email')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Role')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Department')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Status')}</th>
+                  <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-gray-500">{msg('Last Login')}</th>
+                  <th className="px-4 py-3 text-right text-xs uppercase tracking-wider text-gray-500">{msg('Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
@@ -383,7 +384,7 @@ export function SystemUsers({
                             size="sm"
                             onClick={() => onEditUser(user.id)}
                             className="h-8 w-8 p-0"
-                            title="Edit User"
+                            title={msg('Edit User')}
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
@@ -394,7 +395,7 @@ export function SystemUsers({
                             size="sm"
                             onClick={() => onManagePermissions(user.id)}
                             className="h-8 w-8 p-0 text-purple-600 hover:bg-purple-50 hover:text-purple-800"
-                            title="Manage Permissions"
+                            title={msg('Manage Permissions')}
                           >
                             <Key className="h-4 w-4" />
                           </Button>
@@ -405,7 +406,7 @@ export function SystemUsers({
                             size="sm"
                             onClick={() => onDeleteUser(user.id)}
                             className="h-8 w-8 p-0 text-red-600 hover:bg-red-50 hover:text-red-800"
-                            title="Delete User"
+                            title={msg('Delete User')}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

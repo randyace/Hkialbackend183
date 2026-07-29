@@ -4,6 +4,7 @@ import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { PosAllergenWarningBanner } from './PosAllergenWarningBanner';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface PosMenuItemCardData {
   id: number;
@@ -27,6 +28,7 @@ export function PosMenuItemCard({
   matchingAllergenNames = [],
   onAddToCart,
 }: PosMenuItemCardProps) {
+  const msg = useMsg();
   const [quantity, setQuantity] = useState(1);
   const isSoldOut = item.availability === 'unavailable';
 
@@ -45,7 +47,7 @@ export function PosMenuItemCard({
           <p className="mt-1 text-xs text-gray-500">{item.categoryName}</p>
         </div>
         {isSoldOut ? (
-          <Badge className="shrink-0 bg-gray-200 text-gray-700 hover:bg-gray-200">Sold Out</Badge>
+          <Badge className="shrink-0 bg-gray-200 text-gray-700 hover:bg-gray-200">{msg('Sold Out')}</Badge>
         ) : null}
       </div>
 
@@ -92,7 +94,7 @@ export function PosMenuItemCard({
           disabled={isSoldOut}
           onClick={handleAdd}
         >
-          Add to Cart
+          {msg('Add to Cart')}
         </Button>
       </div>
     </Card>

@@ -3,6 +3,8 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Switch } from './ui/switch';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 export type SuiteKind = 'suite' | 'lounge';
 
@@ -31,15 +33,15 @@ export interface SuiteEditProps {
 }
 
 const KIND_OPTIONS: { value: SuiteKind; label: string }[] = [
-  { value: 'suite', label: 'Suite' },
-  { value: 'lounge', label: 'Lounge' },
+  { value: 'suite', label: msg('Suite') },
+  { value: 'lounge', label: msg('Lounge') },
 ];
 
 const STATUS_OPTIONS: { value: SuiteOperationalStatus; label: string }[] = [
-  { value: 'available', label: 'Available' },
-  { value: 'occupied', label: 'Occupied' },
-  { value: 'reserved', label: 'Reserved' },
-  { value: 'maintenance', label: 'Maintenance' },
+  { value: 'available', label: msg('Available') },
+  { value: 'occupied', label: msg('Occupied') },
+  { value: 'reserved', label: msg('Reserved') },
+  { value: 'maintenance', label: msg('Maintenance') },
 ];
 
 const defaultFormData: SuiteFormData = {
@@ -59,6 +61,7 @@ export function SuiteEdit({
   onBack,
   onSave,
 }: SuiteEditProps) {
+  const msg = useMsg();
   const isEditMode = !!suiteId;
   const [formData, setFormData] = useState<SuiteFormData>(defaultFormData);
   const [suiteNameError, setSuiteNameError] = useState<string | null>(null);
@@ -114,7 +117,7 @@ export function SuiteEdit({
     return (
       <div className="p-6 flex items-center justify-center min-h-[320px] text-gray-500 gap-2">
         <Loader2 className="w-5 h-5 animate-spin" />
-        Loading suite...
+        {msg('Loading suite...')}
       </div>
     );
   }
@@ -124,20 +127,20 @@ export function SuiteEdit({
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {msg('Back')}
         </Button>
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Suite' : 'Create Suite'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure physical suite or lounge seat details.</p>
+          <p className="text-sm text-gray-500 mt-1">{msg('Configure physical suite or lounge seat details.')}</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Suite Name</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Suite Name')}</span>
             <input
               required
               value={formData.suiteName}
@@ -145,7 +148,7 @@ export function SuiteEdit({
                 setFormData((prev) => ({ ...prev, suiteName: e.target.value }));
                 if (suiteNameError) setSuiteNameError(null);
               }}
-              placeholder="e.g. CIP 1, Lobby 3"
+              placeholder={msg('e.g. CIP 1, Lobby 3')}
               className={`w-full px-3 py-2 border rounded-lg text-sm ${
                 suiteNameError ? 'border-red-400' : 'border-gray-200'
               }`}
@@ -154,7 +157,7 @@ export function SuiteEdit({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Type</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Type')}</span>
             <select
               value={formData.kind}
               onChange={(e) => {
@@ -165,7 +168,7 @@ export function SuiteEdit({
                 kindError ? 'border-red-400' : 'border-gray-200'
               }`}
             >
-              <option value="">Select type...</option>
+              <option value="">{msg('Select type...')}</option>
               {KIND_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -176,7 +179,7 @@ export function SuiteEdit({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Capacity</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Capacity')}</span>
             <input
               type="number"
               min={1}
@@ -194,17 +197,17 @@ export function SuiteEdit({
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Floor</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Floor')}</span>
             <input
               value={formData.floor}
               onChange={(e) => setFormData((prev) => ({ ...prev, floor: e.target.value }))}
-              placeholder="e.g. Level 7"
+              placeholder={msg('e.g. Level 7')}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
             />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Operational Status</span>
+            <span className="text-sm font-medium text-gray-700">{msg('Operational Status')}</span>
             <select
               value={formData.status}
               onChange={(e) => {
@@ -218,7 +221,7 @@ export function SuiteEdit({
                 statusError ? 'border-red-400' : 'border-gray-200'
               }`}
             >
-              <option value="">Select status...</option>
+              <option value="">{msg('Select status...')}</option>
               {STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -230,8 +233,8 @@ export function SuiteEdit({
 
           <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <div>
-              <p className="text-sm font-medium text-gray-800">Is Active</p>
-              <p className="text-xs text-gray-500">Inactive suites are hidden from booking assignment.</p>
+              <p className="text-sm font-medium text-gray-800">{msg('Is Active')}</p>
+              <p className="text-xs text-gray-500">{msg('Inactive suites are hidden from booking assignment.')}</p>
             </div>
             <Switch
               checked={formData.isActive}

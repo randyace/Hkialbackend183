@@ -25,6 +25,7 @@ import {
 import type {
   BookingFormData, EditMembershipTier, EditBookingChannel,
 } from '../BookingEditView';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface EditSectionAccountInfoProps {
   formData: BookingFormData;
@@ -51,32 +52,33 @@ export function EditSectionAccountInfo({
   onFormChange,
   promoCodeOptions = [],
 }: EditSectionAccountInfoProps) {
+  const msg = useMsg();
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-        <Award className="w-4 h-4" /> Account Settings
+        <Award className="w-4 h-4" /> {msg('Account Settings')}
       </h3>
       <div className="grid grid-cols-3 gap-6">
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Membership Tier</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Membership Tier')}</label>
           <Select
             value={formData.membershipTier || 'none'}
             onValueChange={v => onFormChange({
               membershipTier: v === 'none' ? undefined : (v as EditMembershipTier),
             })}
           >
-            <SelectTrigger><SelectValue placeholder="— Select —" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={msg('— Select —')} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">— None —</SelectItem>
-              <SelectItem value="Diamond">Diamond</SelectItem>
-              <SelectItem value="Platinum">Platinum</SelectItem>
-              <SelectItem value="Gold">Gold</SelectItem>
-              <SelectItem value="Sapphire">Sapphire</SelectItem>
+              <SelectItem value="none">{msg('— None —')}</SelectItem>
+              <SelectItem value="Diamond">{msg('Diamond')}</SelectItem>
+              <SelectItem value="Platinum">{msg('Platinum')}</SelectItem>
+              <SelectItem value="Gold">{msg('Gold')}</SelectItem>
+              <SelectItem value="Sapphire">{msg('Sapphire')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Account Discount %</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Account Discount %')}</label>
           <input
             type="number"
             min={0}
@@ -90,7 +92,7 @@ export function EditSectionAccountInfo({
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Promo Code</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Promo Code')}</label>
           {promoCodeOptions.length > 0 ? (
             // 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) —
             // real FK picker. The wrapper's `handleMasterSave`
@@ -124,9 +126,9 @@ export function EditSectionAccountInfo({
                     })(),
               })}
             >
-              <SelectTrigger><SelectValue placeholder="— Select —" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={msg('— Select —')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">— None —</SelectItem>
+                <SelectItem value="none">{msg('— None —')}</SelectItem>
                 {promoCodeOptions.map((opt) => (
                   <SelectItem key={opt.id} value={String(opt.id)}>
                     {opt.code}
@@ -147,32 +149,32 @@ export function EditSectionAccountInfo({
               value={formData.promoCode ?? ''}
               onChange={e => onFormChange({ promoCode: e.target.value.toUpperCase() })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
-              placeholder="e.g. SUMMER2024"
+              placeholder={msg('e.g. SUMMER2024')}
               disabled
             />
           )}
         </div>
         <div>
-          <label className="block text-sm text-gray-600 mb-[10px]">Booking Channel</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Booking Channel')}</label>
           <Select
             value={formData.bookingChannel ?? 'Email/Call to HKIAL'}
             onValueChange={v => onFormChange({ bookingChannel: v as EditBookingChannel })}
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="Online">Online</SelectItem>
-              <SelectItem value="Email/Call to HKIAL">Email / Call to HKIAL</SelectItem>
+              <SelectItem value="Online">{msg('Online')}</SelectItem>
+              <SelectItem value="Email/Call to HKIAL">{msg('Email / Call to HKIAL')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm text-gray-600 mb-[10px]">Account Remark (staff internal note)</label>
+          <label className="block text-sm text-gray-600 mb-[10px]">{msg('Account Remark (staff internal note)')}</label>
           <input
             type="text"
             value={formData.accountRemark ?? ''}
             onChange={e => onFormChange({ accountRemark: e.target.value })}
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            placeholder="e.g. VIP preferred seating near window"
+            placeholder={msg('e.g. VIP preferred seating near window')}
           />
         </div>
       </div>
@@ -180,16 +182,16 @@ export function EditSectionAccountInfo({
       {/* Round 6.2.139 — free LD / free PS credit opt-in on edit reprice */}
       {(formData.membershipTier || formData.ldEntriesRemaining != null || formData.psFreeUpgradesRemaining != null) && (
         <div className="mt-4 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-          <p className="text-sm font-medium text-[#0f2942] mb-2">Membership free credits</p>
+          <p className="text-sm font-medium text-[#0f2942] mb-2">{msg('Membership free credits')}</p>
           <div className="grid grid-cols-2 gap-3 text-sm mb-3">
             <div>
-              <span className="text-gray-600">Free LD entries left</span>
+              <span className="text-gray-600">{msg('Free LD entries left')}</span>
               <p className="font-semibold text-[#0f2942]" data-testid="edit-membership-ld-remaining">
                 {formatQuota(formData.ldEntriesRemaining)}
               </p>
             </div>
             <div>
-              <span className="text-gray-600">Free PS upgrades left</span>
+              <span className="text-gray-600">{msg('Free PS upgrades left')}</span>
               <p className="font-semibold text-[#0f2942]" data-testid="edit-membership-ps-remaining">
                 {formatQuota(formData.psFreeUpgradesRemaining)}
               </p>
@@ -205,8 +207,8 @@ export function EditSectionAccountInfo({
                 onChange={(e) => onFormChange({ useMembershipLdFree: e.target.checked })}
               />
               <span>
-                <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                <span className="block text-xs text-gray-500">Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base.</span>
+                <span className="font-medium text-[#0f2942]">{msg('Use free LD entry credit')}</span>
+                <span className="block text-xs text-gray-500">{msg('Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base.')}</span>
               </span>
             </label>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -218,8 +220,8 @@ export function EditSectionAccountInfo({
                 onChange={(e) => onFormChange({ useMembershipPsFree: e.target.checked })}
               />
               <span>
-                <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                <span className="block text-xs text-gray-500">Off → paid 40% off PS base only if LD credit is checked (burns 1 LD).</span>
+                <span className="font-medium text-[#0f2942]">{msg('Use free PS upgrade credit')}</span>
+                <span className="block text-xs text-gray-500">{msg('Off → paid 40% off PS base only if LD credit is checked (burns 1 LD).')}</span>
               </span>
             </label>
           </div>

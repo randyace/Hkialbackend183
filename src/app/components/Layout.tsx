@@ -5,10 +5,12 @@ import { POSFoodAlert, INITIAL_OVERDUE_COUNT } from './POSFoodAlert';
 import { Button } from './ui/button';
 import { Menu } from 'lucide-react';
 import { Toaster } from 'sonner';
+import { useMsg } from '@/i18n/useMsg';
 
 export interface LayoutProps {}
 
 export function Layout({}: LayoutProps = {}) {
+  const msg = useMsg();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,7 +44,7 @@ export function Layout({}: LayoutProps = {}) {
           >
             <Menu className="w-6 h-6 text-gray-700" />
           </Button>
-          <h1 className="text-gray-900">HKIA VIP Lounge Backend System</h1>
+          <h1 className="text-gray-900">{msg('HKIA VIP Lounge Backend System')}</h1>
         </div>
 
         {/* POS Food Alert — pinned below top bar on all /pos pages */}

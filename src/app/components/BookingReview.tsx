@@ -7,6 +7,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { toast } from 'sonner@2.0.3';
+import { useMsg } from '@/i18n/useMsg';
 
 // Mock data - in real app, this would fetch from API
 const MOCK_BOOKINGS = [
@@ -122,6 +123,7 @@ export interface BookingReviewProps {
 }
 
 export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () => {}, onApprove, onReject }: BookingReviewProps = {}) {
+  const msg = useMsg();
   const allBookings = bookingsProp?.length ? bookingsProp : MOCK_BOOKINGS;
   const booking = allBookings.find(b => b.id === (bookingId ?? 1)) ?? allBookings[0];
   const [reviewMode, setReviewMode] = useState<'view' | 'reject'>('view');
@@ -133,10 +135,10 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
       <div className="p-6">
         <Button variant="outline" onClick={onBack} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+          {msg('Back')}
         </Button>
         <Card className="p-12 text-center">
-          <p className="text-gray-600">Booking not found</p>
+          <p className="text-gray-600">{msg('Booking not found')}</p>
         </Card>
       </div>
     );
@@ -175,11 +177,11 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Approvals
+            {msg('Back to Approvals')}
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl">Review Booking Request</h1>
+              <h1 className="text-2xl">{msg('Review Booking Request')}</h1>
               <Badge className={`text-sm ${
                 booking.requestType === 'New Booking Request'
                   ? 'bg-green-100 text-green-700 border border-green-200'
@@ -198,66 +200,66 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
         <Card className="p-6 bg-blue-50 border-2 border-blue-300">
           <div className="flex items-center gap-2 mb-4">
             <FileEdit className="w-5 h-5 text-blue-700" />
-            <h2 className="text-lg font-medium text-blue-900">Changes Requested</h2>
+            <h2 className="text-lg font-medium text-blue-900">{msg('Changes Requested')}</h2>
           </div>
           <div className="grid grid-cols-2 gap-8">
             {/* Left: Original */}
             <div>
               <p className="text-sm text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b-2 border-blue-200 font-medium">
-                Original
+                {msg('Original')}
               </p>
               <div className="space-y-3">
                 {booking.originalData.suite && booking.originalData.suite !== booking.suite && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Suite</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Suite')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.suite}</span>
                   </div>
                 )}
                 {booking.originalData.dateTime && booking.originalData.dateTime !== booking.dateTime && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Visit Date/Time</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Visit Date/Time')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.dateTime}</span>
                   </div>
                 )}
                 {booking.originalData.flightNo && booking.originalData.flightNo !== booking.flightNo && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Flight No.</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Flight No.')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.flightNo}</span>
                   </div>
                 )}
                 {booking.originalData.flightTime && booking.originalData.flightTime !== booking.flightTime && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Flight Time</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Flight Time')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.flightTime}</span>
                   </div>
                 )}
                 {booking.originalData.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Number of Guests</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Number of Guests')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.numberOfGuests} pax</span>
                   </div>
                 )}
                 {booking.originalData.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Non-flying Guests</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Non-flying Guests')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.nonFlyingGuests}</span>
                   </div>
                 )}
                 {booking.originalData.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Limousine Service</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Limousine Service')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.hasLimousine ? 'Yes' : 'No'}</span>
                   </div>
                 )}
                 {booking.originalData.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Shopping Service</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Shopping Service')}</span>
                     <span className="line-through text-red-600 font-medium">{booking.originalData.hasShopping ? 'Yes' : 'No'}</span>
                   </div>
                 )}
                 {booking.originalData.specialRequests !== booking.specialRequests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Special Request</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Special Request')}</span>
                     <span className="line-through text-red-600 text-sm">{booking.originalData.specialRequests || '(none)'}</span>
                   </div>
                 )}
@@ -266,60 +268,60 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
             {/* Right: Changed */}
             <div>
               <p className="text-sm text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b-2 border-blue-200 font-medium">
-                Changed To
+                {msg('Changed To')}
               </p>
               <div className="space-y-3">
                 {booking.originalData.suite && booking.originalData.suite !== booking.suite && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Suite</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Suite')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.suite}</span>
                   </div>
                 )}
                 {booking.originalData.dateTime && booking.originalData.dateTime !== booking.dateTime && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Visit Date/Time</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Visit Date/Time')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.dateTime}</span>
                   </div>
                 )}
                 {booking.originalData.flightNo && booking.originalData.flightNo !== booking.flightNo && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Flight No.</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Flight No.')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.flightNo}</span>
                   </div>
                 )}
                 {booking.originalData.flightTime && booking.originalData.flightTime !== booking.flightTime && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Flight Time</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Flight Time')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.flightTime}</span>
                   </div>
                 )}
                 {booking.originalData.numberOfGuests !== undefined && booking.originalData.numberOfGuests !== booking.numberOfGuests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Number of Guests</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Number of Guests')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.numberOfGuests} pax</span>
                   </div>
                 )}
                 {booking.originalData.nonFlyingGuests !== undefined && booking.originalData.nonFlyingGuests !== booking.nonFlyingGuests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Non-flying Guests</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Non-flying Guests')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.nonFlyingGuests}</span>
                   </div>
                 )}
                 {booking.originalData.hasLimousine !== undefined && booking.originalData.hasLimousine !== booking.hasLimousine && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Limousine Service</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Limousine Service')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.hasLimousine ? 'Yes' : 'No'}</span>
                   </div>
                 )}
                 {booking.originalData.hasShopping !== undefined && booking.originalData.hasShopping !== booking.hasShopping && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Shopping Service</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Shopping Service')}</span>
                     <span className="text-green-700 font-bold text-lg">{booking.hasShopping ? 'Yes' : 'No'}</span>
                   </div>
                 )}
                 {booking.originalData.specialRequests !== booking.specialRequests && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-1">Special Request</span>
+                    <span className="text-xs text-gray-500 block mb-1">{msg('Special Request')}</span>
                     <span className="text-green-700 font-bold">{booking.specialRequests || '(none)'}</span>
                   </div>
                 )}
@@ -333,25 +335,25 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Guest & Account Information */}
         <Card className="p-6">
-          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">Guest & Account</h3>
+          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">{msg('Guest & Account')}</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Guest Name</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Guest Name')}</p>
               <p className="font-medium">{booking.guestName}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Account No.</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Account No.')}</p>
               <p className="font-mono text-sm">{booking.accountNo}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Account Type</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Account Type')}</p>
               <Badge className={accountTypeBadgeClass(booking.accountType)}>
                 {booking.accountType}
               </Badge>
             </div>
             {booking.membershipTier && (
               <div>
-                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Membership Tier</p>
+                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Membership Tier')}</p>
                 <Badge className={membershipBadgeClass(booking.membershipTier)}>
                   {booking.membershipTier}
                 </Badge>
@@ -359,7 +361,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
             )}
             {booking.agencyName && (
               <div>
-                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Agency</p>
+                <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Agency')}</p>
                 <div className="flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-purple-600" />
                   <span>{booking.agencyName}</span>
@@ -376,18 +378,18 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
 
         {/* Booking Information */}
         <Card className="p-6">
-          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">Booking Details</h3>
+          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">{msg('Booking Details')}</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Suite</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Suite')}</p>
               <p className="font-medium">{booking.suite}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Visit Date & Time</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Visit Date & Time')}</p>
               <p className="font-medium">{booking.dateTime}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Flight Details</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Flight Details')}</p>
               <div className="flex items-center gap-2">
                 <Plane className={`w-4 h-4 text-gray-400 ${booking.flightType === 'Arrival' ? 'rotate-[-45deg]' : 'rotate-45'}`} />
                 <span className="font-medium">{booking.flightNo}</span>
@@ -400,7 +402,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
               )}
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Total Guests</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Total Guests')}</p>
               <p className="font-medium">
                 {booking.numberOfGuests} pax
                 {booking.nonFlyingGuests > 0 && (
@@ -409,29 +411,29 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Additional Services</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Additional Services')}</p>
               <div className="flex gap-2">
                 {booking.hasLimousine && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-purple-100 text-purple-700 text-xs">
                     <Car className="w-3 h-3" />
-                    Limousine
+                    {msg('Limousine')}
                   </span>
                 )}
                 {booking.hasShopping && (
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 text-green-700 text-xs">
                     <ShoppingBag className="w-3 h-3" />
-                    Shopping
+                    {msg('Shopping')}
                   </span>
                 )}
                 {!booking.hasLimousine && !booking.hasShopping && (
-                  <span className="text-gray-400 text-sm">None</span>
+                  <span className="text-gray-400 text-sm">{msg('None')}</span>
                 )}
               </div>
             </div>
             {booking.isAdHoc && (
               <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded p-3 mt-2">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <span className="text-sm">This is an <strong>ad-hoc booking</strong> submitted within the cut-off period.</span>
+                <span className="text-sm">{msg('This is an')} <strong>{msg('ad-hoc booking')}</strong> {msg('submitted within the cut-off period.')}</span>
               </div>
             )}
           </div>
@@ -439,16 +441,16 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
 
         {/* Payment & Notes */}
         <Card className="p-6">
-          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">Payment & Notes</h3>
+          <h3 className="text-sm uppercase text-gray-500 tracking-wide mb-4 font-medium">{msg('Payment & Notes')}</h3>
           <div className="space-y-3">
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Payment Mode</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Payment Mode')}</p>
               <Badge className={paymentModeBadgeClass(booking.paymentMode)}>
                 {booking.paymentMode}
               </Badge>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Amount</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Amount')}</p>
               {booking.agencyDiscountRate && booking.originalAmountValue ? (
                 <div className="space-y-1">
                   <p className="text-gray-400 line-through text-sm">HK${booking.originalAmountValue.toLocaleString()}</p>
@@ -459,11 +461,11 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
               )}
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Booking Type</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Booking Type')}</p>
               <p>{booking.bookingType}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>Submitted At</p>
+              <p className="text-xs text-gray-500" style={{ marginBottom: 10 }}>{msg('Submitted At')}</p>
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-400" />
                 <span className="text-sm">{booking.submittedAt}</span>
@@ -473,7 +475,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
               <div className="flex items-start gap-2 text-yellow-800 bg-yellow-50 border border-yellow-200 rounded p-3 mt-3">
                 <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium mb-1">Special Request</p>
+                  <p className="text-sm font-medium mb-1">{msg('Special Request')}</p>
                   <p className="text-sm">{booking.specialRequests}</p>
                 </div>
               </div>
@@ -485,10 +487,10 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
       {/* Rejection Reason Section */}
       {reviewMode === 'reject' && (
         <Card className="p-6 bg-red-50 border-2 border-red-200">
-          <h3 className="text-lg font-medium text-red-900 mb-4">Rejection Reason</h3>
+          <h3 className="text-lg font-medium text-red-900 mb-4">{msg('Rejection Reason')}</h3>
           <div className="space-y-3">
             <label className="text-sm text-gray-700" style={{ marginBottom: 10, display: 'block' }}>
-              Please select a reason for rejecting this booking <span className="text-red-500">*</span>
+              {msg('Please select a reason for rejecting this booking')} <span className="text-red-500">*</span>
             </label>
             <div className="space-y-2">
               {REJECTION_REASONS.map(reason => (
@@ -509,14 +511,14 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
               <textarea
                 className="w-full border border-gray-300 rounded-md p-3 text-sm mt-2"
                 rows={4}
-                placeholder="Please describe the rejection reason…"
+                placeholder={msg('Please describe the rejection reason…')}
                 value={customReason}
                 onChange={e => setCustomReason(e.target.value)}
               />
             )}
             <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded text-sm text-orange-800 mt-4">
               <MailCheck className="w-5 h-5 flex-shrink-0" />
-              The guest will be notified of this rejection and the reason via email.
+              {msg('The guest will be notified of this rejection and the reason via email.')}
             </div>
           </div>
         </Card>
@@ -528,7 +530,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
           <div className="flex items-center gap-2 text-blue-800">
             <MailCheck className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm">
-              An email notification will be sent to <strong>{booking.guestName}</strong> automatically after approval or rejection.
+              {msg('An email notification will be sent to')} <strong>{booking.guestName}</strong> {msg('automatically after approval or rejection.')}
             </p>
           </div>
         </Card>
@@ -538,7 +540,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
       <Card className="p-6">
         <div className="flex justify-end gap-3">
           <Button variant="outline" onClick={onBack} size="lg">
-            Cancel
+            {msg('Cancel')}
           </Button>
           {reviewMode === 'view' && (
             <>
@@ -548,7 +550,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
                 onClick={() => setReviewMode('reject')}
               >
                 <XCircle className="w-5 h-5" />
-                Reject Booking
+                {msg('Reject Booking')}
               </Button>
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white gap-2"
@@ -556,7 +558,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
                 onClick={handleApprove}
               >
                 <CheckCircle className="w-5 h-5" />
-                Approve Booking
+                {msg('Approve Booking')}
               </Button>
             </>
           )}
@@ -571,7 +573,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
                   setCustomReason('');
                 }}
               >
-                Back to Review
+                {msg('Back to Review')}
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white gap-2"
@@ -580,7 +582,7 @@ export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () =
                 onClick={handleReject}
               >
                 <XCircle className="w-5 h-5" />
-                Confirm Rejection
+                {msg('Confirm Rejection')}
               </Button>
             </>
           )}

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { INITIAL_RECORDS } from './PurchaseCreate';
 import { toast } from 'sonner@2.0.3';
 import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 // 2026-07-02 — wrapper-supplied contract shape. Mirrors the PurchaseRecord
@@ -152,6 +153,7 @@ const MOCK_BATCH_EDIT = {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCodesPage, availableContracts: availableContractsProp }: PromoCodeEditProps) {
+  const msg = useMsg();
   const isEditMode = promoCodeId !== null;
   const availableContracts = getAvailableContracts(availableContractsProp);
 
@@ -242,14 +244,14 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
 
     const contract = selectedContract;
     if (!isEditMode && (!contract || selectedContractId == null)) {
-      toast.error('Please select a contract');
+      toast.error(msg('Please select a contract'));
       return;
     }
     const isCorporateOrTA = contract &&
       (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Agency');
 
     toast.success('Promo code batch saved successfully!', {
-      description: 'Batch record created. Generating unique codes…',
+      description: msg('Batch record created. Generating unique codes…'),
     });
 
     if (isCorporateOrTA && !isEditMode) {
@@ -334,7 +336,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
               className="gap-2 border-[#0f2942] text-[#0f2942] hover:bg-[#0f2942] hover:text-white"
             >
               <Eye className="w-4 h-4" />
-              View Generated Codes
+              {msg('View Generated Codes')}
             </Button>
           )}
         </div>
@@ -346,7 +348,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-6 h-6 rounded-full bg-[#0f2942] text-white flex items-center justify-center text-xs">1</div>
-            <h2 className="text-base">Contract & Promo Code Settings</h2>
+            <h2 className="text-base">{msg('Contract & Promo Code Settings')}</h2>
           </div>
 
           <div className="grid grid-cols-1 gap-6">
@@ -354,7 +356,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
             <div>
               <label className="block text-sm" style={{ marginBottom: 10 }}>
                 <Receipt className="inline w-4 h-4 mr-1 text-gray-500" />
-                Select Contract *
+                {msg('Select Contract *')}
               </label>
               {isEditMode ? (
                 <div className="flex flex-col gap-2 px-3 py-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -379,11 +381,11 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                     required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a contract…" />
+                      <SelectValue placeholder={msg('Select a contract…')} />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
                       {availableContracts.length === 0 ? (
-                        <div className="px-3 py-6 text-center text-sm text-gray-500">No available contracts found.</div>
+                        <div className="px-3 py-6 text-center text-sm text-gray-500">{msg('No available contracts found.')}</div>
                       ) : (
                         availableContracts.map(c => {
                           // Prefer contract promo name as prefix label; fall back to company initials.
@@ -424,7 +426,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-500 mt-1">
-                    A contract is required. Selecting one auto-fills code name, prefix, quantity (locked), and contract dates.
+                    {msg('A contract is required. Selecting one auto-fills code name, prefix, quantity (locked), and contract dates.')}
                   </p>
                 </>
               )}
@@ -434,23 +436,23 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div>
                 <label className="block text-xs font-medium text-blue-900 mb-2">
-                  Promo Code Prefix *
+                  {msg('Promo Code Prefix *')}
                 </label>
                 <Input
                   value={prefix}
                   onChange={(e) => setPrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                  placeholder="e.g. CPA"
+                  placeholder={msg('e.g. CPA')}
                   className="font-mono bg-white"
                   required
                   disabled={isEditMode}
                 />
                 <p className="text-xs text-blue-700 mt-1">
-                  Format: <span className="font-mono font-medium">{prefix || 'PREFIX'}-XXXXXX</span>
+                  {msg('Format:')} <span className="font-mono font-medium">{prefix || 'PREFIX'}-XXXXXX</span>
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-blue-900 mb-2">
-                  Promo Code Quantity *
+                  {msg('Promo Code Quantity *')}
                 </label>
                 <Input
                   type="number"
@@ -458,14 +460,14 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   max={10000}
                   value={codeCount}
                   onChange={(e) => setCodeCount(Math.max(1, Math.min(10000, Number(e.target.value))))}
-                  placeholder="Select a contract first"
+                  placeholder={msg('Select a contract first')}
                   className="bg-white"
                   required
                   disabled
                   readOnly
                 />
                 <p className="text-xs text-blue-700 mt-1">
-                  Locked to the selected contract quantity (not editable)
+                  {msg('Locked to the selected contract quantity (not editable)')}
                 </p>
               </div>
             </div>
@@ -476,11 +478,11 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-6 h-6 rounded-full bg-[#0f2942] text-white flex items-center justify-center text-xs">2</div>
-            <h2 className="text-base">Code Type & Value</h2>
+            <h2 className="text-base">{msg('Code Type & Value')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Code Type *</label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Code Type *')}</label>
               <select
                 value={codeType}
                 onChange={(e) => {
@@ -491,14 +493,14 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 required
               >
-                <option value="Free bookings">Free Bookings</option>
-                <option value="Discount">Discount (%)</option>
+                <option value="Free bookings">{msg('Free Bookings')}</option>
+                <option value="Discount">{msg('Discount (%)')}</option>
               </select>
             </div>
 
             {codeType === 'Discount' && (
               <div>
-                <label className="block text-sm" style={{ marginBottom: 10 }}>Discount Percentage (%) *</label>
+                <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Discount Percentage (%) *')}</label>
                 <Input
                   type="number" min={1} max={100}
                   value={amount}
@@ -506,13 +508,13 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   placeholder="e.g. 15"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Percentage discount applied at checkout.</p>
+                <p className="text-xs text-gray-500 mt-1">{msg('Percentage discount applied at checkout.')}</p>
               </div>
             )}
 
             {codeType === 'Free bookings' && (
               <div>
-                <label className="block text-sm" style={{ marginBottom: 10 }}>Number of Free Bookings *</label>
+                <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Number of Free Bookings *')}</label>
                 <Input
                   type="number" min={1}
                   value={amount}
@@ -520,12 +522,12 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   placeholder="e.g. 1"
                   required
                 />
-                <p className="text-xs text-gray-500 mt-1">Complimentary bookings granted per code use.</p>
+                <p className="text-xs text-gray-500 mt-1">{msg('Complimentary bookings granted per code use.')}</p>
               </div>
             )}
 
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Use Limit per Code *</label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Use Limit per Code *')}</label>
               <Input
                 type="number" min={1}
                 value={useLimit}
@@ -533,24 +535,24 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                 placeholder="e.g. 1"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">How many times each individual code can be used.</p>
+              <p className="text-xs text-gray-500 mt-1">{msg('How many times each individual code can be used.')}</p>
             </div>
 
             {/* Reusable by Same User — only shown when useLimit > 1 */}
             {showReusableSection && (
               <div>
-                <label className="block text-sm" style={{ marginBottom: 10 }}>Reusable by Same User</label>
+                <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Reusable by Same User')}</label>
                 <div className="flex items-center gap-6 mt-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="reusable" checked={reusable === true}  onChange={() => setReusable(true)}  className="w-4 h-4" />
-                    <span className="text-sm">Yes</span>
+                    <span className="text-sm">{msg('Yes')}</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="reusable" checked={reusable === false} onChange={() => setReusable(false)} className="w-4 h-4" />
-                    <span className="text-sm">No</span>
+                    <span className="text-sm">{msg('No')}</span>
                   </label>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Can the same customer use this code more than once?</p>
+                <p className="text-xs text-gray-500 mt-1">{msg('Can the same customer use this code more than once?')}</p>
               </div>
             )}
           </div>
@@ -560,30 +562,30 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-6 h-6 rounded-full bg-[#0f2942] text-white flex items-center justify-center text-xs">3</div>
-            <h2 className="text-base">Validity Period & Availability</h2>
+            <h2 className="text-base">{msg('Validity Period & Availability')}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Start Date *</label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Start Date *')}</label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>End Date *</label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('End Date *')}</label>
               <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Availability</label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>{msg('Availability')}</label>
               <div className="flex items-center gap-6 mt-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="availability" checked={availability === true}  onChange={() => setAvailability(true)}  className="w-4 h-4" />
-                  <span className="text-sm">Active</span>
+                  <span className="text-sm">{msg('Active')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="radio" name="availability" checked={availability === false} onChange={() => setAvailability(false)} className="w-4 h-4" />
-                  <span className="text-sm">Inactive</span>
+                  <span className="text-sm">{msg('Inactive')}</span>
                 </label>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Enable or disable all codes in this batch.</p>
+              <p className="text-xs text-gray-500 mt-1">{msg('Enable or disable all codes in this batch.')}</p>
             </div>
           </div>
         </Card>
@@ -592,19 +594,19 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-6 h-6 rounded-full bg-[#0f2942] text-white flex items-center justify-center text-xs">4</div>
-            <h2 className="text-base">Title <span className="text-gray-400 text-sm font-normal">(Multilingual — Optional)</span></h2>
+            <h2 className="text-base">{msg('Title')} <span className="text-gray-400 text-sm font-normal">{msg('(Multilingual — Optional)')}</span></h2>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (English) <span className="text-gray-400 text-xs">(Optional)</span></label>
-              <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder="Enter title in English" />
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (English) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <Input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder={msg('Enter title in English')} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Simplified Chinese) <span className="text-gray-400 text-xs">(Optional)</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Simplified Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Input value={titleSimpChi} onChange={(e) => setTitleSimpChi(e.target.value)} placeholder="输入简体中文标题" />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Traditional Chinese) <span className="text-gray-400 text-xs">(Optional)</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Title (Traditional Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Input value={titleTradChi} onChange={(e) => setTitleTradChi(e.target.value)} placeholder="輸入繁體中文標題" />
             </div>
           </div>
@@ -614,19 +616,19 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-6 h-6 rounded-full bg-[#0f2942] text-white flex items-center justify-center text-xs">5</div>
-            <h2 className="text-base">Description <span className="text-gray-400 text-sm font-normal">(Multilingual — Optional)</span></h2>
+            <h2 className="text-base">{msg('Description')} <span className="text-gray-400 text-sm font-normal">{msg('(Multilingual — Optional)')}</span></h2>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (English) <span className="text-gray-400 text-xs">(Optional)</span></label>
-              <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder="Enter description in English" rows={3} />
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (English) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
+              <Textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} placeholder={msg('Enter description in English')} rows={3} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Simplified Chinese) <span className="text-gray-400 text-xs">(Optional)</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Simplified Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Textarea value={descriptionSimpChi} onChange={(e) => setDescriptionSimpChi(e.target.value)} placeholder="输入简体中文描述" rows={3} />
             </div>
             <div>
-              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Traditional Chinese) <span className="text-gray-400 text-xs">(Optional)</span></label>
+              <label className="block text-sm" style={{ marginBottom: 10 }}>Description (Traditional Chinese) <span className="text-gray-400 text-xs">{msg('(Optional)')}</span></label>
               <Textarea value={descriptionTradChi} onChange={(e) => setDescriptionTradChi(e.target.value)} placeholder="輸入繁體中文描述" rows={3} />
             </div>
           </div>
@@ -634,7 +636,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
 
         {/* ── Action Buttons ───────────────────────────────────────────────── */}
         <div className="flex gap-3 justify-end pb-4">
-          <Button type="button" variant="outline" onClick={onBack}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={onBack}>{msg('Cancel')}</Button>
           <Button type="submit" className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white gap-2">
             <Save className="w-4 h-4" />
             {isEditMode ? 'Update Batch' : 'Save & Generate Codes'}

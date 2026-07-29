@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mockKitchenDisplayData } from './__fixtures__/KitchenDisplay.mocks';
+import { useMsg } from '@/i18n/useMsg';
 
 // ─── Language strings (pure UI — not data, not from backend) ─────────────────
 
@@ -577,6 +578,7 @@ export function KitchenDisplay({
   onOrderStatusChanged,
   onRefresh,
 }: KitchenDisplayProps = {}) {
+  const msg = useMsg();
 
   // ── Pure UI state ──────────────────────────────────────────────────────────
   const [orders,        setOrders]        = useState<KDSOrder[]>(initialOrders);
@@ -769,7 +771,7 @@ export function KitchenDisplay({
             onClick={() => setLang(l => l === 'en' ? 'zh' : 'en')}
             style={{ fontSize: '0.85em' }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors font-semibold"
-            title="Switch Language / 切換語言"
+            title={msg('Switch Language / 切換語言')}
           >
             <Languages className="w-4 h-4" />
             {t.switchLang}

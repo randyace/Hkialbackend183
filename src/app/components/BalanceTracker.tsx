@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Search, Building2, Plane, AlertTriangle, CheckCircle, XCircle, TrendingDown, ChevronDown, ChevronRight, FileText, Calendar, Edit2 } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 type AccountType = 'Corporate' | 'Agency' | 'Individual';
 
@@ -266,11 +268,11 @@ function getBalanceStatus(used: number, total: number): BalanceStatus {
 }
 
 const STATUS_CONFIG: Record<BalanceStatus, { label: string; barColor: string; textColor: string; bg: string; icon: React.ReactNode }> = {
-  full:     { label: 'Full',     barColor: 'bg-blue-500',   textColor: 'text-blue-700',  bg: 'bg-blue-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  ok:       { label: 'OK',       barColor: 'bg-green-500',  textColor: 'text-green-700', bg: 'bg-green-50',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
-  low:      { label: 'Low',      barColor: 'bg-amber-500',  textColor: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  critical: { label: 'Critical', barColor: 'bg-red-500',    textColor: 'text-red-700',   bg: 'bg-red-50',    icon: <AlertTriangle className="w-3.5 h-3.5" /> },
-  depleted: { label: 'Depleted', barColor: 'bg-gray-300',   textColor: 'text-gray-500',  bg: 'bg-gray-50',   icon: <XCircle className="w-3.5 h-3.5" /> },
+  full:     { label: msg('Full'),     barColor: 'bg-blue-500',   textColor: 'text-blue-700',  bg: 'bg-blue-50',   icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  ok:       { label: msg('OK'),       barColor: 'bg-green-500',  textColor: 'text-green-700', bg: 'bg-green-50',  icon: <CheckCircle className="w-3.5 h-3.5" /> },
+  low:      { label: msg('Low'),      barColor: 'bg-amber-500',  textColor: 'text-amber-700', bg: 'bg-amber-50',  icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  critical: { label: msg('Critical'), barColor: 'bg-red-500',    textColor: 'text-red-700',   bg: 'bg-red-50',    icon: <AlertTriangle className="w-3.5 h-3.5" /> },
+  depleted: { label: msg('Depleted'), barColor: 'bg-gray-300',   textColor: 'text-gray-500',  bg: 'bg-gray-50',   icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 
 function BalanceBadge({ used, total }: { used: number; total: number }) {
@@ -346,6 +348,7 @@ export function BalanceTracker({
   onViewContract,
   isLoading = false,
 }: BalanceTrackerProps = {}) {
+  const msg = useMsg();
   const displayAccounts = contractsProp.length > 0 ? contractsProp : MOCK_ACCOUNTS;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
@@ -512,29 +515,29 @@ export function BalanceTracker({
   return (
     <div className="p-4 md:p-6">
       <div className="mb-6">
-        <h1 className="text-gray-900 mb-1">Contract Management</h1>
-        <p className="text-sm text-gray-500">Manage and track all active contracts with multiple offers per account.</p>
+        <h1 className="text-gray-900 mb-1">{msg('Contract Management')}</h1>
+        <p className="text-sm text-gray-500">{msg('Manage and track all active contracts with multiple offers per account.')}</p>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card className="p-4 bg-[#0f2942] text-white">
-          <p className="text-xs text-blue-200 mb-1">Total Contracts</p>
+          <p className="text-xs text-blue-200 mb-1">{msg('Total Contracts')}</p>
           <p className="text-2xl text-white">{totalContracts}</p>
           <p className="text-xs text-blue-300 mt-1">{MOCK_ACCOUNTS.length} accounts</p>
         </Card>
         <Card className="p-4 border-2 border-red-300 bg-red-50">
-          <div className="flex items-center gap-1 mb-1"><AlertTriangle className="w-4 h-4 text-red-600" /><p className="text-xs text-red-700">Critical / Depleted</p></div>
+          <div className="flex items-center gap-1 mb-1"><AlertTriangle className="w-4 h-4 text-red-600" /><p className="text-xs text-red-700">{msg('Critical / Depleted')}</p></div>
           <p className="text-2xl text-red-600">{criticalCount}</p>
-          <p className="text-xs text-gray-500 mt-1">Needs attention</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('Needs attention')}</p>
         </Card>
         <Card className="p-4 border-2 border-amber-300 bg-amber-50">
-          <div className="flex items-center gap-1 mb-1"><TrendingDown className="w-4 h-4 text-amber-600" /><p className="text-xs text-amber-700">Low Balance</p></div>
+          <div className="flex items-center gap-1 mb-1"><TrendingDown className="w-4 h-4 text-amber-600" /><p className="text-xs text-amber-700">{msg('Low Balance')}</p></div>
           <p className="text-2xl text-amber-600">{lowCount}</p>
-          <p className="text-xs text-gray-500 mt-1">≤ 30% remaining</p>
+          <p className="text-xs text-gray-500 mt-1">{msg('≤ 30% remaining')}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs text-gray-500 mb-1">Session Utilisation</p>
+          <p className="text-xs text-gray-500 mb-1">{msg('Session Utilisation')}</p>
           <p className="text-2xl text-gray-900">{totalSessions > 0 ? Math.round((usedSessions / totalSessions) * 100) : 0}%</p>
           <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
             <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${totalSessions > 0 ? (usedSessions / totalSessions) * 100 : 0}%` }} />
@@ -548,49 +551,49 @@ export function BalanceTracker({
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input placeholder="Search by name or account number..." value={searchTerm}
+              <Input placeholder={msg('Search by name or account number...')} value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
             </div>
             <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
-              <SelectTrigger className="w-full md:w-48"><SelectValue placeholder="All Account Types" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-48"><SelectValue placeholder={msg('All Account Types')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Account Types</SelectItem>
-                <SelectItem value="Corporate">Corporate</SelectItem>
-                <SelectItem value="Agency">Agency</SelectItem>
-                <SelectItem value="Individual">Individual</SelectItem>
+                <SelectItem value="all">{msg('All Account Types')}</SelectItem>
+                <SelectItem value="Corporate">{msg('Corporate')}</SelectItem>
+                <SelectItem value="Agency">{msg('Agency')}</SelectItem>
+                <SelectItem value="Individual">{msg('Individual')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterMembership} onValueChange={(v: any) => setFilterMembership(v)}>
-              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder="Membership Type" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder={msg('Membership Type')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Membership</SelectItem>
-                <SelectItem value="Gold">Gold</SelectItem>
-                <SelectItem value="Platinum">Platinum</SelectItem>
-                <SelectItem value="Diamond">Diamond</SelectItem>
-                <SelectItem value="Sapphire">Sapphire</SelectItem>
+                <SelectItem value="all">{msg('All Membership')}</SelectItem>
+                <SelectItem value="Gold">{msg('Gold')}</SelectItem>
+                <SelectItem value="Platinum">{msg('Platinum')}</SelectItem>
+                <SelectItem value="Diamond">{msg('Diamond')}</SelectItem>
+                <SelectItem value="Sapphire">{msg('Sapphire')}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={(v: any) => setFilterStatus(v)}>
-              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+              <SelectTrigger className="w-full md:w-44"><SelectValue placeholder={msg('All Statuses')} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="full">Full</SelectItem>
-                <SelectItem value="ok">OK</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="depleted">Depleted</SelectItem>
+                <SelectItem value="all">{msg('All Statuses')}</SelectItem>
+                <SelectItem value="full">{msg('Full')}</SelectItem>
+                <SelectItem value="ok">{msg('OK')}</SelectItem>
+                <SelectItem value="low">{msg('Low')}</SelectItem>
+                <SelectItem value="critical">{msg('Critical')}</SelectItem>
+                <SelectItem value="depleted">{msg('Depleted')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
           <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
-            <Label className="text-sm text-gray-600 lg:min-w-fit">Contract Expiry Date Range:</Label>
+            <Label className="text-sm text-gray-600 lg:min-w-fit">{msg('Contract Expiry Date Range:')}</Label>
             <div className="flex flex-col sm:flex-row gap-2 items-center flex-1">
               <Input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="From"
+                placeholder={msg('From')}
                 className="w-full sm:w-44"
               />
               <span className="text-gray-400">to</span>
@@ -598,16 +601,16 @@ export function BalanceTracker({
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                placeholder="To"
+                placeholder={msg('To')}
                 className="w-full sm:w-44"
               />
             </div>
             <div className="flex gap-2 lg:ml-auto">
               <Button variant="outline" onClick={handleClearFilters} className="flex-1 lg:flex-none">
-                Clear Filters
+                {msg('Clear Filters')}
               </Button>
               <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] flex-1 lg:flex-none" onClick={handleSearch}>
-                Apply Filters
+                {msg('Apply Filters')}
               </Button>
             </div>
           </div>
@@ -621,17 +624,17 @@ export function BalanceTracker({
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12"></TableHead>
-                <TableHead>Account</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Contracts</TableHead>
-                <TableHead>Total Balance</TableHead>
-                <TableHead>Used</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>{msg('Account')}</TableHead>
+                <TableHead>{msg('Type')}</TableHead>
+                <TableHead>{msg('Contracts')}</TableHead>
+                <TableHead>{msg('Total Balance')}</TableHead>
+                <TableHead>{msg('Used')}</TableHead>
+                <TableHead>{msg('Status')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-gray-500 py-10">No accounts found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-gray-500 py-10">{msg('No accounts found.')}</TableCell></TableRow>
               ) : filtered.flatMap(account => {
                 const totals = calculateAccountTotals(account);
                 const isExpanded = expandedRows.has(account.id);
@@ -647,10 +650,10 @@ export function BalanceTracker({
                     </TableCell>
                     <TableCell>
                       {account.accountType === 'Corporate'
-                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800"><Building2 className="w-3 h-3" />Corporate</span>
+                        ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-800"><Building2 className="w-3 h-3" />{msg('Corporate')}</span>
                         : account.accountType === 'Agency'
-                          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800"><Plane className="w-3 h-3" />Agency</span>
-                          : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800">Individual</span>}
+                          ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-800"><Plane className="w-3 h-3" />{msg('Agency')}</span>
+                          : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800">{msg('Individual')}</span>}
                     </TableCell>
                     <TableCell>
                       <span className="text-sm font-medium text-gray-900">{account.contracts.length}</span>
@@ -713,12 +716,12 @@ export function BalanceTracker({
                             <div className="col-span-3">
                               {account.accountType === 'Agency' ? (
                                 <>
-                                  <p className="text-xs text-gray-500 mb-1">Credit Balance</p>
+                                  <p className="text-xs text-gray-500 mb-1">{msg('Credit Balance')}</p>
                                   <CreditBar used={contract.creditUsed || 0} total={contract.creditLimit || 0} />
                                 </>
                               ) : (
                                 <>
-                                  <p className="text-xs text-gray-500 mb-1">Session Balance</p>
+                                  <p className="text-xs text-gray-500 mb-1">{msg('Session Balance')}</p>
                                   <SessionBar used={contract.sessionsUsed || 0} total={contract.sessionsTotal || 0} />
                                 </>
                               )}
@@ -738,7 +741,7 @@ export function BalanceTracker({
                                   }}
                                 >
                                   <Edit2 className="w-3 h-3 mr-1" />
-                                  Edit
+                                  {msg('Edit')}
                                 </Button>
                               </div>
                               {contract.notes && (
@@ -766,7 +769,7 @@ export function BalanceTracker({
       <Dialog open={!!editingContract} onOpenChange={() => setEditingContract(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Contract</DialogTitle>
+            <DialogTitle>{msg('Edit Contract')}</DialogTitle>
             <DialogDescription>
               Update contract details for {editingContract?.contract.contractNumber}
             </DialogDescription>
@@ -774,7 +777,7 @@ export function BalanceTracker({
           
           <div className="space-y-4 mt-4">
             <div>
-              <Label className="mb-[10px] block">Expiry Date *</Label>
+              <Label className="mb-[10px] block">{msg('Expiry Date *')}</Label>
               <Input
                 type="date"
                 value={editForm.expiryDate}
@@ -786,7 +789,7 @@ export function BalanceTracker({
             {editingContract?.accountType === 'Agency' ? (
               <>
                 <div>
-                  <Label className="mb-[10px] block">Credit Limit (HKD) *</Label>
+                  <Label className="mb-[10px] block">{msg('Credit Limit (HKD) *')}</Label>
                   <Input
                     type="number"
                     value={editForm.creditLimit}
@@ -796,7 +799,7 @@ export function BalanceTracker({
                   />
                 </div>
                 <div>
-                  <Label className="mb-[10px] block">Credit Used (HKD) *</Label>
+                  <Label className="mb-[10px] block">{msg('Credit Used (HKD) *')}</Label>
                   <Input
                     type="number"
                     value={editForm.creditUsed}
@@ -809,7 +812,7 @@ export function BalanceTracker({
             ) : (
               <>
                 <div>
-                  <Label className="mb-[10px] block">Total Sessions *</Label>
+                  <Label className="mb-[10px] block">{msg('Total Sessions *')}</Label>
                   <Input
                     type="number"
                     value={editForm.sessionsTotal}
@@ -819,7 +822,7 @@ export function BalanceTracker({
                   />
                 </div>
                 <div>
-                  <Label className="mb-[10px] block">Used Sessions *</Label>
+                  <Label className="mb-[10px] block">{msg('Used Sessions *')}</Label>
                   <Input
                     type="number"
                     value={editForm.sessionsUsed}
@@ -833,10 +836,10 @@ export function BalanceTracker({
 
             <div className="flex justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setEditingContract(null)}>
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button className="bg-[#0f2942] hover:bg-[#1a3d5c]" onClick={handleSaveContract}>
-                Save Changes
+                {msg('Save Changes')}
               </Button>
             </div>
           </div>

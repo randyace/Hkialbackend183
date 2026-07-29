@@ -31,6 +31,8 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -343,22 +345,22 @@ const STATUS_CONFIG: Record<RefundStatus, { color: string; icon: React.ReactNode
   'Pending Review': {
     color: 'bg-amber-100 text-amber-800 border border-amber-200',
     icon: <Clock className="w-3 h-3" />,
-    label: 'Pending Review',
+    label: msg('Pending Review'),
   },
   Processing: {
     color: 'bg-blue-100 text-blue-800 border border-blue-200',
     icon: <RefreshCw className="w-3 h-3" />,
-    label: 'Processing',
+    label: msg('Processing'),
   },
   Completed: {
     color: 'bg-green-100 text-green-800 border border-green-200',
     icon: <CheckCircle className="w-3 h-3" />,
-    label: 'Completed',
+    label: msg('Completed'),
   },
   Cancelled: {
     color: 'bg-gray-100 text-gray-700 border border-gray-200',
     icon: <XCircle className="w-3 h-3" />,
-    label: 'Cancelled',
+    label: msg('Cancelled'),
   },
 };
 
@@ -398,7 +400,7 @@ function RefundDetailModal({
           Refund Detail — {record.refundNo}
         </DialogTitle>
         <DialogDescription>
-          Price adjustment and refund information for finance follow-up
+          {msg('Price adjustment and refund information for finance follow-up')}
         </DialogDescription>
       </DialogHeader>
 
@@ -406,36 +408,36 @@ function RefundDetailModal({
         {/* Status Banner */}
         <div className={`flex items-center gap-2 px-4 py-3 rounded-lg ${statusCfg.color}`}>
           {statusCfg.icon}
-          <span className="text-sm">Current Status: <strong>{record.status}</strong></span>
+          <span className="text-sm">{msg('Current Status:')} <strong>{record.status}</strong></span>
         </div>
 
         {/* Booking & Account */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="p-4 space-y-3">
             <h3 className="text-sm text-gray-500 uppercase tracking-wide flex items-center gap-2">
-              <Calendar className="w-4 h-4" /> Booking Information
+              <Calendar className="w-4 h-4" /> {msg('Booking Information')}
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Booking No.</span>
+                <span className="text-gray-500">{msg('Booking No.')}</span>
                 <span className="font-mono">{record.bookingNo}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Suite</span>
+                <span className="text-gray-500">{msg('Suite')}</span>
                 <span>{record.suite}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Flight No.</span>
+                <span className="text-gray-500">{msg('Flight No.')}</span>
                 <span className="flex items-center gap-1">
                   <Plane className="w-3 h-3 text-gray-400" /> {record.flightNo}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Booking Date</span>
+                <span className="text-gray-500">{msg('Booking Date')}</span>
                 <span>{record.bookingDate}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Adjustment Date</span>
+                <span className="text-gray-500">{msg('Adjustment Date')}</span>
                 <span>{record.adjustmentDate}</span>
               </div>
             </div>
@@ -443,25 +445,25 @@ function RefundDetailModal({
 
           <Card className="p-4 space-y-3">
             <h3 className="text-sm text-gray-500 uppercase tracking-wide flex items-center gap-2">
-              <User className="w-4 h-4" /> Account Information
+              <User className="w-4 h-4" /> {msg('Account Information')}
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Account No.</span>
+                <span className="text-gray-500">{msg('Account No.')}</span>
                 <span className="font-mono">{record.accountNo}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Account Name</span>
+                <span className="text-gray-500">{msg('Account Name')}</span>
                 <span>{record.accountName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Account Type</span>
+                <span className="text-gray-500">{msg('Account Type')}</span>
                 <Badge className={`text-xs ${ACCOUNT_TYPE_COLOR[record.accountType]}`}>
                   {record.accountType}
                 </Badge>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-500">Payment Method</span>
+                <span className="text-gray-500">{msg('Payment Method')}</span>
                 <span>{record.paymentMethod}</span>
               </div>
             </div>
@@ -471,11 +473,11 @@ function RefundDetailModal({
         {/* Price Breakdown */}
         <Card className="p-4">
           <h3 className="text-sm text-gray-500 uppercase tracking-wide mb-4 flex items-center gap-2">
-            <TrendingDown className="w-4 h-4 text-red-500" /> Price Adjustment Breakdown
+            <TrendingDown className="w-4 h-4 text-red-500" /> {msg('Price Adjustment Breakdown')}
           </h3>
           <div className="flex items-center gap-4">
             <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">Original Amount</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Original Amount')}</p>
               <p className="text-xl text-gray-700">{fmtHKD(record.originalAmount)}</p>
             </div>
             <div className="flex items-center">
@@ -484,19 +486,19 @@ function RefundDetailModal({
               </div>
             </div>
             <div className="flex-1 bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-xs text-gray-500 mb-1">Revised Amount</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Revised Amount')}</p>
               <p className="text-xl text-blue-700">{fmtHKD(record.revisedAmount)}</p>
             </div>
             <div className="flex items-center">
               <span className="text-gray-400 text-lg">=</span>
             </div>
             <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-              <p className="text-xs text-red-500 mb-1">Refund Amount</p>
+              <p className="text-xs text-red-500 mb-1">{msg('Refund Amount')}</p>
               <p className="text-xl text-red-600">{fmtHKD(record.refundAmount)}</p>
             </div>
           </div>
           <div className="mt-3 text-right">
-            <span className="text-sm text-gray-500">Reduction: </span>
+            <span className="text-sm text-gray-500">{msg('Reduction:')} </span>
             <span className="text-sm text-red-600">
               -{((record.refundAmount / record.originalAmount) * 100).toFixed(1)}%
             </span>
@@ -506,7 +508,7 @@ function RefundDetailModal({
         {/* Adjustment Reason */}
         <Card className="p-4">
           <h3 className="text-sm text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-500" /> Adjustment Reason
+            <AlertTriangle className="w-4 h-4 text-amber-500" /> {msg('Adjustment Reason')}
           </h3>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -514,7 +516,7 @@ function RefundDetailModal({
                 {record.adjustmentReason}
               </Badge>
               {record.agencyDiscountApplied && (
-                <Badge className="bg-teal-50 text-teal-700 text-xs">Agency Discount</Badge>
+                <Badge className="bg-teal-50 text-teal-700 text-xs">{msg('Agency Discount')}</Badge>
               )}
               {record.promoCodeApplied && (
                 <Badge className="bg-violet-50 text-violet-700 text-xs">
@@ -530,18 +532,18 @@ function RefundDetailModal({
         {(record.processedDate || record.processedBy) && (
           <Card className="p-4">
             <h3 className="text-sm text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" /> Processing Information
+              <CheckCircle className="w-4 h-4 text-green-500" /> {msg('Processing Information')}
             </h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               {record.processedDate && (
                 <div>
-                  <span className="text-gray-500">Processed Date</span>
+                  <span className="text-gray-500">{msg('Processed Date')}</span>
                   <p>{record.processedDate}</p>
                 </div>
               )}
               {record.processedBy && (
                 <div>
-                  <span className="text-gray-500">Processed By</span>
+                  <span className="text-gray-500">{msg('Processed By')}</span>
                   <p>{record.processedBy}</p>
                 </div>
               )}
@@ -552,41 +554,41 @@ function RefundDetailModal({
         {/* Finance Actions */}
         <Card className="p-4">
           <h3 className="text-sm text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-blue-500" /> Finance Action
+            <DollarSign className="w-4 h-4 text-blue-500" /> {msg('Finance Action')}
           </h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm text-gray-600 mb-[10px]">Update Refund Status</label>
+              <label className="block text-sm text-gray-600 mb-[10px]">{msg('Update Refund Status')}</label>
               <div className="relative">
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as RefundStatus)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-8"
                 >
-                  <option value="Pending Review">Pending Review</option>
-                  <option value="Processing">Processing</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="Pending Review">{msg('Pending Review')}</option>
+                  <option value="Processing">{msg('Processing')}</option>
+                  <option value="Completed">{msg('Completed')}</option>
+                  <option value="Cancelled">{msg('Cancelled')}</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-[10px]">Finance Notes</label>
+              <label className="block text-sm text-gray-600 mb-[10px]">{msg('Finance Notes')}</label>
               <textarea
                 rows={3}
                 value={financeNotes}
                 onChange={(e) => setFinanceNotes(e.target.value)}
-                placeholder="Add notes for finance record keeping..."
+                placeholder={msg('Add notes for finance record keeping...')}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm resize-none"
               />
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="outline" size="sm" onClick={onClose}>
-                Cancel
+                {msg('Cancel')}
               </Button>
               <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
-                Save Changes
+                {msg('Save Changes')}
               </Button>
             </div>
           </div>
@@ -616,6 +618,7 @@ export function RefundReport({
   onUpdateStatus,
   isLoading = false,
 }: RefundReportProps = {}) {
+  const msg = useMsg();
   const [records, setRecords] = useState<RefundRecord[]>(
     refundsProp.length > 0 ? refundsProp : MOCK_REFUND_RECORDS,
   );
@@ -707,20 +710,20 @@ export function RefundReport({
         <div>
           <h1 className="flex items-center gap-3">
             <RotateCcw className="w-6 h-6 text-red-500" />
-            Refund Report
+            {msg('Refund Report')}
           </h1>
           <p className="text-gray-500 mt-1">
-            Track and manage refunds arising from booking price adjustments
+            {msg('Track and manage refunds arising from booking price adjustments')}
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            {msg('Export CSV')}
           </Button>
           <Button variant="outline" size="sm">
             <FileText className="w-4 h-4 mr-2" />
-            Export PDF
+            {msg('Export PDF')}
           </Button>
         </div>
       </div>
@@ -730,7 +733,7 @@ export function RefundReport({
         <Card className="p-4 col-span-2 md:col-span-1">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Pending Review</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Pending Review')}</p>
               <p className="text-2xl text-amber-600">{stats.pending}</p>
             </div>
             <div className="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center">
@@ -741,7 +744,7 @@ export function RefundReport({
         <Card className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Processing</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Processing')}</p>
               <p className="text-2xl text-blue-600">{stats.processing}</p>
             </div>
             <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -752,7 +755,7 @@ export function RefundReport({
         <Card className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Completed</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Completed')}</p>
               <p className="text-2xl text-green-600">{stats.completed}</p>
             </div>
             <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
@@ -763,7 +766,7 @@ export function RefundReport({
         <Card className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Total Refundable</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Total Refundable')}</p>
               <p className="text-lg text-red-600">{fmtHKD(stats.totalRefundable)}</p>
             </div>
             <div className="w-9 h-9 bg-red-50 rounded-lg flex items-center justify-center">
@@ -774,7 +777,7 @@ export function RefundReport({
         <Card className="p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-500 mb-1">Completed Refunds</p>
+              <p className="text-xs text-gray-500 mb-1">{msg('Completed Refunds')}</p>
               <p className="text-lg text-green-600">{fmtHKD(stats.completedAmount)}</p>
             </div>
             <div className="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center">
@@ -792,7 +795,7 @@ export function RefundReport({
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by refund no., booking no., account no. or name..."
+              placeholder={msg('Search by refund no., booking no., account no. or name...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-md text-sm"
@@ -815,7 +818,7 @@ export function RefundReport({
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearFilters} className="text-gray-500">
               <X className="w-4 h-4 mr-1" />
-              Clear
+              {msg('Clear')}
             </Button>
           )}
         </div>
@@ -825,18 +828,18 @@ export function RefundReport({
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4 pt-4 border-t border-gray-100">
             {/* Status */}
             <div>
-              <label className="block text-xs text-gray-500 mb-[10px]">Status</label>
+              <label className="block text-xs text-gray-500 mb-[10px]">{msg('Status')}</label>
               <div className="relative">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as RefundStatus | 'All')}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-7"
                 >
-                  <option value="All">All Statuses</option>
-                  <option value="Pending Review">Pending Review</option>
-                  <option value="Processing">Processing</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="All">{msg('All Statuses')}</option>
+                  <option value="Pending Review">{msg('Pending Review')}</option>
+                  <option value="Processing">{msg('Processing')}</option>
+                  <option value="Completed">{msg('Completed')}</option>
+                  <option value="Cancelled">{msg('Cancelled')}</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400 pointer-events-none" />
               </div>
@@ -844,17 +847,17 @@ export function RefundReport({
 
             {/* Account Type */}
             <div>
-              <label className="block text-xs text-gray-500 mb-[10px]">Account Type</label>
+              <label className="block text-xs text-gray-500 mb-[10px]">{msg('Account Type')}</label>
               <div className="relative">
                 <select
                   value={accountTypeFilter}
                   onChange={(e) => setAccountTypeFilter(e.target.value as AccountType | 'All')}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-7"
                 >
-                  <option value="All">All Types</option>
-                  <option value="Individual">Individual</option>
-                  <option value="Corporate">Corporate</option>
-                  <option value="Agency">Agency</option>
+                  <option value="All">{msg('All Types')}</option>
+                  <option value="Individual">{msg('Individual')}</option>
+                  <option value="Corporate">{msg('Corporate')}</option>
+                  <option value="Agency">{msg('Agency')}</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-2.5 w-3 h-3 text-gray-400 pointer-events-none" />
               </div>
@@ -862,14 +865,14 @@ export function RefundReport({
 
             {/* Adjustment Reason */}
             <div>
-              <label className="block text-xs text-gray-500 mb-[10px]">Adjustment Reason</label>
+              <label className="block text-xs text-gray-500 mb-[10px]">{msg('Adjustment Reason')}</label>
               <div className="relative">
                 <select
                   value={reasonFilter}
                   onChange={(e) => setReasonFilter(e.target.value as AdjustmentReason | 'All')}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-7"
                 >
-                  <option value="All">All Reasons</option>
+                  <option value="All">{msg('All Reasons')}</option>
                   {allReasons.map((r) => (
                     <option key={r} value={r}>
                       {r}
@@ -882,7 +885,7 @@ export function RefundReport({
 
             {/* Date From */}
             <div>
-              <label className="block text-xs text-gray-500 mb-[10px]">Adjustment Date From</label>
+              <label className="block text-xs text-gray-500 mb-[10px]">{msg('Adjustment Date From')}</label>
               <input
                 type="date"
                 value={startDate}
@@ -893,7 +896,7 @@ export function RefundReport({
 
             {/* Date To */}
             <div>
-              <label className="block text-xs text-gray-500 mb-[10px]">Adjustment Date To</label>
+              <label className="block text-xs text-gray-500 mb-[10px]">{msg('Adjustment Date To')}</label>
               <input
                 type="date"
                 value={endDate}
@@ -908,11 +911,11 @@ export function RefundReport({
       {/* Results count */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          Showing <strong>{filtered.length}</strong> of <strong>{records.length}</strong> refund records
+          {msg('Showing')} <strong>{filtered.length}</strong> of <strong>{records.length}</strong> refund records
         </p>
         <div className="flex items-center gap-2 text-xs text-gray-400">
           <Filter className="w-3 h-3" />
-          <span>Click a row to view details & update status</span>
+          <span>{msg('Click a row to view details & update status')}</span>
         </div>
       </div>
 
@@ -923,34 +926,34 @@ export function RefundReport({
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Refund No.
+                  {msg('Refund No.')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Booking No.
+                  {msg('Booking No.')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Account
+                  {msg('Account')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Adj. Date
+                  {msg('Adj. Date')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Original
+                  {msg('Original')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Revised
+                  {msg('Revised')}
                 </th>
                 <th className="text-right px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Refund Amt
+                  {msg('Refund Amt')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Reason
+                  {msg('Reason')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Payment
+                  {msg('Payment')}
                 </th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">
-                  Status
+                  {msg('Status')}
                 </th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -960,7 +963,7 @@ export function RefundReport({
                 <tr>
                   <td colSpan={11} className="text-center py-12 text-gray-400">
                     <RotateCcw className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <p>No refund records match your current filters.</p>
+                    <p>{msg('No refund records match your current filters.')}</p>
                   </td>
                 </tr>
               ) : (
@@ -1021,7 +1024,7 @@ export function RefundReport({
                         <span className="text-xs text-gray-600 line-clamp-2">{r.adjustmentReason}</span>
                         {r.agencyDiscountApplied && (
                           <Badge className="mt-1 text-xs bg-teal-50 text-teal-700 px-1.5 py-0">
-                            Agency Disc.
+                            {msg('Agency Disc.')}
                           </Badge>
                         )}
                         {r.promoCodeApplied && (
@@ -1067,7 +1070,7 @@ export function RefundReport({
       {/* Legend */}
       <Card className="p-4">
         <h3 className="text-xs text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> Refund Trigger Conditions
+          <AlertTriangle className="w-4 h-4" /> {msg('Refund Trigger Conditions')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {allReasons.slice(0, 4).map((reason) => (

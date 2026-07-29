@@ -12,6 +12,8 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, AreaChart, Area, ComposedChart,
 } from 'recharts';
+import { useMsg } from '@/i18n/useMsg';
+import { msg } from '@/i18n/msgFallback';
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -271,6 +273,7 @@ const MOCK_COUPON_KPIS: Required<NonNullable<CouponKpis>> = {
 };
 
 function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) {
+  const msg = useMsg();
   const couponMonthly = data?.couponMonthly ?? COUPON_MONTHLY;
   const timeToConvert = data?.timeToConvert ?? TIME_TO_CONVERT;
   const kpis = { ...MOCK_COUPON_KPIS, ...(data?.kpis ?? {}) };
@@ -280,17 +283,17 @@ function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) 
     <div className="space-y-6">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          Tracks the <strong>"Free to Paid"</strong> pipeline — helping management understand if coupons attract
-          high-value returning customers or one-time opportunists. {data?.kpis ? 'Period: based on selected date range.' : <>Report period: <strong>Nov 2025 – Apr 2026</strong>.</>}
+          {msg('Tracks the')} <strong>"Free to Paid"</strong> pipeline — helping management understand if coupons attract
+          high-value returning customers or one-time opportunists. {data?.kpis ? 'Period: based on selected date range.' : <>{msg('Report period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
 
       {/* Visual Funnel */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Coupons Issued',     value: fmt(funnel.couponsIssued),     pct: '100%',                                       bg: 'bg-blue-600' },
-          { label: 'Coupons Redeemed',   value: fmt(funnel.couponsRedeemed),   pct: `Redemption Rate: ${kpis.redemptionRate.toFixed(1)}%`, bg: 'bg-purple-600' },
-          { label: 'Converted to Paid',  value: fmt(funnel.convertedToPaid),   pct: `Conversion Rate: ${kpis.conversionRate.toFixed(1)}%`, bg: 'bg-emerald-600' },
+          { label: msg('Coupons Issued'),     value: fmt(funnel.couponsIssued),     pct: '100%',                                       bg: 'bg-blue-600' },
+          { label: msg('Coupons Redeemed'),   value: fmt(funnel.couponsRedeemed),   pct: `Redemption Rate: ${kpis.redemptionRate.toFixed(1)}%`, bg: 'bg-purple-600' },
+          { label: msg('Converted to Paid'),  value: fmt(funnel.convertedToPaid),   pct: `Conversion Rate: ${kpis.conversionRate.toFixed(1)}%`, bg: 'bg-emerald-600' },
         ].map((f) => (
           <div key={f.label} className={`${f.bg} text-white rounded-xl p-5 text-center`}>
             <p className="text-3xl font-bold">{f.value}</p>
@@ -312,8 +315,8 @@ function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Redemption vs. Conversion to Paid</h4>
-          <p className="text-xs text-gray-500 mb-4">Tracking the free-to-paid pipeline each month</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly Redemption vs. Conversion to Paid')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Tracking the free-to-paid pipeline each month')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={couponMonthly} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -328,7 +331,7 @@ function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) 
         </Card>
 
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Time-to-Conversion Distribution</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Time-to-Conversion Distribution')}</h4>
           <p className="text-xs text-gray-500 mb-4">Days between first free visit and first paid return (n={funnel.convertedToPaid} converted clients)</p>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={timeToConvert} layout="vertical" barSize={24}>
@@ -345,7 +348,7 @@ function CouponConversionReport({ data }: { data?: CouponConversionData } = {}) 
       </div>
 
       <InsightBox
-        color="green" icon={TrendingUp} title="Key Insight"
+        color="green" icon={TrendingUp} title={msg('Key Insight')}
         body="Coupon-to-paid conversion tracks the free-trial-to-returning-customer pipeline. The 16-30 day window is typically the highest-converting re-engagement period; a 5% uplift in conversion rate compounds materially over a 6-month cycle."
       />
     </div>
@@ -359,6 +362,7 @@ const MOCK_NEW_CLIENT_KPIS: Required<NewClientKpis> = {
 };
 
 function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
+  const msg = useMsg();
   const newClientMonthly = data?.newClientMonthly ?? NEW_CLIENT_MONTHLY;
   const sourceAttribution = data?.sourceAttribution ?? SOURCE_ATTR;
   const kpis = { ...MOCK_NEW_CLIENT_KPIS, ...(data?.kpis ?? {}) };
@@ -366,8 +370,8 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
     <div className="space-y-6">
       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
         <p className="text-sm text-green-800">
-          Focuses on the <strong>"Inflow"</strong> of the business — tracking whether the new paying client base
-          is growing, what they are worth, and where they come from. {data?.kpis ? `Period: ${kpis.periodLabel}.` : <>Period: <strong>Nov 2025 – Apr 2026</strong>.</>}
+          {msg('Focuses on the')} <strong>"Inflow"</strong> of the business — tracking whether the new paying client base
+          is growing, what they are worth, and where they come from. {data?.kpis ? `Period: ${kpis.periodLabel}.` : <>{msg('Period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
 
@@ -383,8 +387,8 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-5 lg:col-span-2">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly New Client Count &amp; Income</h4>
-          <p className="text-xs text-gray-500 mb-4">Bars = new client count (left axis) · Line = HK$ income from new clients (right axis)</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly New Client Count &amp; Income')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Bars = new client count (left axis) · Line = HK$ income from new clients (right axis)')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <ComposedChart data={newClientMonthly}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -412,7 +416,7 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
         </Card>
 
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">New Client Source Attribution</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">{msg('New Client Source Attribution')}</h4>
           {sourceAttribution.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={150}>
@@ -437,14 +441,14 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
             </>
           ) : (
             <p className="text-xs text-gray-500 italic">
-              Source attribution requires an <code>Account.source</code> column (deferred — see <code>docs/pending-changes/2026-06-27-reports-real-data.md</code>).
+              {msg('Source attribution requires an')} <code>Account.source</code> {msg('column (deferred — see')} <code>{msg('docs/pending-changes/2026-06-27-reports-real-data.md')}</code>).
             </p>
           )}
         </Card>
       </div>
 
       <InsightBox
-        color="blue" icon={UserPlus} title="Key Insight"
+        color="blue" icon={UserPlus} title={msg('Key Insight')}
         body="New-client performance tracks the inflow of first-time paying customers each month. Pair with the Coupon Conversion tab to understand which acquisition channels drive the highest-LTV cohorts."
       />
     </div>
@@ -465,6 +469,7 @@ const MOCK_EXISTING_KPIS: Required<ExistingCustomerKpis> = {
 };
 
 function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } = {}) {
+  const msg = useMsg();
   const retentionByTier       = data?.retentionByTier       ?? RETENTION_BY_TIER;
   const clvByTier             = data?.clvByTier             ?? CLV_BY_TIER;
   const churnTrend            = data?.churnTrend            ?? CHURN_TREND;
@@ -478,8 +483,8 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
     <div className="space-y-6">
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <p className="text-sm text-amber-800">
-          Measures the health and loyalty of the core <strong>"Bread and Butter"</strong> client base — tracking
-          retention, visit frequency, lifetime value, and early churn signals. {data?.kpis ? 'Period: based on selected date range.' : <>Period: <strong>Nov 2025 – Apr 2026</strong>.</>}
+          {msg('Measures the health and loyalty of the core')} <strong>"Bread and Butter"</strong> client base — tracking
+          retention, visit frequency, lifetime value, and early churn signals. {data?.kpis ? 'Period: based on selected date range.' : <>{msg('Period:')} <strong>{msg('Nov 2025 – Apr 2026')}</strong>.</>}
         </p>
       </div>
 
@@ -494,7 +499,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Retention Rate by Membership Tier</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Retention Rate by Membership Tier')}</h4>
           <p className="text-xs text-gray-500 mb-4">% of tier members with ≥1 visit in past 6 months</p>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={retentionByTier} layout="vertical" barSize={26}>
@@ -510,7 +515,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
         </Card>
 
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Churn Rate Trend</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly Churn Rate Trend')}</h4>
           <p className="text-xs text-gray-500 mb-4">% of previously active clients who lapsed (&gt;6 months without a visit)</p>
           <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={churnTrend}>
@@ -530,8 +535,8 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
         </Card>
 
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Avg CLV by Membership Tier</h4>
-          <p className="text-xs text-gray-500 mb-4">Total income generated per client since first visit (HK$)</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Avg CLV by Membership Tier')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Total income generated per client since first visit (HK$)')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <BarChart data={clvByTier} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -548,7 +553,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
 
       {/* Tier breakdown table */}
       <Card className="p-5">
-        <h4 className="text-sm font-semibold text-gray-700 mb-4">Membership Tier Health Summary</h4>
+        <h4 className="text-sm font-semibold text-gray-700 mb-4">{msg('Membership Tier Health Summary')}</h4>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -586,7 +591,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
         <div className="flex-1 h-px bg-gray-200" />
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0f2942] rounded-full">
           <DollarSign className="w-3.5 h-3.5 text-white" />
-          <span className="text-xs font-semibold text-white tracking-wide">INCOME PERFORMANCE</span>
+          <span className="text-xs font-semibold text-white tracking-wide">{msg('INCOME PERFORMANCE')}</span>
         </div>
         <div className="flex-1 h-px bg-gray-200" />
       </div>
@@ -614,8 +619,8 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Monthly income trend — area */}
         <Card className="p-5 lg:col-span-2">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Income from Existing Customers</h4>
-          <p className="text-xs text-gray-500 mb-4">Total HK$ income generated by returning clients each month</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly Income from Existing Customers')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Total HK$ income generated by returning clients each month')}</p>
           <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={existingIncomeMonthly}>
               <defs>
@@ -667,8 +672,8 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
 
         {/* Income by tier (period total) */}
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Income by Tier</h4>
-          <p className="text-xs text-gray-500 mb-4">Total income contribution per membership tier in period</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Income by Tier')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Total income contribution per membership tier in period')}</p>
           {incomeByTierTotal.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={180}>
@@ -702,7 +707,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
             </>
           ) : (
             <p className="text-xs text-gray-500 italic">
-              Tier-income breakdown requires the <code>Account.membership_type</code> column to be populated for active clients in the selected period.
+              {msg('Tier-income breakdown requires the')} <code>{Account.membership_type}</code> {msg('column to be populated for active clients in the selected period.')}
             </p>
           )}
         </Card>
@@ -711,8 +716,8 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
       {/* Monthly stacked bar by tier */}
       {existingIncomeByTier.length > 0 && (
         <Card className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly Income Breakdown by Membership Tier</h4>
-          <p className="text-xs text-gray-500 mb-4">Stacked monthly income (HK$) showing each tier's contribution</p>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">{msg('Monthly Income Breakdown by Membership Tier')}</h4>
+          <p className="text-xs text-gray-500 mb-4">{msg('Stacked monthly income (HK$) showing each tier\'s contribution')}</p>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={existingIncomeByTier} barSize={36}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
@@ -733,7 +738,7 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
       )}
 
       <InsightBox
-        color="amber" icon={AlertTriangle} title="Key Insight"
+        color="amber" icon={AlertTriangle} title={msg('Key Insight')}
         body="Existing-customer insights measure loyalty, lifetime value, and churn risk per membership tier. Top tier (Sapphire) typically has the highest retention but smallest cohort; Gold tier is the largest cohort and the most at risk — targeted upgrade incentives compound over the membership lifetime."
       />
     </div>
@@ -743,14 +748,14 @@ function ExistingCustomerReport({ data }: { data?: ExistingCustomerReportData } 
 // ── Operational report definitions ──────────────────────────────────────────
 
 const OPERATIONAL_REPORTS = [
-  { id: 'daily-bookings',  title: 'Daily Booking List',       description: 'List of all bookings for a specific date',             icon: Calendar,   color: 'text-blue-600 bg-blue-50',       fields: ['Booking No.', 'Guest Name', 'Suite', 'Time', 'Flight Info'] },
-  { id: 'departure-list',  title: 'Departure List',           description: 'Departure information for retail team coordination',    icon: TrendingUp, color: 'text-green-600 bg-green-50',     fields: ['Booking No.', 'Passenger Names', 'Flight No.', 'Departure Time', 'Suite'] },
-  { id: '48hr-bookings',   title: '48-Hour Booking Report',   description: 'Bookings scheduled within next 48 hours',              icon: Calendar,   color: 'text-orange-600 bg-orange-50',   fields: ['Booking No.', 'Guest Name', 'Time', 'Add-on Services', 'Special Requests'] },
-  { id: 'movement-list',   title: 'Movement List',            description: 'Guest arrival and departure tracking',                 icon: Users,      color: 'text-purple-600 bg-purple-50',   fields: ['Guest Name', 'Arrival Time', 'Departure Time', 'Baggage Info', 'Staff Name'] },
-  { id: 'room-allocation', title: 'Room Allocation Table',    description: 'Current suite allocation and availability',            icon: FileText,   color: 'text-indigo-600 bg-indigo-50',   fields: ['Suite Name', 'Guest Name', 'Check-in Time', 'Expected Departure', 'Status'] },
-  { id: 'income-report',   title: 'Income Report',            description: 'Financial summary and income breakdown',               icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', fields: ['Date', 'Total Bookings', 'Income', 'Payment Method', 'Discounts Applied'] },
-  { id: 'member-report',   title: 'Member Activity Report',   description: 'Member usage statistics and patterns',                 icon: Users,      color: 'text-pink-600 bg-pink-50',       fields: ['Member Name', 'Account No.', 'Total Bookings', 'Last Visit', 'Membership Status'] },
-  { id: 'sales-report',    title: 'Add-on Services Sales',    description: 'Sales breakdown for additional services',              icon: DollarSign, color: 'text-teal-600 bg-teal-50',       fields: ['Service Name', 'Quantity', 'Income', 'Discount Applied', 'Popular Times'] },
+  { id: 'daily-bookings',  title: msg('Daily Booking List'),       description: 'List of all bookings for a specific date',             icon: Calendar,   color: 'text-blue-600 bg-blue-50',       fields: ['Booking No.', 'Guest Name', 'Suite', 'Time', 'Flight Info'] },
+  { id: 'departure-list',  title: msg('Departure List'),           description: 'Departure information for retail team coordination',    icon: TrendingUp, color: 'text-green-600 bg-green-50',     fields: ['Booking No.', 'Passenger Names', 'Flight No.', 'Departure Time', 'Suite'] },
+  { id: '48hr-bookings',   title: msg('48-Hour Booking Report'),   description: msg('Bookings scheduled within next 48 hours'),              icon: Calendar,   color: 'text-orange-600 bg-orange-50',   fields: ['Booking No.', 'Guest Name', 'Time', 'Add-on Services', 'Special Requests'] },
+  { id: 'movement-list',   title: msg('Movement List'),            description: 'Guest arrival and departure tracking',                 icon: Users,      color: 'text-purple-600 bg-purple-50',   fields: ['Guest Name', 'Arrival Time', 'Departure Time', 'Baggage Info', 'Staff Name'] },
+  { id: 'room-allocation', title: msg('Room Allocation Table'),    description: 'Current suite allocation and availability',            icon: FileText,   color: 'text-indigo-600 bg-indigo-50',   fields: ['Suite Name', 'Guest Name', 'Check-in Time', 'Expected Departure', 'Status'] },
+  { id: 'income-report',   title: msg('Income Report'),            description: 'Financial summary and income breakdown',               icon: DollarSign, color: 'text-emerald-600 bg-emerald-50', fields: ['Date', 'Total Bookings', 'Income', 'Payment Method', 'Discounts Applied'] },
+  { id: 'member-report',   title: msg('Member Activity Report'),   description: 'Member usage statistics and patterns',                 icon: Users,      color: 'text-pink-600 bg-pink-50',       fields: ['Member Name', 'Account No.', 'Total Bookings', 'Last Visit', 'Membership Status'] },
+  { id: 'sales-report',    title: msg('Add-on Services Sales'),    description: 'Sales breakdown for additional services',              icon: DollarSign, color: 'text-teal-600 bg-teal-50',       fields: ['Service Name', 'Quantity', 'Income', 'Discount Applied', 'Popular Times'] },
 ];
 
 // ── Operational Reports ──────────────────────────────────────────────────────
@@ -779,10 +784,10 @@ function OperationalReports({
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Bookings',  value: (kpis.totalBookings ?? 0).toLocaleString(), icon: Calendar,   color: 'text-blue-600' },
-          { label: 'Total Income',    value: totalIncomeDisplay,                          icon: DollarSign, color: 'text-green-600' },
-          { label: 'Active Members',  value: (kpis.activeMembers ?? 0).toLocaleString(),  icon: Users,      color: 'text-purple-600' },
-          { label: 'Avg. Occupancy',  value: kpis.avgOccupancy ?? '—',                    icon: TrendingUp, color: 'text-orange-600' },
+          { label: msg('Total Bookings'),  value: (kpis.totalBookings ?? 0).toLocaleString(), icon: Calendar,   color: 'text-blue-600' },
+          { label: msg('Total Income'),    value: totalIncomeDisplay,                          icon: DollarSign, color: 'text-green-600' },
+          { label: msg('Active Members'),  value: (kpis.activeMembers ?? 0).toLocaleString(),  icon: Users,      color: 'text-purple-600' },
+          { label: msg('Avg. Occupancy'),  value: kpis.avgOccupancy ?? '—',                    icon: TrendingUp, color: 'text-orange-600' },
         ].map(s => (
           <Card key={s.label} className="p-4">
             <div className="flex items-center justify-between">
@@ -798,10 +803,10 @@ function OperationalReports({
 
       {/* Date Range */}
       <Card className="p-5">
-        <h3 className="mb-4 text-gray-800">Report Period</h3>
+        <h3 className="mb-4 text-gray-800">{msg('Report Period')}</h3>
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
-            <label className="mb-[10px] block text-sm text-gray-600">Start Date</label>
+            <label className="mb-[10px] block text-sm text-gray-600">{msg('Start Date')}</label>
             <input
               type="date"
               value={data?.startDate ?? ''}
@@ -810,7 +815,7 @@ function OperationalReports({
             />
           </div>
           <div className="flex-1">
-            <label className="mb-[10px] block text-sm text-gray-600">End Date</label>
+            <label className="mb-[10px] block text-sm text-gray-600">{msg('End Date')}</label>
             <input
               type="date"
               value={data?.endDate ?? ''}
@@ -820,7 +825,7 @@ function OperationalReports({
           </div>
           <Button variant="outline" disabled={isLoading}>{isLoading ? 'Loading…' : 'Apply Filter'}</Button>
         </div>
-        {isLoading && <p className="text-xs text-gray-500 mt-2">Refreshing data for selected period…</p>}
+        {isLoading && <p className="text-xs text-gray-500 mt-2">{msg('Refreshing data for selected period…')}</p>}
       </Card>
 
       {/* Report Cards Grid */}
@@ -833,7 +838,7 @@ function OperationalReports({
             <h3 className="mb-1.5 text-gray-900 text-sm font-semibold">{report.title}</h3>
             <p className="text-xs text-gray-500 mb-4 flex-1">{report.description}</p>
             <div className="mb-4">
-              <p className="text-xs text-gray-400 mb-2">Included fields:</p>
+              <p className="text-xs text-gray-400 mb-2">{msg('Included fields:')}</p>
               <div className="flex flex-wrap gap-1">
                 {report.fields.slice(0, 3).map((f, i) => (
                   <span key={i} className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{f}</span>
@@ -845,14 +850,14 @@ function OperationalReports({
             </div>
             <div className="flex gap-2 mt-auto">
               <Button variant="outline" size="sm" className="flex-1">
-                <FileText className="w-3.5 h-3.5 mr-1.5" />Preview
+                <FileText className="w-3.5 h-3.5 mr-1.5" />{msg('Preview')}
               </Button>
               <Button
                 size="sm"
                 className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
                 onClick={() => onExport?.(report.id)}
               >
-                <Download className="w-3.5 h-3.5 mr-1.5" />Export
+                <Download className="w-3.5 h-3.5 mr-1.5" />{msg('Export')}
               </Button>
             </div>
           </Card>
@@ -861,7 +866,7 @@ function OperationalReports({
 
       {/* Export Options */}
       <Card className="p-5">
-        <h3 className="mb-4 text-gray-800">Export Format Options</h3>
+        <h3 className="mb-4 text-gray-800">{msg('Export Format Options')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
             { fmt: 'CSV Format',   desc: 'Spreadsheet-compatible format for data analysis in Excel / Google Sheets' },
@@ -882,8 +887,8 @@ function OperationalReports({
       {/* Scheduled Reports */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-gray-800">Scheduled Reports</h3>
-          <Button variant="outline" size="sm">Configure Schedule</Button>
+          <h3 className="text-gray-800">{msg('Scheduled Reports')}</h3>
+          <Button variant="outline" size="sm">{msg('Configure Schedule')}</Button>
         </div>
         <div className="space-y-3">
           {[
@@ -896,7 +901,7 @@ function OperationalReports({
                 <p className="text-sm font-medium text-gray-800">{s.name}</p>
                 <p className="text-xs text-gray-500">{s.cron}</p>
               </div>
-              <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
+              <Badge className="bg-green-100 text-green-700 border-0">{msg('Active')}</Badge>
             </div>
           ))}
         </div>
@@ -910,7 +915,7 @@ function OperationalReports({
 const ANALYTICS_TABS = [
   {
     id: 'operational',
-    label: 'Operational Reports',
+    label: msg('Operational Reports'),
     icon: FileText,
     accent: 'border-slate-500',
     badge: 'bg-slate-100 text-slate-700',
@@ -918,7 +923,7 @@ const ANALYTICS_TABS = [
   },
   {
     id: 'coupon',
-    label: 'Coupon to Conversion Analysis',
+    label: msg('Coupon to Conversion Analysis'),
     icon: Ticket,
     accent: 'border-blue-500',
     badge: 'bg-blue-100 text-blue-700',
@@ -926,7 +931,7 @@ const ANALYTICS_TABS = [
   },
   {
     id: 'new-client',
-    label: 'New Client Performance',
+    label: msg('New Client Performance'),
     icon: UserPlus,
     accent: 'border-emerald-500',
     badge: 'bg-emerald-100 text-emerald-700',
@@ -934,7 +939,7 @@ const ANALYTICS_TABS = [
   },
   {
     id: 'existing',
-    label: 'Existing Customer Insights',
+    label: msg('Existing Customer Insights'),
     icon: Heart,
     accent: 'border-amber-500',
     badge: 'bg-amber-100 text-amber-700',
@@ -951,6 +956,7 @@ export interface ReportsProps {
 }
 
 export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) {
+  const msg = useMsg();
   const [activeTab, setActiveTab] = useState<string>('operational');
 
   const activeReport = ANALYTICS_TABS.find(t => t.id === activeTab)!;
@@ -960,8 +966,8 @@ export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) 
     <div className="p-6 space-y-6">
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div>
-        <h1>Reports &amp; Analytics</h1>
-        <p className="text-gray-600">Operational report generation and strategic management analytics</p>
+        <h1>{msg('Reports &amp; Analytics')}</h1>
+        <p className="text-gray-600">{msg('Operational report generation and strategic management analytics')}</p>
       </div>
 
       {/* ── Unified Tab Section ───────────────────────────────────────────── */}
@@ -981,7 +987,7 @@ export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) 
               <tab.icon className={`w-4 h-4 flex-shrink-0 ${activeTab === tab.id ? 'text-gray-700' : 'text-gray-400'}`} />
               <span className="text-left leading-tight">{tab.label}</span>
               {activeTab === tab.id && (
-                <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${tab.badge}`}>Active</span>
+                <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${tab.badge}`}>{msg('Active')}</span>
               )}
             </button>
           ))}
@@ -1011,7 +1017,7 @@ export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) 
                 onClick={() => onExport?.(activeTab)}
               >
                 <Download className="w-4 h-4" />
-                Export Report
+                {msg('Export Report')}
               </Button>
             )}
           </div>
