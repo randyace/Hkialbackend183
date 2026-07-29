@@ -6,12 +6,16 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 
 export type PosPrinterRole = 'kitchen' | 'receipt' | 'both';
 
+/** Matches API PosPrinter models */
+export type PosPrinterModel = 'thermal' | 'tm_u220';
+
 export interface PosPrinterFormData {
   name: string;
   host: string;
   port: number;
   beepCount: number;
   role: PosPrinterRole;
+  model: PosPrinterModel;
   isActive: boolean;
 }
 
@@ -32,6 +36,7 @@ const defaultFormData: PosPrinterFormData = {
   port: 9100,
   beepCount: 1,
   role: 'both',
+  model: 'tm_u220',
   isActive: true,
 };
 
@@ -189,6 +194,27 @@ export function PosPrinterEdit({
             <p className="text-xs text-gray-500">
               Kitchen routing still uses each menu item&apos;s assigned printer. Receipt jobs go to
               printers with role Receipt or Both.
+            </p>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Printer Model</span>
+            <select
+              value={formData.model}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  model: e.target.value as PosPrinterModel,
+                }))
+              }
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+            >
+              <option value="tm_u220">Epson TM-U220A (impact, auto-cutter) — default</option>
+              <option value="thermal">Thermal ESC/POS</option>
+            </select>
+            <p className="text-xs text-gray-500">
+              Model sets paper width, feed/cut, and agent TCP timeout. TM-U220 uses 76mm impact
+              profile with Big5 Chinese.
             </p>
           </label>
 
