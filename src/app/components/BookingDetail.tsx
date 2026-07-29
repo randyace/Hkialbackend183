@@ -110,7 +110,7 @@ export interface StaffAssignmentPayload {
 
 export type BookingStatusValue =
   | 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed'
-  | 'Rejected' | 'Cancelled' | 'No-show';
+  | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
 export type PaymentStatusValue =
   | 'Not Required' | 'Pending' | 'Invoice Sent' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
@@ -1696,6 +1696,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       'Rejected': 'bg-red-100 text-red-800 border border-red-200',
       'Cancelled': 'bg-gray-100 text-gray-800 border border-gray-200',
       'No-show': 'bg-orange-100 text-orange-800 border border-orange-200',
+      'Incomplete (No-show)': 'bg-orange-100 text-orange-800 border border-orange-200',
     };
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
@@ -3984,7 +3985,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <option value="Confirmed">Confirmed</option>
               <option value="Rejected">Rejected</option>
               <option value="Cancelled">Cancelled</option>
-              <option value="No-show">No-show</option>
+              <option value="Incomplete (No-show)">Incomplete (No-show)</option>
             </select>
           </div>
           <div>
