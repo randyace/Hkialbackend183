@@ -362,6 +362,11 @@ interface AccountOption {
  * Delete this type + `renderDevQuickFill` prop with the `__dev__` folder before pentest.
  */
 export interface CreateBookingDevQuickFillPayload {
+  premiereSuiteQty: number;
+  premiereVipQty: number;
+  loungeVipQty: number;
+  assignedPhysicalSuites: string[];
+  assignedLobbySeats: string[];
   accountType: 'Individual' | 'Corporate' | 'Agency' | '';
   accountNumber: string;
   paymentMode: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice' | '';
@@ -373,6 +378,7 @@ export interface CreateBookingDevQuickFillPayload {
   visitTime: string;
   passengerTitle: 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
   passengerFirstName: string;
+  passengerLastNameTemplate: string;
   passengerTravelDocNo: string;
   passengerAgeGroup:
     | 'Adults (aged 12 and above)'
@@ -392,7 +398,6 @@ export interface CreateBookingDevQuickFillRenderApi {
   onAccountSearch?: (query: string) => void;
   onAccountSelect?: (account: AccountOption) => void;
   setShowAccountDropdown?: (open: boolean) => void;
-  passengerCount: number;
 }
 
 export interface CreateBookingProps {
@@ -2135,26 +2140,53 @@ export function CreateBooking({
     setVisitDate(payload.visitDate || payload.departureDate);
     setVisitTime(payload.visitTime);
 
-    const existingSlots = vipPS + vipLD;
-    const targetCount = Math.max(1, existingSlots);
-    if (existingSlots === 0) {
-      setVipLD(1);
-    }
+    const premiereSuiteQty = Math.max(0, payload.premiereSuiteQty || 0);
+    const premiereVipQty = Math.max(0, payload.premiereVipQty || 0);
+    const loungeVipQty = Math.max(0, payload.loungeVipQty || 0);
+    const totalVips = premiereVipQty + loungeVipQty;
 
-    setPassengers(
-      Array.from({ length: targetCount }, (_, index) => ({
-        ...emptyPassenger(),
-        title: payload.passengerTitle,
-        firstName: payload.passengerFirstName,
-        lastName: String(index + 1),
-        travelDocNo: payload.passengerTravelDocNo,
-        ageGroup: payload.passengerAgeGroup,
-        birthdayDay: payload.passengerBirthdayDay,
-        birthdayMonth: payload.passengerBirthdayMonth,
-        birthdayYear: payload.passengerBirthdayYear,
-        nationality: payload.passengerNationality,
-      })),
-    );
+    setNumPremiereSuites(premiereSuiteQty);
+    setVipPS(premiereVipQty);
+    setVipLD(loungeVipQty);
+    prevVipPSRef.current = premiereVipQty;
+    prevVipLDRef.current = loungeVipQty;
+
+    const lastNameBase = payload.passengerLastNameTemplate.trim() || 'Guest';
+    const docNoBase = payload.passengerTravelDocNo.trim() || 'doc';
+
+    const generatedVips = Array.from({ length: totalVips }, (_, index) => ({
+      ...emptyPassenger(),
+      title: payload.passengerTitle,
+      firstName: payload.passengerFirstName,
+      lastName: `${lastNameBase} ${index + 1}`,
+      travelDocNo: `${docNoBase}-${index + 1}`,
+      ageGroup: payload.passengerAgeGroup,
+      birthdayDay: payload.passengerBirthdayDay,
+      birthdayMonth: payload.passengerBirthdayMonth,
+      birthdayYear: payload.passengerBirthdayYear,
+      nationality: payload.passengerNationality,
+      foodAllergies: '',
+    }));
+
+    setPassengers(generatedVips);
+
+    const normalizeName = (value: string) => value.trim().toLowerCase();
+    const suiteNameSet = new Set(payload.assignedPhysicalSuites.map(normalizeName));
+    const loungeNameSet = new Set(payload.assignedLobbySeats.map(normalizeName));
+
+    const resolvedSuiteIds = physicalSuites
+      .filter((s) => suiteNameSet.has(normalizeName(s.suite_name)))
+      .map((s) => s.id);
+    const resolvedLoungeIds = physicalLounges
+      .filter((l) => loungeNameSet.has(normalizeName(l.suite_name)))
+      .map((l) => l.id);
+
+    if (setAssignedSuiteIds) {
+      setAssignedSuiteIds(resolvedSuiteIds.slice(0, premiereSuiteQty));
+    }
+    if (setAssignedLoungeIds) {
+      setAssignedLoungeIds(resolvedLoungeIds.slice(0, loungeVipQty));
+    }
 
     setFieldErrors({});
     setShowAccountDropdown?.(false);
@@ -2205,7 +2237,6 @@ export function CreateBooking({
                   onAccountSearch,
                   onAccountSelect,
                   setShowAccountDropdown,
-                  passengerCount: Math.max(1, vipPS + vipLD),
                 })
               : null}
           </div>
