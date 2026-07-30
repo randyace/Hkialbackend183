@@ -80,6 +80,7 @@ import type {
   Booking, HistoricalGuest, PassengerTitle, AgeGroup,
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
+import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 
 // ── Save-flow payload types (2026-06-15) ───────────────────────────────────────
 // 6 new save buttons were previously wired to `toast.success(...)` only (no
@@ -149,6 +150,7 @@ function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
     birthdayMonth: p.birthdayMonth ?? '',
     birthdayYear: p.birthdayYear ?? '',
     foodAllergies: p.foodAllergies ?? '',
+    nationality: (p.nationality ?? '').trim().toUpperCase(),
   };
 }
 
@@ -164,6 +166,7 @@ function toEditPassenger(p: PassengerDetail): EditPassenger {
     birthdayMonth: p.birthdayMonth || undefined,
     birthdayYear: p.birthdayYear || undefined,
     foodAllergies: p.foodAllergies || undefined,
+    nationality: (p.nationality || '').trim().toUpperCase() || undefined,
   };
 }
 
@@ -174,6 +177,7 @@ function toNonFlyingGuest(g: Partial<EditNonFlyingGuest>): NonFlyingGuest {
     lastName: g.lastName ?? '',
     ageGroup: (g.ageGroup ?? '') as AgeGroup,
     foodAllergies: g.foodAllergies ?? '',
+    nationality: (g.nationality ?? '').trim().toUpperCase(),
   };
 }
 
@@ -184,6 +188,7 @@ function toEditNonFlyingGuest(g: NonFlyingGuest): EditNonFlyingGuest {
     lastName: g.lastName,
     ageGroup: (g.ageGroup || '') as EditNonFlyingGuest['ageGroup'],
     foodAllergies: g.foodAllergies || undefined,
+    nationality: (g.nationality || '').trim().toUpperCase() || undefined,
   };
 }
 
@@ -623,6 +628,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           birthdayMonth: p.birthdayMonth || '',
           birthdayYear: p.birthdayYear || '',
           foodAllergies: p.foodAllergies || '',
+          nationality: (p.nationality || '').trim().toUpperCase(),
         }))
       : bookingProp
         ? Array.from(
@@ -1276,10 +1282,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     const realList = booking.nonFlyingGuestsList;
     if (Array.isArray(realList) && realList.length > 0) {
       return realList.map((g) => ({
-        title: g.title ?? '',
+        title: (g.title ?? '') as PassengerTitle,
         firstName: g.firstName ?? '',
         lastName: g.lastName ?? '',
-        ageGroup: g.ageGroup ?? 'Adults (aged 12 and above)',
+        ageGroup: (g.ageGroup ?? 'Adults (aged 12 and above)') as AgeGroup,
+        foodAllergies: g.foodAllergies ?? '',
+        nationality: (g.nationality ?? '').trim().toUpperCase(),
       }));
     }
     // 2026-06-14 — for a real booking, don't auto-fill mock personal
@@ -1569,21 +1577,40 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // forms. Used by the local fallback for `hasGuestErrors`
   // when the wrapper doesn't pass the prop, and surfaced in
   // the master Save warning text via `incompleteVipInfoCount`.
-  function getMissingPassengerFields(p: { title: string; firstName: string; lastName: string; ageGroup: string; travelDocNo: string }): string[] {
+  function getMissingPassengerFields(p: {
+    title: string;
+    firstName: string;
+    lastName: string;
+    ageGroup: string;
+    travelDocNo: string;
+    nationality?: string;
+  }): string[] {
     const missing: string[] = [];
     if (!p.title) missing.push('Title');
     if (!p.firstName) missing.push('First Name');
     if (!p.lastName) missing.push('Last Name');
     if (!p.ageGroup) missing.push('Age Group');
     if (!p.travelDocNo) missing.push('Travel Doc No.');
+    if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
+      missing.push('Nationality');
+    }
     return missing;
   }
-  function getMissingNfgFields(g: { title: string; firstName: string; lastName: string; ageGroup: string }): string[] {
+  function getMissingNfgFields(g: {
+    title: string;
+    firstName: string;
+    lastName: string;
+    ageGroup: string;
+    nationality?: string;
+  }): string[] {
     const missing: string[] = [];
     if (!g.title) missing.push('Title');
     if (!g.firstName) missing.push('First Name');
     if (!g.lastName) missing.push('Last Name');
     if (!g.ageGroup) missing.push('Age Group');
+    if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
+      missing.push('Nationality');
+    }
     return missing;
   }
   // Compute the local completeness count when the wrapper
@@ -2606,7 +2633,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Travel Doc No.
+                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Travel Doc No. / Nationality.
                 </span>
               </div>
             )}
@@ -2811,7 +2838,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                     </div>
 
-                    {/* Row 3: Food Allergies — full width */}
+                    {/* Row 3: Nationality (ISO alpha-2) */}
+                    <div>
+                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality *</label>
+                      <NationalityTypeahead
+                        id={`detail-vip-nationality-${idx}`}
+                        value={p.nationality}
+                        required
+                        onChange={(code) => updatePassenger(idx, 'nationality', code)}
+                        data-testid={`detail-vip-nationality-${idx}`}
+                      />
+                    </div>
+
+                    {/* Row 4: Food Allergies — full width */}
                     <div>
                       <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                         <Utensils className="w-3.5 h-3.5 text-red-400" />
@@ -2871,7 +2910,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  {totalNfgIncomplete} Non-Flying Guest row{totalNfgIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group.
+                  {totalNfgIncomplete} Non-Flying Guest row{totalNfgIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Nationality.
                 </span>
               </div>
             )}
@@ -3005,6 +3044,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>
+                    </div>
+                    {/* Nationality */}
+                    <div>
+                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality *</label>
+                      <NationalityTypeahead
+                        id={`detail-nfg-nationality-${idx}`}
+                        value={g.nationality}
+                        required
+                        onChange={(code) => updateNonFlyingGuest(idx, 'nationality', code)}
+                        data-testid={`detail-nfg-nationality-${idx}`}
+                      />
                     </div>
                     {/* Food Allergies */}
                     <div>

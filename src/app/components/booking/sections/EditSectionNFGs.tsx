@@ -20,17 +20,17 @@ import { Badge } from '../../ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../ui/select';
+import { NationalityTypeahead } from '../../../../../../../components/NationalityTypeahead';
 import type {
   BookingFormData, EditNonFlyingGuest,
 } from '../BookingEditView';
 
+// Spec (Sky 2026-06-10): ONLY the 3 canonical labels. Legacy aliases are
+// normalised on read by mapPassengerAgeGroup — not offered in the UI.
 const AGE_GROUP_OPTIONS = [
-  { value: 'Adult (13+ years)', label: 'Adult (13+ years)' },
+  { value: 'Adults (aged 12 and above)', label: 'Adults (aged 12 and above)' },
   { value: 'Children (aged 2-11)', label: 'Children (aged 2-11)' },
   { value: 'Infants (under 2 years old)', label: 'Infants (under 2 years old)' },
-  { value: 'Adult', label: 'Adult (legacy)' },
-  { value: 'Child', label: 'Child (legacy)' },
-  { value: 'Infant', label: 'Infant (legacy)' },
 ];
 
 export interface EditSectionNFGsProps {
@@ -60,7 +60,7 @@ export function EditSectionNFGs({
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-NFG fields. The 1st {nonFlyingPS} rows are PS NFGs; the next {nonFlyingLD} are LD NFGs.
-        Title, First Name, Last Name, and Age Group are required.
+        Title, First Name, Last Name, Age Group, and Nationality are required.
       </p>
       <div className="space-y-3">
         {nfgs.map((g, i) => {
@@ -72,7 +72,7 @@ export function EditSectionNFGs({
                   {section} NFG #{i + 1}
                 </Badge>
               </div>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Title <span className="text-red-500">*</span></label>
                   <Select
@@ -121,6 +121,16 @@ export function EditSectionNFGs({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Nationality <span className="text-red-500">*</span></label>
+                  <NationalityTypeahead
+                    id={`edit-nfg-nationality-${i}`}
+                    value={g.nationality ?? ''}
+                    required
+                    onChange={(code) => updateNfg(i, { nationality: code })}
+                    data-testid={`edit-nfg-nationality-${i}`}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Food Allergies</label>
