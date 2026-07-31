@@ -107,6 +107,9 @@ export interface Booking {
     firstName?: string;
     lastName?: string;
     ageGroup?: string;
+    foodAllergies?: string;
+    /** ISO 3166-1 alpha-2 */
+    nationality?: string;
   }>;
   status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
@@ -185,6 +188,8 @@ export interface Booking {
     birthdayMonth?: string;
     birthdayYear?: string;
     foodAllergies?: string;
+    /** ISO 3166-1 alpha-2 */
+    nationality?: string;
   }>;
 }
 
@@ -204,6 +209,8 @@ export interface PassengerDetail {
   birthdayMonth: string;
   birthdayYear: string;
   foodAllergies: string;
+  /** ISO 3166-1 alpha-2 (mandatory on create since 2026-07-17). */
+  nationality: string;
 }
 
 export const emptyPassenger = (): PassengerDetail => ({
@@ -211,6 +218,7 @@ export const emptyPassenger = (): PassengerDetail => ({
   travelDocNo: '', membershipNo: '', ageGroup: '',
   birthdayDay: '', birthdayMonth: '', birthdayYear: '',
   foodAllergies: '',
+  nationality: '',
 });
 
 export const MONTHS = [
@@ -226,10 +234,13 @@ export interface NonFlyingGuest {
   lastName: string;
   ageGroup: AgeGroup;
   foodAllergies: string;
+  /** ISO 3166-1 alpha-2 (mandatory on create since 2026-07-17). */
+  nationality: string;
 }
 
 export const emptyNonFlyingGuest = (): NonFlyingGuest => ({
   title: '', firstName: '', lastName: '', ageGroup: '', foodAllergies: '',
+  nationality: '',
 });
 
 // ── Historical guest registry ─────────────────────────────────────────────────
@@ -389,6 +400,7 @@ export const buildInitialPassengers = (total: number, bookingId: number): Passen
       travelDocNo: seed.doc, membershipNo: seed.mem, ageGroup: seed.ageGroup,
       birthdayDay: seed.day, birthdayMonth: seed.month, birthdayYear: seed.year,
       foodAllergies: seed.allergies,
+      nationality: 'HK',
     };
   });
 
@@ -406,7 +418,14 @@ const mockNonFlyingSeeds = [
 export const buildInitialNonFlyingGuests = (total: number, bookingId: number): NonFlyingGuest[] =>
   Array.from({ length: total }, (_, idx) => {
     const seed = mockNonFlyingSeeds[(bookingId + idx + 2) % mockNonFlyingSeeds.length];
-    return { title: seed.title, firstName: seed.firstName, lastName: seed.lastName, ageGroup: seed.ageGroup, foodAllergies: seed.allergies };
+    return {
+      title: seed.title,
+      firstName: seed.firstName,
+      lastName: seed.lastName,
+      ageGroup: seed.ageGroup,
+      foodAllergies: seed.allergies,
+      nationality: 'HK',
+    };
   });
 
 // ── Mock booking generator ────────────────────────────────────────────────────

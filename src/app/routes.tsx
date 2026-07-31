@@ -46,6 +46,7 @@ import { POSTransactions } from './components/POSTransactions';
 import { PriceManagement } from './components/PriceManagement';
 import { PriceManagementEdit } from './components/PriceManagementEdit';
 import { mockLoungeDeluxe, mockPremiereSuite, mockComboDiscount } from './components/__fixtures__/PriceManagement.mocks';
+import { ReportsRouter } from '../../../reports/shared/ReportsRouter';
 
 // ── Fallback for unknown routes ───────────────────────────────────────────────
 function NotFound() {
@@ -520,6 +521,7 @@ export const router = createBrowserRouter([
 
       // 404
       { path: '*', Component: NotFound },
+      { path: 'admin/reports/*', Component: ReportsRouter },
     ],
   },
 ]);

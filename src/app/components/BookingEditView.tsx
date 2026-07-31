@@ -87,24 +87,37 @@ export type BookingStatusValue =
 export type PaymentStatusValue =
   | 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
 
+/** Canonical age labels only (Sky 2026-06-10). Legacy wire values are
+ *  accepted as string at runtime after mapPassengerAgeGroup normalises
+ *  them; the union lists the UI / write-path tokens. */
+export type EditAgeGroup =
+  | 'Adults (aged 12 and above)'
+  | 'Children (aged 2-11)'
+  | 'Infants (under 2 years old)'
+  | '';
+
 export interface EditPassenger {
   title: string;
   firstName: string;
   lastName: string;
-  ageGroup: 'Adult (13+ years)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | 'Child' | 'Infant' | '';
+  ageGroup: EditAgeGroup;
   birthdayDay?: string;
   birthdayMonth?: string;
   birthdayYear?: string;
   travelDocNo: string;
   membershipNo?: string;
   foodAllergies?: string;
+  /** ISO 3166-1 alpha-2 */
+  nationality?: string;
 }
 export interface EditNonFlyingGuest {
   title: string;
   firstName: string;
   lastName: string;
-  ageGroup: 'Adult (13+ years)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | 'Child' | 'Infant' | '';
+  ageGroup: EditAgeGroup;
   foodAllergies?: string;
+  /** ISO 3166-1 alpha-2 */
+  nationality?: string;
 }
 
 export interface EditLimoStop {
@@ -447,8 +460,8 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   vipPassengersInLoungeDeluxe: 1,
   nonFlyingGuestsInLoungeDeluxe: 0,
   passengers: [
-    { title: 'Mr', firstName: 'James', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P1234567', membershipNo: 'CX-DIA-001' },
-    { title: 'Mrs', firstName: 'Sarah', lastName: 'Hoffmann', ageGroup: 'Adult (13+ years)', travelDocNo: 'P7654321' },
+    { title: 'Mr', firstName: 'James', lastName: 'Hoffmann', ageGroup: 'Adults (aged 12 and above)', travelDocNo: 'P1234567', membershipNo: 'CX-DIA-001' },
+    { title: 'Mrs', firstName: 'Sarah', lastName: 'Hoffmann', ageGroup: 'Adults (aged 12 and above)', travelDocNo: 'P7654321' },
   ],
   nonFlyingGuestsList: [],
   hasLimousine:     true,
@@ -493,6 +506,10 @@ function getMissingPassengerFields(p: EditPassenger): string[] {
   if (!p.lastName) missing.push('Last Name');
   if (!p.ageGroup) missing.push('Age Group');
   if (!p.travelDocNo) missing.push('Travel Doc No.');
+  // 2026-07-17+ — guest nationality mandatory on create; surface on edit too.
+  if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
+    missing.push('Nationality');
+  }
   return missing;
 }
 function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
@@ -501,6 +518,9 @@ function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
   if (!g.firstName) missing.push('First Name');
   if (!g.lastName) missing.push('Last Name');
   if (!g.ageGroup) missing.push('Age Group');
+  if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
+    missing.push('Nationality');
+  }
   return missing;
 }
 

@@ -18,24 +18,18 @@ import { Badge } from '../../ui/badge';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../ui/select';
+import { NationalityTypeahead } from '../../../../../../../components/NationalityTypeahead';
 import type {
   BookingFormData, EditPassenger,
 } from '../BookingEditView';
 
-// 2026-06-08 round 6.2.1 — Age group dropdown options. The form
-// accepts BOTH the Q-B long-form strings ('Adult (13+ years)',
-// 'Children (aged 2-11)', 'Infants (under 2 years old)') AND
-// the pre-Q-B short strings ('Adult', 'Child', 'Infant') for
-// back-compat with legacy bookings. The orchestrator's
-// `applyGuestCountFieldsToData` reads both (per round 6.2.53).
+// Spec (Sky 2026-06-10 age-dropdown normalize): ONLY these 3 labels.
+// Pre-rename wire values are normalised on read by mapPassengerAgeGroup
+// and must never reappear as selectable dropdown options.
 const AGE_GROUP_OPTIONS = [
-  { value: 'Adult (13+ years)', label: 'Adult (13+ years)' },
+  { value: 'Adults (aged 12 and above)', label: 'Adults (aged 12 and above)' },
   { value: 'Children (aged 2-11)', label: 'Children (aged 2-11)' },
   { value: 'Infants (under 2 years old)', label: 'Infants (under 2 years old)' },
-  // Back-compat aliases (pre-Q-B figma-ui data may still use these)
-  { value: 'Adult', label: 'Adult (legacy)' },
-  { value: 'Child', label: 'Child (legacy)' },
-  { value: 'Infant', label: 'Infant (legacy)' },
 ];
 
 export interface EditSectionPassengersProps {
@@ -65,7 +59,7 @@ export function EditSectionPassengers({
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-passenger fields. The 1st {vipPS} rows are Premiere Suite VIPs; the next {vipLD} are Lounge Deluxe VIPs.
-        Title, First Name, Last Name, Age Group, and Travel Doc No. are required (round 6.2.65 completeness gate).
+        Title, First Name, Last Name, Age Group, Travel Doc No., and Nationality are required.
       </p>
       <div className="space-y-4">
         {passengers.map((p, i) => {
@@ -144,6 +138,16 @@ export function EditSectionPassengers({
                     value={p.membershipNo ?? ''}
                     onChange={e => updatePassenger(i, { membershipNo: e.target.value })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-600 mb-1">Nationality <span className="text-red-500">*</span></label>
+                  <NationalityTypeahead
+                    id={`edit-vip-nationality-${i}`}
+                    value={p.nationality ?? ''}
+                    required
+                    onChange={(code) => updatePassenger(i, { nationality: code })}
+                    data-testid={`edit-vip-nationality-${i}`}
                   />
                 </div>
                 <div className="col-span-2">
