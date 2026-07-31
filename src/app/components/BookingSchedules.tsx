@@ -199,7 +199,8 @@ export function BookingSchedules({
   pageTitle = 'Booking Schedules',
   pageSubtitle = 'Daily schedule view across all suites and lounge areas',
 }: BookingSchedulesProps = {}) {
-  const bookings: ScheduleBooking[] = bookingsProp?.length ? bookingsProp : ALL_BOOKINGS;
+  // Defined empty array is authoritative — never fall back to mock ALL_BOOKINGS when prop is [].
+  const bookings: ScheduleBooking[] = bookingsProp !== undefined ? bookingsProp : ALL_BOOKINGS;
   const today = todayISO();
   const [selectedDate, setSelectedDate]   = useState(today);
   const [venueFilter, setVenueFilter]     = useState('all');

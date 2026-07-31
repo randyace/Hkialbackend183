@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, UtensilsCrossed, Clock, CheckCheck, X, AlertTriangle } from 'lucide-react';
 
 interface PendingItem {
@@ -65,9 +65,13 @@ export const INITIAL_OVERDUE_COUNT = MOCK_ALERTS.filter(o =>
   o.items.some(i => i.waitMinutes >= OVERDUE_THRESHOLD)
 ).length;
 
-export function POSFoodAlert({ alerts: alertsProp = [], isLoading, onDismiss, onRefresh, onViewBooking }: POSFoodAlertProps = {}) {
-  const baseAlerts = alertsProp.length > 0 ? alertsProp : MOCK_ALERTS;
+export function POSFoodAlert({ alerts: alertsProp, isLoading, onDismiss, onRefresh, onViewBooking }: POSFoodAlertProps = {}) {
+  // Defined empty array is authoritative (no live alerts) — mock only when prop omitted (Figma).
+  const baseAlerts = alertsProp !== undefined ? alertsProp : MOCK_ALERTS;
   const [orders, setOrders] = useState<FoodAlert[]>(baseAlerts);
+  useEffect(() => {
+    if (alertsProp !== undefined) setOrders(alertsProp);
+  }, [alertsProp]);
   const [isExpanded, setIsExpanded]       = useState(true);
   const [dismissed, setDismissed]         = useState(false);
 

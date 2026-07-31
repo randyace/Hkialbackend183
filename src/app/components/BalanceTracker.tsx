@@ -332,7 +332,7 @@ function ContractStatusBadge({ status }: { status: Contract['status'] }) {
 
 // ── Props interface ───────────────────────────────────────────────────────────
 export interface BalanceTrackerProps {
-  /** Pass populated array from CI4; falls back to MOCK_ACCOUNTS when empty */
+  /** Pass array from container; omitted → MOCK_ACCOUNTS (Figma). Defined [] stays empty. */
   contracts?: Account[];
   onViewContract?: (id: string) => void;
   isLoading?: boolean;
@@ -342,11 +342,12 @@ export interface BalanceTrackerProps {
 }
 
 export function BalanceTracker({
-  contracts: contractsProp = [],
+  contracts: contractsProp,
   onViewContract,
   isLoading = false,
 }: BalanceTrackerProps = {}) {
-  const displayAccounts = contractsProp.length > 0 ? contractsProp : MOCK_ACCOUNTS;
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
+  const displayAccounts = contractsProp !== undefined ? contractsProp : MOCK_ACCOUNTS;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | BalanceStatus>('all');

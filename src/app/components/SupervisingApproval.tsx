@@ -283,16 +283,16 @@ export interface SupervisingApprovalProps {
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function SupervisingApproval({
-  bookings: bookingsProp = [],
+  bookings: bookingsProp,
   onApprove,
   onReject,
   onEscalate,
   onViewDetail,
   isLoading = false,
 }: SupervisingApprovalProps) {
-  const [bookings] = useState<SupervisingBooking[]>(
-    bookingsProp.length > 0 ? bookingsProp : MOCK_SUPERVISING_BOOKINGS,
-  );
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
+  const bookings: SupervisingBooking[] =
+    bookingsProp !== undefined ? bookingsProp : MOCK_SUPERVISING_BOOKINGS;
   const [statuses, setStatuses] = useState<Record<number, SupervisingStatus>>({});
 
   // Sub-navigation
