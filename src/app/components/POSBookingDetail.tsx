@@ -999,9 +999,9 @@ export function POSBookingDetail({
           </div>
         </div>
         <div className="mb-1 flex flex-col gap-3">
-          <div className="flex flex-col min-w-0">
-            <h2 className="text-base font-semibold text-gray-900 truncate">{booking.suiteName}</h2>
-            <p className="text-sm text-gray-600 truncate">{booking.memberName}</p>
+          <div className="flex min-w-0 flex-col">
+            <h2 className="truncate text-base font-semibold text-gray-900">{booking.suiteName}</h2>
+            <p className="truncate text-sm text-gray-600">{booking.memberName}</p>
             <p className="text-xs text-gray-500">{booking.numberOfGuests} pax</p>
           </div>
 
@@ -1185,50 +1185,30 @@ export function POSBookingDetail({
             HK${booking.totalAmount.toLocaleString()}
           </span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-2 flex w-full flex-col gap-2">
+          <Button type="button" variant="outline" className="w-full border-gray-300 text-gray-700">
+            Print Bill
+          </Button>
           {hasPendingOrderItems && onSubmitPendingOrder ? (
             <Button
-              className="inline-flex items-center px-4 py-2 text-sm bg-green-600 text-white rounded-md shadow hover:bg-green-700"
+              type="button"
+              className="w-full bg-green-600 py-3 text-base font-bold text-white shadow hover:bg-green-700"
               disabled={isSubmittingPendingOrder}
               onClick={() => void onSubmitPendingOrder()}
             >
               {isSubmittingPendingOrder ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Utensils className="w-4 h-4 mr-1.5" />
+                  <Utensils className="mr-1.5 h-4 w-4" />
                   Send to Kitchen
                 </>
               )}
             </Button>
           ) : null}
-          <Button variant="outline" className="flex-1 min-w-[90px]">
-            Print Bill
-          </Button>
-          {showCancelWalkIn ? (
-            <Button
-              variant="outline"
-              className="flex-1 min-w-[90px] border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
-              onClick={() => void onClearWalkIn?.()}
-              disabled={isClearingWalkIn}
-            >
-              {isClearingWalkIn ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  Clearing...
-                </>
-              ) : (
-                'Cancel Walk-in'
-              )}
-            </Button>
-          ) : (
-            <Button className="flex-1 min-w-[90px] bg-purple-700 hover:bg-purple-800 text-white" onClick={onCheckoutClick}>
-              Checkout
-            </Button>
-          )}
         </div>
       </div>
     </>
@@ -1238,43 +1218,73 @@ export function POSBookingDetail({
     <div className="flex flex-col h-[calc(100vh-64px)] overflow-hidden bg-gray-100">
       <div className="shrink-0 border-b border-gray-200 bg-gray-100 px-2 py-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 shrink-0">
-            <Button variant="outline" onClick={onBack} size="sm" className="w-fit shrink-0">
-              <ArrowLeft className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Back</span>
-            </Button>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
+              <Button variant="outline" onClick={onBack} size="sm" className="w-fit shrink-0">
+                <ArrowLeft className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1 rounded-full border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 shadow-sm hover:bg-purple-100"
+                onClick={() => {
+                  if (isTicketSidebarVisible) {
+                    setIsTicketSidebarVisible(false);
+                    setMobilePanel('menu');
+                  } else {
+                    openTicketPanel();
+                  }
+                }}
+                aria-pressed={isTicketSidebarVisible}
+              >
+                {isTicketSidebarVisible ? (
+                  <>
+                    <PanelLeftClose className="h-4 w-4" />
+                    <span>Hide Ticket</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelLeftOpen className="h-4 w-4" />
+                    <span>View Ticket</span>
+                  </>
+                )}
+              </Button>
+            </div>
+            <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900 sm:text-base">
+              <span className="lg:hidden">{booking.bookingNo}</span>
+              <span className="hidden lg:inline">POS Booking Details {booking.bookingNo}</span>
+            </h1>
+          </div>
+          {showCancelWalkIn ? (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="flex items-center gap-1 rounded-full border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-700 shadow-sm hover:bg-purple-100"
-              onClick={() => {
-                if (isTicketSidebarVisible) {
-                  setIsTicketSidebarVisible(false);
-                  setMobilePanel('menu');
-                } else {
-                  openTicketPanel();
-                }
-              }}
-              aria-pressed={isTicketSidebarVisible}
+              className="shrink-0 border-red-300 text-red-700 hover:bg-red-50 hover:text-red-800"
+              onClick={() => void onClearWalkIn?.()}
+              disabled={isClearingWalkIn}
             >
-              {isTicketSidebarVisible ? (
+              {isClearingWalkIn ? (
                 <>
-                  <PanelLeftClose className="h-4 w-4" />
-                  <span>Hide Ticket</span>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  Clearing...
                 </>
               ) : (
-                <>
-                  <PanelLeftOpen className="h-4 w-4" />
-                  <span>View Ticket</span>
-                </>
+                'Cancel Walk-in'
               )}
             </Button>
-          </div>
-          <h1 className="min-w-0 flex-1 text-sm font-semibold text-gray-900 truncate text-right sm:text-base sm:text-left">
-            <span className="lg:hidden">{booking.bookingNo}</span>
-            <span className="hidden lg:inline">POS Booking Details {booking.bookingNo}</span>
-          </h1>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              className="shrink-0 bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-700"
+              onClick={onCheckoutClick}
+            >
+              Checkout
+            </Button>
+          )}
         </div>
       </div>
 
