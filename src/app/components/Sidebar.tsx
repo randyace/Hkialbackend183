@@ -162,6 +162,7 @@ const MOCK_MENU_ITEMS: SidebarMenuItem[] = [
     submenu: [
       { id: 'corporate-reports', label: 'BD Usage Reports', path: '/reports/corporate' },
       { id: 'refund-report',     label: 'Refund Report',    path: '/reports/refund' },
+      { id: 'movements-report',  label: 'Movements Report', path: '/reports/movements' },
     ],
   },
   {
