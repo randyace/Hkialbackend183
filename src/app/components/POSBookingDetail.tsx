@@ -1414,7 +1414,8 @@ export function POSBookingDetail({
           </button>
 
           {isContextDetailsOpen ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          <div className={`grid grid-cols-1 gap-3 ${isWalkIn ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+            {!isWalkIn ? (
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <User className="w-3.5 h-3.5 text-gray-400" />
@@ -1455,21 +1456,43 @@ export function POSBookingDetail({
                 </div>
               </dl>
             </div>
+            ) : (
+            <div className="bg-white p-3 rounded-lg shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <User className="w-3.5 h-3.5 text-gray-400" />
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Walk-in Guest</h3>
+              </div>
+              <dl className="space-y-1">
+                <div>
+                  <dt className="text-xs text-gray-500">Label</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.memberName}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-gray-500">Number of Guests</dt>
+                  <dd className="text-sm font-medium text-gray-900">{booking.numberOfGuests} pax</dd>
+                </div>
+              </dl>
+            </div>
+            )}
 
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">Booking</h3>
+                <h3 className="text-xs uppercase tracking-wide text-gray-500 font-medium">
+                  {isWalkIn ? 'Walk-in Session' : 'Booking'}
+                </h3>
               </div>
               <dl className="space-y-1">
                 <div>
                   <dt className="text-xs text-gray-500">Suite</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.suiteName}</dd>
                 </div>
+                {!isWalkIn ? (
                 <div>
                   <dt className="text-xs text-gray-500">Check-in Time</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.checkInTime}</dd>
                 </div>
+                ) : null}
                 <div>
                   <dt className="text-xs text-gray-500">Number of Guests</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.numberOfGuests} pax</dd>
@@ -1478,6 +1501,8 @@ export function POSBookingDetail({
                   <dt className="text-xs text-gray-500">Flight Number</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightNo}</dd>
                 </div>
+                {!isWalkIn ? (
+                <>
                 <div>
                   <dt className="text-xs text-gray-500">Flight Time</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightTime}</dd>
@@ -1486,9 +1511,12 @@ export function POSBookingDetail({
                   <dt className="text-xs text-gray-500">Destination</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightDestination}</dd>
                 </div>
+                </>
+                ) : null}
               </dl>
             </div>
 
+            {!isWalkIn ? (
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-gray-400" />
@@ -1521,6 +1549,7 @@ export function POSBookingDetail({
                 </div>
               </dl>
             </div>
+            ) : null}
           </div>
           ) : null}
           </div>
