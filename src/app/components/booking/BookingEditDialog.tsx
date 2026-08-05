@@ -1,5 +1,5 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { Edit2, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search, X, Plus, Minus, CheckCircle, Users } from 'lucide-react';
+import { Edit2, Eye, Plane, Building2, Tag, MessageSquare, Car, Accessibility, Search, X, Plus, Minus, CheckCircle, Users } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Checkbox } from '../ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
@@ -287,6 +287,13 @@ const ADDON_SERVICES: AddonService[] = CATALOG_ADDONS.map((a) => ({
 }));
 
 export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = false }: BookingEditDialogProps) {
+  // 2026-08-05 (round 6.2.152, M8 honesty) — without a parent
+  // `onSave` the dialog cannot persist. Label as View and hide
+  // Save so staff never see an Edit/Save affordance that no-ops
+  // (pre-fix path toasted "Booking updated successfully!" then
+  // closed — dishonest). When `onSave` is wired, Edit is honest.
+  const canPersist = typeof onSave === 'function';
+
   const [editFlightType,    setEditFlightType]    = useState<'Arrival' | 'Departure' | 'Transit'>(booking.flightType ?? 'Departure');
   const [editFlightNo,      setEditFlightNo]      = useState(booking.flightNo);
   const [editFlightTime,    setEditFlightTime]    = useState(booking.flightTime);
@@ -467,14 +474,10 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
   };
 
   const handleSave = async () => {
+    // M8 honesty: no fake success toast when parent never wired onSave.
+    if (!canPersist || !onSave) return;
     if (!editFlightNo.trim()) { toast.error('Flight number is required.'); return; }
     if (!editVisitDate)       { toast.error('Visit date is required.'); return; }
-    if (!onSave) {
-      // No parent handler wired — preserve the legacy "toast + close" behaviour.
-      toast.success('Booking updated successfully!');
-      onClose();
-      return;
-    }
     const suiteNames  = editAssignedSuiteIds
       .map(id => physicalSuites.find(s => s.id === id)?.suite_name)
       .filter((n): n is string => Boolean(n));
@@ -584,12 +587,23 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
           wrapping awkwardly. */}
       <DialogContent className="max-w-6xl w-full max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Edit2 className="w-5 h-5 text-blue-600" />
-            Edit Booking — {booking.bookingNo}
+          <DialogTitle className="flex items-center gap-2" data-testid="booking-edit-dialog-title">
+            {canPersist ? (
+              <>
+                <Edit2 className="w-5 h-5 text-blue-600" />
+                Edit Booking — {booking.bookingNo}
+              </>
+            ) : (
+              <>
+                <Eye className="w-5 h-5 text-gray-500" />
+                View Booking — {booking.bookingNo}
+              </>
+            )}
           </DialogTitle>
           <DialogDescription>
-            Update the booking details below. Changes will be saved after clicking "Save Changes".
+            {canPersist
+              ? 'Update the booking details below. Changes will be saved after clicking "Save Changes".'
+              : 'View-only — no save handler is wired. Open the booking detail page to edit and use Save All Changes.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -1078,10 +1092,18 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
         </div>
 
         <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            <CheckCircle className="w-4 h-4 mr-2" />{isSaving ? 'Saving…' : 'Save Changes'}
-          </Button>
+          {canPersist ? (
+            <>
+              <Button variant="outline" onClick={onClose} disabled={isSaving}>Cancel</Button>
+              <Button onClick={handleSave} disabled={isSaving} data-testid="booking-edit-dialog-save">
+                <CheckCircle className="w-4 h-4 mr-2" />{isSaving ? 'Saving…' : 'Save Changes'}
+              </Button>
+            </>
+          ) : (
+            <Button variant="outline" onClick={onClose} data-testid="booking-edit-dialog-close">
+              Close
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

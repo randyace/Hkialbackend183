@@ -262,9 +262,10 @@ export function PurchaseCreate({
   onAccountSearch,
   isAccountSearching = false,
 }: PurchaseCreateProps = {}) {
-  const availablePackages  = packagesProp?.length  ? packagesProp  : GRADING_PACKAGES;
-  const availableBundles   = sessionBundlesProp?.length ? sessionBundlesProp : SESSION_BUNDLES;
-  const availableAccounts  = accountsProp?.length  ? accountsProp  : MOCK_ACCOUNTS;
+  // Defined empty arrays are authoritative (container loading/empty) — mock only when omitted.
+  const availablePackages  = packagesProp !== undefined ? packagesProp : GRADING_PACKAGES;
+  const availableBundles   = sessionBundlesProp !== undefined ? sessionBundlesProp : SESSION_BUNDLES;
+  const availableAccounts  = accountsProp !== undefined ? accountsProp : MOCK_ACCOUNTS;
 
   // 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill items 1+2) —
   // catFilter is now a real PurchaseCategory (no 'all' union member). Default

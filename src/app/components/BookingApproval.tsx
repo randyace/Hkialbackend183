@@ -274,15 +274,16 @@ export interface BookingApprovalProps {
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export function BookingApproval({
-  bookings: bookingsProp = [],
+  bookings: bookingsProp,
   onApprove,
   onReject,
   onViewDetail,
   isLoading = false,
 }: BookingApprovalProps) {
-  const [bookings] = useState<PendingBooking[]>(
-    bookingsProp.length > 0 ? bookingsProp : MOCK_BOOKINGS,
-  );
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
+  // Derive from props (not frozen useState) so container reloads update the list.
+  const bookings: PendingBooking[] =
+    bookingsProp !== undefined ? bookingsProp : MOCK_BOOKINGS;
 
   // ── Two-step approval status ─────────────────────────────────────────────
   const [bookingStatuses, setBookingStatuses] = useState<Record<number, BookingStatusRecord>>({});

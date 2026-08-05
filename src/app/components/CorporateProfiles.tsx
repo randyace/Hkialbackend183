@@ -146,7 +146,8 @@ export function CorporateProfiles({
   onEditProfile,
   onCreateProfile,
 }: CorporateProfilesProps = {}) {
-  const profiles: CompanyProfile[] = profilesProp?.length ? profilesProp : MOCK_PROFILES;
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
+  const profiles: CompanyProfile[] = profilesProp !== undefined ? profilesProp : MOCK_PROFILES;
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | AccountType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'Active' | 'Inactive' | 'Pending'>('all');

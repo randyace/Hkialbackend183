@@ -102,7 +102,9 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const companies: Company[] = companiesProp?.length ? companiesProp : MOCK_COMPANIES;
+  // Defined empty array is authoritative (no empty→MOCK flash when API returns []).
+  // Mock only when props are omitted (Figma Make preview).
+  const companies: Company[] = companiesProp !== undefined ? companiesProp : MOCK_COMPANIES;
 
   const filteredCompanies = companies.filter(company => {
     const matchesSearch = company.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||

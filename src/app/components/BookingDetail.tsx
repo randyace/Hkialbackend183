@@ -5,18 +5,12 @@ import { useAuthContextOptional } from '../../../../../providers/AuthProvider';
 import { hasPermission } from '../../../../../lib/permissions';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
-// The standalone edit page (`/bookings/:id/edit`) is now the
-// SINGLE edit surface for admin bookings; the modal trigger is
-// replaced with a header button that calls `onOpenFullEditor`
-// (which the parent wrapper translates to `navigate('/bookings/{id}/edit')`).
-//
-// 2026-06-28 (round 6.2.72, Phase B) — pivot: the standalone
-// edit page is DEPRECATED. The detail page itself becomes the
-// sole edit surface. The `onOpenFullEditor` button in the
-// header is removed (Phase E), and the section components
-// from `./booking/sections/` are slotted into a new "Editable
-// Sections" container at the bottom of this page. The parent
-// wrapper manages `formData` lifted state and the master Save.
+// The detail page is the sole production edit surface. The
+// compatibility route (`/bookings/:id/edit`) redirects back here;
+// the header CTA calls `onOpenFullEditor` to scroll to the inline
+// editor. The section components from `./booking/sections/` are
+// controlled by the parent wrapper's lifted `formData` state and
+// master Save.
 import { BookingMovementLog, type MovementEntry, type MovementForm } from './booking/BookingMovementLog';
 import { BookingGuestsSearcher } from './booking/BookingGuestsSearcher';
 import { BookingCustomerProfile, type CustomerProfile } from './booking/BookingCustomerProfile';
@@ -227,24 +221,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
     discountType: 'percentage' | 'fixed';
     discountValue: number | string;
   }>;
-  /**
-   * 2026-06-28 (round 6.2.71, Phase 4A) — Edit Booking header button.
-   * Replaces the `onSaveEdit` + `isSavingEdit` props (which were
-   * wired to the now-deleted `<BookingEditDialog>` modal). The
-   * header button now calls `onOpenFullEditor(bookingId)` instead
-   * of opening a modal; the parent wrapper navigates to
-   * `/bookings/{id}/edit` (the standalone edit page).
-   *
-   * Single-edit-surface contract: there is now ONE place to edit
-   * a booking — the standalone edit page. The 6 inline save cards
-   * on this detail page (Save Guest Details / Save Assignment /
-   * Save Staff Assignment / Save Passenger Details / Save Guest
-   * Details for NFGs / Update Status) are still wired via their
-   * own callbacks and remain operational for status transitions
-   * + small in-place edits. Phase 4B will convert them to
-   * read-only display in a follow-up patch (per the consolidation
-   * plan — see `docs/handoff/2026-06-28-booking-edit-flow-consolidation-phase-1.md`).
-   */
+  /** Scroll the header CTA to the sole inline editor. */
   onOpenFullEditor?: (bookingId: number) => void;
   /**
    * Round 6.2.12 (2026-06-08, user-reported: "this part
@@ -425,6 +402,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // (PUT + refetch). Sky can lock down individual sections later.
   /** Lifted BookingFormData state — drives the 11 section components. */
   formData?: BookingFormData;
+  /** Parent-computed meaningful diff against the last hydrated booking. */
+  isEditDirty?: boolean;
   /** Patch the lifted formData. The wrapper merges via shallow Object.assign. */
   onFormChange?: (patch: Partial<BookingFormData>) => void;
   /** Master Save callback — receives the full formData. Wrapper does PUT + refetch. */
@@ -487,7 +466,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   catalogAddonSlot?: React.ReactNode;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
@@ -2874,15 +2853,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               );
             })}
 
-            {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Save Passenger Details"
-            button REMOVED. The per-passenger cards above remain
-            rendered with the existing data (name / ageGroup /
-            travelDocNo / birthday / membershipNo) but edits
-            don't persist from the detail page. Admin edits via
-            the standalone edit page (click `[Edit Booking (full editor)]`
-            in the header). The VIP/NFG completeness gate (round
-            6.2.65) is now enforced on the standalone edit page's
-            Save Changes handler. */}
+            {/* Passenger cards are controlled by the parent's formData and
+                persist through the single master Save below. The VIP/NFG
+                completeness gate is evaluated before that Save. */}
           </div>
         )}
       </Card>
@@ -3080,12 +3053,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               );
             })}
 
-            {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Save Guest Details (NFG)"
-            button REMOVED. NFG detail edits go through the
-            standalone edit page (single edit surface). The
-            per-NFG cards above remain rendered with existing
-            data (name / ageGroup / foodAllergies) but edits
-            don't persist from the detail page. */}
+            {/* NFG cards are controlled by the parent's formData and persist
+                through the single master Save below. */}
           </div>
         )}
       </Card>
@@ -4268,7 +4237,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             • Added `hasGuestErrors` gating on the master Save
               button (binding rules enforced in lines 1026-1033). */}
       {formData && onFormChange && (
-        <div className="pt-6 mt-6 border-t-2 border-blue-300 space-y-6">
+        <div
+          className="pt-6 mt-6 border-t-2 border-blue-300 space-y-6"
+          data-testid="booking-detail-edit-sections"
+        >
           {/* 1. Account Settings (editable) */}
           <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} promoCodeOptions={promoCodeOptions} />
 
@@ -4309,6 +4281,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     The detail page re-fetches on success." description
                     from this bar. The save button below still says
                     "Save All Changes" so the user knows what it does. */}
+                {isEditDirty !== undefined && (
+                  <p
+                    className={`text-xs mt-2 ${isEditDirty ? 'text-blue-700' : 'text-gray-500'}`}
+                    data-testid="booking-detail-dirty-state"
+                  >
+                    {isEditDirty ? 'Unsaved changes' : 'All changes saved'}
+                  </p>
+                )}
                 {hasGuestErrorsFinal && (
                   <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
@@ -4330,17 +4310,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <Button
                   type="button"
                   onClick={() => onSaveAllChanges?.(formData)}
-                  disabled={isSavingAllChanges || hasGuestErrorsFinal}
+                  disabled={isSavingAllChanges || hasGuestErrorsFinal || isEditDirty === false}
                   data-testid="booking-detail-master-save"
                   title={hasGuestErrorsFinal
                     ? (effectiveIncompleteVipInfoCount > 0
                         ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} before saving.`
                         : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.')
-                    : undefined}
+                    : isEditDirty === false
+                      ? 'There are no booking changes to save.'
+                      : undefined}
                   className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="w-4 h-4 mr-1.5" />
-                  {isSavingAllChanges ? 'Saving…' : 'Save All Changes'}
+                  {isSavingAllChanges
+                    ? 'Saving…'
+                    : isEditDirty === false
+                      ? 'No Changes'
+                      : 'Save All Changes'}
                 </Button>
               </div>
             </div>

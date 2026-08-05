@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -598,7 +598,7 @@ function RefundDetailModal({
 
 // ── Props interface ───────────────────────────────────────────────────────────
 export interface RefundReportProps {
-  /** Pass populated array from CI4; falls back to MOCK_REFUND_RECORDS when empty */
+  /** Pass array from container; omitted → MOCK (Figma). Defined [] stays empty. */
   refunds?: RefundRecord[];
   onViewDetail?: (id: number) => void;
   onUpdateStatus?: (id: number, status: RefundStatus, notes: string) => void;
@@ -611,14 +611,19 @@ export interface RefundReportProps {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function RefundReport({
-  refunds: refundsProp = [],
+  refunds: refundsProp,
   onViewDetail,
   onUpdateStatus,
   isLoading = false,
 }: RefundReportProps = {}) {
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
   const [records, setRecords] = useState<RefundRecord[]>(
-    refundsProp.length > 0 ? refundsProp : MOCK_REFUND_RECORDS,
+    refundsProp !== undefined ? refundsProp : MOCK_REFUND_RECORDS,
   );
+  // Sync when container finishes loading (initial useState is frozen).
+  useEffect(() => {
+    if (refundsProp !== undefined) setRecords(refundsProp);
+  }, [refundsProp]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<RefundStatus | 'All'>('All');
   const [accountTypeFilter, setAccountTypeFilter] = useState<AccountType | 'All'>('All');

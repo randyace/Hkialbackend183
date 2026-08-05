@@ -122,7 +122,8 @@ export interface BookingReviewProps {
 }
 
 export function BookingReview({ bookingId, bookings: bookingsProp, onBack = () => {}, onApprove, onReject }: BookingReviewProps = {}) {
-  const allBookings = bookingsProp?.length ? bookingsProp : MOCK_BOOKINGS;
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
+  const allBookings = bookingsProp !== undefined ? bookingsProp : MOCK_BOOKINGS;
   const booking = allBookings.find(b => b.id === (bookingId ?? 1)) ?? allBookings[0];
   const [reviewMode, setReviewMode] = useState<'view' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');

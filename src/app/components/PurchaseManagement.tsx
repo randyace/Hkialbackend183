@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -41,8 +41,10 @@ const fmt = (d: string) => new Date(d).toLocaleDateString('en-HK', { day: '2-dig
 
 // ── Props interface ───────────────────────────────────────────────────────────
 export interface PurchaseManagementProps {
-  /** Pass populated array from CI4; falls back to INITIAL_RECORDS when empty */
+  /** Pass array from container; omitted → INITIAL_RECORDS (Figma). Defined [] stays empty. */
   purchases?: PurchaseRecord[];
+  /** Live account options for create flow; omitted → MOCK_ACCOUNTS (Figma only). */
+  accounts?: AccountOption[];
   onViewDetail?: (id: string) => void;
   onCreateNew?: () => void;
   isLoading?: boolean;
@@ -52,16 +54,26 @@ export interface PurchaseManagementProps {
 }
 
 export function PurchaseManagement({
-  purchases: purchasesProp = [],
+  purchases: purchasesProp,
+  accounts: accountsProp,
   onViewDetail,
   onCreateNew,
   isLoading = false,
 }: PurchaseManagementProps = {}) {
   const [view, setView] = useState<'list' | 'create'>('list');
+  // Defined empty array is authoritative — never fall back to mock when prop is [].
   const [records, setRecords]   = useState<PurchaseRecord[]>(
-    purchasesProp.length > 0 ? purchasesProp : INITIAL_RECORDS,
+    purchasesProp !== undefined ? purchasesProp : INITIAL_RECORDS,
   );
-  const [accounts, setAccounts] = useState<AccountOption[]>(MOCK_ACCOUNTS);
+  const [accounts, setAccounts] = useState<AccountOption[]>(
+    accountsProp !== undefined ? accountsProp : MOCK_ACCOUNTS,
+  );
+  useEffect(() => {
+    if (purchasesProp !== undefined) setRecords(purchasesProp);
+  }, [purchasesProp]);
+  useEffect(() => {
+    if (accountsProp !== undefined) setAccounts(accountsProp);
+  }, [accountsProp]);
 
   // Tab & filters
   const [activeTab, setActiveTab]     = useState<TabView>('all');

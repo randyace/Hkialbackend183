@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -175,7 +175,7 @@ function InteractionIcon({ type }: { type: InteractionType }) {
 
 // ── Props interface ───────────────────────────────────────────────────────────
 export interface OpportunityTrackingProps {
-  /** Pass populated array from CI4; falls back to MOCK_OPPORTUNITIES when empty */
+  /** Pass array from container; omitted → MOCK (Figma). Defined [] stays empty. */
   opportunities?: Opportunity[];
   onUpdateStatus?: (id: string, status: DealStage) => void;
   onAddInteraction?: (id: string) => void;
@@ -183,14 +183,18 @@ export interface OpportunityTrackingProps {
 }
 
 export function OpportunityTracking({
-  opportunities: opportunitiesProp = [],
+  opportunities: opportunitiesProp,
   onUpdateStatus,
   onAddInteraction,
   isLoading = false,
 }: OpportunityTrackingProps = {}) {
+  // Defined empty array is authoritative — never fall back to MOCK when prop is [].
   const [opportunities, setOpportunities] = useState<Opportunity[]>(
-    opportunitiesProp.length > 0 ? opportunitiesProp : MOCK_OPPORTUNITIES,
+    opportunitiesProp !== undefined ? opportunitiesProp : MOCK_OPPORTUNITIES,
   );
+  useEffect(() => {
+    if (opportunitiesProp !== undefined) setOpportunities(opportunitiesProp);
+  }, [opportunitiesProp]);
   const [filterStage, setFilterStage]     = useState<'all' | DealStage>('all');
   const [filterType,  setFilterType]      = useState<'all' | AccountType>('all');
   const [searchTerm,  setSearchTerm]      = useState('');
