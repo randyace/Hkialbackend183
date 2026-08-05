@@ -8,6 +8,10 @@ import {
   FLOOR_PLAN_DEFAULT_CANVAS_WIDTH,
   normalizeLayoutForDisplay,
 } from '@/utils/floorPlanLayoutScale';
+import {
+  formatFloorPlanWalkInTime,
+  formatWalkInGuestLabel,
+} from '@/lib/pos/walkInDisplay';
 
 export interface PosFloorPlanBooking {
   id: number;
@@ -30,6 +34,8 @@ export interface PosFloorPlanSuite {
   booking: PosFloorPlanBooking | null;
   display_name?: string | null;
   display_time?: string | null;
+  order_flight_no?: string | null;
+  order_no_of_pax?: number | null;
   has_upcoming_conflict?: boolean;
 }
 
@@ -418,6 +424,13 @@ export function PosFloorPlanCanvas({
                   const hasBooking = Boolean(booking);
                   const fallbackDisplayName = suite?.display_name ?? 'Walk-in Order';
                   const fallbackDisplayTime = suite?.display_time ?? null;
+                  const walkInFlightNo = suite?.order_flight_no?.trim() || null;
+                  const walkInPax = suite?.order_no_of_pax ?? null;
+                  const walkInTitle =
+                    walkInPax != null && walkInPax >= 1
+                      ? formatWalkInGuestLabel(walkInPax)
+                      : fallbackDisplayName;
+                  const walkInTime = formatFloorPlanWalkInTime(fallbackDisplayTime);
                   const hasUpcomingConflict = Boolean(suite?.has_upcoming_conflict);
                   const isAssignmentModeActive = isInteractiveModeActive || isMultiAssignMode;
                   const isSelectedForAssignment =
@@ -521,13 +534,20 @@ export function PosFloorPlanCanvas({
                           <div
                             className={`line-clamp-1 w-full px-0.5 text-center text-[10px] ${isSelectedForAssignment ? 'text-white/90' : 'text-gray-700'}`}
                           >
-                            {fallbackDisplayName}
+                            {walkInTitle}
                           </div>
-                          {fallbackDisplayTime ? (
+                          {walkInFlightNo ? (
+                            <div
+                              className={`line-clamp-1 w-full px-0.5 text-center text-[10px] ${isSelectedForAssignment ? 'text-white/90' : 'text-blue-700'}`}
+                            >
+                              Flight: {walkInFlightNo}
+                            </div>
+                          ) : null}
+                          {walkInTime ? (
                             <div
                               className={`text-[10px] ${isSelectedForAssignment ? 'text-white/80' : 'text-gray-500'}`}
                             >
-                              {fallbackDisplayTime}
+                              {walkInTime}
                             </div>
                           ) : null}
                         </div>
