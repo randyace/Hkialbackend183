@@ -1414,7 +1414,7 @@ export function POSBookingDetail({
           </button>
 
           {isContextDetailsOpen ? (
-          <div className={`grid grid-cols-1 gap-3 ${isWalkIn ? 'md:grid-cols-2' : 'md:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {!isWalkIn ? (
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -1487,36 +1487,31 @@ export function POSBookingDetail({
                   <dt className="text-xs text-gray-500">Suite</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.suiteName}</dd>
                 </div>
-                {!isWalkIn ? (
                 <div>
                   <dt className="text-xs text-gray-500">Check-in Time</dt>
-                  <dd className="text-sm font-medium text-gray-900">{booking.checkInTime}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{booking.checkInTime || '—'}</dd>
                 </div>
-                ) : null}
                 <div>
                   <dt className="text-xs text-gray-500">Number of Guests</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.numberOfGuests} pax</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Flight Number</dt>
-                  <dd className="text-sm font-medium text-gray-900">{booking.flightNo}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{booking.flightNo || '—'}</dd>
                 </div>
-                {!isWalkIn ? (
-                <>
                 <div>
                   <dt className="text-xs text-gray-500">Flight Time</dt>
-                  <dd className="text-sm font-medium text-gray-900">{booking.flightTime}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{booking.flightTime || '—'}</dd>
                 </div>
+                {!isWalkIn ? (
                 <div>
                   <dt className="text-xs text-gray-500">Destination</dt>
                   <dd className="text-sm font-medium text-gray-900">{booking.flightDestination}</dd>
                 </div>
-                </>
                 ) : null}
               </dl>
             </div>
 
-            {!isWalkIn ? (
             <div className="bg-white p-3 rounded-lg shadow-sm">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-gray-400" />
@@ -1525,13 +1520,13 @@ export function POSBookingDetail({
               <dl className="space-y-1">
                 <div>
                   <dt className="text-xs text-gray-500">Payment Mode</dt>
-                  <dd className="text-sm font-medium text-gray-900">{booking.paymentMode}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{booking.paymentMode || '—'}</dd>
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Payment Status</dt>
                   <dd>
                     <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs px-1.5 py-0">
-                      {booking.paymentStatus}
+                      {booking.paymentStatus || '—'}
                     </Badge>
                   </dd>
                 </div>
@@ -1539,6 +1534,7 @@ export function POSBookingDetail({
                   <dt className="text-xs text-gray-500">Total Amount</dt>
                   <dd className="text-sm font-medium text-gray-900">HK${booking.totalAmount.toLocaleString()}</dd>
                 </div>
+                {!isWalkIn ? (
                 <div>
                   <dt className="text-xs text-gray-500">Credit Balance</dt>
                   <dd className="text-sm font-medium text-gray-900">
@@ -1547,9 +1543,9 @@ export function POSBookingDetail({
                       : '—'}
                   </dd>
                 </div>
+                ) : null}
               </dl>
             </div>
-            ) : null}
           </div>
           ) : null}
           </div>
