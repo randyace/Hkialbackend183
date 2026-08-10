@@ -598,29 +598,38 @@ export function BookingReviewPage({
                 <h2 className="text-lg font-medium text-blue-900">Changes Requested</h2>
               </div>
               {booking.changeRows && booking.changeRows.length > 0 ? (
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-red-200 font-medium">Original</p>
-                  <div className="space-y-3">
+              /* 2026-08-10 — single-row Field | Before → After layout.
+                 Two side-by-side columns repeated the label for every field
+                 and made long passenger/contact diffs hard to scan. */
+              <div className="overflow-x-auto rounded-lg border border-blue-200 bg-white">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-blue-100/60 text-left text-xs uppercase tracking-wide text-blue-900">
+                      <th className="px-3 py-2 font-semibold w-[28%]">Field</th>
+                      <th className="px-3 py-2 font-semibold w-[36%]">Original</th>
+                      <th className="px-3 py-2 font-semibold w-[36%]">Changed to</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-blue-100">
                     {booking.changeRows.map((row) => (
-                      <div key={`from-${row.field}-${row.label}`}>
-                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{row.label}</p>
-                        <p className="line-through text-red-600 font-medium break-words">{row.from}</p>
-                      </div>
+                      <tr key={`row-${row.field}-${row.label}`} className="align-top hover:bg-blue-50/40">
+                        <td className="px-3 py-2.5 text-xs font-medium text-gray-700 whitespace-nowrap">
+                          {row.label}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-block max-w-full break-words rounded bg-red-50 px-2 py-1 text-red-700 line-through decoration-red-400/80">
+                            {row.from}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-block max-w-full break-words rounded bg-green-50 px-2 py-1 font-medium text-green-800">
+                            {row.to}
+                          </span>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-3 pb-2 border-b-2 border-green-200 font-medium">Changed To</p>
-                  <div className="space-y-3">
-                    {booking.changeRows.map((row) => (
-                      <div key={`to-${row.field}-${row.label}`}>
-                        <p className="text-xs text-gray-500" style={{ marginBottom: '10px' }}>{row.label}</p>
-                        <p className="text-green-700 font-medium break-words">{row.to}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                  </tbody>
+                </table>
               </div>
               ) : (
               <div className="grid grid-cols-2 gap-6">
