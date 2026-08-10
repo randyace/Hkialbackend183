@@ -17,6 +17,8 @@ const MOCK_SETTINGS = {
   minBookingAdvance: 2,
   maxBookingAdvance: 90,
   allowNonFlyingGuests: true,
+  /** RFQ B8 — staff-configurable dietary / allergy field visibility on booking forms */
+  showDietaryFields: true,
   requirePaymentForUpfront: true,
   paymentLinkExpiry: 48,
 };
@@ -141,6 +143,20 @@ export function BookingSettings({ settings: settingsProp, onBack = () => {}, onS
             <div>
               <div className="text-gray-900">Allow Non-flying Guests</div>
               <p className="text-sm text-gray-600">Permit guests who are not flying (e.g., companions)</p>
+            </div>
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={settings.showDietaryFields !== false}
+              onChange={(e) => setSettings({ ...settings, showDietaryFields: e.target.checked })}
+              className="w-4 h-4"
+            />
+            <div>
+              <div className="text-gray-900">Show Dietary / Allergy Fields</div>
+              <p className="text-sm text-gray-600">
+                When enabled, booking forms show food allergy and dietary requirement fields for passengers
+              </p>
             </div>
           </label>
         </div>

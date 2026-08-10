@@ -407,6 +407,12 @@ export interface CreateBookingProps {
   // CreateBooking.tsx) passes false per Sky's directive.
   showTransit?: boolean;
   /**
+   * RFQ B8 — when false, hide passenger/NFG food-allergy inputs and
+   * de-emphasize dietary copy in special requests. Default true.
+   * Driven by booking_settings.show_dietary_fields.
+   */
+  showDietaryFields?: boolean;
+  /**
    * Dev-only slot under Booking No. Provided by the admin wrapper when
    * the signed-in email is on the `__dev__` allowlist. Remove before pentest.
    */
@@ -1068,6 +1074,7 @@ function RegionCodeCombobox({
 
 export function CreateBooking({
   showTransit = true,
+  showDietaryFields = true,
   renderDevQuickFill,
   onSubmit,
   onCancel,
@@ -3407,7 +3414,9 @@ export function CreateBooking({
                         form (the edit form at BookingDetail.tsx
                         already has it). Mirrors the edit-form
                         field exactly so the read+write
-                        symmetry is preserved. */}
+                        symmetry is preserved.
+                        RFQ B8 (2026-08-10): gated by showDietaryFields. */}
+                      {showDietaryFields && (
                       <div>
                         <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 text-red-400" />
@@ -3426,6 +3435,7 @@ export function CreateBooking({
                           </p>
                         )}
                       </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -3524,7 +3534,9 @@ export function CreateBooking({
                         of the booking's AD blob; the
                         BookingDetail view's NFG card already
                         reads `g.foodAllergies ?? ''` (line
-                        2701) so the round-trip is symmetric. */}
+                        2701) so the round-trip is symmetric.
+                        RFQ B8 (2026-08-10): gated by showDietaryFields. */}
+                      {showDietaryFields && (
                       <div className="mt-4">
                         <label className="text-sm text-gray-600 mb-[10px] flex items-center gap-1.5">
                           <AlertCircle className="w-3.5 h-3.5 text-red-400" />
@@ -3543,6 +3555,7 @@ export function CreateBooking({
                           </p>
                         )}
                       </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -3961,9 +3974,15 @@ export function CreateBooking({
             ════════════════════════════════════════ */}
         <Card className="p-6">
           <h2 className="mb-1">Special Requests &amp; Notes</h2>
-          <p className="text-sm text-gray-500 mb-4">Any dietary requirements, accessibility needs, or special instructions for the lounge team.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            {showDietaryFields
+              ? 'Any dietary requirements, accessibility needs, or special instructions for the lounge team.'
+              : 'Any accessibility needs or special instructions for the lounge team.'}
+          </p>
           <textarea value={specialRequests} onChange={e => setSpecialRequests(e.target.value)}
-            placeholder="e.g. Birthday celebration, Kosher meal required, Allergy to nuts…"
+            placeholder={showDietaryFields
+              ? 'e.g. Birthday celebration, Kosher meal required, Allergy to nuts…'
+              : 'e.g. Birthday celebration, wheelchair access…'}
             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             rows={4} />
         </Card>
