@@ -210,8 +210,12 @@ export function BookingInvoiceDialog({
     // a temporary `<a download>` click to trigger the
     // browser's native download UX. The blob URL is
     // revoked after a short delay to free memory.
+    //
+    // 2026-08-10 — reject non-PDF bodies (401/HTML error
+    // pages) so the browser never saves a "broken" PDF.
     try {
-      const response = await fetch(`${baseUrl}/bookings/${bookingId}/invoice.pdf`, {
+      const apiRoot = (baseUrl || '').replace(/\/$/, '');
+      const response = await fetch(`${apiRoot}/bookings/${bookingId}/invoice.pdf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -221,11 +225,17 @@ export function BookingInvoiceDialog({
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const blob = await response.blob();
+      const buffer = await response.arrayBuffer();
+      const head = new TextDecoder('utf-8').decode(buffer.slice(0, 5));
+      if (head !== '%PDF-') {
+        const contentType = response.headers.get('content-type') ?? 'unknown';
+        throw new Error(`Invoice endpoint returned non-PDF content (${contentType})`);
+      }
+      const blob = new Blob([buffer], { type: 'application/pdf' });
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `invoice-${bookingId}.pdf`;
+      a.download = `invoice-${booking.bookingNo || bookingId}.pdf`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
