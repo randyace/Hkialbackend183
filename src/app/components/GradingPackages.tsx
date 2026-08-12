@@ -265,8 +265,8 @@ export function GradingPackages({
         open={isDialogOpen}
         onOpenChange={(open) => { if (!open) closeDialog(); }}
       >
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-4xl">
+          <DialogHeader className="shrink-0">
             <DialogTitle>
               {editingPackage && (
                 <span className={editingPackage.color}>
@@ -277,7 +277,7 @@ export function GradingPackages({
           </DialogHeader>
 
           {editingPackage && (
-            <div className="space-y-5 py-2">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto py-2">
               {/* Description — staff-owned EN / 繁 / 简. Customer SPA reads these columns. */}
               <div className="space-y-3">
                 <p className="text-xs text-gray-500">
@@ -438,7 +438,7 @@ export function GradingPackages({
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-4">
             <Button variant="outline" onClick={closeDialog}>Cancel</Button>
             <Button onClick={handleSave} className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white">
               Save Changes
