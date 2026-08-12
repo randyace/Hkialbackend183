@@ -339,7 +339,17 @@ export function AccountCreation({
                   value={companySearch}
                   onChange={(e) => handleCompanySearchChange(e.target.value)}
                   onFocus={() => companySearch.length > 0 && setShowCompanyDropdown(true)}
+                  style={
+                    fieldErrors.company_id
+                      ? { borderColor: '#dc2626', borderWidth: 2 }
+                      : undefined
+                  }
                 />
+                {fieldErrors.company_id && (
+                  <p style={{ margin: '4px 0 0', color: '#dc2626', fontSize: '13px' }}>
+                    {fieldErrors.company_id}
+                  </p>
+                )}
                 {showCompanyDropdown && (
                   <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
                     {companySearchResults.length === 0 ? (
@@ -436,12 +446,27 @@ export function AccountCreation({
                         placeholder="Enter last name" required />
                     </div>
 
-                    {/* Email */}
+                    {/* Email — primary contact maps to accounts.email (unique); surface API fieldErrors */}
                     <div>
                       <Label htmlFor={`em-${subForm.id}`} style={{ marginBottom: 10 }}>Email *</Label>
-                      <Input id={`em-${subForm.id}`} type="email" value={subForm.email}
+                      <Input
+                        id={`em-${subForm.id}`}
+                        type="email"
+                        value={subForm.email}
                         onChange={e => updateCorporateForm(subForm.id, 'email', e.target.value)}
-                        placeholder="Enter email address" required />
+                        placeholder="Enter email address"
+                        required
+                        style={
+                          index === 0 && fieldErrors.email
+                            ? { borderColor: '#dc2626', borderWidth: 2 }
+                            : undefined
+                        }
+                      />
+                      {index === 0 && fieldErrors.email && (
+                        <p style={{ margin: '4px 0 0', color: '#dc2626', fontSize: '13px' }}>
+                          {fieldErrors.email}
+                        </p>
+                      )}
                     </div>
 
                     {/* Region Code + Contact Number */}
