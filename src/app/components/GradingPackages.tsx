@@ -39,6 +39,8 @@ export type PackageTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 export interface PackageBenefit {
   id:   number;
   text: string;
+  textTrad?: string;
+  textSimp?: string;
 }
 
 export interface GradingPackage {
@@ -51,6 +53,8 @@ export interface GradingPackage {
   psFreeUpgrades: number;
   validityMonths: number;
   description:    string;
+  descriptionTrad?: string;
+  descriptionSimp?: string;
   benefits:       PackageBenefit[];
   isActive:       boolean;
   memberCount:    number;
@@ -128,7 +132,12 @@ export function GradingPackages({
     const newId = Math.max(0, ...editingPackage.benefits.map(b => b.id)) + 1;
     setEditingPackage({
       ...editingPackage,
-      benefits: [...editingPackage.benefits, { id: newId, text: newBenefitText.trim() }],
+      benefits: [...editingPackage.benefits, {
+        id: newId,
+        text: newBenefitText.trim(),
+        textTrad: '',
+        textSimp: '',
+      }],
     });
     setNewBenefitText('');
   };
@@ -141,12 +150,23 @@ export function GradingPackages({
     });
   };
 
-  const updateBenefitText = (benefitId: number, text: string) => {
+  const updateBenefitText = (
+    benefitId: number,
+    patch: Partial<Pick<PackageBenefit, 'text' | 'textTrad' | 'textSimp'>>,
+  ) => {
     if (!editingPackage) return;
     setEditingPackage({
       ...editingPackage,
-      benefits: editingPackage.benefits.map(b => b.id === benefitId ? { ...b, text } : b),
+      benefits: editingPackage.benefits.map(b => b.id === benefitId ? { ...b, ...patch } : b),
     });
+  };
+
+  const missingChinese = (pkg: GradingPackage): boolean => {
+    const descMissing = !(pkg.descriptionTrad ?? '').trim() || !(pkg.descriptionSimp ?? '').trim();
+    const benefitMissing = pkg.benefits.some(
+      (b) => !(b.textTrad ?? '').trim() || !(b.textSimp ?? '').trim(),
+    );
+    return descMissing || benefitMissing;
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -187,7 +207,14 @@ export function GradingPackages({
 
             {/* Card Body */}
             <div className="p-6">
-              <p className="text-sm text-gray-600 mb-4">{pkg.description}</p>
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">{pkg.description}</p>
+                {missingChinese(pkg) && (
+                  <p className="text-xs text-amber-700 mt-2">
+                    Missing Traditional / Simplified copy — customer Chinese UI will fall back to English until you fill it here.
+                  </p>
+                )}
+              </div>
 
               {/* Key Details */}
               <div className="grid grid-cols-3 gap-3 mb-4">
@@ -238,7 +265,7 @@ export function GradingPackages({
         open={isDialogOpen}
         onOpenChange={(open) => { if (!open) closeDialog(); }}
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingPackage && (
@@ -251,17 +278,46 @@ export function GradingPackages({
 
           {editingPackage && (
             <div className="space-y-5 py-2">
-              {/* Description */}
-              <div>
-                <Label htmlFor="edit-desc" className="mb-[10px] block">Package Description</Label>
-                <Textarea
-                  id="edit-desc"
-                  value={editingPackage.description}
-                  onChange={(e) =>
-                    setEditingPackage({ ...editingPackage, description: e.target.value })
-                  }
-                  rows={3}
-                />
+              {/* Description — staff-owned EN / 繁 / 简. Customer SPA reads these columns. */}
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500">
+                  Customer membership pages show Traditional / Simplified when filled. Empty fields fall back to English. Do not rely on the customer app to translate this copy.
+                </p>
+                <div>
+                  <Label htmlFor="edit-desc" className="mb-[10px] block">Package Description (English)</Label>
+                  <Textarea
+                    id="edit-desc"
+                    value={editingPackage.description}
+                    onChange={(e) =>
+                      setEditingPackage({ ...editingPackage, description: e.target.value })
+                    }
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-desc-trad" className="mb-[10px] block">Package Description (Traditional Chinese)</Label>
+                  <Textarea
+                    id="edit-desc-trad"
+                    value={editingPackage.descriptionTrad ?? ''}
+                    onChange={(e) =>
+                      setEditingPackage({ ...editingPackage, descriptionTrad: e.target.value })
+                    }
+                    placeholder="繁體中文描述…"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-desc-simp" className="mb-[10px] block">Package Description (Simplified Chinese)</Label>
+                  <Textarea
+                    id="edit-desc-simp"
+                    value={editingPackage.descriptionSimp ?? ''}
+                    onChange={(e) =>
+                      setEditingPackage({ ...editingPackage, descriptionSimp: e.target.value })
+                    }
+                    placeholder="简体中文描述…"
+                    rows={3}
+                  />
+                </div>
               </div>
 
               {/* Pricing & Credits */}
@@ -321,21 +377,33 @@ export function GradingPackages({
 
               {/* Benefits */}
               <div>
-                <Label className="mb-[10px] block">Package Benefits</Label>
+                <Label className="mb-[10px] block">Package Benefits (English / Traditional / Simplified)</Label>
                 <div className="space-y-2 mb-3">
                   {editingPackage.benefits.map((benefit) => (
-                    <div key={benefit.id} className="flex gap-2 items-center">
-                      <Check className={`w-4 h-4 ${editingPackage.color} shrink-0`} />
-                      <Input
-                        value={benefit.text}
-                        onChange={(e) => updateBenefitText(benefit.id, e.target.value)}
-                        className="flex-1"
-                      />
+                    <div key={benefit.id} className="flex gap-2 items-start">
+                      <Check className={`w-4 h-4 ${editingPackage.color} shrink-0 mt-2.5`} />
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <Input
+                          value={benefit.text}
+                          onChange={(e) => updateBenefitText(benefit.id, { text: e.target.value })}
+                          placeholder="English"
+                        />
+                        <Input
+                          value={benefit.textTrad ?? ''}
+                          onChange={(e) => updateBenefitText(benefit.id, { textTrad: e.target.value })}
+                          placeholder="繁體中文"
+                        />
+                        <Input
+                          value={benefit.textSimp ?? ''}
+                          onChange={(e) => updateBenefitText(benefit.id, { textSimp: e.target.value })}
+                          placeholder="简体中文"
+                        />
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => removeBenefit(benefit.id)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0 mt-0.5"
                       >
                         <X className="w-4 h-4" />
                       </Button>
