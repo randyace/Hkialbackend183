@@ -18,6 +18,11 @@ export interface Booking {
   bookingNo: string;
   guestName: string;
   accountNo: string;
+  billingName?: string;
+  billingCompany?: string;
+  billingAddress?: string;
+  billingEmail?: string;
+  billingPhone?: string;
   // 2026-06-11 — round 6.2.34 UX. The booking's account FK.
   // The parent-repo wrapper pre-fetches
   // `GET /api/accounts/{booking.accountId}` for the "View

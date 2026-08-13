@@ -407,6 +407,12 @@ export interface BookingFormData {
   regionCode?: string;
   contactNo?: string;
   contactMemo?: string;
+  /** Per-booking invoice Bill To. Empty fields fall back to guest/account on the PDF. */
+  billingName?: string;
+  billingCompany?: string;
+  billingAddress?: string;
+  billingEmail?: string;
+  billingPhone?: string;
   // 2026-06-29 (round 6.2.78, Bug #4) — Status Management card
   // wires through the master Save. The 3 controls (Booking
   // Status dropdown / Payment Status dropdown / Status Update

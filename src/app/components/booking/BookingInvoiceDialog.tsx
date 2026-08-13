@@ -11,6 +11,11 @@ interface InvoiceBooking {
   guestName: string;
   accountNo: string;
   accountType?: string;
+  billingName?: string;
+  billingCompany?: string;
+  billingAddress?: string;
+  billingEmail?: string;
+  billingPhone?: string;
   suite: string;
   dateTime: string;
   flightNo: string;
@@ -301,7 +306,19 @@ export function BookingInvoiceDialog({
             <Card className="p-4">
               <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">Bill To</h3>
               <div className="space-y-2">
-                <p className="font-medium">{booking.guestName}</p>
+                <p className="font-medium">{booking.billingName || booking.guestName}</p>
+                {booking.billingCompany ? (
+                  <p className="text-sm text-gray-800">{booking.billingCompany}</p>
+                ) : null}
+                {booking.billingAddress ? (
+                  <p className="text-sm text-gray-600 whitespace-pre-line">{booking.billingAddress}</p>
+                ) : null}
+                {booking.billingEmail ? (
+                  <p className="text-sm text-gray-600">Email: {booking.billingEmail}</p>
+                ) : null}
+                {booking.billingPhone ? (
+                  <p className="text-sm text-gray-600">Tel: {booking.billingPhone}</p>
+                ) : null}
                 <p className="text-sm text-gray-600">Account: {booking.accountNo}</p>
                 <p className="text-sm text-gray-600">Type: {booking.accountType}</p>
               </div>
