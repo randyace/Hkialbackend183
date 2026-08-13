@@ -227,8 +227,6 @@ export interface MemberDetailProps {
   activeSessions?: number;
   loginHistory?: LoginAttempt[];
 
-  /** When true, render Contracts tab before Remarks. */
-  hasContracts?: boolean;
   /** Contracts tab body — supplied by parent container. */
   contractsTabContent?: ReactNode;
 
@@ -437,7 +435,6 @@ export function MemberDetail({
   activeSessions: activeSessionsProp,
   loginHistory: loginHistoryProp = [],
 
-  hasContracts = false,
   contractsTabContent,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
@@ -937,7 +934,7 @@ export function MemberDetail({
 
       {/* Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className={`grid w-full ${hasContracts ? 'grid-cols-7' : 'grid-cols-6'}`}>
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="allergies">Food Allergies</TabsTrigger>

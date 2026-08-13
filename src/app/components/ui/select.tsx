@@ -36,6 +36,8 @@ function SelectTrigger({
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default";
 }) {
+  // Default type="button" so Radix triggers never accidentally submit parent forms.
+  // Keep `type` after `{...props}` so callers cannot override it back to "submit".
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
@@ -45,6 +47,7 @@ function SelectTrigger({
         className,
       )}
       {...props}
+      type="button"
     >
       {children}
       <SelectPrimitive.Icon asChild>

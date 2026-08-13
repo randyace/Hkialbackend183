@@ -30,6 +30,8 @@ export interface SidebarMenuSubItem {
   id: string;
   label: string;
   path: string;
+  /** Optional red count badge (same style as Point of Sales). Hidden when 0/undefined. */
+  badge?: number;
 }
 
 export interface SidebarMenuItem {
@@ -294,13 +296,18 @@ export function Sidebar({
                             e.preventDefault();
                             onNavigate(subItem.path);
                           }}
-                          className={`block w-full text-left p-2 rounded text-sm transition-colors ${
+                          className={`flex items-center justify-between gap-2 w-full text-left p-2 rounded text-sm transition-colors ${
                             isActive(subItem.path)
                               ? 'bg-blue-600 text-white'
                               : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
                           }`}
                         >
-                          {subItem.label}
+                          <span>{subItem.label}</span>
+                          {typeof subItem.badge === 'number' && subItem.badge > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold leading-none shadow-sm shrink-0">
+                              {subItem.badge > 99 ? '99+' : subItem.badge}
+                            </span>
+                          )}
                         </a>
                       ))}
                     </div>

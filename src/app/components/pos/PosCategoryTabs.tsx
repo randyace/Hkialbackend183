@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-/** Fallback for Figma standalone preview when no categories prop is provided. */
+/** Fallback for Figma standalone preview when no sections/categories prop is provided. */
 export const MOCK_POS_CATEGORIES: PosCategoryOption[] = [
   { id: 1, name: 'Coffee' },
   { id: 2, name: 'Tea' },
@@ -17,7 +17,10 @@ export interface PosCategoryOption {
 }
 
 export interface PosCategoryTabsProps {
-  /** Active menu categories from the API (id + name, already sort-ordered). */
+  /**
+   * Active menu sections (or legacy catalog categories) from the API
+   * (id + name, already sort-ordered). Tabs render as All + each name.
+   */
   categories?: PosCategoryOption[];
   selectedTab: string;
   onSelectTab: (tabName: string) => void;
