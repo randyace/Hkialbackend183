@@ -2743,12 +2743,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </div>
                       <div className="col-span-1">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Travel Document No. <span className="text-gray-400 font-normal">(optional)</span></label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">Travel Document No.</label>
                         <input
                           type="text"
                           value={p.travelDocNo}
                           onChange={e => updatePassenger(idx, 'travelDocNo', e.target.value)}
-                          placeholder="e.g. K12345678 (optional)"
+                          placeholder="e.g. K12345678"
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
                         />
                       </div>

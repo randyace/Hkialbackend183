@@ -123,7 +123,7 @@ export function EditSectionPassengers({
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Travel Doc No. <span className="text-gray-400 font-normal">(optional)</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">Travel Doc No.</label>
                   <input
                     type="text"
                     value={p.travelDocNo}

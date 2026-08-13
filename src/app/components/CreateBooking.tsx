@@ -3370,9 +3370,9 @@ export function CreateBooking({
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                         <div className="col-span-1">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Travel Doc No. <span className="text-gray-400 font-normal">(optional)</span></label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Travel Doc No.</label>
                           <input type="text" value={p.travelDocNo} onChange={e => updatePassenger(idx, 'travelDocNo', e.target.value)}
-                            placeholder="e.g. K12345678 (optional)"
+                            placeholder="e.g. K12345678"
                             className="w-full px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                         </div>
                       </div>
