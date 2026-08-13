@@ -658,30 +658,62 @@ export interface CreateBookingProps {
 // AccountCreation.tsx::filterContactNumber.
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
-// Splits a stored contact phone ("+852 9876-5432") into the
-// region code + number pair that the split input uses. Mirrors
-// the customer-side `splitContactPhone` in
-// `frontend/.../NewBooking.tsx:95-108` + `EditBooking.tsx:122`.
-// The `options` arg drives the `known` check against the active
-// region list — caller passes `regionCodes` prop when loaded,
-// else `FALLBACK_REGION_CODES` so the helper still resolves
-// common HK/CN/US/UK codes during the prefetch window.
-// When the leading +XX code is not in the known list, we fall
-// back to '+852' to match customer-side behaviour (legacy data
-// sometimes stored numbers without a recognised region).
+// Splits a stored contact phone into the region code + number
+// pair that the split input uses. Mirrors
+// `hkial-react/src/utils/splitContactPhone.ts` (INV-X1: Figma
+// Make cannot import that module, so this copy stays inline).
+//
+// The old `/^(\+\d{1,4})\s*(.*)$/` take-1-to-4-digits regex
+// clipped the first local digit whenever the stored phone had
+// no space (`+85298765432` → region `+8529` unknown → `+852`
+// + number `8765432`). Match the longest known prefix instead.
 function splitContactPhone(
   raw: string | undefined | null,
   options: { code: string; name: string }[],
 ): { regionCode: string; contactNumber: string } {
   if (!raw) return { regionCode: '+852', contactNumber: '' };
   const trimmed = String(raw).trim();
-  const match = trimmed.match(/^(\+\d{1,4})\s*(.*)$/);
-  if (match) {
-    const code = match[1];
-    const num = match[2].replace(/[^0-9-]/g, '');
-    const known = options.some((o) => o.code === code);
-    return { regionCode: known ? code : '+852', contactNumber: num };
+  if (!trimmed) return { regionCode: '+852', contactNumber: '' };
+
+  const codes = options
+    .map((o) => o.code)
+    .filter((c): c is string => typeof c === 'string' && c.length > 0)
+    .sort((a, b) => b.length - a.length);
+
+  const compactHay = trimmed.replace(/[\s().]/g, '');
+  const hasLeadingPlus = trimmed.startsWith('+');
+
+  for (const code of codes) {
+    const compactCode = code.replace(/[\s().]/g, '');
+    if (!compactCode) continue;
+
+    const digitLen = compactCode.replace(/\D/g, '').length;
+    if (digitLen <= 1 && !hasLeadingPlus) continue;
+
+    if (compactHay.startsWith(compactCode)) {
+      return {
+        regionCode: code,
+        contactNumber: compactHay.slice(compactCode.length).replace(/[^0-9-]/g, ''),
+      };
+    }
+
+    const codeNoPlus = compactCode.replace(/^\+/, '');
+    if (codeNoPlus && compactHay.startsWith(codeNoPlus)) {
+      return {
+        regionCode: code.startsWith('+') ? code : `+${code}`,
+        contactNumber: compactHay.slice(codeNoPlus.length).replace(/[^0-9-]/g, ''),
+      };
+    }
   }
+
+  const spaced = trimmed.match(/^(\+\d{1,4}(?:-\d{1,4})?)\s+(.+)$/);
+  if (spaced) {
+    return {
+      regionCode: spaced[1],
+      contactNumber: spaced[2].replace(/[^0-9-]/g, ''),
+    };
+  }
+
   return { regionCode: '+852', contactNumber: trimmed.replace(/[^0-9-]/g, '') };
 }
 
