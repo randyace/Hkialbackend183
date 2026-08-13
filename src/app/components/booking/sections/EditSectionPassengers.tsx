@@ -59,7 +59,7 @@ export function EditSectionPassengers({
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-passenger fields. The 1st {vipPS} rows are Premiere Suite VIPs; the next {vipLD} are Lounge Deluxe VIPs.
-        Title, First Name, Last Name, Age Group, Travel Doc No., and Nationality are required.
+        Title, First Name, Last Name, Age Group, and Nationality are required. Travel Doc No. is optional.
       </p>
       <div className="space-y-4">
         {passengers.map((p, i) => {
@@ -123,7 +123,7 @@ export function EditSectionPassengers({
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Travel Doc No. <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">Travel Doc No.</label>
                   <input
                     type="text"
                     value={p.travelDocNo}

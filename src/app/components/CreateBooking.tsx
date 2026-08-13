@@ -3395,7 +3395,7 @@ export function CreateBooking({
                           </select>
                         </div>
                         <div className="col-span-3">
-                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday</label>
+                          <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
                           <div className="grid grid-cols-3 gap-2">
                             <select value={p.birthdayDay} onChange={e => updatePassenger(idx, 'birthdayDay', e.target.value)}
                               className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">

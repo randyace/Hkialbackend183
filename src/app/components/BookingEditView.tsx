@@ -511,7 +511,7 @@ function getMissingPassengerFields(p: EditPassenger): string[] {
   if (!p.firstName) missing.push('First Name');
   if (!p.lastName) missing.push('Last Name');
   if (!p.ageGroup) missing.push('Age Group');
-  if (!p.travelDocNo) missing.push('Travel Doc No.');
+  // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
   // 2026-07-17+ — guest nationality mandatory on create; surface on edit too.
   if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
     missing.push('Nationality');

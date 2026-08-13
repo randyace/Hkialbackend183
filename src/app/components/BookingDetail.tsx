@@ -1569,7 +1569,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     if (!p.firstName) missing.push('First Name');
     if (!p.lastName) missing.push('Last Name');
     if (!p.ageGroup) missing.push('Age Group');
-    if (!p.travelDocNo) missing.push('Travel Doc No.');
+    // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
     if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
       missing.push('Nationality');
     }
@@ -2600,11 +2600,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </span>
               </div>
             )}
-            {/* 2026-06-28 — VIP Passenger completeness inline warning.
-                Moved here from the Booking Details (Part 1 / Part 2)
-                card per Sky's directive. Surfaces any VIP Passenger
-                row (PS or LD) with missing Title / First Name / Last
-                Name / Age Group / Travel Doc No. */}
+            {/* VIP Passenger completeness inline warning.
+                Required: Title / First Name / Last Name / Age Group /
+                Nationality. Travel Doc No. and DOB are optional. */}
             {totalVipIncomplete > 0 && (
               <div
                 className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800"
@@ -2612,7 +2610,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Travel Doc No. / Nationality.
+                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Nationality.
                 </span>
               </div>
             )}
@@ -2782,7 +2780,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </select>
                       </div>
                       <div className="col-span-3">
-                        <label className="text-sm text-gray-600 block mb-[10px]">Birthday</label>
+                        <label className="text-sm text-gray-600 block mb-[10px]">Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
                         <div className="grid grid-cols-3 gap-2">
                           <select
                             value={p.birthdayDay}
@@ -4293,7 +4291,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {effectiveIncompleteVipInfoCount > 0
-                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group${vipPS + vipLD > 0 ? ' / Travel Doc No.' : ''}) before saving.`
+                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group / Nationality) before saving.`
                       : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.'}
                   </p>
                 )}
