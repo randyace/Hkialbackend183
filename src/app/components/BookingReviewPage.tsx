@@ -264,6 +264,9 @@ export interface BookingReviewPageProps {
   onBack?: () => void;
   onApprove?: (bookingId: number) => void;
   onReject?: (bookingId: number, reason: string) => void;
+  /** Staff new-booking review: persist auto-send invoice for supervisor approve. */
+  autoSendInvoice?: boolean;
+  onAutoSendInvoiceChange?: (value: boolean) => void;
   // 2026-06-24: supervisor-only — send a Step-2 booking back to
   // Step 1 (staff review). Backend requires a non-empty
   // `rejection_reason` for the PendingForApproval → PendingForReview
@@ -308,6 +311,8 @@ export function BookingReviewPage({
   onApprove,
   onReject,
   onPushBack,
+  autoSendInvoice = false,
+  onAutoSendInvoiceChange,
 }: BookingReviewPageProps = {}) {
   const booking: PendingBooking = bookingProp ?? MOCK_PENDING_BOOKING;
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
@@ -1200,6 +1205,43 @@ export function BookingReviewPage({
 
             {reviewMode === 'view' && (
               <div className="space-y-3">
+                {reviewStage === 'staff' && booking.requestType === 'New Booking Request' && (
+                  <div
+                    className="rounded-md border border-gray-200 bg-gray-50 p-3"
+                    data-testid="auto-send-invoice-radio"
+                  >
+                    <p className="text-sm font-medium text-gray-800 mb-2">
+                      Auto send invoice
+                    </p>
+                    <p className="text-xs text-gray-500 mb-2">
+                      If Yes, supervisor approval emails the invoice and payment link.
+                    </p>
+                    <div className="flex items-center gap-4 text-sm">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="autoSendInvoice"
+                          value="yes"
+                          checked={autoSendInvoice}
+                          onChange={() => onAutoSendInvoiceChange?.(true)}
+                          data-testid="auto-send-invoice-yes"
+                        />
+                        Yes
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="autoSendInvoice"
+                          value="no"
+                          checked={!autoSendInvoice}
+                          onChange={() => onAutoSendInvoiceChange?.(false)}
+                          data-testid="auto-send-invoice-no"
+                        />
+                        No
+                      </label>
+                    </div>
+                  </div>
+                )}
                 <Button
                   className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
                   onClick={handleApprove}
