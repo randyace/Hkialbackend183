@@ -497,14 +497,7 @@ export interface CreateBookingProps {
   /** Disable Apply while the wrapper's validate request is in flight. */
   promoValidating?: boolean;
   selectedAddonKeys?: string[];
-  // Round 6.2.30 (2026-06-10) — server-fetched booking no
-  // preview. The wrapper fetches this on mount and on
-  // `flightType` change (`GET /api/bookings/next-no`). The
-  // figma-ui view's "Booking No." header chip reads this
-  // prop instead of the legacy client-side `Math.random()`
-  // sequence. The figma-ui working tree is the source of
-  // truth for this header per the project rule on the
-  // submodule sync workflow.
+  // Minted on POST. Empty on create so the header chip stays hidden.
   bookingNo?: string;
   /** Physical resources fetched by the wrapper from /api/suites. */
   physicalSuites?: Array<{ id: number; suite_name: string; capacity: number; kind: 'suite' | 'lounge' }>;
@@ -1099,11 +1092,6 @@ export function CreateBooking({
   promoError: promoErrorProp,
   promoValidating = false,
   selectedAddonKeys = [],
-  // Round 6.2.30 (2026-06-10) — server-fetched booking no
-  // preview. Default `''` so the chip renders an em-dash
-  // placeholder while the wrapper's mount-effect is in
-  // flight; the chip re-renders with the real value once
-  // `GET /api/bookings/next-no` resolves.
   bookingNo = '',
   physicalSuites = [],
   physicalLounges = [],
@@ -2223,19 +2211,14 @@ export function CreateBooking({
               `0b02235` for reference if a local dev demo is
               ever needed. */}
           <div className="text-right">
-            {/* Round 6.2.30 (2026-06-10) — label changed from
-                "Booking No. (preview)" to "Booking No.". The
-                value is now fetched from
-                `GET /api/bookings/next-no` and matches what
-                `POST /bookings` will mint on submit, so the
-                preview qualifier is no longer needed. The
-                em-dash placeholder renders while the
-                mount-effect is in flight or if the network
-                call fails (soft-fail in the wrapper). */}
-            <p className="text-xs text-gray-400">Booking No.</p>
-            <p className="font-mono text-sm text-[#0f2942]">
-              {bookingNo || '—'}
-            </p>
+            {bookingNo ? (
+              <>
+                <p className="text-xs text-gray-400">Booking No.</p>
+                <p className="font-mono text-sm text-[#0f2942]">
+                  {bookingNo}
+                </p>
+              </>
+            ) : null}
             {typeof renderDevQuickFill === 'function'
               ? renderDevQuickFill({
                   apply: applyDevQuickFill,
