@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -227,8 +227,12 @@ export interface MemberDetailProps {
   activeSessions?: number;
   loginHistory?: LoginAttempt[];
 
+  /** When true, render Contracts tab before Remarks. */
+  hasContracts?: boolean;
+  /** Contracts tab body — supplied by parent container. */
+  contractsTabContent?: ReactNode;
+
   // ── Delete callbacks ─────────────────────────────────────────────────────
-  onDeletePreference?: (id: number) => void;
   onDeleteAllergy?: (id: number) => void;
   onDeleteDietary?: (id: number) => void;
   onDeleteSpouseAllergy?: (id: number) => void;
@@ -432,6 +436,9 @@ export function MemberDetail({
   twoFAEnabled: twoFAEnabledProp,
   activeSessions: activeSessionsProp,
   loginHistory: loginHistoryProp = [],
+
+  hasContracts = false,
+  contractsTabContent,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
   onDeletePreference,
@@ -930,10 +937,11 @@ export function MemberDetail({
 
       {/* Tabs */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className={`grid w-full ${hasContracts ? 'grid-cols-7' : 'grid-cols-6'}`}>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="preferences">Preferences</TabsTrigger>
           <TabsTrigger value="allergies">Food Allergies</TabsTrigger>
+          <TabsTrigger value="contracts">Contracts</TabsTrigger>
           <TabsTrigger value="remarks">Remarks</TabsTrigger>
           <TabsTrigger value="movements">Movement Log</TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-1.5">
@@ -1668,6 +1676,10 @@ export function MemberDetail({
               )}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="contracts" className="space-y-4">
+          {contractsTabContent}
         </TabsContent>
 
         {/* Remarks Tab */}
