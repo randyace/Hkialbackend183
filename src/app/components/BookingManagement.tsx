@@ -778,7 +778,19 @@ export function BookingManagement({
                         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" title="Ad-hoc booking (<48hrs)" />
                       )}
                       <div>
-                        <div className="font-mono text-base font-semibold text-gray-900">{booking.bookingNo}</div>
+                        {(onEditBooking || onViewDetail) ? (
+                          <button
+                            type="button"
+                            data-testid={`booking-no-link-${booking.id}`}
+                            className="font-mono text-base font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left"
+                            title="Edit Booking"
+                            onClick={() => (onEditBooking ?? onViewDetail)?.(booking.id)}
+                          >
+                            {booking.bookingNo}
+                          </button>
+                        ) : (
+                          <div className="font-mono text-base font-semibold text-gray-900">{booking.bookingNo}</div>
+                        )}
                         {/* PR7 — New / Edit / Cancel request-type badge (matches approval queue) */}
                         {booking.requestType && (
                           <div className="mt-1">
