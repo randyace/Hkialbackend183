@@ -757,7 +757,6 @@ export function BookingManagement({
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Booking No.</th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guest Name</th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Suite</th>
@@ -773,14 +772,13 @@ export function BookingManagement({
             <tbody className="bg-white divide-y divide-gray-200">
               {paginatedBookings.map((booking) => (
                 <tr key={booking.id} className={`hover:bg-gray-50 ${booking.isAdHoc ? 'bg-amber-50' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">{booking.id}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex items-start gap-2">
                       {booking.isAdHoc && (
                         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" title="Ad-hoc booking (<48hrs)" />
                       )}
                       <div>
-                        <div className="font-mono text-xs font-medium text-gray-900">{booking.bookingNo}</div>
+                        <div className="font-mono text-base font-semibold text-gray-900">{booking.bookingNo}</div>
                         {/* PR7 — New / Edit / Cancel request-type badge (matches approval queue) */}
                         {booking.requestType && (
                           <div className="mt-1">
