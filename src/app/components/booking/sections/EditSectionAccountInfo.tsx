@@ -264,24 +264,38 @@ export function EditSectionAccountInfo({
                 className="mt-0.5"
                 data-testid="edit-use-membership-ld-free"
                 checked={formData.useMembershipLdFree !== false}
-                onChange={(e) => onFormChange({ useMembershipLdFree: e.target.checked })}
+                onChange={(e) => onFormChange({
+                  useMembershipLdFree: e.target.checked,
+                  ...(e.target.checked ? {} : { useMembershipPsFree: false }),
+                })}
               />
               <span>
                 <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                <span className="block text-xs text-gray-500">Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base.</span>
+                <span className="block text-xs text-gray-500">Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base. Mixed + free PS: dual-quota ticket only, LD room stays charged.</span>
               </span>
             </label>
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <label className={`flex items-start gap-2 text-sm ${
+              ((formData.numPremiereSuites ?? 0) > 0 || (formData.vipPassengersInPremiereSuite ?? 0) > 0 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
+              && formData.useMembershipLdFree !== false
+                ? 'cursor-pointer'
+                : 'opacity-60 cursor-not-allowed'
+            }`}>
               <input
                 type="checkbox"
                 className="mt-0.5"
                 data-testid="edit-use-membership-ps-free"
                 checked={formData.useMembershipPsFree !== false}
+                disabled={
+                  !((formData.numPremiereSuites ?? 0) > 0
+                    || (formData.vipPassengersInPremiereSuite ?? 0) > 0
+                    || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
+                  || formData.useMembershipLdFree === false
+                }
                 onChange={(e) => onFormChange({ useMembershipPsFree: e.target.checked })}
               />
               <span>
                 <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                <span className="block text-xs text-gray-500">Off → paid 40% off PS base only if LD credit is checked (burns 1 LD).</span>
+                <span className="block text-xs text-gray-500">Only when this booking includes Premiere Suite, and only together with the LD credit (cannot use free PS alone).</span>
               </span>
             </label>
           </div>

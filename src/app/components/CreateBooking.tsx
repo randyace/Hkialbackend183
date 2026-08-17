@@ -1283,6 +1283,13 @@ export function CreateBooking({
   const [vipPS, setVipPS] = useState(0);
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
 
+  useEffect(() => {
+    const includesPs = numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0;
+    if (useMembershipPsFree && (!includesPs || !useMembershipLdFree)) {
+      setUseMembershipPsFree(false);
+    }
+  }, [numPremiereSuites, vipPS, nonFlyingPS, useMembershipLdFree, useMembershipPsFree]);
+
   // ── Lounge Deluxe ───────────────────────────────────────────────────────────
   const [vipLD, setVipLD] = useState(0);
   const [nonFlyingLD, setNonFlyingLD] = useState(0);
@@ -2530,24 +2537,35 @@ export function CreateBooking({
                       className="mt-0.5"
                       data-testid="use-membership-ld-free"
                       checked={useMembershipLdFree}
-                      onChange={(e) => setUseMembershipLdFree(e.target.checked)}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        setUseMembershipLdFree(on);
+                        if (!on) setUseMembershipPsFree(false);
+                      }}
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD).</span>
+                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD). Mixed + free PS: this is the dual-quota ticket, not a second LD waive.</span>
                     </span>
                   </label>
-                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <label className={`flex items-start gap-2 text-sm ${(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && useMembershipLdFree ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
                     <input
                       type="checkbox"
                       className="mt-0.5"
                       data-testid="use-membership-ps-free"
                       checked={useMembershipPsFree}
+                      disabled={
+                        !((numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && useMembershipLdFree)
+                      }
                       onChange={(e) => setUseMembershipPsFree(e.target.checked)}
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                      <span className="block text-xs text-gray-500">Pure PS: dual-quota free upgrade (1 LD ticket + 1 PS voucher). Off → 40% off PS base only if LD credit is checked.</span>
+                      <span className="block text-xs text-gray-500">
+                        Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
+                        {!(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) ? ' Add a Premiere Suite first.' : ''}
+                        {(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && !useMembershipLdFree ? ' Check LD credit first.' : ''}
+                      </span>
                     </span>
                   </label>
                 </div>
