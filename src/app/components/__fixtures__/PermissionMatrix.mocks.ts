@@ -57,7 +57,7 @@ export const mockPermissionModules: PermissionModuleView[] = [
 ];
 
 export const mockRoles: RoleOptionView[] = [
-  { id: 1, name: 'Staff' },
+  { id: 1, name: 'Operation Officer' },
   { id: 2, name: 'Supervisor' },
   { id: 3, name: 'Super Admin' },
 ];

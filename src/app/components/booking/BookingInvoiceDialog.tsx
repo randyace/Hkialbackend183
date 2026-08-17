@@ -1,4 +1,4 @@
-import { Mail, Download, Ticket, Utensils, Loader2 } from 'lucide-react';
+import { Mail, Download, Ticket, Utensils, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useState } from 'react';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -100,6 +100,28 @@ interface BookingInvoiceDialogProps {
   // successful `send-invoice` POST. The parent wrapper
   // uses this to refresh the booking's payment_status.
   onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
+  /** Distinguishes unpaid invoice preview from paid receipt preview. */
+  documentType?: 'invoice' | 'receipt';
+}
+
+function formatReceiptDate(value?: string): string {
+  if (!value) {
+    return new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  }
+  const datePart = value.split(/[,\s]/)[0];
+  return datePart || value;
 }
 
 export function BookingInvoiceDialog({
@@ -117,7 +139,10 @@ export function BookingInvoiceDialog({
   apiBaseUrl,
   authToken,
   onInvoiceSent,
+  documentType = 'invoice',
 }: BookingInvoiceDialogProps) {
+  const isInvoice = documentType === 'invoice';
+  const documentLabel = isInvoice ? 'Invoice' : 'Receipt';
   // 2026-06-17 (round 6.2.47) — action handlers. The dialog
   // now hits the new backend endpoints (POST send-invoice,
   // GET invoice.pdf) instead of being a toast-stub. Errors
@@ -220,7 +245,9 @@ export function BookingInvoiceDialog({
     // pages) so the browser never saves a "broken" PDF.
     try {
       const apiRoot = (baseUrl || '').replace(/\/$/, '');
-      const response = await fetch(`${apiRoot}/bookings/${bookingId}/invoice.pdf`, {
+      const response = await fetch(
+        `${apiRoot}/bookings/${bookingId}/document.pdf?type=${encodeURIComponent(documentType)}`,
+        {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -240,13 +267,13 @@ export function BookingInvoiceDialog({
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `invoice-${booking.bookingNo || bookingId}.pdf`;
+      a.download = `${documentLabel}-${booking.bookingNo || bookingId}.pdf`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-      toast.success('Invoice downloaded');
+      toast.success(`${documentLabel} downloaded`);
     } catch (err) {
       toast.error('Failed to download PDF', {
         description: err instanceof Error ? err.message : 'Unknown error',
@@ -254,51 +281,103 @@ export function BookingInvoiceDialog({
     }
   };
 
+  const handleDownloadExcel = async () => {
+    if (!token) {
+      toast.error('Not signed in. Please log in to download.');
+      return;
+    }
+    try {
+      const apiRoot = (baseUrl || '').replace(/\/$/, '');
+      const response = await fetch(
+        `${apiRoot}/bookings/${bookingId}/document/excel?type=${encodeURIComponent(documentType)}`,
+        {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!contentType.includes('spreadsheet') && !contentType.includes('excel')) {
+        throw new Error(`Receipt Excel endpoint returned unexpected content-type "${contentType}"`);
+      }
+      const buffer = await response.arrayBuffer();
+      const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `${documentLabel}-${booking.bookingNo || bookingId}.xlsx`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      toast.success(`${documentLabel} Excel downloaded`);
+    } catch (err) {
+      toast.error('Failed to download Excel', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  };
+
+  const issueDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const bookingDate = formatReceiptDate(booking.dateTime);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      {/* 2026-06-19 (round 6.2.49, user-reported "dialog too narrow")
-        — widened from `w-[1400px]` to `w-[1700px]`. The dialog's
-        items table + voucher + payment blocks were getting
-        horizontally cramped on a typical 1920px viewport — the
-        right-hand "Booking Information" card was wrapping and
-        the line items were squeezing the unit-price column.
-        Bumping to 1700px keeps the dialog comfortably within
-        95vw on most laptop screens while giving the table room
-        to breathe.
-
-        Round 6.2.49 follow-up (user-reported: "still thin even
-        after w-[1700px]"): the base `DialogContent` UI primitive
-        has hardcoded defaults — `max-w-[calc(100%-2rem)]` and
-        `sm:max-w-lg` (512px) — that the `cn()` merge applies
-        alongside our `w-[1700px]`. CSS rules then cap our width
-        at the smaller of the two max-widths, so the dialog
-        rendered at ~512px on a >640px viewport regardless of
-        our width override. The fix is `!max-w-none sm:!max-w-none`
-        to defeat those defaults (and re-assert `w-[1700px]` as
-        `!w-[1700px]` for good measure). The `95vw` cap is still
-        honored via the second `max-w-[95vw]` declaration. */}
-      <DialogContent className="!max-w-none sm:!max-w-none !w-[1700px] max-w-[95vw] min-w-[650px] max-h-[95vh] overflow-y-auto">
+      {/* Dialog width: override DialogContent defaults (`sm:max-w-lg`) with
+        `sm:!max-w-5xl` + `w-[95vw]`. Invoice document scrolls horizontally
+        inside `overflow-x-auto` when narrower than `min-w-[800px]`. */}
+      <DialogContent className="!max-w-[calc(100%-2rem)] sm:!max-w-5xl w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Invoice - {booking.bookingNo}</DialogTitle>
-          <DialogDescription>Review and send invoice for this booking</DialogDescription>
+          <DialogTitle>{documentLabel.toUpperCase()} - {booking.bookingNo}</DialogTitle>
+          <DialogDescription>
+            {isInvoice
+              ? 'Review and send invoice for this booking'
+              : 'Review and download receipt for this confirmed payment'}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Invoice Header */}
-          <div className="bg-[#0f2942] text-white p-6 rounded-lg">
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-2xl mb-2">HKIA VIP Lounge</h2>
-                <p className="text-sm text-gray-300">Email: vip@hkia-lounge.com</p>
-                <p className="text-sm text-gray-300">Tel: +852 2345 6789</p>
-              </div>
-              <div className="text-right">
-                <h3 className="text-xl mb-2">INVOICE</h3>
-                <p className="text-sm text-gray-300">Invoice No: INV-{booking.bookingNo}</p>
-                <p className="text-sm text-gray-300">Date: {new Date().toLocaleDateString()}</p>
-                <p className="text-sm text-gray-300">Booking: {booking.bookingNo}</p>
-              </div>
+        <div className="w-full overflow-x-auto">
+          <div className="min-w-[800px] bg-white space-y-6 border border-black p-6">
+          {/* Receipt header — matches PDF layout (white, minimal) */}
+          <div className="flex items-start justify-between gap-6 pb-2">
+            <div className="shrink-0">
+              <img
+                src="/images/invoice-logo.png"
+                alt="HKIA VIP LOUNGE"
+                className="h-12 w-auto"
+              />
             </div>
+            <table className="text-[10px] border-collapse ml-auto">
+              <tbody>
+                <tr>
+                  <td className="pr-2 text-right text-gray-700">Issue Date:</td>
+                  <td className="text-right text-gray-900">{issueDate}</td>
+                </tr>
+                <tr>
+                  <td className="pr-2 text-right text-gray-700">Customer ID:</td>
+                  <td className="text-right text-gray-900">{booking.accountNo}</td>
+                </tr>
+                <tr>
+                  <td className="pr-2 text-right text-gray-700">Booking Date:</td>
+                  <td className="text-right text-gray-900">{bookingDate}</td>
+                </tr>
+                <tr>
+                  <td className="pr-2 text-right text-gray-700">Flight No.</td>
+                  <td className="text-right text-gray-900">{booking.flightNo}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* Bill To & Booking Info */}
@@ -346,13 +425,13 @@ export function BookingInvoiceDialog({
 
           {/* Invoice Items Table */}
           <Card>
-            <table className="w-full">
+            <table className="w-full text-left">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Description</th>
                   <th className="px-6 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Unit Price</th>
-                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">Unit Price</th>
+                  <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider whitespace-nowrap">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -399,10 +478,10 @@ export function BookingInvoiceDialog({
                         <p className="font-medium">{line.label}</p>
                       </td>
                       <td className="px-6 py-4 text-center">{line.qty}</td>
-                      <td className="px-6 py-4 text-right text-gray-700">
+                      <td className="px-6 py-4 text-right text-gray-700 whitespace-nowrap">
                         HK${(line.unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium">
+                      <td className="px-6 py-4 text-right font-medium whitespace-nowrap">
                         HK${(line.subtotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>
@@ -414,8 +493,8 @@ export function BookingInvoiceDialog({
                       <p className="text-sm text-gray-600">Date: {booking.dateTime}</p>
                     </td>
                     <td className="px-6 py-4 text-center">{booking.numberOfGuests}</td>
-                    <td className="px-6 py-4 text-right text-gray-500">—</td>
-                    <td className="px-6 py-4 text-right font-medium">
+                    <td className="px-6 py-4 text-right text-gray-500 whitespace-nowrap">—</td>
+                    <td className="px-6 py-4 text-right font-medium whitespace-nowrap">
                       {livePreviewTotal !== null
                         ? `HK$${livePreviewTotal.toLocaleString()}`
                         : '—'}
@@ -434,10 +513,10 @@ export function BookingInvoiceDialog({
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center text-sm text-gray-500">—</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
                     <span className="text-sm text-green-600 font-medium">Complimentary</span>
                   </td>
-                  <td className="px-6 py-4 text-right font-medium text-green-600">HK$0</td>
+                  <td className="px-6 py-4 text-right font-medium text-green-600 whitespace-nowrap">HK$0</td>
                 </tr>
               </tbody>
               <tfoot className="border-t-2">
@@ -460,17 +539,17 @@ export function BookingInvoiceDialog({
                       Food &amp; Beverage (incl. pre-order):
                     </span>
                   </td>
-                  <td className="px-6 py-2 text-right text-sm font-medium text-green-600">Complimentary</td>
+                  <td className="px-6 py-2 text-right text-sm font-medium text-green-600 whitespace-nowrap">Complimentary</td>
                 </tr>
                 {serviceSubtotal > 0 && (
                   <tr className="bg-gray-50">
                     <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">Services Subtotal:</td>
-                    <td className="px-6 py-2 text-right font-medium text-gray-800">HK${Math.round(serviceSubtotal).toLocaleString()}</td>
+                    <td className="px-6 py-2 text-right font-medium text-gray-800 whitespace-nowrap">HK${Math.round(serviceSubtotal).toLocaleString()}</td>
                   </tr>
                 )}
                 <tr className="bg-gray-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600 font-medium">Subtotal:</td>
-                  <td className="px-6 py-2 text-right font-medium text-gray-800">
+                  <td className="px-6 py-2 text-right font-medium text-gray-800 whitespace-nowrap">
                     {/* Round 6.2.13: use `livePreviewTotal` (the
                      * backend's authoritative total) instead of
                      * `headCountTotal + serviceSubtotal`. The
@@ -488,7 +567,7 @@ export function BookingInvoiceDialog({
                 </tr>
                 <tr className="bg-gray-50">
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-gray-600">Tax (0%):</td>
-                  <td className="px-6 py-2 text-right text-gray-600">HK$0</td>
+                  <td className="px-6 py-2 text-right text-gray-600 whitespace-nowrap">HK$0</td>
                 </tr>
                 {voucherCount > 0 && (
                   <tr className="bg-amber-50">
@@ -508,7 +587,7 @@ export function BookingInvoiceDialog({
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-3 text-right font-semibold text-amber-700">
+                    <td className="px-6 py-3 text-right font-semibold text-amber-700 whitespace-nowrap">
                       − HK${voucherTotal.toLocaleString()}
                     </td>
                   </tr>
@@ -517,7 +596,7 @@ export function BookingInvoiceDialog({
                   <td colSpan={3} className="px-6 py-4 text-right font-bold text-gray-900">
                     {voucherCount > 0 ? 'Total Amount Payable (after entry vouchers):' : 'Total Amount:'}
                   </td>
-                  <td className="px-6 py-4 text-right font-bold text-green-600">
+                  <td className="px-6 py-4 text-right font-bold text-green-600 whitespace-nowrap">
                     {/* Round 6.2.13: use `livePreviewTotal` instead
                      * of `amountDueAfterVouchers` (which is now
                      * a placeholder 0). Voucher pricing model
@@ -559,6 +638,8 @@ export function BookingInvoiceDialog({
               <li>• All prices are in Hong Kong Dollars (HKD)</li>
             </ul>
           </Card>
+          </div>
+        </div>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 pt-4 border-t">
@@ -568,6 +649,13 @@ export function BookingInvoiceDialog({
               data-testid="invoice-download-pdf-button"
             >
               <Download className="w-4 h-4 mr-2" />Download PDF
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleDownloadExcel}
+              data-testid="invoice-download-excel-button"
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />Download Excel
             </Button>
             <Button variant="outline" onClick={onClose}>Close</Button>
           </div>
@@ -579,7 +667,8 @@ export function BookingInvoiceDialog({
             button. Invoice Sent / Payment Link Sent still allow
             re-send after an edited booking is re-approved (fresh
             invoice snapshot for the new total). */}
-          {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
+          {isInvoice &&
+           (booking.status === 'Approved' || booking.status === 'Confirmed') &&
            booking.paymentStatus !== 'Paid' &&
            booking.paymentStatus !== 'Refunded' && (
             <div className="pt-4 border-t">
@@ -600,7 +689,6 @@ export function BookingInvoiceDialog({
               </Button>
             </div>
           )}
-        </div>
       </DialogContent>
     </Dialog>
   );

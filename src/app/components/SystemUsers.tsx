@@ -34,7 +34,7 @@ import { mockSystemUsersData } from './__fixtures__/SystemUsers.mocks';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
-export type SystemUserRole   = 'Administrator' | 'Supervisor' | 'Staff' | 'Super Admin';
+export type SystemUserRole   = 'Administrator' | 'Supervisor' | 'Operation Officer' | 'Business Development' | 'Super Admin';
 export type SystemUserStatus = 'Active' | 'Inactive';
 
 export interface SystemUser {
@@ -75,7 +75,7 @@ export interface SystemUsersProps {
   /** Full list of system users to display */
   users?: SystemUser[];
   /** Map from backend role value to display label */
-  roleLabels?: Record<SystemUserRole, string>;
+  roleLabels?: Partial<Record<SystemUserRole, string>> & Record<string, string>;
   /** Whether data is being fetched */
   isLoading?: boolean;
   /** Permission flags controlling which actions are surfaced */
@@ -99,7 +99,8 @@ export interface SystemUsersProps {
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
   Administrator: 'Administrator',
   Supervisor: 'Supervisor',
-  Staff: 'Staff',
+  'Operation Officer': 'Operation Officer',
+  'Business Development': 'Business Development',
   'Super Admin': 'Super Admin',
 };
 
@@ -107,7 +108,8 @@ function getRoleColor(role: SystemUserRole): string {
   switch (role) {
     case 'Administrator': return 'bg-purple-100 text-purple-700';
     case 'Supervisor':    return 'bg-green-100 text-green-700';
-    case 'Staff':         return 'bg-gray-100 text-gray-700';
+    case 'Operation Officer': return 'bg-gray-100 text-gray-700';
+    case 'Business Development': return 'bg-sky-100 text-sky-700';
     case 'Super Admin':   return 'bg-indigo-100 text-indigo-700';
   }
 }
@@ -146,14 +148,16 @@ export function SystemUsers({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const allRoleEntries = Object.entries(roleLabels) as [SystemUserRole, string][];
+  const allRoleEntries = Object.entries(roleLabels).filter(
+    ([value]) => value !== 'Viewer',
+  ) as [SystemUserRole, string][];
 
   const filteredUsers = users
     .filter(u => {
       const q = searchTerm.toLowerCase();
       const matchSearch = u.name.toLowerCase().includes(q) ||
                           u.email.toLowerCase().includes(q) ||
-                          roleLabels[u.role].toLowerCase().includes(q);
+                          (roleLabels[u.role] ?? u.role).toLowerCase().includes(q);
       const matchRole   = roleFilter === 'all' || u.role === roleFilter;
       const matchStatus = statusFilter === 'all' || u.status === statusFilter;
       const matchStart  = !startDate || new Date(u.createdDate) >= new Date(startDate);
@@ -364,7 +368,7 @@ export function SystemUsers({
                       {user.email}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge className={getRoleColor(user.role)}>{roleLabels[user.role]}</Badge>
+                      <Badge className={getRoleColor(user.role)}>{roleLabels[user.role] ?? user.role}</Badge>
                     </td>
                     <td className="truncate px-4 py-3 text-sm" title={user.department}>
                       {user.department}

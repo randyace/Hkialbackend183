@@ -48,8 +48,8 @@ export interface SystemUserEditProps {
   /** Fetch permission names assigned to a role (by id or name). */
   loadRolePermissions?: (roleIdOrName: number | string) => Promise<string[]>;
   rolePermissions?: Partial<Record<SystemUserRole, string[]>>;
-  roleLabels?: Record<SystemUserRole, string>;
-  editableRoles?: SystemUserRole[];
+  roleLabels?: Partial<Record<SystemUserRole, string>> & Record<string, string>;
+  editableRoles?: string[];
   /** Disable Role selects (self-edit). */
   roleSelectDisabled?: boolean;
   /** Entire permissions tab read-only (self-edit). */
@@ -74,14 +74,15 @@ export interface SystemUserEditProps {
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
   Administrator: 'Administrator',
   Supervisor: 'Supervisor',
-  Staff: 'Staff',
+  'Operation Officer': 'Operation Officer',
+  'Business Development': 'Business Development',
   'Super Admin': 'Super Admin',
 };
 
 const DEFAULT_FORM: SystemUserFormData = {
   name: '',
   email: '',
-  role: 'Staff',
+  role: 'Administrator',
   department: 'IT Department',
   permissions: [],
   status: 'Active',
@@ -137,7 +138,7 @@ export function SystemUserEdit({
   spatieRoles = [],
   loadRolePermissions,
   roleLabels = DEFAULT_ROLE_LABELS,
-  editableRoles = ['Staff', 'Supervisor', 'Administrator', 'Super Admin'],
+  editableRoles = [],
   roleSelectDisabled = false,
   permissionsReadOnly = false,
   effectivePermissionNames = null,
@@ -297,7 +298,14 @@ export function SystemUserEdit({
     };
   }, [selectedRoleId, formRole, loadRolePermissions]);
 
-  const formRoleOptions: SystemUserRole[] =
+  useEffect(() => {
+    if (isEditMode || editableRoles.length === 0) return;
+    if (!editableRoles.includes(formRole)) {
+      setFormRole(editableRoles[0] as SystemUserRole);
+    }
+  }, [isEditMode, editableRoles, formRole]);
+
+  const formRoleOptions: string[] =
     isEditMode && initialData && !editableRoles.includes(initialData.role)
       ? [...editableRoles, initialData.role]
       : editableRoles;
@@ -420,7 +428,7 @@ export function SystemUserEdit({
                     disabled={roleSelectDisabled}
                   >
                     {formRoleOptions.map((role) => (
-                      <option key={role} value={role}>{roleLabels[role]}</option>
+                      <option key={role} value={role}>{roleLabels[role] ?? role}</option>
                     ))}
                   </select>
                   {roleSelectDisabled ? (
@@ -495,7 +503,7 @@ export function SystemUserEdit({
                     disabled={roleSelectDisabled || permissionsReadOnly}
                   >
                     {formRoleOptions.map((role) => (
-                      <option key={role} value={role}>{roleLabels[role]}</option>
+                      <option key={role} value={role}>{roleLabels[role] ?? role}</option>
                     ))}
                   </select>
                   <p className="text-sm text-gray-500 mt-2">
