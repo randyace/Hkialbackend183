@@ -1759,7 +1759,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 pb-28">
       {/* 1. Back Button */}
       <div>
         <Button variant="outline" onClick={onBack}>
@@ -1768,8 +1768,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </Button>
       </div>
 
-      {/* 2. Header */}
-      <div className="flex items-center justify-between">
+      {/* 2. Header — sticky so Save stays on screen (sky/unify-create-edit-ux) */}
+      <div className="sticky top-0 z-20 -mx-6 px-6 py-3 bg-white/95 border-b border-gray-200 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
             <h1>Booking Details - {booking.bookingNo}</h1>
@@ -1809,15 +1809,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <FileText className="w-4 h-4 mr-2" />
             Generate Invoice
           </Button>
-          {/* 2026-06-28 (round 6.2.72, Phase E) — `[Edit Booking
-              (full editor)]` button REMOVED. Per Sky's pivot
-              from round 6.2.71, the standalone edit page is
-              deprecated. The detail page itself is now the sole
-              edit surface (via the new "Editable Sections"
-              container at the bottom — see Phase B). The
-              `onOpenFullEditor` prop is kept in the interface
-              for backward compatibility with the parent
-              wrapper but is unused. */}
+          {formData && onSaveAllChanges && (
+            <Button
+              type="button"
+              onClick={() => onSaveAllChanges(formData)}
+              disabled={isSavingAllChanges || hasGuestErrorsFinal || isEditDirty === false}
+              data-testid="booking-detail-master-save"
+              className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Save className="w-4 h-4 mr-1.5" />
+              {isSavingAllChanges
+                ? 'Saving…'
+                : isEditDirty === false
+                  ? 'No Changes'
+                  : 'Save All Changes'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -2084,210 +2091,20 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </div>
       </Card>
 
-      {/* 7. Flight Information */}
-      <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
-        <div className="grid grid-cols-4 gap-6">
-          {/* Row 1 — Flight Type & Arrival Date (above Flight Number) */}
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Type</label>
-            {booking.flightType === 'Arrival' ? (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
-                  </svg>
-                  Arrival
-                </span>
-              </div>
-            ) : booking.flightType === 'Transit' ? (
-              // 2026-06-08 round 6.2.6 — added the Transit case.
-              // Distinct amber color (Q1=a) differentiates from
-              // Arrival (blue) + Departure (purple). Pre-6.2.6 this
-              // ternary fell through to the Departure branch, so
-              // Transit bookings showed the wrong badge.
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-800 border border-amber-200">
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    {/* Transfer / transit icon: 2 planes */}
-                    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
-                    <path d="M7 4l1.5 6L4 11.5l-.5 1 2 1 2 1.5 1-1.5L8 7l-1-3z"/>
-                  </svg>
-                  Transit
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border border-purple-200">
-                  <svg className="w-3.5 h-3.5 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19.5 2.5S18 2 16.5 3.5L13 7 4.8 5.2a1 1 0 0 0-.9.3L2.5 6.9a1 1 0 0 0 .1 1.4L8 12l-2 3H4l-1 1 3 2 2 3 1-1v-2l3-2 3.5 5.4a1 1 0 0 0 1.4.1l1.4-1.4a1 1 0 0 0 .3-.9z"/>
-                  </svg>
-                  Departure
-                </span>
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">
-              {booking.flightType === 'Arrival' ? 'Arrival Date'
-                : booking.flightType === 'Transit' ? '1st Leg Arrival Date'
-                : 'Departure Date'}
-            </label>
-            <p className="text-lg">{booking.arrivalDate || '—'}</p>
-          </div>
-          {/* Row 1 continued — Flight Number & Flight Time */}
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Number</label>
-            <div className="flex items-center gap-2">
-              <Plane className="w-4 h-4 text-gray-400" />
-              <p className="text-lg">{booking.flightNo}</p>
-            </div>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Time (STD/STA)</label>
-            <p className="text-lg">{booking.flightTime}</p>
-          </div>
-          {/* Row 2 — Route, Luggage, Flight Class */}
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Route</label>
-            <p className="text-lg">{booking.flightOrigin || '—'} → {booking.flightDestination || '—'}</p>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Number of Luggage</label>
-            <p className="text-lg">{booking.numberOfLuggage || 0} pcs</p>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-[10px]">Flight Class (Main VIP Passenger)</label>
-            {booking.flightClass ? (
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
-                booking.flightClass === 'First Class'
-                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                  : booking.flightClass === 'Business Class'
-                  ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                  : 'bg-gray-50 text-gray-700 border-gray-200'
-              }`}>
-                {booking.flightClass === 'First Class' && (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                )}
-                {booking.flightClass === 'Business Class' && (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-                  </svg>
-                )}
-                {booking.flightClass}
-              </span>
-            ) : (
-              <p className="text-lg text-gray-400">—</p>
-            )}
-          </div>
+      {/* 7. Flight Information — editable editor (sky/unify-create-edit-ux).
+          The read-only badge card was a second copy of the same fields as
+          EditSectionFlight at the bottom of the page. Production always
+          passes formData; the compact fallback is for standalone mocks. */}
+      {formData && onFormChange ? (
+        <div data-testid="booking-detail-flight-editor">
+          <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
         </div>
-
-        {/* 2026-06-08 round 6.2.6 — Transit 2nd-leg display (Q2=b: same
-            Card, sub-heading, separator). Only renders for Transit
-            bookings where legs[] is populated. Pre-6.2.6 this section
-            didn't exist; Transit bookings showed only the 1st-leg
-            fields. The 1st-leg grid above shows the inbound (Flight
-            Date / Number / Time / Route / Class); this block shows
-            the outbound (2nd flight) + the 6h+ gap computed from the
-            1st-leg arrival vs the 2nd-leg arrival. The 2nd-leg
-            "Route" is omitted because ViewBooking.legs[] only has
-            4 fields (flightNo / flightTime / arrivalDate / flightClass)
-            per round 6.2.2's mapper — origin/destination are the
-            same as the 1st leg's (HKG is implicit for transit at
-            HKG). The gap display (Q3=a) makes the 6h rule visible
-            to staff. */}
-        {booking.flightType === 'Transit' && booking.legs && booking.legs.length >= 2 && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h4 className="text-xs uppercase tracking-wider text-gray-500 font-semibold mb-4">
-              2nd Flight (Outbound)
-            </h4>
-            <div className="grid grid-cols-5 gap-6">
-              <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Number</label>
-                <div className="flex items-center gap-2">
-                  <Plane className="w-4 h-4 text-gray-400" />
-                  <p className="text-lg">{booking.legs[1].flightNo || '—'}</p>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Time (STD)</label>
-                <p className="text-lg">{booking.legs[1].flightTime || '—'}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Route</label>
-                {/* 2026-06-08 round 6.2.6.1 — Route column for the
-                    2nd-leg block. Format: "{origin} → {destination}".
-                    For Transit at HKG, origin = legs[1].flightOrigin
-                    (= HKG, the transit hub) and destination =
-                    legs[1].flightDestination (= the 1st leg's
-                    origin, e.g. LHR). Falls back to just the
-                    destination if origin is missing (defensive
-                    for legacy/malformed data). */}
-                <p className="text-lg">
-                  {booking.legs[1].flightOrigin || 'HKG'}
-                  {' → '}
-                  {(booking.legs[1].flightDestination || booking.legs[1].destination || '—')}
-                </p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">
-                  {/* 2026-06-08 round 6.2.8 — customer follow-up.
-                      Customer renamed the timestamp to
-                      `departureDate` for leg 2 (leg 2 is the
-                      OUTBOUND flight from HKG, so the timestamp
-                      is the departure time, not arrival). The
-                      column label now reflects that. The cell
-                      value prefers `departureDate` and falls
-                      back to `arrivalDate` for legacy bookings. */}
-                  Departure Date &amp; Time
-                </label>
-                <p className="text-lg">{booking.legs[1].departureDate || booking.legs[1].arrivalDate || '—'}</p>
-              </div>
-              <div>
-                <label className="text-sm text-gray-600 block mb-[10px]">Flight Class</label>
-                {booking.legs[1].flightClass ? (
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
-                    booking.legs[1].flightClass === 'First Class'
-                      ? 'bg-amber-50 text-amber-800 border-amber-200'
-                      : booking.legs[1].flightClass === 'Business Class'
-                      ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                      : 'bg-gray-50 text-gray-700 border-gray-200'
-                  }`}>
-                    {booking.legs[1].flightClass}
-                  </span>
-                ) : (
-                  <p className="text-lg text-gray-400">—</p>
-                )}
-              </div>
-            </div>
-            {/* Gap display: computed from 1st-leg arrivalDate vs
-                2nd-leg arrivalDate. Round 6.2 backend's TransitLegsRule
-                enforces >= 6h; this display makes it visible to staff. */}
-            {(() => {
-              const l0 = booking.arrivalDate ? new Date(booking.arrivalDate.replace(' ', 'T')) : null;
-              const l1 = booking.legs[1].arrivalDate ? new Date(booking.legs[1].arrivalDate.replace(' ', 'T')) : null;
-              if (!l0 || !l1 || isNaN(l0.getTime()) || isNaN(l1.getTime())) return null;
-              const diffMs = l1.getTime() - l0.getTime();
-              const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-              const hours = Math.floor(diffMs / 3600000);
-              const mins = Math.floor((diffMs % 3600000) / 60000);
-              const isValid = diffMs >= SIX_HOURS_MS;
-              return (
-                <p
-                  className={`text-sm mt-4 flex items-center gap-1.5 ${isValid ? 'text-green-700' : 'text-red-700'}`}
-                  data-testid="transit-gap-display"
-                >
-                  <Info className="w-4 h-4 flex-shrink-0" />
-                  Transit gap: <strong>{hours}h {mins}m</strong>
-                  {isValid ? ' (compliant with 6h minimum)' : ' (BELOW 6h minimum — data error)'}.
-                </p>
-              );
-            })()}
-          </div>
-        )}
-      </Card>
+      ) : (
+        <Card className="p-6" data-testid="booking-detail-flight-readonly">
+          <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
+          <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
+        </Card>
+      )}
 
       {/* 8. Booking Details */}
       <Card className="p-6">
@@ -3196,10 +3013,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         );
       })()}
 
-      {/* 12. Service Items */}
-      <Card className="p-6">
+      {/* 12. Service Items — canonical line-price editor (Sky 2026-08-17).
+          Client wants free-edit unit prices for PS, LD, addons, etc.
+          Do not replace this table with Create's read-only Price Breakdown. */}
+      <Card className="p-6" data-testid="booking-detail-service-items">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
+          <div>
+            <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
+            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit quantity, unit price, and discount, including Premiere Suite and Lounge Deluxe.</p>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -4364,8 +4186,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {/* 1. Account Settings (editable) */}
           <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} promoCodeOptions={promoCodeOptions} />
 
-          {/* 2. Flight + Visit + Suite + Payment (editable) */}
-          <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
+          {/* Flight editor moved up — see booking-detail-flight-editor */}
 
           {/* 3. Limo stops editor (gated on hasLimousine in detail logic) */}
           <EditSectionLimoStops formData={formData} onFormChange={onFormChange} />
@@ -4392,8 +4213,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             staffOptions={staffOptions}
           />
 
-          {/* Master Save bar */}
-          <Card className="p-5 border-blue-300 bg-blue-50/40">
+          {/* Master Save bar — sticky so staff do not hunt past Status */}
+          <Card
+            className="p-5 border-blue-300 bg-blue-50/40 sticky bottom-0 z-20 shadow-md"
+            data-testid="booking-detail-sticky-save"
+          >
             <div className="flex items-center justify-between">
               <div>
                 {/* 2026-06-28 — Sky removed the "Master Save" title
@@ -4426,27 +4250,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   disabled={isSavingAllChanges}
                 >
                   <X className="w-4 h-4 mr-1.5" /> Back
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => onSaveAllChanges?.(formData)}
-                  disabled={isSavingAllChanges || hasGuestErrorsFinal || isEditDirty === false}
-                  data-testid="booking-detail-master-save"
-                  title={hasGuestErrorsFinal
-                    ? (effectiveIncompleteVipInfoCount > 0
-                        ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} before saving.`
-                        : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.')
-                    : isEditDirty === false
-                      ? 'There are no booking changes to save.'
-                      : undefined}
-                  className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Save className="w-4 h-4 mr-1.5" />
-                  {isSavingAllChanges
-                    ? 'Saving…'
-                    : isEditDirty === false
-                      ? 'No Changes'
-                      : 'Save All Changes'}
                 </Button>
               </div>
             </div>
