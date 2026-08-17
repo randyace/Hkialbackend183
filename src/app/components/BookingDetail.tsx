@@ -837,6 +837,44 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setWheelchairPassenger('');
   };
 
+  const invoiceShowLimo = Boolean(formData?.hasLimousine ?? booking.hasLimousine);
+  const invoiceShowShopping = Boolean(formData?.hasShopping ?? booking.hasShopping);
+  const invoiceShowSecurity = Boolean(formData?.hasSecurity ?? booking.hasSecurity);
+  const invoiceShowWheelchair = Boolean(formData?.hasWheelchair ?? booking.hasWheelchair);
+  const invoiceShowLoungeExt = Boolean(
+    formData?.hasLoungeExtension
+    ?? booking.addons?.some((a) => a.name === 'Lounge Extension'),
+  );
+  const invoiceSpecialAddonNames = new Set([
+    'Limousine Transfer',
+    'Lounge Extension',
+    'Wheelchair Assistance',
+    'Security Escort Service',
+  ]);
+  const invoiceCatalogRows = [
+    ...(booking.addons ?? [])
+      .filter((a) => !invoiceSpecialAddonNames.has(a.name) && !/shopping/i.test(a.name))
+      .map((a) => ({
+        name: a.name,
+        quantity: Number(a.quantity ?? 1),
+        unitPrice: Number(a.unitPrice ?? 0),
+        subtotal: Number(a.subtotal ?? 0),
+      })),
+    ...(formData?.catalogAddonSelections ?? [])
+      .filter((s) => !(booking.addons ?? []).some((a) => a.name === s.name))
+      .map((s) => {
+        const catalog = addonServices.find((c) => c.key === s.name);
+        const unit = catalog ? parseFloat(catalog.defaultPrice) : 0;
+        const qty = Math.max(1, s.quantity || 1);
+        return {
+          name: s.name,
+          quantity: qty,
+          unitPrice: unit,
+          subtotal: unit * qty,
+        };
+      }),
+  ];
+
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
   // 2026-06-28 (round 6.2.71, Phase 4A) — `isEditBookingOpen`
   // state DELETED. The modal that used to open on this state
@@ -3266,7 +3304,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               )}
 
               {/* Limousine Service */}
-              {booking.hasLimousine && (() => {
+              {invoiceShowLimo && (() => {
                 // Round 6.1.2 (2026-06-07): render the structured limo
                 // addon (quantity / unit_price / subtotal / destinations)
                 // from `booking.addons` instead of the previous hard-coded
@@ -3336,7 +3374,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               })()}
 
               {/* Shopping Service */}
-              {booking.hasShopping && (
+              {invoiceShowShopping && (
                 <>
                   <tr>
                     <td className="px-4 py-3">
@@ -3396,11 +3434,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   `name === 'Lounge Extension'`. The edit form's
                   separate Lounge Extension toggle + qty stepper
                   lives in `EditSectionAddons.tsx:226-261`. */}
-              {booking.addons?.some(a => a.name === 'Lounge Extension') && (() => {
-                const loungeAddon = booking.addons!.find(a => a.name === 'Lounge Extension')!;
-                const qty = Number(loungeAddon.quantity ?? 1);
-                const unit = Number(loungeAddon.unitPrice ?? 1500);
-                const subtotal = Number(loungeAddon.subtotal ?? unit * qty);
+              {invoiceShowLoungeExt && (() => {
+                const loungeAddon = booking.addons?.find(a => a.name === 'Lounge Extension');
+                const qty = Number(formData?.loungeExtensionQty ?? loungeAddon?.quantity ?? 1);
+                const unit = Number(loungeAddon?.unitPrice ?? 1500);
+                const subtotal = unit * qty;
                 return (
                   <>
                     <tr>
@@ -3416,11 +3454,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <td className="px-4 py-3 text-center">
                         <input
                           type="number"
-                          defaultValue={qty}
+                          value={qty}
+                          onChange={(e) => {
+                            const next = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
+                            onFormChange?.({ hasLoungeExtension: true, loungeExtensionQty: next });
+                          }}
                           className="w-20 px-2 py-1 border rounded text-center"
                           min="1"
                           max="6"
-                          readOnly
+                          readOnly={!onFormChange}
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -3437,6 +3479,86 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </>
                 );
               })()}
+
+              {invoiceShowSecurity && (() => {
+                const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
+                const qty = Number(securityAddon?.quantity ?? 1);
+                const unit = Number(securityAddon?.unitPrice ?? 1200);
+                const subtotal = Number(securityAddon?.subtotal ?? unit * qty);
+                return (
+                  <tr data-testid="invoice-additional-security-row">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-amber-600" />
+                        <div>
+                          <p className="font-medium">Security Escort Service</p>
+                          <p className="text-xs text-gray-500">Personal security personnel</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
+                    <td className="px-4 py-3 text-right text-sm">HK${unit.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
+                  </tr>
+                );
+              })()}
+
+              {invoiceShowWheelchair && (() => {
+                const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
+                const qty = Number(wcAddon?.quantity ?? 1);
+                const unit = Number(wcAddon?.unitPrice ?? 0);
+                const subtotal = Number(wcAddon?.subtotal ?? unit * qty);
+                return (
+                  <tr data-testid="invoice-additional-wheelchair-row">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Accessibility className="w-4 h-4 text-pink-600" />
+                        <div>
+                          <p className="font-medium">Wheelchair Assistance</p>
+                          <p className="text-xs text-gray-500">{formData?.wheelchairPassenger || 'Passenger assistance'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
+                    <td className="px-4 py-3 text-right text-sm">{unit > 0 ? `HK$${unit.toLocaleString()}` : 'Complimentary'}</td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right font-medium">{subtotal > 0 ? `HK$${subtotal.toLocaleString()}` : 'HK$0'}</td>
+                  </tr>
+                );
+              })()}
+
+              {invoiceCatalogRows.map((row) => (
+                <tr key={`invoice-catalog-${row.name}`} data-testid="invoice-additional-catalog-row">
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{row.name}</p>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <input
+                      type="number"
+                      value={row.quantity}
+                      onChange={(e) => {
+                        const next = Math.max(1, parseInt(e.target.value, 10) || 1);
+                        const prev = formData?.catalogAddonSelections ?? [];
+                        const without = prev.filter((s) => s.name !== row.name);
+                        onFormChange?.({
+                          catalogAddonSelections: [...without, { name: row.name, quantity: next }],
+                        });
+                      }}
+                      className="w-20 px-2 py-1 border rounded text-center"
+                      min="1"
+                      readOnly={!onFormChange}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm">
+                    {row.unitPrice > 0 ? `HK$${row.unitPrice.toLocaleString()}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right">—</td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {row.subtotal > 0 ? `HK$${row.subtotal.toLocaleString()}` : '—'}
+                  </td>
+                </tr>
+              ))}
 
               {/* Spa Service */}
               {false && (
@@ -3544,7 +3666,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Type to search services, e.g. Limousine, Fast Track, Shower…"
+                        placeholder="Type to search services, e.g. Limousine, Security, Wheelchair…"
                         value={addonSearch}
                         onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
                         onFocus={() => setShowAddonDropdown(true)}
@@ -3652,8 +3774,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <input
                         type="text"
                         value={addonUnitPrice}
-                        onChange={e => setAddonUnitPrice(e.target.value)}
-                        className="w-28 px-2 py-1 border rounded text-right"
+                        readOnly
+                        className="w-28 px-2 py-1 border rounded text-right bg-gray-50"
                       />
                     </div>
                   </td>
@@ -3662,8 +3784,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <input
                         type="text"
                         value={addonDiscount}
-                        onChange={e => setAddonDiscount(e.target.value)}
-                        className="w-16 px-2 py-1 border rounded text-right"
+                        readOnly
+                        className="w-16 px-2 py-1 border rounded text-right bg-gray-50"
                       />
                       <span className="text-xs text-gray-400">%</span>
                     </div>
