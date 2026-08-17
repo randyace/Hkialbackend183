@@ -24,9 +24,6 @@ import {
   EditSectionAccountInfo,
   EditSectionFlight,
   EditSectionPhysicalResource,
-  EditSectionLimoStops,
-  EditSectionWheelchair,
-  EditSectionAddons,
   EditSectionStaff,
 } from './booking/sections';
 // 2026-06-28 (round 6.2.72, Phase B) — `BookingFormData` +
@@ -462,11 +459,19 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // Optional — falls back to defaultPrice when missing (mirrors
   // Create's behavior at CreateBooking.tsx:2706-2716).
   bookableItemPrices?: Record<string, number>;
-  /** 2026-07-16 — Lane B catalog picker slot. */
+  /** 2026-07-16 — Lane B catalog picker slot (Create still uses this). Detail merges Lane B into Add Item. */
   catalogAddonSlot?: React.ReactNode;
+  /** Lane B catalog rows for the unified Add Item search (qty-only services). */
+  catalogAddonOptions?: Array<{
+    id: number;
+    name_en: string;
+    price: number;
+    description_en?: string;
+    category?: string;
+  }>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0, bookableItemPrices, catalogAddonSlot, catalogAddonOptions, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
@@ -744,6 +749,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       desc: a.desc,
       defaultPrice: a.defaultPrice.toFixed(2),
     }));
+  const findAddonChoice = (key: string) => {
+    const laneA = addonServices.find((s) => s.key === key);
+    if (laneA) return laneA;
+    const o = (catalogAddonOptions ?? []).find((x) => x.name_en === key);
+    if (!o) return undefined;
+    return {
+      key: o.name_en,
+      icon: <Tag className="w-4 h-4" />,
+      desc: o.description_en || o.category || 'Catalog service',
+      defaultPrice: Number(o.price || 0).toFixed(2),
+    };
+  };
   const [selectedAddon, setSelectedAddon] = useState<AddonService | null>(null);
   const [addonQty, setAddonQty]           = useState(1);
   const [addonUnitPrice, setAddonUnitPrice] = useState('');
@@ -837,6 +854,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setWheelchairPassenger('');
   };
 
+  // Chip-remove from the retired lower EditSectionAddons lives on each
+  // Service Items row so staff can still drop a service without a second card.
+  const renderAddonRemove = (label: string, onRemove: () => void) => (
+    onFormChange ? (
+      <button
+        type="button"
+        aria-label={`Remove ${label}`}
+        data-testid={`service-items-remove-${label}`}
+        onClick={onRemove}
+        className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+        title={`Remove ${label}`}
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    ) : null
+  );
+
   const invoiceShowLimo = Boolean(formData?.hasLimousine ?? booking.hasLimousine);
   const invoiceShowShopping = Boolean(formData?.hasShopping ?? booking.hasShopping);
   const invoiceShowSecurity = Boolean(formData?.hasSecurity ?? booking.hasSecurity);
@@ -863,7 +897,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(formData?.catalogAddonSelections ?? [])
       .filter((s) => !(booking.addons ?? []).some((a) => a.name === s.name))
       .map((s) => {
-        const catalog = addonServices.find((c) => c.key === s.name);
+        const catalog = findAddonChoice(s.name);
         const unit = catalog ? parseFloat(catalog.defaultPrice) : 0;
         const qty = Math.max(1, s.quantity || 1);
         return {
@@ -3125,6 +3159,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </>
               )}
 
+              {!(invoiceShowLimo || invoiceShowShopping || invoiceShowSecurity || invoiceShowWheelchair || invoiceShowLoungeExt || invoiceCatalogRows.length > 0) && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-2 text-sm text-gray-500">
+                    No services selected. Search below to add Limousine, Lounge Extension, Security, or Wheelchair.
+                  </td>
+                </tr>
+              )}
+
               {/* Limousine Service */}
               {invoiceShowLimo && (() => {
                 // Round 6.1.2 (2026-06-07): render the structured limo
@@ -3156,6 +3198,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             <p className="font-medium">Limousine Transfer Service</p>
                             <p className="text-xs text-gray-500">Airport Transfer</p>
                           </div>
+                          {renderAddonRemove('Limousine Transfer', () => {
+                            onFormChange?.({
+                              hasLimousine: false,
+                              limoStops: [{ id: 1, type: 'Pick-up', location: '' }],
+                            });
+                          })}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
@@ -3179,16 +3227,75 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <td className="px-4 py-3 text-right font-medium">HK${limoSubtotal.toLocaleString()}</td>
                     </tr>
                     <tr>
-                      <td colSpan={5} className="px-4 py-2 bg-gray-50">
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                          <textarea
-                            className="w-full px-3 py-2 border rounded text-sm resize-none"
-                            rows={2}
-                            defaultValue={limoRemarks}
-                            readOnly
-                          />
-                        </div>
+                      <td colSpan={5} className="px-4 py-2 bg-purple-50/50" data-testid="service-items-limo-stops">
+                        {onFormChange ? (() => {
+                          const stops = (formData?.limoStops && formData.limoStops.length > 0)
+                            ? formData.limoStops
+                            : (limoDestinations.length > 0
+                              ? limoDestinations.map((location, idx) => ({
+                                  id: idx + 1,
+                                  type: (idx === 0 ? 'Pick-up' : 'Destination') as const,
+                                  location,
+                                }))
+                              : [{ id: 1, type: 'Pick-up' as const, location: '' }]);
+                          const writeStops = (next: typeof stops) => onFormChange({ limoStops: next });
+                          return (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-purple-600" />
+                                <p className="text-xs text-purple-800">Pick-up / Destinations</p>
+                              </div>
+                              {stops.map((stop, idx) => (
+                                <div key={stop.id} className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <select
+                                    value={stop.type}
+                                    onChange={(e) => writeStops(stops.map((s) => s.id === stop.id ? { ...s, type: e.target.value as 'Pick-up' | 'Destination' } : s))}
+                                    className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0"
+                                  >
+                                    <option value="Pick-up">Pick-up</option>
+                                    <option value="Destination">Destination</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={stop.location}
+                                    onChange={(e) => writeStops(stops.map((s) => s.id === stop.id ? { ...s, location: e.target.value } : s))}
+                                    placeholder="Location (e.g. HKG Terminal 1)"
+                                    className="flex-1 px-2 py-1.5 border rounded text-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => writeStops(stops.length > 1 ? stops.filter((s) => s.id !== stop.id) : stops)}
+                                    className="text-gray-400 hover:text-red-600 shrink-0"
+                                    aria-label={`Remove stop ${idx + 1}`}
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => writeStops([...stops, { id: Date.now(), type: 'Destination', location: '' }])}
+                                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add another stop
+                              </button>
+                            </div>
+                          );
+                        })() : (
+                          <div className="flex flex-col gap-1">
+                            <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                            <textarea
+                              className="w-full px-3 py-2 border rounded text-sm resize-none"
+                              rows={2}
+                              defaultValue={limoRemarks}
+                              readOnly
+                            />
+                          </div>
+                        )}
                       </td>
                     </tr>
                   </>
@@ -3206,6 +3313,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <p className="font-medium">In-lounge Shopping Service</p>
                           <p className="text-xs text-gray-500">Personal Shopping Assistant</p>
                         </div>
+                        {renderAddonRemove('In-lounge Shopping', () => {
+                          onFormChange?.({
+                            hasShopping: false,
+                            catalogAddonSelections: (formData?.catalogAddonSelections ?? []).filter(
+                              (s) => !/shopping/i.test(s.name),
+                            ),
+                          });
+                        })}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -3253,13 +3368,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   `api.booking_items[].bookable_item.name_en`) —
                   mirrors the Limo block above (:3432-3500).
                   Renders only when at least one addon row has
-                  `name === 'Lounge Extension'`. The edit form's
-                  separate Lounge Extension toggle + qty stepper
-                  lives in `EditSectionAddons.tsx:226-261`. */}
+                  `name === 'Lounge Extension'`. Qty + mixed-rate
+                  hint live on this row (relocated from the retired
+                  lower Add-on Services card). */}
               {invoiceShowLoungeExt && (() => {
                 const loungeAddon = booking.addons?.find(a => a.name === 'Lounge Extension');
                 const qty = Number(formData?.loungeExtensionQty ?? loungeAddon?.quantity ?? 1);
                 const unit = Number(loungeAddon?.unitPrice ?? 1500);
+                const loungeHourly = bookableItemPrices?.['Lounge Extension'] ?? 0;
                 const subtotal = unit * qty;
                 return (
                   <>
@@ -3269,23 +3385,56 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <Clock className="w-4 h-4 text-amber-600" />
                           <div>
                             <p className="font-medium">Lounge Extension Service</p>
-                            <p className="text-xs text-gray-500">Additional hours beyond the base 3 hours</p>
+                            <p className="text-xs text-gray-500">Lounge Extension — Additional Hours (max 6)</p>
                           </div>
+                          {renderAddonRemove('Lounge Extension', () => {
+                            onFormChange?.({ hasLoungeExtension: false, loungeExtensionQty: 1 });
+                          })}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <input
-                          type="number"
-                          value={qty}
-                          onChange={(e) => {
-                            const next = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
-                            onFormChange?.({ hasLoungeExtension: true, loungeExtensionQty: next });
-                          }}
-                          className="w-20 px-2 py-1 border rounded text-center"
-                          min="1"
-                          max="6"
-                          readOnly={!onFormChange}
-                        />
+                        {onFormChange ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onFormChange({ hasLoungeExtension: true, loungeExtensionQty: Math.max(1, qty - 1) })}
+                              disabled={qty <= 1}
+                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30"
+                              aria-label="Decrease lounge hours"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <input
+                              type="number"
+                              value={qty}
+                              onChange={(e) => {
+                                const next = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
+                                onFormChange({ hasLoungeExtension: true, loungeExtensionQty: next });
+                              }}
+                              className="w-14 px-2 py-1 border rounded text-center"
+                              min="1"
+                              max="6"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => onFormChange({ hasLoungeExtension: true, loungeExtensionQty: Math.min(6, qty + 1) })}
+                              disabled={qty >= 6}
+                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30"
+                              aria-label="Increase lounge hours"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            value={qty}
+                            className="w-20 px-2 py-1 border rounded text-center"
+                            min="1"
+                            max="6"
+                            readOnly
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <input
@@ -3297,6 +3446,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </td>
                       <td className="px-4 py-3 text-right">—</td>
                       <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={5} className="px-4 pb-3">
+                        <p className="text-xs text-gray-500">
+                          HK${loungeHourly.toLocaleString()} per hour
+                          {' × '}{qty} hour{qty !== 1 ? 's' : ''}
+                          {' = '}
+                          <span className="font-medium text-amber-700">
+                            HK${(loungeHourly * qty).toLocaleString()}
+                          </span>
+                        </p>
+                        {(formData?.numPremiereSuites ?? 0) > 0
+                          && ((formData?.vipPassengersInLoungeDeluxe ?? 0) + (formData?.nonFlyingGuestsInLoungeDeluxe ?? 0)) > 0 && (
+                          <p
+                            data-testid="lounge-extension-mixed-breakdown"
+                            className="text-xs text-gray-600 mt-1"
+                          >
+                            HK$3,000 PS + HK${loungeHourly.toLocaleString()} LD per hour (mixed PS + LD)
+                          </p>
+                        )}
+                      </td>
                     </tr>
                   </>
                 );
@@ -3316,6 +3486,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <p className="font-medium">Security Escort Service</p>
                           <p className="text-xs text-gray-500">Personal security personnel</p>
                         </div>
+                        {renderAddonRemove('Security Escort Service', () => {
+                          onFormChange?.({ hasSecurity: false });
+                        })}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
@@ -3332,6 +3505,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 const unit = Number(wcAddon?.unitPrice ?? 0);
                 const subtotal = Number(wcAddon?.subtotal ?? unit * qty);
                 return (
+                  <>
                   <tr data-testid="invoice-additional-wheelchair-row">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -3340,6 +3514,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <p className="font-medium">Wheelchair Assistance</p>
                           <p className="text-xs text-gray-500">{formData?.wheelchairPassenger || 'Passenger assistance'}</p>
                         </div>
+                        {renderAddonRemove('Wheelchair Assistance', () => {
+                          onFormChange?.({ hasWheelchair: false, wheelchairPassenger: '' });
+                        })}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
@@ -3347,13 +3524,37 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">{subtotal > 0 ? `HK$${subtotal.toLocaleString()}` : 'HK$0'}</td>
                   </tr>
+                  {onFormChange && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 bg-pink-50/40" data-testid="service-items-wheelchair-recipient">
+                        <label className="text-xs text-gray-600 mb-1 block">Wheelchair recipient</label>
+                        <input
+                          type="text"
+                          value={formData?.wheelchairPassenger ?? ''}
+                          onChange={(e) => onFormChange({ wheelchairPassenger: e.target.value })}
+                          placeholder="e.g. Mr James Hoffmann"
+                          className="w-full max-w-md px-3 py-1.5 border rounded text-sm"
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               })()}
 
               {invoiceCatalogRows.map((row) => (
                 <tr key={`invoice-catalog-${row.name}`} data-testid="invoice-additional-catalog-row">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{row.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{row.name}</p>
+                      {renderAddonRemove(row.name, () => {
+                        onFormChange?.({
+                          catalogAddonSelections: (formData?.catalogAddonSelections ?? []).filter(
+                            (s) => s.name !== row.name,
+                          ),
+                        });
+                      })}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <input
@@ -3479,8 +3680,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <tr className="bg-green-50/30">
                 <td colSpan={5} className="px-4 pt-3 pb-2">
                   <p className="text-xs text-gray-500 mb-2">
-                    Search and select an add-on, then click Add Item. You can add multiple
-                    services one at a time — remember to Save All Changes below.
+                    Search and select a special (Limousine, Lounge, Security, Wheelchair), then click Add Item.
                   </p>
                   <div className="relative">
                     {/* Search input */}
@@ -3488,7 +3688,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Type to search services, e.g. Limousine, Security, Wheelchair…"
+                        placeholder="Search services to add, e.g. Limousine, Security, Wheelchair…"
                         value={addonSearch}
                         onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
                         onFocus={() => setShowAddonDropdown(true)}
@@ -3510,7 +3710,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     {/* Selected badge */}
                     {selectedAddon && !showAddonDropdown && (
                       <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-green-100 border border-green-300 rounded-md text-sm text-green-800">
-                        {addonServices.find(s => s.key === selectedAddon)?.icon}
+                        {findAddonChoice(selectedAddon)?.icon}
                         <span>{selectedAddon}</span>
                         <button
                           type="button"
@@ -3576,7 +3776,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-100 text-green-800 text-sm">
-                        {addonServices.find(s => s.key === selectedAddon)?.icon}
+                        {findAddonChoice(selectedAddon)?.icon}
                         {selectedAddon}
                       </span>
                     </div>
@@ -3818,6 +4018,30 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </tfoot>
           </table>
         </div>
+
+        {formData && onFormChange && (
+          <div className="mt-6 space-y-4" data-testid="booking-detail-service-items-extras">
+            {catalogAddonSlot}
+            <div className="pt-4 border-t border-gray-200">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isAdHoc}
+                  onChange={(e) => onFormChange({ isAdHoc: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                  Ad-hoc Booking (this booking was created outside the normal flow)
+                </span>
+              </label>
+              <p className="text-xs text-gray-400 mt-1 ml-7">
+                Toggle on if this booking was not scheduled in advance. Drives the `is_ad_hoc`
+                column on the backend.
+              </p>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* 13. Promotion / Redemption Code — REMOVED 2026-07-02 (round 6.2.82).
@@ -4187,24 +4411,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <EditSectionAccountInfo formData={formData} onFormChange={onFormChange} promoCodeOptions={promoCodeOptions} />
 
           {/* Flight editor moved up — see booking-detail-flight-editor */}
-
-          {/* 3. Limo stops editor (gated on hasLimousine in detail logic) */}
-          <EditSectionLimoStops formData={formData} onFormChange={onFormChange} />
-
-          {/* 4. Wheelchair recipient (gated on hasWheelchair in section) */}
-          <EditSectionWheelchair formData={formData} onFormChange={onFormChange} />
-
-          {/* 5. Unified Add-on Services (Create parity per Sky 2026-06-28) —
-              chips + searchable dropdown over CATALOG_ADDONS + Lounge
-              Extension qty stepper + isAdHoc standalone toggle. Replaces
-              the pre-6.2.75 split between EditSectionBooleanAddons +
-              EditSectionAddons. */}
-          <EditSectionAddons
-            formData={formData}
-            onFormChange={onFormChange}
-            bookableItemPrices={bookableItemPrices}
-            catalogAddonSlot={catalogAddonSlot}
-          />
+          {/* Limo stops + wheelchair recipient live under their Service Items rows.
+              Lane A specials + Lane B catalog share one Add Item search. */}
 
           {/* 7. In-Charge Staff multi-select */}
           <EditSectionStaff
