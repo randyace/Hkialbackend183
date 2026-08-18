@@ -72,6 +72,14 @@ import type {
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import {
+  CHILD_AGE_SELECT_OPTIONS,
+  guestChildAgeSelectValue,
+  isChildrenAgeGroup,
+  missingChildAgeField,
+  normalizeGuestAgeFromApi,
+  parseGuestAge,
+} from '../../../../../lib/guestAgeGroup';
 
 // ── Save-flow payload types (2026-06-15) ───────────────────────────────────────
 // 6 new save buttons were previously wired to `toast.success(...)` only (no
@@ -142,6 +150,7 @@ function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
     birthdayYear: p.birthdayYear ?? '',
     foodAllergies: p.foodAllergies ?? '',
     nationality: (p.nationality ?? '').trim().toUpperCase(),
+    age: p.age,
   };
 }
 
@@ -158,6 +167,7 @@ function toEditPassenger(p: PassengerDetail): EditPassenger {
     birthdayYear: p.birthdayYear || undefined,
     foodAllergies: p.foodAllergies || undefined,
     nationality: (p.nationality || '').trim().toUpperCase() || undefined,
+    age: p.age,
   };
 }
 
@@ -169,6 +179,7 @@ function toNonFlyingGuest(g: Partial<EditNonFlyingGuest>): NonFlyingGuest {
     ageGroup: (g.ageGroup ?? '') as AgeGroup,
     foodAllergies: g.foodAllergies ?? '',
     nationality: (g.nationality ?? '').trim().toUpperCase(),
+    age: g.age,
   };
 }
 
@@ -180,6 +191,7 @@ function toEditNonFlyingGuest(g: NonFlyingGuest): EditNonFlyingGuest {
     ageGroup: (g.ageGroup || '') as EditNonFlyingGuest['ageGroup'],
     foodAllergies: g.foodAllergies || undefined,
     nationality: (g.nationality || '').trim().toUpperCase() || undefined,
+    age: g.age,
   };
 }
 
@@ -609,18 +621,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // would fire → loop).
   const [passengers, setPassengers] = useState<PassengerDetail[]>(() =>
     booking.passengers && booking.passengers.length > 0
-      ? booking.passengers.map(p => ({
-          title: (p.title || '') as PassengerTitle,
-          firstName: p.firstName || '',
-          lastName: p.lastName || '',
-          travelDocNo: p.travelDocNo || '',
-          membershipNo: p.membershipNo || '',
-          ageGroup: (p.ageGroup || '') as AgeGroup,
-          birthdayDay: p.birthdayDay || '',
-          birthdayMonth: p.birthdayMonth || '',
-          birthdayYear: p.birthdayYear || '',
-          foodAllergies: p.foodAllergies || '',
-          nationality: (p.nationality || '').trim().toUpperCase(),
+      ? booking.passengers.map(p => toPassengerDetail({
+          title: p.title,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          travelDocNo: p.travelDocNo,
+          membershipNo: p.membershipNo,
+          ageGroup: p.ageGroup,
+          birthdayDay: p.birthdayDay,
+          birthdayMonth: p.birthdayMonth,
+          birthdayYear: p.birthdayYear,
+          foodAllergies: p.foodAllergies,
+          nationality: p.nationality,
+          age: normalizeGuestAgeFromApi(p.age),
         }))
       : bookingProp
         ? Array.from(
@@ -740,7 +753,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     });
   }, [vipPS, vipLD]);
 
-  const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string) => {
+  const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string | number | undefined) => {
     setPassengers(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   };
 
@@ -1363,13 +1376,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>(() => {
     const realList = booking.nonFlyingGuestsList;
     if (Array.isArray(realList) && realList.length > 0) {
-      return realList.map((g) => ({
-        title: (g.title ?? '') as PassengerTitle,
-        firstName: g.firstName ?? '',
-        lastName: g.lastName ?? '',
+      return realList.map((g) => toNonFlyingGuest({
+        title: g.title,
+        firstName: g.firstName,
+        lastName: g.lastName,
         ageGroup: (g.ageGroup ?? 'Adults (aged 12 and above)') as AgeGroup,
-        foodAllergies: g.foodAllergies ?? '',
-        nationality: (g.nationality ?? '').trim().toUpperCase(),
+        foodAllergies: g.foodAllergies,
+        nationality: g.nationality,
+        age: normalizeGuestAgeFromApi(g.age),
       }));
     }
     // 2026-06-14 — for a real booking, don't auto-fill mock personal
@@ -1472,7 +1486,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     });
   }, [nonFlyingPS, nonFlyingLD]);
 
-  const updateNonFlyingGuest = (idx: number, field: keyof NonFlyingGuest, value: string) => {
+  const updateNonFlyingGuest = (idx: number, field: keyof NonFlyingGuest, value: string | number | undefined) => {
     setNonFlyingGuests(prev => prev.map((g, i) => i === idx ? { ...g, [field]: value } : g));
   };
 
@@ -1666,12 +1680,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ageGroup: string;
     travelDocNo: string;
     nationality?: string;
+    age?: number;
   }): string[] {
     const missing: string[] = [];
     if (!p.title) missing.push('Title');
     if (!p.firstName) missing.push('First Name');
     if (!p.lastName) missing.push('Last Name');
     if (!p.ageGroup) missing.push('Age Group');
+    const childAgeMissing = missingChildAgeField(p.ageGroup, p.age);
+    if (childAgeMissing) missing.push(childAgeMissing);
     // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
     if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
       missing.push('Nationality');
@@ -1684,12 +1701,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     lastName: string;
     ageGroup: string;
     nationality?: string;
+    age?: number;
   }): string[] {
     const missing: string[] = [];
     if (!g.title) missing.push('Title');
     if (!g.firstName) missing.push('First Name');
     if (!g.lastName) missing.push('Last Name');
     if (!g.ageGroup) missing.push('Age Group');
+    const childAgeMissing = missingChildAgeField(g.ageGroup, g.age);
+    if (childAgeMissing) missing.push(childAgeMissing);
     if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
       missing.push('Nationality');
     }
@@ -2710,7 +2730,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         <label className="text-sm text-gray-600 block mb-[10px]">Age Group</label>
                         <select
                           value={p.ageGroup}
-                          onChange={e => updatePassenger(idx, 'ageGroup', e.target.value)}
+                          onChange={e => {
+                            const nextGroup = e.target.value;
+                            updatePassenger(idx, 'ageGroup', nextGroup);
+                            if (!isChildrenAgeGroup(nextGroup)) {
+                              updatePassenger(idx, 'age', undefined);
+                            }
+                          }}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">Select age group</option>
@@ -2719,7 +2745,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <option value="Infants (under 2 years old)">Infants (under 2 years old)</option>
                         </select>
                       </div>
-                      <div className="col-span-3">
+                      {isChildrenAgeGroup(p.ageGroup) && (
+                        <div className="col-span-2">
+                          <label className="text-sm text-gray-600 block mb-[10px]">Child Age *</label>
+                          <select
+                            value={guestChildAgeSelectValue(p.age)}
+                            onChange={e => updatePassenger(idx, 'age', parseGuestAge(e.target.value))}
+                            className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                            required
+                          >
+                            <option value="">Select Age (2-11)</option>
+                            {CHILD_AGE_SELECT_OPTIONS.map((age) => (
+                              <option key={age} value={String(age)}>{age} years old</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      <div className={isChildrenAgeGroup(p.ageGroup) ? 'col-span-1' : 'col-span-3'}>
                         <label className="text-sm text-gray-600 block mb-[10px]">Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
                         <div className="grid grid-cols-3 gap-2">
                           <select
@@ -2946,7 +2988,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         <label className="text-sm text-gray-600 block mb-[10px]">Age Group</label>
                         <select
                           value={g.ageGroup}
-                          onChange={e => updateNonFlyingGuest(idx, 'ageGroup', e.target.value)}
+                          onChange={e => {
+                            const nextGroup = e.target.value;
+                            updateNonFlyingGuest(idx, 'ageGroup', nextGroup);
+                            if (!isChildrenAgeGroup(nextGroup)) {
+                              updateNonFlyingGuest(idx, 'age', undefined);
+                            }
+                          }}
                           className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                         >
                           <option value="">Select age group</option>
@@ -2956,6 +3004,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </select>
                       </div>
                     </div>
+                    {isChildrenAgeGroup(g.ageGroup) && (
+                      <div>
+                        <label className="text-sm text-gray-600 block mb-[10px]">Child Age *</label>
+                        <select
+                          value={guestChildAgeSelectValue(g.age)}
+                          onChange={e => updateNonFlyingGuest(idx, 'age', parseGuestAge(e.target.value))}
+                          className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                          required
+                        >
+                          <option value="">Select Age (2-11)</option>
+                          {CHILD_AGE_SELECT_OPTIONS.map((age) => (
+                            <option key={age} value={String(age)}>{age} years old</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     {/* Nationality */}
                     <div>
                       <label className="text-sm text-gray-600 block mb-[10px]">Nationality *</label>
