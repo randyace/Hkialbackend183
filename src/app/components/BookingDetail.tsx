@@ -459,7 +459,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // Optional — falls back to defaultPrice when missing (mirrors
   // Create's behavior at CreateBooking.tsx:2706-2716).
   bookableItemPrices?: Record<string, number>;
-  /** 2026-07-16 — Lane B catalog picker slot (Create still uses this). Detail merges Lane B into Add Item. */
+  /** Unused on Detail (Lane B is in Add Item). Create still owns its own slot. */
   catalogAddonSlot?: React.ReactNode;
   /** Lane B catalog rows for the unified Add Item search (qty-only services). */
   catalogAddonOptions?: Array<{
@@ -473,7 +473,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   afterCardsSlot?: React.ReactNode;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonSlot, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
@@ -757,6 +757,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       desc: a.desc,
       defaultPrice: a.defaultPrice.toFixed(2),
     }));
+  // One Add Item list: Lane A specials first, then Lane B catalog
+  // (API already excludes reserved names; drop any name collision).
+  const addonSearchChoices = [
+    ...addonServices,
+    ...(catalogAddonOptions ?? [])
+      .filter((o) => !addonServices.some((s) => s.key.toLowerCase() === o.name_en.toLowerCase()))
+      .map((o) => ({
+        key: o.name_en,
+        icon: <Tag className="w-4 h-4" />,
+        desc: o.description_en || o.category || 'Catalog service',
+        defaultPrice: Number(o.price || 0).toFixed(2),
+      })),
+  ];
   const findAddonChoice = (key: string) => {
     const laneA = addonServices.find((s) => s.key === key);
     if (laneA) return laneA;
@@ -3200,7 +3213,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {!(invoiceShowLimo || invoiceShowShopping || invoiceShowSecurity || invoiceShowWheelchair || invoiceShowLoungeExt || invoiceCatalogRows.length > 0) && (
                 <tr>
                   <td colSpan={5} className="px-4 py-2 text-sm text-gray-500">
-                    No services selected. Search below to add Limousine, Lounge Extension, Security, or Wheelchair.
+                    No services selected. Search below to add a special or catalog service.
                   </td>
                 </tr>
               )}
@@ -3718,7 +3731,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <tr className="bg-green-50/30">
                 <td colSpan={5} className="px-4 pt-3 pb-2">
                   <p className="text-xs text-gray-500 mb-2">
-                    Search and select a special (Limousine, Lounge, Security, Wheelchair), then click Add Item.
+                    Search and select a special or catalog service, then click Add Item.
                   </p>
                   <div className="relative">
                     {/* Search input */}
@@ -3726,7 +3739,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input
                         type="text"
-                        placeholder="Search services to add, e.g. Limousine, Security, Wheelchair…"
+                        data-testid="service-items-add-search"
+                        placeholder="Search services to add, e.g. Limousine, Security, Champagne…"
                         value={addonSearch}
                         onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
                         onFocus={() => setShowAddonDropdown(true)}
@@ -3766,11 +3780,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         {(() => {
                           const q = addonSearch.trim().toLowerCase();
                           const results = q
-                            ? addonServices.filter(s =>
+                            ? addonSearchChoices.filter(s =>
                                 s.key.toLowerCase().includes(q) ||
                                 s.desc.toLowerCase().includes(q)
                               )
-                            : addonServices;
+                            : addonSearchChoices;
                           if (results.length === 0) {
                             return (
                               <div className="px-4 py-3 text-sm text-gray-500">
@@ -4059,7 +4073,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
         {formData && onFormChange && (
           <div className="mt-6 space-y-4" data-testid="booking-detail-service-items-extras">
-            {catalogAddonSlot}
             <div className="pt-4 border-t border-gray-200">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
