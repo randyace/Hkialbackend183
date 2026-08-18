@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem, Cake } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -87,6 +87,7 @@ interface Booking {
    * Optional so mock data and standalone previews stay valid.
    */
   requestType?: 'New' | 'Edit' | 'Cancel';
+  hasUpcomingBirthday?: boolean;
 }
 
 // Travel Agency master data with default discount rates
@@ -820,12 +821,24 @@ export function BookingManagement({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button 
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                      onClick={() => onViewDetail?.(booking.id)}
-                    >
-                      {booking.guestName}
-                    </button>
+                    <div className="inline-flex items-center gap-1.5">
+                      <button 
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                        onClick={() => onViewDetail?.(booking.id)}
+                      >
+                        {booking.guestName}
+                      </button>
+                      {booking.hasUpcomingBirthday && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="inline-flex" title="Birthday this month or within 3 days">
+                              <Cake className="w-4 h-4 text-red-500" aria-label="Birthday this month or within 3 days" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>Birthday this month or within 3 days</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                     <div className="text-xs text-gray-500">{booking.accountNo}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
