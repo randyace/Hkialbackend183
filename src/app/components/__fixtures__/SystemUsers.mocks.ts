@@ -17,7 +17,7 @@ function ymdLocal(d: Date): string {
 
 const FIRST_NAMES  = ['Wong', 'Chan', 'Lee', 'Lam', 'Cheng', 'Ng', 'Cheung', 'Ho', 'Leung', 'Tang', 'Yip', 'Fong', 'Tsang', 'Chow', 'Kwok'];
 const LAST_NAMES   = ['Chi Ming', 'Siu Lan', 'Ka Wai', 'Mei Ling', 'Hoi Man', 'Yuk Fai', 'Wai Ying', 'Chun Kit', 'Sum Yi', 'Wing Sze'];
-const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Staff', 'Staff', 'Staff', 'Staff'];
+const ROLES: SystemUser['role'][]       = ['Administrator', 'Supervisor', 'Operation Officer', 'Operation Officer', 'Business Development', 'Operation Officer'];
 const DEPARTMENTS  = ['IT Department', 'Lounge Operations', 'Guest Services', 'Finance', 'Management', 'Security', 'Housekeeping', 'F&B Services'];
 const STATUSES: SystemUser['status'][]  = ['Active', 'Active', 'Active', 'Active', 'Inactive'];
 

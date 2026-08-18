@@ -478,7 +478,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
-  const [showInvoice, setShowInvoice] = useState(false);
+  const [showDocumentDialog, setShowDocumentDialog] = useState(false);
+  const [documentType, setDocumentType] = useState<'invoice' | 'receipt'>('invoice');
+
+  const openDocumentDialog = (type: 'invoice' | 'receipt') => {
+    setDocumentType(type);
+    setShowDocumentDialog(true);
+  };
 
   // ── Movement Log ─────────────────────────────────────────────────────────
   const [isMovementLogOpen, setIsMovementLogOpen] = useState(false);
@@ -1054,13 +1060,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const actionItems: BookingActionItem[] = [
     ...((booking.status === 'Approved' || booking.status === 'Confirmed') &&
     booking.paymentStatus !== 'Paid' &&
+    booking.paymentStatus !== 'PaymentLinkPaid' &&
     booking.paymentStatus !== 'Refunded'
       ? [{
           key: 'generate-invoice',
           label: 'Generate Invoice',
           icon: <FileText className="w-4 h-4 mr-2" />,
-          onClick: () => setShowInvoice(true),
+          onClick: () => openDocumentDialog('invoice'),
           testId: 'actions-generate-invoice',
+        }]
+      : []),
+    ...((booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid')
+      ? [{
+          key: 'generate-receipt',
+          label: 'Generate Receipt',
+          icon: <FileText className="w-4 h-4 mr-2" />,
+          onClick: () => openDocumentDialog('receipt'),
+          testId: 'actions-generate-receipt',
         }]
       : []),
     ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
@@ -1841,10 +1857,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <p className="text-gray-600">View and manage booking information</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowInvoice(true)}>
-            <FileText className="w-4 h-4 mr-2" />
-            Generate Invoice
-          </Button>
+          {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
+           booking.paymentStatus !== 'Paid' &&
+           booking.paymentStatus !== 'PaymentLinkPaid' &&
+           booking.paymentStatus !== 'Refunded' && (
+            <Button variant="outline" onClick={() => openDocumentDialog('invoice')}>
+              <FileText className="w-4 h-4 mr-2" />
+              Generate Invoice
+            </Button>
+          )}
+          {(booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid') && (
+            <Button variant="outline" onClick={() => openDocumentDialog('receipt')}>
+              <FileText className="w-4 h-4 mr-2" />
+              Generate Receipt
+            </Button>
+          )}
           {formData && onSaveAllChanges && (
             <Button
               type="button"
@@ -1861,6 +1888,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   : 'Save All Changes'}
             </Button>
           )}
+          {/* 2026-06-28 (round 6.2.72, Phase E) — `[Edit Booking
+              (full editor)]` button REMOVED. Per Sky's pivot
+              from round 6.2.71, the standalone edit page is
+              deprecated. The detail page itself is now the sole
+              edit surface (via the new "Editable Sections"
+              container at the bottom — see Phase B). The
+              `onOpenFullEditor` prop is kept in the interface
+              for backward compatibility with the parent
+              wrapper but is unused. */}
         </div>
       </div>
 
@@ -4229,8 +4265,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         * live preview that may still be loading / missing
         * account_id. */}
       <BookingInvoiceDialog
-        open={showInvoice}
-        onClose={() => setShowInvoice(false)}
+        open={showDocumentDialog}
+        onClose={() => setShowDocumentDialog(false)}
+        documentType={documentType}
         booking={booking}
         bookingId={bookingId}
         voucherCount={voucherCount}
