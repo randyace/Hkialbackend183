@@ -140,6 +140,7 @@ export interface Member {
   phone: string;
   nationality: string;
   passportNumber: string;
+  dateOfBirth?: string;
   internalGrouping: string;
   paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase';
   companyCode: string;
@@ -177,6 +178,7 @@ const MOCK_MEMBER: Member = {
   phone: '+852 9876 5432',
   nationality: 'GB',
   passportNumber: 'UK123456789',
+  dateOfBirth: '1980-06-15',
   internalGrouping: 'HSBC',
   paymentMethod: 'On-Credit',
   companyCode: 'CORP-2024-001',
@@ -396,6 +398,7 @@ export interface Spouse {
   nationality: string;
   passportFirst4: string;
   linkedAccountNo?: string;
+  dateOfBirth?: string;
 }
 
 export interface LoginAttempt {
@@ -532,6 +535,7 @@ export function MemberDetail({
     phone: memberData.phone,
     nationality: memberData.nationality,
     passportNumber: memberData.passportNumber,
+    dateOfBirth: memberData.dateOfBirth ?? '',
   });
   const [accountForm, setAccountForm] = useState({
     internalGrouping: memberData.internalGrouping,
@@ -598,11 +602,12 @@ export function MemberDetail({
     phone: '+852 9876 1111',
     nationality: 'GB',
     passportFirst4: 'UK78',
+    dateOfBirth: '1982-03-10',
     linkedAccountNo: '',
   });
   const [mockIsSpouseDialogOpen, setMockIsSpouseDialogOpen] = useState(false);
   const [mockIsRemoveSpouseOpen, setMockIsRemoveSpouseOpen] = useState(false);
-  const [mockSpouseForm, setMockSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '' });
+  const [mockSpouseForm, setMockSpouseForm] = useState<Spouse>({ title: 'Mr.', firstName: '', lastName: '', email: '', phone: '', nationality: '', passportFirst4: '', linkedAccountNo: '', dateOfBirth: '' });
 
   // memberData is defined above (prop-driven)
 
@@ -717,7 +722,7 @@ export function MemberDetail({
 
   const handleCancel = () => {
     // Reset all form state back to current memberData
-    setBasicForm({ title: memberData.title, firstName: memberData.firstName, lastName: memberData.lastName, email: memberData.email, phone: memberData.phone, nationality: memberData.nationality, passportNumber: memberData.passportNumber });
+    setBasicForm({ title: memberData.title, firstName: memberData.firstName, lastName: memberData.lastName, email: memberData.email, phone: memberData.phone, nationality: memberData.nationality, passportNumber: memberData.passportNumber, dateOfBirth: memberData.dateOfBirth ?? '' });
     setAccountForm({ internalGrouping: memberData.internalGrouping, paymentMethod: memberData.paymentMethod, companyCode: memberData.companyCode });
     setAppearanceForm({ ...memberData.appearance });
     setWorkForm({ ...memberData.workInfo });
@@ -1033,6 +1038,18 @@ export function MemberDetail({
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
+              <div>
+                <label>Date of Birth</label>
+                <input
+                  type="date"
+                  value={basicForm.dateOfBirth}
+                  onChange={e => setBasicForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                  disabled={!isEditing}
+                  min="1900-01-01"
+                  max={localDateStr()}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                />
+              </div>
             </div>
           </Card>
 
@@ -1227,6 +1244,16 @@ export function MemberDetail({
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>First 4 Digits of Passport</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">{displaySpouse.passportFirst4 || '—'}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Date of Birth</label>
+                  <input
+                    type="date"
+                    value={(displaySpouse.dateOfBirth || '').slice(0, 10)}
+                    readOnly
+                    disabled
+                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+                  />
                 </div>
               </div>
             ) : (
@@ -2989,6 +3016,21 @@ export function MemberDetail({
               </div>
             </div>
 
+            <div>
+              <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Date of Birth <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={(activeSpouseForm.dateOfBirth || '').slice(0, 10)}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, dateOfBirth: e.target.value }); setMockSpouseForm(f => ({ ...f, dateOfBirth: e.target.value })); }}
+                  min="1900-01-01"
+                  max={localDateStr()}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm"
+                />
+                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+
             {/* Linked Account (optional) */}
             <div>
               <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>
@@ -3010,6 +3052,9 @@ export function MemberDetail({
               onClick={() => {
                 if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
                   toast.error('First Name and Last Name are required.'); return;
+                }
+                if (!(activeSpouseForm.dateOfBirth || '').trim()) {
+                  toast.error('Date of Birth is required.'); return;
                 }
                 setMockSpouse({ ...activeSpouseForm }); // demo fallback
                 toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
