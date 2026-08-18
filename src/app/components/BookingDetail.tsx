@@ -471,10 +471,33 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   }>;
   /** Wrapper-owned cards (Payment / Access history) rendered in the same padded stack. */
   afterCardsSlot?: React.ReactNode;
+  // 2026-08-19 — round 6.2.169 task 8 (Cirium flight schedule
+  // auto-poll). figma-ui consumes the 4 flight-change props that
+  // the wrapper (admin BookingDetail.tsx) passes to render
+  // (a) a manual "Update Flight Info" button next to the flight
+  // info card and (b) one banner per pending change detected by
+  // the Cirium poller. Mirrors the wrapper's
+  // `BookingDetailViewWithFlightProps` shape. When `onRefreshFlight`
+  // is omitted, the button is hidden (the wrapper always passes
+  // it in production).
+  pendingChanges?: Array<{
+    id: number;
+    change_type: 'time_or_date' | 'route' | 'flight_not_found' | string;
+    old: Record<string, unknown>;
+    new: Record<string, unknown>;
+  }>;
+  onRefreshFlight?: () => Promise<void>;
+  onResolvePendingChange?: (
+    changeId: number,
+    action: 'apply' | 'dismiss',
+    reason?: string,
+  ) => Promise<void>;
+  refreshing?: boolean;
 }
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
- showTransit = true }: BookingDetailFullProps) {
+ showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
+ pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
@@ -2180,16 +2203,104 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           The read-only badge card was a second copy of the same fields as
           EditSectionFlight at the bottom of the page. Production always
           passes formData; the compact fallback is for standalone mocks. */}
-      {formData && onFormChange ? (
-        <div data-testid="booking-detail-flight-editor">
-          <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
+      {/* 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll).
+          Pending-change banners (rendered ABOVE the flight info card
+          when the wrapper passes a non-empty pendingChanges[]). Each
+          banner carries an id-based testid so the wrapper's Apply /
+          Dismiss buttons can be wired by the e2e suite. Color-coded
+          by change_type: blue (time_or_date), amber (route),
+          red (flight_not_found). */}
+      {pendingChanges.map((change) => (
+        <div
+          key={change.id}
+          data-testid={`booking-detail-pending-change-${change.id}`}
+          className={`rounded-lg p-4 mb-4 border-l-4 ${
+            change.change_type === 'flight_not_found'
+              ? 'bg-red-50 border-red-400'
+              : change.change_type === 'route'
+                ? 'bg-amber-50 border-amber-400'
+                : 'bg-blue-50 border-blue-400'
+          }`}
+        >
+          <div className="font-semibold mb-1">
+            {change.change_type === 'time_or_date' && 'Flight time changed'}
+            {change.change_type === 'route' && 'Flight route changed'}
+            {change.change_type === 'flight_not_found' && 'Flight not found by Cirium'}
+          </div>
+          <div className="text-sm text-slate-700">
+            {change.change_type === 'time_or_date' && (
+              <p>
+                Time: {String(change.old?.flight_time ?? '—')} → {String(change.new?.flight_time ?? '—')}
+              </p>
+            )}
+            {change.change_type === 'route' && (
+              <>
+                <p>
+                  Origin: {String(change.old?.flight_origin ?? '—')} → {String(change.new?.flight_origin ?? '—')}
+                </p>
+                <p>
+                  Destination: {String(change.old?.flight_destination ?? '—')} → {String(change.new?.flight_destination ?? '—')}
+                </p>
+              </>
+            )}
+            {change.change_type === 'flight_not_found' && (
+              <p>Cirium returned no schedule for this flight on this date.</p>
+            )}
+          </div>
+          <div className="mt-3 flex gap-2">
+            {change.change_type !== 'flight_not_found' && (
+              <button
+                type="button"
+                data-testid={`booking-detail-pending-change-${change.id}-apply`}
+                onClick={() => onResolvePendingChange?.(change.id, 'apply')}
+                className="px-3 py-1 bg-slate-900 text-white rounded text-sm"
+              >
+                Apply new values
+              </button>
+            )}
+            <button
+              type="button"
+              data-testid={`booking-detail-pending-change-${change.id}-dismiss`}
+              onClick={() => onResolvePendingChange?.(change.id, 'dismiss')}
+              className="px-3 py-1 bg-slate-100 text-slate-700 rounded text-sm"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
-      ) : (
-        <Card className="p-6" data-testid="booking-detail-flight-readonly">
-          <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
-          <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
-        </Card>
-      )}
+      ))}
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          {formData && onFormChange ? (
+            <div data-testid="booking-detail-flight-editor">
+              <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
+            </div>
+          ) : (
+            <Card className="p-6" data-testid="booking-detail-flight-readonly">
+              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
+              <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
+            </Card>
+          )}
+        </div>
+        {/* 2026-08-19 — round 6.2.169 task 8. Manual
+            "Update Flight Info" button. Wrapped in a flex row next to
+            the flight info card so it doesn't disturb the
+            EditSectionFlight layout. Hidden when the wrapper doesn't
+            pass onRefreshFlight (the wrapper always passes it in
+            production; the gate keeps the read-only mock preview
+            unchanged). Disabled while the wrapper is mid-refetch. */}
+        {onRefreshFlight && (
+          <button
+            type="button"
+            data-testid="booking-detail-refresh-flight"
+            onClick={onRefreshFlight}
+            disabled={refreshing}
+            className="shrink-0 mt-1 px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-sm hover:bg-slate-200 disabled:opacity-50"
+          >
+            {refreshing ? 'Refreshing…' : '🔄 Update Flight Info'}
+          </button>
+        )}
+      </div>
 
       {/* 8. Booking Details */}
       <Card className="p-6">

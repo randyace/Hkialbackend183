@@ -87,6 +87,17 @@ interface Booking {
    * Optional so mock data and standalone previews stay valid.
    */
   requestType?: 'New' | 'Edit' | 'Cancel';
+  /**
+   * 2026-08-19 — round 6.2.169 task 8 (Cirium flight schedule
+   * auto-poll). Number of pending flight changes detected by the
+   * Cirium poller. When > 0, the row renders a yellow-dot
+   * badge with a tooltip ("1 pending flight change" /
+   * "N pending flight changes"). The wrapper populates this
+   * from the list endpoint's per-row
+   * `pending_flight_changes_count` column; optional so mock
+   * data and standalone previews stay valid.
+   */
+  pendingFlightChangesCount?: number;
 }
 
 // Travel Agency master data with default discount rates
@@ -778,6 +789,21 @@ export function BookingManagement({
                         <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" title="Ad-hoc booking (<48hrs)" />
                       )}
                       <div>
+                        {/* 2026-08-19 — round 6.2.169 task 8 (Cirium flight
+                            poll). Yellow-dot badge inline with the booking
+                            no. when the wrapper populates
+                            `pendingFlightChangesCount > 0`. The wrapper
+                            reads the per-row `pending_flight_changes_count`
+                            column from the list endpoint. Tooltip text
+                            pluralizes the count. */}
+                        {booking.pendingFlightChangesCount !== undefined &&
+                          booking.pendingFlightChangesCount > 0 && (
+                            <span
+                              data-testid={`bookings-list-row-${booking.id}-pending-badge`}
+                              className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1.5 align-middle"
+                              title={`${booking.pendingFlightChangesCount} pending flight change${booking.pendingFlightChangesCount === 1 ? '' : 's'}`}
+                            />
+                          )}
                         {(onEditBooking || onViewDetail) ? (
                           <button
                             type="button"
