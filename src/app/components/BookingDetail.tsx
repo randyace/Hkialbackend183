@@ -486,8 +486,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // 2026-08-19 — round 6.2.169 task 8 (Cirium flight schedule
   // auto-poll). figma-ui consumes the 4 flight-change props that
   // the wrapper (admin BookingDetail.tsx) passes to render
-  // (a) a manual "Update Flight Info" button next to the flight
-  // info card and (b) one banner per pending change detected by
+  // (a) a manual "Update Flight Info" button inside the Flight
+  // Information card header and (b) one banner per pending change detected by
   // the Cirium poller. Mirrors the wrapper's
   // `BookingDetailViewWithFlightProps` shape. When `onRefreshFlight`
   // is omitted, the button is hidden (the wrapper always passes
@@ -505,11 +505,13 @@ export interface BookingDetailFullProps extends BookingDetailProps {
     reason?: string,
   ) => Promise<void>;
   refreshing?: boolean;
+  /** Staff-facing Cirium freshness, already formatted by the wrapper (HKT). */
+  flightLastCheckedLabel?: string | null;
 }
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
- pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false }: BookingDetailFullProps) {
+ pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
@@ -1866,6 +1868,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     return colors[status] || 'bg-gray-100 text-gray-700';
   };
 
+  // 2026-08-19 — Cirium manual refresh. Rendered in the Flight
+  // Information card header (EditSectionFlight headerActions, or
+  // the compact readonly card). Hidden when the wrapper doesn't
+  // pass onRefreshFlight. Disabled while mid-refetch.
+  const lastCheckedSpan = flightLastCheckedLabel ? (
+    <span data-testid="booking-detail-flight-last-checked" className="text-xs font-normal normal-case tracking-normal text-gray-400">
+      {flightLastCheckedLabel}
+    </span>
+  ) : null;
+
+  const refreshFlightButton = onRefreshFlight ? (
+    <button
+      type="button"
+      data-testid="booking-detail-refresh-flight"
+      onClick={onRefreshFlight}
+      disabled={refreshing}
+      className="shrink-0 px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-sm hover:bg-slate-200 disabled:opacity-50"
+    >
+      {refreshing ? 'Refreshing…' : '🔄 Update Flight Info'}
+    </button>
+  ) : null;
+
   return (
     <div className="p-6 space-y-6 pb-28">
       {/* 1. Back Button */}
@@ -2289,38 +2313,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
         </div>
       ))}
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          {formData && onFormChange ? (
-            <div data-testid="booking-detail-flight-editor">
-              <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
-            </div>
-          ) : (
-            <Card className="p-6" data-testid="booking-detail-flight-readonly">
-              <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
-              <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
-            </Card>
-          )}
+      {formData && onFormChange ? (
+        <div data-testid="booking-detail-flight-editor">
+            <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} headerActions={refreshFlightButton} lastCheckedLabel={flightLastCheckedLabel} />
         </div>
-        {/* 2026-08-19 — round 6.2.169 task 8. Manual
-            "Update Flight Info" button. Wrapped in a flex row next to
-            the flight info card so it doesn't disturb the
-            EditSectionFlight layout. Hidden when the wrapper doesn't
-            pass onRefreshFlight (the wrapper always passes it in
-            production; the gate keeps the read-only mock preview
-            unchanged). Disabled while the wrapper is mid-refetch. */}
-        {onRefreshFlight && (
-          <button
-            type="button"
-            data-testid="booking-detail-refresh-flight"
-            onClick={onRefreshFlight}
-            disabled={refreshing}
-            className="shrink-0 mt-1 px-3 py-1.5 bg-slate-100 text-slate-700 rounded text-sm hover:bg-slate-200 disabled:opacity-50"
-          >
-            {refreshing ? 'Refreshing…' : '🔄 Update Flight Info'}
-          </button>
-        )}
-      </div>
+      ) : (
+        <Card className="p-6" data-testid="booking-detail-flight-readonly">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
+              <h3 className="text-sm uppercase tracking-wide text-gray-500">Flight Information</h3>
+              {lastCheckedSpan}
+            </div>
+            {refreshFlightButton}
+          </div>
+          <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
+        </Card>
+      )}
 
       {/* 8. Booking Details */}
       <Card className="p-6">

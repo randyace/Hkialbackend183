@@ -22,6 +22,7 @@
  * Now merged into one section for visual cohesion.
  */
 
+import type { ReactNode } from 'react';
 import { Plane, Calendar, AlertTriangle, AlertCircle } from 'lucide-react';
 import { Card } from '../../ui/card';
 import {
@@ -116,6 +117,10 @@ export interface EditSectionFlightProps {
   // false from the admin Detail page per Sky's directive to stop
   // staff from flipping existing bookings into Transit.
   showTransit?: boolean;
+  /** Optional actions rendered in the card header (e.g. Update Flight Info). */
+  headerActions?: ReactNode;
+  /** Freshness text shown after the Flight Information title. */
+  lastCheckedLabel?: ReactNode;
 }
 
 // 2026-06-28 (round 6.2.76) — "Suite / Venue (legacy)" dropdown
@@ -129,6 +134,8 @@ export function EditSectionFlight({
   formData,
   onFormChange,
   showTransit = true,
+  headerActions,
+  lastCheckedLabel,
 }: EditSectionFlightProps) {
   const flightType = formData.flightType;
   // Round 6.2.74 — Sky's 3h booking-time rule. The range is empty when
@@ -140,9 +147,19 @@ export function EditSectionFlight({
     : null;
   return (
     <Card className="p-5">
-      <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
-        <Plane className="w-4 h-4" /> Flight Information
-      </h3>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
+          <h3 className="text-sm uppercase tracking-wide text-gray-500 flex items-center gap-2">
+            <Plane className="w-4 h-4" /> Flight Information
+          </h3>
+          {lastCheckedLabel ? (
+            <span data-testid="booking-detail-flight-last-checked" className="text-xs font-normal normal-case tracking-normal text-gray-400">
+              {lastCheckedLabel}
+            </span>
+          ) : null}
+        </div>
+        {headerActions}
+      </div>
       <div className="grid grid-cols-3 gap-6">
 
         <div>
