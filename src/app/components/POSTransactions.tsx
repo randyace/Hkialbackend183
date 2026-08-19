@@ -19,6 +19,9 @@ export interface PosTransactionItemRow {
   itemName: string;
   itemNameZh: string | null;
   quantity: number;
+  unitPrice: number;
+  discount: number;
+  lineTotal: number;
   remarks: string | null;
   kitchenStatus: string;
   orderedAt: string | null;
@@ -30,6 +33,7 @@ export interface PosTransactionItemRow {
 export interface PosTransactionOrderRow {
   id: number;
   suiteName: string | null;
+  fnbSubtotal: number;
   items: PosTransactionItemRow[];
 }
 
@@ -40,6 +44,7 @@ export interface PosTransactionBookingRow {
   mainGuest: string;
   totalSuites: number;
   totalOrders: number;
+  fnbSubtotal: number;
   guests: PosTransactionGuestRow[];
   posOrders: PosTransactionOrderRow[];
 }
@@ -139,6 +144,30 @@ function getKitchenStatusBadgeClass(status: string): string {
   }
 }
 
+function formatPosItemUnitPrice(unitPrice: number): string {
+  if (unitPrice <= 0) {
+    return 'Complimentary';
+  }
+
+  return `HK$ ${unitPrice.toFixed(2)}`;
+}
+
+function formatPosItemLineTotal(lineTotal: number): string {
+  if (lineTotal <= 0) {
+    return 'Complimentary';
+  }
+
+  return `HK$ ${lineTotal.toFixed(2)}`;
+}
+
+function formatPosOrderSubtotal(subtotal: number): string {
+  if (subtotal <= 0) {
+    return 'Complimentary';
+  }
+
+  return `HK$ ${subtotal.toFixed(2)}`;
+}
+
 function toggleExpandedRow(expandedRows: number[], bookingId: number): number[] {
   return expandedRows.includes(bookingId)
     ? expandedRows.filter((id) => id !== bookingId)
@@ -228,9 +257,12 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
           <div className="space-y-4">
             {booking.posOrders.map((order) => (
               <div key={order.id} className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-2.5 bg-gray-100 border-b border-gray-200">
+                <div className="px-4 py-2.5 bg-gray-100 border-b border-gray-200 flex justify-between items-center gap-4">
                   <p className="text-sm font-medium text-gray-800">
                     Suite: {order.suiteName || 'Unassigned / Lounge'}
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 shrink-0">
+                    Order Subtotal: {formatPosOrderSubtotal(order.fnbSubtotal)}
                   </p>
                 </div>
 
@@ -243,6 +275,12 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                       <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                         Qty
                       </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        Unit Price
+                      </th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                        Line Total
+                      </th>
                       <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                         Status
                       </th>
@@ -254,7 +292,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                   <tbody className="divide-y divide-gray-100">
                     {order.items.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-3 text-center text-gray-400">
+                        <td colSpan={6} className="px-4 py-3 text-center text-gray-400">
                           No items
                         </td>
                       </tr>
@@ -297,6 +335,12 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                             </td>
                             <td className={`px-4 py-2.5 text-center align-top ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                               {item.quantity}
+                            </td>
+                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap ${isCancelled ? 'line-through text-gray-400' : item.unitPrice > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                              {formatPosItemUnitPrice(item.unitPrice)}
+                            </td>
+                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap font-medium ${isCancelled ? 'line-through text-gray-400' : item.lineTotal > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                              {formatPosItemLineTotal(item.lineTotal)}
                             </td>
                             <td className="px-4 py-2.5 text-center align-top">
                               {isCancelled ? (
@@ -428,19 +472,20 @@ export function PosTransactions({
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Main Guest</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Suites</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Orders</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">F&amp;B Subtotal</th>
                 <th className="px-4 py-3 w-12" />
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                     Loading transactions...
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500">
                     No transactions found.
                   </td>
                 </tr>
@@ -456,6 +501,9 @@ export function PosTransactions({
                         <td className="px-4 py-3 text-gray-700">{booking.mainGuest}</td>
                         <td className="px-4 py-3 text-center text-gray-700">{booking.totalSuites}</td>
                         <td className="px-4 py-3 text-center text-gray-700">{booking.totalOrders}</td>
+                        <td className={`px-4 py-3 text-right font-semibold ${booking.fnbSubtotal > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                          {formatPosOrderSubtotal(booking.fnbSubtotal)}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <button
                             type="button"
@@ -475,7 +523,7 @@ export function PosTransactions({
 
                       {isExpanded ? (
                         <tr className="bg-gray-50 border-x border-b border-gray-200">
-                          <td colSpan={6} className="p-0">
+                          <td colSpan={7} className="p-0">
                             <ExpandedBookingDetails booking={booking} />
                           </td>
                         </tr>

@@ -1,18 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ArrowLeft, CreditCard, DollarSign, Receipt, Printer, Mail, Check } from 'lucide-react';
+import { ArrowLeft, Receipt, Printer, Mail, Check, Loader2 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Textarea } from './ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 
 interface OrderItem {
   id: number;
@@ -20,6 +12,8 @@ interface OrderItem {
   category: string;
   quantity: number;
   unitPrice: number;
+  discount?: number;
+  lineTotal: number;
 }
 
 interface BookingData {
@@ -40,8 +34,23 @@ export interface POSCheckoutProps {
   bookingData?: BookingData;
   orderItems?: OrderItem[];
   fnbSubtotal?: number;
+  guestEmail?: string;
+  isWalkIn?: boolean;
+  orderPaymentStatus?: string;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
+  onSendPaymentEmail?: (email: string) => void | Promise<void>;
+}
+
+function paymentStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'Paid':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'Pending':
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+    default:
+      return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
 }
 
 export function POSCheckout({
@@ -49,12 +58,21 @@ export function POSCheckout({
   bookingData: bookingDataProp,
   orderItems: orderItemsProp,
   fnbSubtotal: fnbSubtotalProp,
+  guestEmail: guestEmailProp = '',
+  isWalkIn = false,
+  orderPaymentStatus = 'Unpaid',
   onBack = () => {},
   onComplete,
+  onSendPaymentEmail,
 }: POSCheckoutProps = {}) {
-  const [paymentMethod, setPaymentMethod] = useState<'credit-card' | 'account-credit'>('credit-card');
+  const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSendingPaymentEmail, setIsSendingPaymentEmail] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+
+  useEffect(() => {
+    setPaymentEmail(guestEmailProp);
+  }, [guestEmailProp]);
 
   const bookingData: BookingData = bookingDataProp ?? {
     bookingNo: bookingNoProp ?? '—',
@@ -71,19 +89,39 @@ export function POSCheckout({
   const orderItems: OrderItem[] = orderItemsProp ?? [];
 
   const fnbSubtotal = fnbSubtotalProp ?? orderItems.reduce(
-    (sum, item) => sum + (item.quantity * item.unitPrice),
+    (sum, item) => sum + item.lineTotal,
     0,
   );
   const serviceCharge = fnbSubtotal * 0.1;
-  const totalOrderAmount = fnbSubtotal;
-  const totalAmount = bookingData.loungeAccess + totalOrderAmount;
-  
+  const totalAmount = bookingData.loungeAccess + fnbSubtotal;
+  const requiresPayment = fnbSubtotal > 0;
+
+  const handleSendPaymentEmail = async () => {
+    const email = paymentEmail.trim();
+    if (!email) {
+      return;
+    }
+    if (!onSendPaymentEmail || isSendingPaymentEmail) {
+      return;
+    }
+
+    setIsSendingPaymentEmail(true);
+    try {
+      await Promise.resolve(onSendPaymentEmail(email));
+    } finally {
+      setIsSendingPaymentEmail(false);
+    }
+  };
+
   const handleCompleteCheckout = () => {
     if (onComplete) {
       setIsProcessing(true);
-      void Promise.resolve(onComplete({ method: paymentMethod, total: totalAmount }))
+      void Promise.resolve(onComplete({ method: 'payment-link', total: totalAmount }))
         .then(() => {
           setIsComplete(true);
+        })
+        .catch(() => {
+          // Parent shows error toast; keep checkout form open.
         })
         .finally(() => {
           setIsProcessing(false);
@@ -114,10 +152,10 @@ export function POSCheckout({
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto">
             <Check className="w-10 h-10 text-green-600" />
           </div>
-          
+
           <div>
             <h2 className="text-2xl mb-2">Checkout Complete!</h2>
-            <p className="text-gray-600">Payment has been processed successfully</p>
+            <p className="text-gray-600">The suite has been released successfully</p>
           </div>
 
           <div className="bg-gray-50 p-6 rounded-lg space-y-3">
@@ -130,24 +168,9 @@ export function POSCheckout({
               <span className="font-semibold">{bookingData.guestName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Total Amount:</span>
-              <span className="font-semibold">HKD {totalAmount.toFixed(2)}</span>
+              <span className="text-gray-600">F&amp;B Total:</span>
+              <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Payment Method:</span>
-              <span className="font-semibold capitalize">{paymentMethod.replace('-', ' ')}</span>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <Button className="flex-1" variant="outline">
-              <Printer className="w-4 h-4 mr-2" />
-              Print Receipt
-            </Button>
-            <Button className="flex-1" variant="outline">
-              <Mail className="w-4 h-4 mr-2" />
-              Email Receipt
-            </Button>
           </div>
 
           <Button className="w-full" onClick={onBack}>
@@ -160,7 +183,6 @@ export function POSCheckout({
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" onClick={onBack}>
@@ -169,7 +191,7 @@ export function POSCheckout({
           </Button>
           <div>
             <h1>Checkout - {bookingNoProp}</h1>
-            <p className="text-gray-600">Complete payment and checkout</p>
+            <p className="text-gray-600">Collect F&amp;B payment before releasing the suite</p>
           </div>
         </div>
         <Badge className="bg-green-600 text-white text-lg px-4 py-2">
@@ -178,9 +200,7 @@ export function POSCheckout({
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Left Column - Booking Summary */}
         <div className="col-span-2 space-y-6">
-          {/* Guest Information */}
           <Card className="p-6">
             <h3 className="text-lg mb-4">Guest Information</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -203,7 +223,6 @@ export function POSCheckout({
             </div>
           </Card>
 
-          {/* Time Summary */}
           <Card className="p-6">
             <h3 className="text-lg mb-4">Time Summary</h3>
             <div className="grid grid-cols-3 gap-4">
@@ -222,7 +241,6 @@ export function POSCheckout({
             </div>
           </Card>
 
-          {/* Order Items */}
           <Card className="p-6">
             <h3 className="text-lg mb-4">Order Summary</h3>
             <div className="space-y-3">
@@ -232,11 +250,24 @@ export function POSCheckout({
                 orderItems.map((item) => (
                   <div key={item.id} className="flex justify-between items-center py-2 border-b">
                     <div className="flex-1">
-                      <p className="font-semibold">{item.name}</p>
-                      <p className="text-sm text-gray-600">{item.category}</p>
+                      <p className="font-medium">{item.name}</p>
+                      {item.unitPrice > 0 ? (
+                        <p className="text-sm text-gray-500">
+                          HK${item.unitPrice.toFixed(2)} x {item.quantity}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-500">x{item.quantity}</p>
+                      )}
+                      {item.discount != null && item.discount > 0 ? (
+                        <p className="text-xs text-green-600">Discount: HK${item.discount.toFixed(2)}</p>
+                      ) : null}
                     </div>
                     <div className="text-right">
-                      <p className="text-gray-600">x{item.quantity}</p>
+                      {item.lineTotal > 0 ? (
+                        <p className="font-semibold">HK${item.lineTotal.toFixed(2)}</p>
+                      ) : (
+                        <p className="font-semibold text-gray-400">Complimentary</p>
+                      )}
                     </div>
                   </div>
                 ))
@@ -244,75 +275,65 @@ export function POSCheckout({
             </div>
           </Card>
 
-          {/* Payment Method */}
           <Card className="p-6">
-            <h3 className="text-lg mb-4">Payment Method</h3>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setPaymentMethod('credit-card')}
-                  className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-all ${
-                    paymentMethod === 'credit-card' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <CreditCard className={`w-8 h-8 ${paymentMethod === 'credit-card' ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={paymentMethod === 'credit-card' ? 'font-semibold text-blue-600' : ''}>Credit Card</span>
-                </button>
-                
-                <button
-                  onClick={() => setPaymentMethod('account-credit')}
-                  className={`p-4 border-2 rounded-lg flex flex-col items-center gap-2 transition-all ${
-                    paymentMethod === 'account-credit' ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <DollarSign className={`w-8 h-8 ${paymentMethod === 'account-credit' ? 'text-blue-600' : 'text-gray-400'}`} />
-                  <span className={paymentMethod === 'account-credit' ? 'font-semibold text-blue-600' : ''}>Account Credit</span>
-                </button>
-              </div>
-
-              {paymentMethod === 'credit-card' && (
-                <div className="space-y-3">
-                  <div>
-                    <Label className="mb-2">Card Number</Label>
-                    <Input placeholder="**** **** **** ****" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="mb-2">Expiry Date</Label>
-                      <Input placeholder="MM/YY" />
-                    </div>
-                    <div>
-                      <Label className="mb-2">CVV</Label>
-                      <Input placeholder="***" type="password" maxLength={3} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {paymentMethod === 'account-credit' && (
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="text-sm text-gray-600">Available Credit Balance</p>
-                      <p className="text-2xl font-semibold text-blue-600">HKD {bookingData.creditBalance.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">After Payment</p>
-                      <p className="text-xl font-semibold">HKD {(bookingData.creditBalance - totalAmount).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+            <div className="flex items-start justify-between gap-4 mb-4">
               <div>
-                <Label className="mb-2">Remarks / Notes</Label>
-                <Textarea placeholder="Optional payment notes..." rows={2} />
+                <h3 className="text-lg">Payment Link</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Email the customer an F&amp;B invoice and Adyen payment link before checkout.
+                </p>
               </div>
+              {requiresPayment ? (
+                <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
+                  {orderPaymentStatus}
+                </Badge>
+              ) : null}
             </div>
+
+            {!requiresPayment ? (
+              <p className="text-sm text-gray-500">
+                No F&amp;B charges on this order. You can complete checkout without sending a payment link.
+              </p>
+            ) : isWalkIn ? (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                Walk-in sessions cannot send a booking-linked payment link from this screen. Collect payment before checkout.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="payment-email" className="mb-2">Customer Email</Label>
+                  <Input
+                    id="payment-email"
+                    type="email"
+                    placeholder="guest@example.com"
+                    value={paymentEmail}
+                    onChange={(event) => setPaymentEmail(event.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => void handleSendPaymentEmail()}
+                  disabled={isSendingPaymentEmail || !paymentEmail.trim()}
+                  data-testid="pos-send-payment-email-button"
+                >
+                  {isSendingPaymentEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending payment email…
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Payment Email
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </Card>
         </div>
 
-        {/* Right Column - Payment Summary */}
         <div className="space-y-6">
           <Card className="p-6 sticky top-6">
             <h3 className="text-lg mb-4">Payment Summary</h3>
@@ -321,9 +342,9 @@ export function POSCheckout({
                 <span className="text-gray-600">Lounge Access Fee</span>
                 <span className="font-semibold">HKD {bookingData.loungeAccess.toFixed(2)}</span>
               </div>
-              
+
               <div className="border-t pt-3">
-                <p className="text-sm text-gray-600 mb-2">Food & Beverage</p>
+                <p className="text-sm text-gray-600 mb-2">Food &amp; Beverage</p>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span>HKD {fnbSubtotal.toFixed(2)}</span>
@@ -336,9 +357,17 @@ export function POSCheckout({
 
               <div className="border-t pt-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">F&B Total</span>
+                  <span className="text-gray-600">F&amp;B Total</span>
                   <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
+                {requiresPayment ? (
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-gray-600">Payment Status</span>
+                    <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
+                      {orderPaymentStatus}
+                    </Badge>
+                  </div>
+                ) : null}
               </div>
 
               <div className="border-t pt-3">
@@ -350,14 +379,18 @@ export function POSCheckout({
             </div>
 
             <div className="mt-6 space-y-3">
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 size="lg"
                 onClick={handleCompleteCheckout}
                 disabled={isProcessing}
+                data-testid="pos-complete-checkout-button"
               >
                 {isProcessing ? (
-                  <>Processing...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
                 ) : (
                   <>
                     <Receipt className="w-4 h-4 mr-2" />
@@ -365,9 +398,9 @@ export function POSCheckout({
                   </>
                 )}
               </Button>
-              
-              <Button 
-                className="w-full" 
+
+              <Button
+                className="w-full"
                 variant="outline"
                 onClick={onBack}
                 disabled={isProcessing}
@@ -383,10 +416,6 @@ export function POSCheckout({
               <Button variant="outline" size="sm" className="w-full justify-start">
                 <Printer className="w-3 h-3 mr-2" />
                 Print Pre-bill
-              </Button>
-              <Button variant="outline" size="sm" className="w-full justify-start">
-                <Mail className="w-3 h-3 mr-2" />
-                Email Summary
               </Button>
             </div>
           </Card>
