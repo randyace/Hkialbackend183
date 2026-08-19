@@ -28,6 +28,7 @@ export interface PosMenuItemFormData {
   categoryId: number | '';
   expectedPrepTime: number;
   printerId: number | '';
+  price: number;
   allergenIds: number[];
   availability: 'available' | 'unavailable';
   published: boolean;
@@ -53,6 +54,7 @@ const defaultFormData: PosMenuItemFormData = {
   categoryId: '',
   expectedPrepTime: 15,
   printerId: '',
+  price: 0,
   allergenIds: [],
   availability: 'available',
   published: true,
@@ -200,6 +202,18 @@ export function PosMenuItemEdit({
                 min={1}
                 value={formData.expectedPrepTime}
                 onChange={(e) => updateField('expectedPrepTime', Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Price (HKD)</span>
+              <input
+                required
+                type="number"
+                min={0}
+                step={0.01}
+                value={formData.price}
+                onChange={(e) => updateField('price', Number(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
             </label>

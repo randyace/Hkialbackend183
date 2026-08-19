@@ -27,6 +27,7 @@ export interface OrderCartItem {
   name: string;
   quantity: number;
   remarks: string;
+  price?: number;
   isExpedited?: boolean;
 }
 
@@ -114,6 +115,11 @@ export function OrderCartItemRow({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
                   <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                  {typeof item.price === 'number' ? (
+                    <span className="text-xs font-medium text-gray-600">
+                      HK$ {item.price.toFixed(2)}
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                     <Flame className="h-3 w-3" aria-hidden />
                     {t('pos.expedited', 'Expedited')}
@@ -176,6 +182,11 @@ export function OrderCartItemRow({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                      {typeof item.price === 'number' ? (
+                        <span className="text-xs font-medium text-gray-600">
+                          HK$ {item.price.toFixed(2)}
+                        </span>
+                      ) : null}
                       {isExpedited ? (
                         <span className="inline-flex items-center gap-0.5 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                           <Flame className="h-3 w-3" aria-hidden />

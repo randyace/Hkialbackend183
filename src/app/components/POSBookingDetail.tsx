@@ -850,6 +850,22 @@ export function POSBookingDetail({
   const booking = bookingProp ?? generateMockBooking(bookingNo ?? 'A-202603-000001');
   const guests = booking.guests?.length > 0 ? booking.guests : booking.guestProfiles;
 
+  const ticketTotal = useMemo(() => {
+    return booking.orders.reduce((sum, order) => {
+      if (order.cancelledAt || order.status === 'cancelled') {
+        return sum;
+      }
+
+      if (Number.isFinite(order.total) && order.total > 0) {
+        return sum + order.total;
+      }
+
+      return sum + Number(order.unitPrice ?? 0) * Number(order.quantity ?? 0);
+    }, 0);
+  }, [booking.orders]);
+
+  const formattedTicketTotal = `HK$${ticketTotal.toFixed(2)}`;
+
   const getOrderStatusColor = (status: OrderItem['status']) => {
     switch (status) {
       case 'pending':
@@ -1204,7 +1220,7 @@ export function POSBookingDetail({
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-gray-600">Total Amount</span>
           <span className="text-xl font-bold text-purple-700">
-            HK${booking.totalAmount.toLocaleString()}
+            {formattedTicketTotal}
           </span>
         </div>
         <div className="mt-2 flex w-full flex-col gap-2">
@@ -1554,7 +1570,7 @@ export function POSBookingDetail({
                 </div>
                 <div>
                   <dt className="text-xs text-gray-500">Total Amount</dt>
-                  <dd className="text-sm font-medium text-gray-900">HK${booking.totalAmount.toLocaleString()}</dd>
+                  <dd className="text-sm font-medium text-gray-900">{formattedTicketTotal}</dd>
                 </div>
                 {!isWalkIn ? (
                 <div>
@@ -1595,7 +1611,7 @@ export function POSBookingDetail({
           </button>
           <div className="flex items-center">
             <span className="mr-6 text-2xl font-bold text-purple-700">
-              HK${booking.totalAmount.toLocaleString()}
+              {formattedTicketTotal}
             </span>
             <button
               type="button"

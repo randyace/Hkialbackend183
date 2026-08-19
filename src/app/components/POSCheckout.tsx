@@ -39,6 +39,7 @@ export interface POSCheckoutProps {
   bookingNo?: string;
   bookingData?: BookingData;
   orderItems?: OrderItem[];
+  fnbSubtotal?: number;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
 }
@@ -47,6 +48,7 @@ export function POSCheckout({
   bookingNo: bookingNoProp,
   bookingData: bookingDataProp,
   orderItems: orderItemsProp,
+  fnbSubtotal: fnbSubtotalProp,
   onBack = () => {},
   onComplete,
 }: POSCheckoutProps = {}) {
@@ -68,9 +70,12 @@ export function POSCheckout({
   };
   const orderItems: OrderItem[] = orderItemsProp ?? [];
 
-  const subtotal = orderItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const serviceCharge = subtotal * 0.1;
-  const totalOrderAmount = subtotal + serviceCharge;
+  const fnbSubtotal = fnbSubtotalProp ?? orderItems.reduce(
+    (sum, item) => sum + (item.quantity * item.unitPrice),
+    0,
+  );
+  const serviceCharge = fnbSubtotal * 0.1;
+  const totalOrderAmount = fnbSubtotal;
   const totalAmount = bookingData.loungeAccess + totalOrderAmount;
   
   const handleCompleteCheckout = () => {
@@ -321,7 +326,7 @@ export function POSCheckout({
                 <p className="text-sm text-gray-600 mb-2">Food & Beverage</p>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>HKD {subtotal.toFixed(2)}</span>
+                  <span>HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm mt-1">
                   <span className="text-gray-600">Service Charge (10%)</span>
@@ -332,7 +337,7 @@ export function POSCheckout({
               <div className="border-t pt-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">F&B Total</span>
-                  <span className="font-semibold">HKD {totalOrderAmount.toFixed(2)}</span>
+                  <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
               </div>
 

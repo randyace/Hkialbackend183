@@ -11,6 +11,7 @@ export interface MenuCardItem {
   categoryName: string;
   imageUrl?: string | null;
   availability: 'available' | 'unavailable';
+  price?: number;
 }
 
 export interface MenuCardProps {
@@ -97,7 +98,14 @@ export function MenuCard({
 
         <div className="flex flex-1 flex-col p-2 sm:p-3">
           <div className="mb-2 min-w-0">
-            <h4 className="truncate text-sm font-semibold text-gray-900">{item.nameEn}</h4>
+            <div className="flex items-start justify-between gap-2">
+              <h4 className="truncate text-sm font-semibold text-gray-900">{item.nameEn}</h4>
+              {typeof item.price === 'number' ? (
+                <span className="shrink-0 text-sm font-semibold text-gray-800">
+                  HK$ {item.price.toFixed(2)}
+                </span>
+              ) : null}
+            </div>
             {item.nameZh ? (
               <p className="truncate text-xs text-gray-500">{item.nameZh}</p>
             ) : null}
