@@ -239,6 +239,8 @@ interface NonFlyingGuest {
   firstName: string;
   lastName: string;
   ageGroup: AgeGroup;
+  /** Exact age (2–11) when ageGroup is Children (aged 2-11). */
+  age?: number | '';
   // 2026-06-25 — round 6.2.63 (bug 3): same as PassengerDetail.
   foodAllergies: string;
   /** ISO 3166-1 alpha-2 (mandatory). */
@@ -1916,6 +1918,13 @@ export function CreateBooking({
   if (nfgMissingNationality) {
     bookingGuestErrors.push('Nationality is required for each Non-Flying Guest (select from the country list).');
   }
+  const nfgMissingChildAge = configuredNfg.some(
+    (g) => g.ageGroup === 'Children (aged 2-11)'
+      && (typeof g.age !== 'number' || g.age < 2 || g.age > 11),
+  );
+  if (nfgMissingChildAge) {
+    bookingGuestErrors.push('Child exact age (2–11) is required for each child Non-Flying Guest.');
+  }
 
   const hasGuestErrors = bookingGuestErrors.length > 0 || psErrors.length > 0 || ldErrors.length > 0;
 
@@ -3539,7 +3548,16 @@ export function CreateBooking({
                         </div>
                         <div>
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Age Group</label>
-                          <select value={g.ageGroup} onChange={e => updateNonFlying(idx, 'ageGroup', e.target.value)}
+                          <select value={g.ageGroup} onChange={e => {
+                            const nextGroup = e.target.value as AgeGroup;
+                            setNonFlyingGuests(prev => prev.map((guest, i) => {
+                              if (i !== idx) return guest;
+                              if (nextGroup === 'Children (aged 2-11)') {
+                                return { ...guest, ageGroup: nextGroup };
+                              }
+                              return { ...guest, ageGroup: nextGroup, age: '' };
+                            }));
+                          }}
                             className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                             <option value="">Select age group</option>
                             <option value="Adults (aged 12 and above)">Adults (aged 12 and above)</option>
@@ -3548,6 +3566,33 @@ export function CreateBooking({
                           </select>
                         </div>
                       </div>
+                      {g.ageGroup === 'Children (aged 2-11)' && (
+                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                          <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">
+                            Child Exact Age (2-11) *
+                          </label>
+                          <select
+                            value={g.age || ''}
+                            onChange={(e) => {
+                              const updatedGuests = [...nonFlyingGuests];
+                              updatedGuests[idx] = {
+                                ...updatedGuests[idx],
+                                age: e.target.value ? Number(e.target.value) : '',
+                              };
+                              setNonFlyingGuests(updatedGuests);
+                            }}
+                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                            required
+                          >
+                            <option value="">-- Please select child age --</option>
+                            {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((age) => (
+                              <option key={age} value={age}>
+                                {age} years old
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="mt-4">
                         <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
                         <NationalityTypeahead

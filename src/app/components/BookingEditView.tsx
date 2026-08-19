@@ -54,6 +54,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
+import { missingChildAgeField } from '../../../../../lib/guestAgeGroup';
 import {
   EditSectionAccountInfo,
   EditSectionFlight,
@@ -107,6 +108,8 @@ export interface EditPassenger {
   travelDocNo: string;
   membershipNo?: string;
   foodAllergies?: string;
+  /** Exact age (2–11) when ageGroup is Children (aged 2-11). */
+  age?: number;
   /** ISO 3166-1 alpha-2 */
   nationality?: string;
 }
@@ -116,8 +119,8 @@ export interface EditNonFlyingGuest {
   lastName: string;
   ageGroup: EditAgeGroup;
   foodAllergies?: string;
-  /** ISO 3166-1 alpha-2 */
-  nationality?: string;
+  /** Exact age (2–11) when ageGroup is Children (aged 2-11). */
+  age?: number;
 }
 
 export interface EditLimoStop {
@@ -511,6 +514,8 @@ function getMissingPassengerFields(p: EditPassenger): string[] {
   if (!p.firstName) missing.push('First Name');
   if (!p.lastName) missing.push('Last Name');
   if (!p.ageGroup) missing.push('Age Group');
+  const childAgeMissing = missingChildAgeField(p.ageGroup, p.age);
+  if (childAgeMissing) missing.push(childAgeMissing);
   // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
   // 2026-07-17+ — guest nationality mandatory on create; surface on edit too.
   if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
@@ -524,6 +529,8 @@ function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
   if (!g.firstName) missing.push('First Name');
   if (!g.lastName) missing.push('Last Name');
   if (!g.ageGroup) missing.push('Age Group');
+  const childAgeMissing = missingChildAgeField(g.ageGroup, g.age);
+  if (childAgeMissing) missing.push(childAgeMissing);
   if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
     missing.push('Nationality');
   }

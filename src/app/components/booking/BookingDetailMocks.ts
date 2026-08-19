@@ -193,6 +193,8 @@ export interface Booking {
     birthdayMonth?: string;
     birthdayYear?: string;
     foodAllergies?: string;
+    /** Exact age (2–11) for children band. */
+    age?: number;
     /** ISO 3166-1 alpha-2 */
     nationality?: string;
   }>;
@@ -214,6 +216,8 @@ export interface PassengerDetail {
   birthdayMonth: string;
   birthdayYear: string;
   foodAllergies: string;
+  /** Exact age (2–11) for children band. */
+  age?: number;
   /** ISO 3166-1 alpha-2 (mandatory on create since 2026-07-17). */
   nationality: string;
 }
@@ -239,6 +243,8 @@ export interface NonFlyingGuest {
   lastName: string;
   ageGroup: AgeGroup;
   foodAllergies: string;
+  /** Exact age (2–11) for children band. */
+  age?: number;
   /** ISO 3166-1 alpha-2 (mandatory on create since 2026-07-17). */
   nationality: string;
 }

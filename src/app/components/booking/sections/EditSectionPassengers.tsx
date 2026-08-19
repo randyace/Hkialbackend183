@@ -22,6 +22,12 @@ import { NationalityTypeahead } from '../../../../../../../components/Nationalit
 import type {
   BookingFormData, EditPassenger,
 } from '../BookingEditView';
+import {
+  CHILD_AGE_SELECT_OPTIONS,
+  guestChildAgeSelectValue,
+  isChildrenAgeGroup,
+  parseGuestAge,
+} from '../../../../../../../lib/guestAgeGroup';
 
 // Spec (Sky 2026-06-10 age-dropdown normalize): ONLY these 3 labels.
 // Pre-rename wire values are normalised on read by mapPassengerAgeGroup
@@ -112,7 +118,13 @@ export function EditSectionPassengers({
                   <label className="block text-xs text-gray-600 mb-1">Age Group <span className="text-red-500">*</span></label>
                   <Select
                     value={p.ageGroup}
-                    onValueChange={v => updatePassenger(i, { ageGroup: v as EditPassenger['ageGroup'] })}
+                    onValueChange={v => {
+                      const patch: Partial<EditPassenger> = {
+                        ageGroup: v as EditPassenger['ageGroup'],
+                      };
+                      if (!isChildrenAgeGroup(v)) patch.age = undefined;
+                      updatePassenger(i, patch);
+                    }}
                   >
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
@@ -122,6 +134,22 @@ export function EditSectionPassengers({
                     </SelectContent>
                   </Select>
                 </div>
+                {isChildrenAgeGroup(p.ageGroup) && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Child Age <span className="text-red-500">*</span></label>
+                    <Select
+                      value={guestChildAgeSelectValue(p.age)}
+                      onValueChange={v => updatePassenger(i, { age: parseGuestAge(v) })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select age (2–11)" /></SelectTrigger>
+                      <SelectContent>
+                        {CHILD_AGE_SELECT_OPTIONS.map((age) => (
+                          <SelectItem key={age} value={String(age)}>{age} years old</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Travel Doc No.</label>
                   <input

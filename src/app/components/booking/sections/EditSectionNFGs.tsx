@@ -24,6 +24,13 @@ import { NationalityTypeahead } from '../../../../../../../components/Nationalit
 import type {
   BookingFormData, EditNonFlyingGuest,
 } from '../BookingEditView';
+import {
+  CHILD_AGE_SELECT_OPTIONS,
+  guestChildAgeSelectValue,
+  isChildrenAgeGroup,
+  missingChildAgeField,
+  parseGuestAge,
+} from '../../../../../../../lib/guestAgeGroup';
 
 // Spec (Sky 2026-06-10): ONLY the 3 canonical labels. Legacy aliases are
 // normalised on read by mapPassengerAgeGroup — not offered in the UI.
@@ -112,7 +119,13 @@ export function EditSectionNFGs({
                   <label className="block text-xs text-gray-600 mb-1">Age Group <span className="text-red-500">*</span></label>
                   <Select
                     value={g.ageGroup}
-                    onValueChange={v => updateNfg(i, { ageGroup: v as EditNonFlyingGuest['ageGroup'] })}
+                    onValueChange={v => {
+                      const patch: Partial<EditNonFlyingGuest> = {
+                        ageGroup: v as EditNonFlyingGuest['ageGroup'],
+                      };
+                      if (!isChildrenAgeGroup(v)) patch.age = undefined;
+                      updateNfg(i, patch);
+                    }}
                   >
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
@@ -122,6 +135,22 @@ export function EditSectionNFGs({
                     </SelectContent>
                   </Select>
                 </div>
+                {isChildrenAgeGroup(g.ageGroup) && (
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Child Age <span className="text-red-500">*</span></label>
+                    <Select
+                      value={guestChildAgeSelectValue(g.age)}
+                      onValueChange={v => updateNfg(i, { age: parseGuestAge(v) })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select age (2–11)" /></SelectTrigger>
+                      <SelectContent>
+                        {CHILD_AGE_SELECT_OPTIONS.map((age) => (
+                          <SelectItem key={age} value={String(age)}>{age} years old</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Nationality <span className="text-red-500">*</span></label>
                   <NationalityTypeahead
