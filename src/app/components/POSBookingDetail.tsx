@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -783,10 +784,14 @@ export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   isClearingWalkIn?: boolean;
   isLoading?: boolean;
   heldPreorderItems?: Array<{
+    id?: number;
+    pos_menu_item_id?: number;
     name_en?: string | null;
     quantity: number;
     remarks?: string | null;
   }>;
+  selectedHeldItems?: number[];
+  onToggleHeldItem?: (itemId: number, checked: boolean) => void;
   onFireHeldPreorders?: () => void;
   isFiringHeldPreorders?: boolean;
   onCancelOrderItem?: (posOrderItemId: number) => void | Promise<void>;
@@ -820,6 +825,8 @@ export function POSBookingDetail({
   isClearingWalkIn = false,
   isLoading = false,
   heldPreorderItems = [],
+  selectedHeldItems = [],
+  onToggleHeldItem,
   onFireHeldPreorders,
   isFiringHeldPreorders = false,
   onCancelOrderItem,
@@ -1113,12 +1120,27 @@ export function POSBookingDetail({
             <ul className="mt-2 space-y-1">
               {heldPreorderItems.map((item, index) => {
                 const trimmedRemarks = (item.remarks ?? '').trim();
+                const itemId = item.id ?? item.pos_menu_item_id;
+                const isSelectable = typeof itemId === 'number';
+                const isChecked = isSelectable && selectedHeldItems.includes(itemId);
 
                 return (
                   <li
                     key={`${item.name_en ?? 'item'}-${item.remarks ?? ''}-${index}`}
                     className="flex items-start justify-between gap-3 rounded-md border border-yellow-200 bg-white/70 px-2 py-1.5 text-xs"
                   >
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={isChecked}
+                      disabled={isFiringHeldPreorders}
+                      onCheckedChange={(checked) => {
+                        if (!isSelectable) {
+                          return;
+                        }
+                        onToggleHeldItem?.(itemId, checked === true);
+                      }}
+                      aria-label={`Select held item ${item.name_en ?? 'item'}`}
+                    />
                     <div className="min-w-0 flex-1">
                       <span className="font-medium text-gray-900">{item.name_en ?? '—'}</span>
                       {trimmedRemarks ? (
@@ -1140,7 +1162,7 @@ export function POSBookingDetail({
               size="sm"
               className="mt-2 w-full bg-amber-600 text-white hover:bg-amber-700"
               onClick={onFireHeldPreorders}
-              disabled={isFiringHeldPreorders || !onFireHeldPreorders}
+              disabled={isFiringHeldPreorders || !onFireHeldPreorders || selectedHeldItems.length === 0}
             >
               {isFiringHeldPreorders ? 'Sending to kitchen...' : 'Send Held Pre-orders to Kitchen'}
             </Button>
