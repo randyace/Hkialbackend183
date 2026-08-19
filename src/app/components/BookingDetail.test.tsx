@@ -14,7 +14,7 @@ import { BookingDetail } from './BookingDetail';
 // (tests/services/bookingsApi.test.ts).
 
 describe('BookingDetail — flight change props', () => {
-  it('renders Update Flight Info button when onRefreshFlight is provided', () => {
+  it('renders Update Flight Info button inside the Flight Information card when onRefreshFlight is provided', () => {
     render(
       <BookingDetail
         onBack={vi.fn()}
@@ -24,7 +24,25 @@ describe('BookingDetail — flight change props', () => {
         refreshing={false}
       />,
     );
-    expect(screen.getByTestId('booking-detail-refresh-flight')).toBeInTheDocument();
+    const card = screen.getByTestId('booking-detail-flight-readonly');
+    expect(card).toContainElement(screen.getByTestId('booking-detail-refresh-flight'));
+  });
+
+  it('renders last-checked timestamp after the Flight Information title', () => {
+    render(
+      <BookingDetail
+        onBack={vi.fn()}
+        onRefreshFlight={vi.fn()}
+        pendingChanges={[]}
+        onResolvePendingChange={vi.fn()}
+        refreshing={false}
+        flightLastCheckedLabel="Last checked 19 Aug 2026, 21:00 HKT (auto-poll)"
+      />,
+    );
+    const card = screen.getByTestId('booking-detail-flight-readonly');
+    const stamp = screen.getByTestId('booking-detail-flight-last-checked');
+    expect(card).toContainElement(stamp);
+    expect(stamp).toHaveTextContent('Last checked 19 Aug 2026, 21:00 HKT (auto-poll)');
   });
 
   it('renders pending-change banner when pendingChanges is non-empty', () => {

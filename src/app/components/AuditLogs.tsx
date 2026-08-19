@@ -51,6 +51,9 @@ const MODULE_LABELS: Record<string, string> = {
   GradingPackage: 'Grading Packages',
   Member: 'Members',
   Contract: 'Contracts',
+  invoices: 'Invoices',
+  Email: 'Email',
+  Cirium: 'Flight Info',
   system: 'System',
   auth: 'Authentication',
 };
@@ -74,6 +77,32 @@ function getStatusColor(status: string): string {
   }
 }
 
+export interface AuditLogsPagination {
+  page: number;
+  lastPage: number;
+  total: number;
+  perPage: number;
+  onPageChange: (page: number) => void;
+}
+
+export interface AuditLogsServerFilters {
+  search: string;
+  module: string;
+  action: string;
+  onSearchChange: (value: string) => void;
+  onModuleChange: (value: string) => void;
+  onActionChange: (value: string) => void;
+  moduleOptions: string[];
+  actionOptions: string[];
+}
+
+export interface AuditLogsSummary {
+  total: number;
+  email: number;
+  cirium: number;
+  failed: number;
+}
+
 export interface AuditLogsProps {
   audits?: AuditLog[];
   isLoading?: boolean;
@@ -83,6 +112,11 @@ export interface AuditLogsProps {
   endDate?: string;
   onStartDateChange?: (value: string) => void;
   onEndDateChange?: (value: string) => void;
+  /** When set, the container owns paging — this view renders the current page only. */
+  pagination?: AuditLogsPagination;
+  /** When set, search/module/action are controlled and sent to the API. */
+  serverFilters?: AuditLogsServerFilters;
+  summary?: AuditLogsSummary;
 }
 
 export function AuditLogs({
@@ -92,10 +126,14 @@ export function AuditLogs({
   endDate: endDateProp,
   onStartDateChange,
   onEndDateChange,
+  pagination,
+  serverFilters,
+  summary,
 }: AuditLogsProps = {}) {
   // Only fall back to MOCK when the prop is omitted (standalone figma Make).
   // An empty array from the container must not flash mock rows.
   const logs: AuditLog[] = auditsProp !== undefined ? auditsProp : MOCK_AUDIT_LOGS;
+  const serverMode = pagination !== undefined;
 
   const [searchTerm, setSearchTerm] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
@@ -114,19 +152,43 @@ export function AuditLogs({
     else setLocalEndDate(v);
   };
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = pagination?.perPage ?? 20;
+
+  const searchValue = serverFilters?.search ?? searchTerm;
+  const moduleValue = serverFilters?.module ?? moduleFilter;
+  const actionValue = serverFilters?.action ?? actionFilter;
+  const setSearchValue = (v: string) => {
+    if (serverFilters) serverFilters.onSearchChange(v);
+    else setSearchTerm(v);
+  };
+  const setModuleValue = (v: string) => {
+    if (serverFilters) serverFilters.onModuleChange(v);
+    else setModuleFilter(v);
+  };
+  const setActionValue = (v: string) => {
+    if (serverFilters) serverFilters.onActionChange(v);
+    else setActionFilter(v);
+  };
 
   const moduleOptions = useMemo(() => {
+    if (serverFilters?.moduleOptions) return serverFilters.moduleOptions;
     const modules = new Set(logs.map((log) => log.module).filter(Boolean));
     return ['all', ...Array.from(modules).sort()];
-  }, [logs]);
+  }, [logs, serverFilters]);
 
   const actionOptions = useMemo(() => {
+    if (serverFilters?.actionOptions) return serverFilters.actionOptions;
     const actions = new Set(logs.map((log) => log.action).filter(Boolean));
     return ['all', ...Array.from(actions).sort()];
-  }, [logs]);
+  }, [logs, serverFilters]);
 
   const filteredLogs = useMemo(() => {
+    if (serverMode) {
+      const totalPages = pagination.lastPage || 1;
+      const safePage = Math.min(Math.max(pagination.page, 1), totalPages);
+      return { list: logs, paginated: logs, totalPages, safePage };
+    }
+
     const list = logs.filter((log) => {
       const q = searchTerm.toLowerCase();
       const matchesSearch =
@@ -149,19 +211,25 @@ export function AuditLogs({
     const safePage = Math.min(currentPage, totalPages);
     const startIndex = (safePage - 1) * itemsPerPage;
     return { list, paginated: list.slice(startIndex, startIndex + itemsPerPage), totalPages, safePage };
-  }, [logs, searchTerm, moduleFilter, actionFilter, statusFilter, startDate, endDate, currentPage]);
+  }, [logs, searchTerm, moduleFilter, actionFilter, statusFilter, startDate, endDate, currentPage, itemsPerPage, serverMode, pagination]);
 
   const { list: filteredList, paginated, totalPages, safePage } = filteredLogs;
+  const entryTotal = serverMode ? pagination.total : filteredList.length;
   const startIndex = (safePage - 1) * itemsPerPage;
 
+  const goToPage = (page: number) => {
+    if (pagination) pagination.onPageChange(page);
+    else setCurrentPage(page);
+  };
+
   const clearFilters = () => {
-    setSearchTerm('');
-    setModuleFilter('all');
-    setActionFilter('all');
+    setSearchValue('');
+    setModuleValue('all');
+    setActionValue('all');
     setStatusFilter('all');
     setStartDate('');
     setEndDate('');
-    setCurrentPage(1);
+    goToPage(1);
   };
 
   // When server-side date filters change, reset to page 1.
@@ -184,11 +252,11 @@ export function AuditLogs({
                 type="text"
                 placeholder="Search by user, action, module, or details..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                value={searchValue}
+                onChange={(e) => { setSearchValue(e.target.value); if (!serverMode) setCurrentPage(1); }}
               />
             </div>
-            <Select value={moduleFilter} onValueChange={(v) => { setModuleFilter(v); setCurrentPage(1); }}>
+            <Select value={moduleValue} onValueChange={(v) => { setModuleValue(v); if (!serverMode) setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by module" />
               </SelectTrigger>
@@ -200,7 +268,7 @@ export function AuditLogs({
                 ))}
               </SelectContent>
             </Select>
-            <Select value={actionFilter} onValueChange={(v) => { setActionFilter(v); setCurrentPage(1); }}>
+            <Select value={actionValue} onValueChange={(v) => { setActionValue(v); if (!serverMode) setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by action" />
               </SelectTrigger>
@@ -212,6 +280,7 @@ export function AuditLogs({
                 ))}
               </SelectContent>
             </Select>
+            {!serverFilters ? (
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
               <SelectTrigger className="w-full md:w-48">
                 <SelectValue placeholder="Filter by status" />
@@ -223,6 +292,7 @@ export function AuditLogs({
                 <SelectItem value="warning">Warning</SelectItem>
               </SelectContent>
             </Select>
+            ) : null}
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
@@ -232,7 +302,7 @@ export function AuditLogs({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => { setStartDate(e.target.value); if (!serverMode) setCurrentPage(1); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -244,7 +314,7 @@ export function AuditLogs({
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
+                  onChange={(e) => { setEndDate(e.target.value); if (!serverMode) setCurrentPage(1); }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 />
                 <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -267,19 +337,25 @@ export function AuditLogs({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <p className="text-sm text-gray-600">Total Activities</p>
-          <h2 className="mt-1">{logs.length}</h2>
+          <h2 className="mt-1">{summary ? summary.total : logs.length}</h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Successful Actions</p>
-          <h2 className="mt-1 text-green-600">{logs.filter((l) => l.status === 'success').length}</h2>
+          <p className="text-sm text-gray-600">{summary ? 'Emails' : 'Successful Actions'}</p>
+          <h2 className="mt-1 text-green-600">
+            {summary ? summary.email : logs.filter((l) => l.status === 'success').length}
+          </h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Failed Actions</p>
-          <h2 className="mt-1 text-red-600">{logs.filter((l) => l.status === 'failed').length}</h2>
+          <p className="text-sm text-gray-600">{summary ? 'Flight Info' : 'Failed Actions'}</p>
+          <h2 className={summary ? 'mt-1 text-blue-600' : 'mt-1 text-red-600'}>
+            {summary ? summary.cirium : logs.filter((l) => l.status === 'failed').length}
+          </h2>
         </Card>
         <Card className="p-4">
-          <p className="text-sm text-gray-600">Warnings</p>
-          <h2 className="mt-1 text-yellow-600">{logs.filter((l) => l.status === 'warning').length}</h2>
+          <p className="text-sm text-gray-600">{summary ? 'Failed' : 'Warnings'}</p>
+          <h2 className={summary ? 'mt-1 text-red-600' : 'mt-1 text-yellow-600'}>
+            {summary ? summary.failed : logs.filter((l) => l.status === 'warning').length}
+          </h2>
         </Card>
       </div>
 
@@ -335,12 +411,12 @@ export function AuditLogs({
         <p className="text-sm text-gray-600">
           {isLoading
             ? 'Loading…'
-            : `Showing ${filteredList.length ? startIndex + 1 : 0}–${Math.min(startIndex + itemsPerPage, filteredList.length)} of ${filteredList.length} entries`}
+            : `Showing ${entryTotal ? startIndex + 1 : 0}–${Math.min(startIndex + itemsPerPage, entryTotal)} of ${entryTotal} entries`}
         </p>
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onClick={() => goToPage(Math.max(1, safePage - 1))}
             disabled={safePage <= 1}
             className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
           >
@@ -351,7 +427,7 @@ export function AuditLogs({
           </span>
           <button
             type="button"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => goToPage(Math.min(totalPages, safePage + 1))}
             disabled={safePage >= totalPages}
             className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-sm disabled:opacity-50"
           >

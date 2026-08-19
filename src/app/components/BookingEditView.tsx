@@ -361,6 +361,11 @@ export interface BookingFormData {
   selectedAddonKeys: string[];
   /** 2026-07-16 — Lane B catalog picks (qty-only). */
   catalogAddonSelections?: Array<{ name: string; quantity: number }>;
+  /**
+   * 2026-08-19 — staff unit-price overrides on Service Items.
+   * Keys: `{product}:{key}` (premiere_suite:base) or `addon:{name}`.
+   */
+  priceOverrides?: Record<string, number>;
   assignedStaffIds: number[];
   paymentMode: EditPaymentMode;
   specialRequests?: string;
@@ -485,6 +490,7 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   wheelchairPassenger: '',
   selectedAddonKeys: [],
   catalogAddonSelections: [],
+  priceOverrides: {},
   assignedStaffIds: [],
   paymentMode:      'Upfront',
   specialRequests:  '',
