@@ -156,10 +156,9 @@ export function SystemUserEdit({
   const [formDepartment, setFormDepartment] = useState(DEFAULT_FORM.department);
   const [directPermissions, setDirectPermissions] = useState<string[]>([]);
   const [roleInheritedPermissions, setRoleInheritedPermissions] = useState<string[]>([]);
+  const [rolePermissionsReady, setRolePermissionsReady] = useState(false);
   const [formStatus, setFormStatus] = useState<SystemUserStatus>(DEFAULT_FORM.status);
   const [formPassword, setFormPassword] = useState('');
-  const previousRoleRef = useRef<SystemUserRole | null>(null);
-  const skipNextDirectHydrateRef = useRef(false);
 
   const effectiveSet = useMemo(() => {
     if (effectivePermissionNames == null) return null;
@@ -197,7 +196,9 @@ export function SystemUserEdit({
   /**
    * Always start from the master PermissionMatrix catalog (never the old 12-item list).
    * Self-view: only permissions present in effective_permissions.
-   * Editing others: only permissions the actor may grant (full catalog when Super Admin).
+   * Editing others: show the full catalog and let each checkbox decide whether
+   * it is grantable. This prevents available permissions from disappearing or
+   * looking permanently locked just because they are currently unchecked.
    */
   const groups = useMemo(() => {
     const base =
@@ -213,14 +214,12 @@ export function SystemUserEdit({
             if (!effectiveSet) return false;
             return setContainsPermission(effectiveSet, p.name);
           }
-          if (!grantableSet) return true;
-          return setContainsPermission(grantableSet, p.name);
+          return true;
         }),
       }))
       .filter((group) => group.permissions.length > 0);
   }, [
     permissionGroups,
-    grantableSet,
     effectiveSet,
     permissionsReadOnly,
   ]);
@@ -252,15 +251,9 @@ export function SystemUserEdit({
 
   // Hydrate direct permissions from dedicated API (preferred) or form payload.
   useEffect(() => {
-    if (skipNextDirectHydrateRef.current) {
-      skipNextDirectHydrateRef.current = false;
-      return;
-    }
-    if (initialDirectPermissions !== undefined) {
+    if (initialDirectPermissions && initialDirectPermissions.length > 0) {
       setDirectPermissions([...initialDirectPermissions]);
-      return;
-    }
-    if (initialData?.permissions) {
+    } else if (initialData?.permissions) {
       setDirectPermissions([...initialData.permissions]);
     }
   }, [initialDirectPermissions, initialData]);
@@ -269,29 +262,26 @@ export function SystemUserEdit({
   useEffect(() => {
     if (selectedRoleId === null || !loadRolePermissions) {
       setRoleInheritedPermissions([]);
+      setRolePermissionsReady(true);
       return;
     }
 
     let cancelled = false;
+    setRolePermissionsReady(false);
 
     loadRolePermissions(selectedRoleId)
       .then((permissions) => {
         if (!cancelled) {
           setRoleInheritedPermissions(permissions);
+          setRolePermissionsReady(true);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setRoleInheritedPermissions([]);
+          setRolePermissionsReady(true);
         }
       });
-
-    // On a user-driven role change, wipe direct extras so the UI mirrors the new role.
-    if (previousRoleRef.current !== null && previousRoleRef.current !== formRole) {
-      skipNextDirectHydrateRef.current = true;
-      setDirectPermissions([]);
-    }
-    previousRoleRef.current = formRole;
 
     return () => {
       cancelled = true;
@@ -310,18 +300,31 @@ export function SystemUserEdit({
       ? [...editableRoles, initialData.role]
       : editableRoles;
 
-  const toggleDirectPermission = (perm: string) => {
+  const handleRoleChange = (newRole: SystemUserRole) => {
+    setFormRole(newRole);
+    // Only wipe direct permissions when a human actively changes the role.
+    if (newRole !== initialData?.role) {
+      setDirectPermissions([]);
+    }
+  };
+
+  const toggleDirectPermission = (perm: string, checked: boolean) => {
     if (permissionsReadOnly) return;
     if (inheritedSet.has(perm)) return;
-    setDirectPermissions((prev) =>
-      prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm],
-    );
+    setDirectPermissions((prev) => {
+      if (checked) {
+        return prev.includes(perm) ? prev : [...prev, perm];
+      }
+      return prev.filter((p) => p !== perm);
+    });
   };
 
   const handleToggleGroup = (groupPermissions: string[], isCurrentlyAllSelected: boolean) => {
     if (permissionsReadOnly) return;
     // Only toggle permissions that are not locked as role defaults.
-    const toggleable = groupPermissions.filter((name) => !inheritedSet.has(name));
+    const toggleable = groupPermissions.filter(
+      (name) => !inheritedSet.has(name) && (!grantableSet || setContainsPermission(grantableSet, name)),
+    );
     if (toggleable.length === 0) return;
 
     setDirectPermissions((prev) => {
@@ -423,7 +426,7 @@ export function SystemUserEdit({
                   <label className="mb-[10px] block text-sm text-gray-700">Role</label>
                   <select
                     value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
+                    onChange={(e) => handleRoleChange(e.target.value as SystemUserRole)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600"
                     disabled={roleSelectDisabled}
                   >
@@ -498,7 +501,7 @@ export function SystemUserEdit({
                   <select
                     id="su-role-permissions"
                     value={formRole}
-                    onChange={(e) => setFormRole(e.target.value as SystemUserRole)}
+                    onChange={(e) => handleRoleChange(e.target.value as SystemUserRole)}
                     className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600"
                     disabled={roleSelectDisabled || permissionsReadOnly}
                   >
@@ -525,7 +528,12 @@ export function SystemUserEdit({
               </div>
 
               <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                {groups.map((group) => {
+                {!rolePermissionsReady ? (
+                  <div className="py-8 text-sm text-gray-500 text-center">
+                    Loading role default permissions…
+                  </div>
+                ) : null}
+                {rolePermissionsReady ? groups.map((group) => {
                   const groupPermissionNames = group.permissions.map((p) => p.name);
                   if (groupPermissionNames.length === 0) {
                     return null;
@@ -534,7 +542,7 @@ export function SystemUserEdit({
                   const isPermissionHeld = (name: string) => permissionIsOwned(name);
 
                   const toggleablePermissions = groupPermissionNames.filter(
-                    (name) => !inheritedSet.has(name),
+                    (name) => !inheritedSet.has(name) && (!grantableSet || setContainsPermission(grantableSet, name)),
                   );
                   const isAllSelected =
                     groupPermissionNames.length > 0 &&
@@ -569,6 +577,7 @@ export function SystemUserEdit({
                         {group.permissions.map((permission) => {
                           const isInherited = inheritedSet.has(permission.name);
                           const isHeld = isPermissionHeld(permission.name);
+                          const canGrant = !grantableSet || setContainsPermission(grantableSet, permission.name);
                           const isLocked = permissionsReadOnly || isInherited;
                           return (
                             <label
@@ -582,16 +591,22 @@ export function SystemUserEdit({
                               <input
                                 type="checkbox"
                                 className="rounded border-gray-300 accent-black shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
-                                checked={isHeld}
+                                checked={isInherited || directPermissions.includes(permission.name)}
                                 disabled={isLocked}
-                                onChange={() => toggleDirectPermission(permission.name)}
+                                onChange={(e) =>
+                                  toggleDirectPermission(permission.name, e.target.checked)
+                                }
                               />
-                              <span className={`text-sm ${isInherited || permissionsReadOnly ? 'text-gray-500' : 'text-gray-900'}`}>
+                              <span className={`text-sm ${isLocked ? 'text-gray-500' : 'text-gray-900'}`}>
                                 <span className="block">
                                   {permission.label}
                                   {isInherited ? (
                                     <span className="ml-1.5 text-xs font-normal text-gray-400">
                                       (Role Default)
+                                    </span>
+                                  ) : !canGrant && !permissionsReadOnly ? (
+                                    <span className="ml-1.5 text-xs font-normal text-gray-400">
+                                      (Not Grantable)
                                     </span>
                                   ) : null}
                                 </span>
@@ -605,8 +620,8 @@ export function SystemUserEdit({
                       </div>
                     </section>
                   );
-                })}
-                {groups.length === 0 && (
+                }) : null}
+                {rolePermissionsReady && groups.length === 0 && (
                   <div className="py-8 text-sm text-gray-500 text-center">
                     No permissions available.
                   </div>
