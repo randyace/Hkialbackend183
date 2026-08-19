@@ -1918,9 +1918,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
            booking.paymentStatus !== 'PaymentLinkPaid' &&
            booking.paymentStatus !== 'Refunded' && (
             <Button variant="outline" onClick={() => openDocumentDialog('invoice')}>
-              <FileText className="w-4 h-4 mr-2" />
-              Generate Invoice
-            </Button>
+            <FileText className="w-4 h-4 mr-2" />
+            Generate Invoice
+          </Button>
           )}
           {(booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid') && (
             <Button variant="outline" onClick={() => openDocumentDialog('receipt')}>
@@ -2246,7 +2246,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {change.change_type === 'time_or_date' && 'Flight time changed'}
             {change.change_type === 'route' && 'Flight route changed'}
             {change.change_type === 'flight_not_found' && 'Flight not found by Cirium'}
-          </div>
+              </div>
           <div className="text-sm text-slate-700">
             {change.change_type === 'time_or_date' && (
               <p>
@@ -2294,14 +2294,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {formData && onFormChange ? (
             <div data-testid="booking-detail-flight-editor">
               <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} />
-            </div>
+                </div>
           ) : (
             <Card className="p-6" data-testid="booking-detail-flight-readonly">
               <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Flight Information</h3>
               <p className="text-lg">{booking.flightNo || '—'} · {booking.flightTime || '—'}</p>
             </Card>
-          )}
-        </div>
+                )}
+              </div>
         {/* 2026-08-19 — round 6.2.169 task 8. Manual
             "Update Flight Info" button. Wrapped in a flex row next to
             the flight info card so it doesn't disturb the
@@ -3279,7 +3279,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       <Card className="p-6" data-testid="booking-detail-service-items">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
+          <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
             <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit quantity, unit price, and discount, including Premiere Suite and Lounge Deluxe.</p>
           </div>
         </div>
@@ -3512,15 +3512,15 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             </div>
                           );
                         })() : (
-                          <div className="flex flex-col gap-1">
-                            <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                            <textarea
-                              className="w-full px-3 py-2 border rounded text-sm resize-none"
-                              rows={2}
-                              defaultValue={limoRemarks}
-                              readOnly
-                            />
-                          </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                          <textarea
+                            className="w-full px-3 py-2 border rounded text-sm resize-none"
+                            rows={2}
+                            defaultValue={limoRemarks}
+                            readOnly
+                          />
+                        </div>
                         )}
                       </td>
                     </tr>
@@ -3630,11 +3630,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             >
                               <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <input
-                              type="number"
-                              value={qty}
-                              onChange={(e) => {
-                                const next = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
+                        <input
+                          type="number"
+                          value={qty}
+                          onChange={(e) => {
+                            const next = Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1));
                                 onFormChange({ hasLoungeExtension: true, loungeExtensionQty: next });
                               }}
                               className="w-14 px-2 py-1 border rounded text-center"
@@ -3655,11 +3655,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <input
                             type="number"
                             value={qty}
-                            className="w-20 px-2 py-1 border rounded text-center"
-                            min="1"
-                            max="6"
+                          className="w-20 px-2 py-1 border rounded text-center"
+                          min="1"
+                          max="6"
                             readOnly
-                          />
+                        />
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -3772,7 +3772,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 <tr key={`invoice-catalog-${row.name}`} data-testid="invoice-additional-catalog-row">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">{row.name}</p>
+                    <p className="font-medium">{row.name}</p>
                       {renderAddonRemove(row.name, () => {
                         onFormChange?.({
                           catalogAddonSelections: (formData?.catalogAddonSelections ?? []).filter(
