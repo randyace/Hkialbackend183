@@ -850,6 +850,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setShowAddonDropdown(false);
   };
 
+  const addonPriceOverridePatch = (name: string): Partial<BookingFormData> => {
+    const n = Number(addonUnitPrice);
+    if (!Number.isFinite(n) || n < 0) return {};
+    return {
+      priceOverrides: {
+        ...(formData?.priceOverrides ?? {}),
+        [`addon:${name}`]: Math.round(n * 100) / 100,
+      },
+    };
+  };
+
   const handleAddItem = () => {
     if (!selectedAddon) { toast.error('Please select an add-on service first.'); return; }
     if (selectedAddon === 'Limousine Transfer' && limoStops.every(s => !s.location.trim())) {
@@ -873,14 +884,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             type: s.type,
             location: s.location,
           })),
+          ...addonPriceOverridePatch(selectedAddon),
         });
       } else if (selectedAddon === 'Wheelchair Assistance') {
         onFormChange({
           hasWheelchair: true,
           wheelchairPassenger: wheelchairPassenger.trim(),
+          ...addonPriceOverridePatch(selectedAddon),
         });
       } else if (selectedAddon === 'Security Escort Service') {
-        onFormChange({ hasSecurity: true });
+        onFormChange({ hasSecurity: true, ...addonPriceOverridePatch(selectedAddon) });
       } else if (selectedAddon === 'Lounge Extension') {
         onFormChange({
           hasLoungeExtension: true,
@@ -895,6 +908,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             ...without,
             { name: selectedAddon, quantity: Math.max(1, addonQty || 1) },
           ],
+          ...addonPriceOverridePatch(selectedAddon),
         });
       }
       toast.success(`"${selectedAddon}" added. Click Save All Changes below to persist.`);
@@ -967,6 +981,63 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         };
       }),
   ];
+
+  const SERVICE_ITEM_PRODUCT_KEYS = new Set([
+    'base',
+    'add_on_flying_guest',
+    'add_on_non_flying_guest',
+    'add_on_child_2_11_1_2',
+    'add_on_child_2_11_3_plus',
+    'add_on_additional_hour',
+  ]);
+  const inferLineProduct = (line: { product?: string }): string | undefined => {
+    if (line.product) return line.product;
+    const hasPs = (formData?.numPremiereSuites ?? 0) > 0;
+    const hasLd = ((formData?.vipPassengersInLoungeDeluxe ?? 0)
+      + (formData?.nonFlyingGuestsInLoungeDeluxe ?? 0)) > 0;
+    if (hasPs && !hasLd) return 'premiere_suite';
+    if (hasLd && !hasPs) return 'lounge_deluxe';
+    return undefined;
+  };
+  const catalogOverrideKey = (line: { key: string; product?: string }): string => {
+    const product = inferLineProduct(line);
+    return product ? `${product}:${line.key}` : line.key;
+  };
+  const writeUnitPriceOverride = (key: string, raw: string) => {
+    if (!onFormChange) return;
+    const n = Number(raw);
+    if (!Number.isFinite(n) || n < 0) return;
+    onFormChange({
+      priceOverrides: {
+        ...(formData?.priceOverrides ?? {}),
+        [key]: Math.round(n * 100) / 100,
+      },
+    });
+  };
+  const unitPriceInput = (overrideKey: string, catalogUnit: number, testId: string) => {
+    const value = formData?.priceOverrides?.[overrideKey] ?? catalogUnit;
+    if (!onFormChange) {
+      return (
+        <span className="text-sm">
+          {catalogUnit > 0 ? `HK$${catalogUnit.toLocaleString()}` : '—'}
+        </span>
+      );
+    }
+    return (
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => writeUnitPriceOverride(overrideKey, e.target.value)}
+        className="w-32 px-2 py-1 border rounded text-right"
+        data-testid={testId}
+      />
+    );
+  };
+  const serviceItemProductRows = (livePreviewBreakdown ?? []).filter(
+    (line) => SERVICE_ITEM_PRODUCT_KEYS.has(line.key),
+  );
 
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
   // 2026-06-28 (round 6.2.71, Phase 4A) — `isEditBookingOpen`
@@ -3309,6 +3380,32 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Suite & Lounge</p>
                 </td>
               </tr>
+              {serviceItemProductRows.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-2 text-sm text-gray-500" data-testid="service-items-product-empty">
+                    Premiere Suite, Lounge Deluxe, guest, and extra-hour line prices appear here once the live preview loads.
+                  </td>
+                </tr>
+              )}
+              {serviceItemProductRows.map((line) => {
+                const overrideKey = catalogOverrideKey(line);
+                const unit = Number(formData?.priceOverrides?.[overrideKey] ?? line.unit_price ?? 0);
+                const qty = Math.max(1, Number(line.qty ?? 1));
+                const subtotal = unit * qty;
+                return (
+                  <tr key={overrideKey} data-testid={`service-items-product-${line.key}`}>
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{line.label}</p>
+                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
+                    <td className="px-4 py-3 text-right">
+                      {unitPriceInput(overrideKey, Number(line.unit_price ?? 0), `service-items-unit-price-${overrideKey}`)}
+                    </td>
+                    <td className="px-4 py-3 text-right">—</td>
+                    <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
+                  </tr>
+                );
+              })}
               
               {/* Head Count Entry Fee — removed round 6.1.5 (2026-06-07).
                   Backend PricingService no longer emits an `entry_fee`
@@ -3416,8 +3513,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   (a) => a.name === 'Limousine Transfer',
                 );
                 const limoQty = limoAddon?.quantity ?? 1;
-                const limoUnit = limoAddon?.unitPrice ?? 800;
-                const limoSubtotal = limoAddon?.subtotal ?? 800;
+                const limoUnit = Number(
+                  formData?.priceOverrides?.['addon:Limousine Transfer']
+                  ?? limoAddon?.unitPrice
+                  ?? 800,
+                );
+                const limoSubtotal = limoUnit * Number(limoQty ?? 1);
                 const limoDestinations = limoAddon?.destinations ?? [];
                 const limoRemarks = limoDestinations.length > 0
                   ? limoDestinations.join(' → ')
@@ -3450,12 +3551,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <input
-                          type="text"
-                          defaultValue={limoUnit.toFixed(2)}
-                          className="w-32 px-2 py-1 border rounded text-right"
-                          readOnly
-                        />
+                        {unitPriceInput('addon:Limousine Transfer', limoUnit, 'service-items-unit-price-addon:Limousine Transfer')}
                       </td>
                       <td className="px-4 py-3 text-right">—</td>
                       <td className="px-4 py-3 text-right font-medium">HK${limoSubtotal.toLocaleString()}</td>
@@ -3563,17 +3659,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         defaultValue={1} 
                         className="w-20 px-2 py-1 border rounded text-center"
                         min="1"
+                        readOnly
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <input 
-                        type="text" 
-                        defaultValue="500.00"
-                        className="w-32 px-2 py-1 border rounded text-right"
-                      />
+                      {unitPriceInput('addon:In-Lounge Shopping', 500, 'service-items-unit-price-addon:In-Lounge Shopping')}
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
-                    <td className="px-4 py-3 text-right font-medium">HK$500</td>
+                    <td className="px-4 py-3 text-right font-medium">
+                      HK${Number(formData?.priceOverrides?.['addon:In-Lounge Shopping'] ?? 500).toLocaleString()}
+                    </td>
                   </tr>
                   <tr>
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
@@ -3608,9 +3703,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowLoungeExt && (() => {
                 const loungeAddon = booking.addons?.find(a => a.name === 'Lounge Extension');
                 const qty = Number(formData?.loungeExtensionQty ?? loungeAddon?.quantity ?? 1);
-                const unit = Number(loungeAddon?.unitPrice ?? 1500);
                 const loungeHourly = bookableItemPrices?.['Lounge Extension'] ?? 0;
-                const subtotal = unit * qty;
                 return (
                   <>
                     <tr>
@@ -3670,16 +3763,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <input
-                          type="text"
-                          defaultValue={unit.toFixed(2)}
-                          className="w-32 px-2 py-1 border rounded text-right"
-                          readOnly
-                        />
+                      <td className="px-4 py-3 text-right text-sm text-gray-500">
+                        —
+                        <p className="text-[11px] text-gray-400 font-normal">Hourly rate is the extra-hour line above</p>
                       </td>
                       <td className="px-4 py-3 text-right">—</td>
-                      <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-500">—</td>
                     </tr>
                     <tr>
                       <td colSpan={5} className="px-4 pb-3">
@@ -3709,8 +3798,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowSecurity && (() => {
                 const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
                 const qty = Number(securityAddon?.quantity ?? 1);
-                const unit = Number(securityAddon?.unitPrice ?? 1200);
-                const subtotal = Number(securityAddon?.subtotal ?? unit * qty);
+                const unit = Number(
+                  formData?.priceOverrides?.['addon:Security Escort Service']
+                  ?? securityAddon?.unitPrice
+                  ?? 1200,
+                );
+                const subtotal = unit * qty;
                 return (
                   <tr data-testid="invoice-additional-security-row">
                     <td className="px-4 py-3">
@@ -3726,7 +3819,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
-                    <td className="px-4 py-3 text-right text-sm">HK${unit.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right">
+                      {unitPriceInput('addon:Security Escort Service', unit, 'service-items-unit-price-addon:Security Escort Service')}
+                    </td>
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
                   </tr>
@@ -3736,8 +3831,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowWheelchair && (() => {
                 const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
                 const qty = Number(wcAddon?.quantity ?? 1);
-                const unit = Number(wcAddon?.unitPrice ?? 0);
-                const subtotal = Number(wcAddon?.subtotal ?? unit * qty);
+                const unit = Number(
+                  formData?.priceOverrides?.['addon:Wheelchair Assistance']
+                  ?? wcAddon?.unitPrice
+                  ?? 0,
+                );
+                const subtotal = unit * qty;
                 return (
                   <>
                   <tr data-testid="invoice-additional-wheelchair-row">
@@ -3754,7 +3853,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
-                    <td className="px-4 py-3 text-right text-sm">{unit > 0 ? `HK$${unit.toLocaleString()}` : 'Complimentary'}</td>
+                    <td className="px-4 py-3 text-right">
+                      {unitPriceInput('addon:Wheelchair Assistance', unit, 'service-items-unit-price-addon:Wheelchair Assistance')}
+                    </td>
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">{subtotal > 0 ? `HK$${subtotal.toLocaleString()}` : 'HK$0'}</td>
                   </tr>
@@ -3807,12 +3908,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       readOnly={!onFormChange}
                     />
                   </td>
-                  <td className="px-4 py-3 text-right text-sm">
-                    {row.unitPrice > 0 ? `HK$${row.unitPrice.toLocaleString()}` : '—'}
+                  <td className="px-4 py-3 text-right">
+                    {unitPriceInput(`addon:${row.name}`, row.unitPrice, `service-items-unit-price-addon:${row.name}`)}
                   </td>
                   <td className="px-4 py-3 text-right">—</td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {row.subtotal > 0 ? `HK$${row.subtotal.toLocaleString()}` : '—'}
+                    {(() => {
+                      const unit = Number(formData?.priceOverrides?.[`addon:${row.name}`] ?? row.unitPrice);
+                      const sub = unit * Number(row.quantity ?? 1);
+                      return sub > 0 ? `HK$${sub.toLocaleString()}` : '—';
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -4031,8 +4136,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <input
                         type="text"
                         value={addonUnitPrice}
-                        readOnly
-                        className="w-28 px-2 py-1 border rounded text-right bg-gray-50"
+                        onChange={(e) => setAddonUnitPrice(e.target.value)}
+                        className="w-28 px-2 py-1 border rounded text-right"
+                        data-testid="service-items-add-unit-price"
                       />
                     </div>
                   </td>
