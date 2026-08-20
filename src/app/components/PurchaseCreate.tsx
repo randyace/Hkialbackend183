@@ -13,8 +13,9 @@ import {
   DISCOUNT_CONTRACT_COMPONENTS,
   DISCOUNT_CONTRACT_ENGINE_COPY,
   DISCOUNT_TYPES,
-  emptyDiscountLineDraft,
+  allDiscountLineDrafts,
   formatDiscountLineSummary,
+  mergeDiscountLineDrafts,
   parseDiscountLineDrafts,
   type DiscountLineDraft,
   type DiscountType,
@@ -318,7 +319,7 @@ export function PurchaseCreate({
   const [creditBalance, setCreditBalance]       = useState('');
   const [totalPrice, setTotalPrice]             = useState('');
   const [discountName, setDiscountName]         = useState('');
-  const [discountLines, setDiscountLines]       = useState<DiscountLineDraft[]>([emptyDiscountLineDraft()]);
+  const [discountLines, setDiscountLines]       = useState<DiscountLineDraft[]>(allDiscountLineDrafts());
   const [discountStart, setDiscountStart]       = useState('');
   const [discountEnd, setDiscountEnd]           = useState('');
 
@@ -349,7 +350,7 @@ export function PurchaseCreate({
     setCreditBalance('');
     setTotalPrice('');
     setDiscountName('');
-    setDiscountLines([emptyDiscountLineDraft()]);
+    setDiscountLines(allDiscountLineDrafts());
     setDiscountStart('');
     setDiscountEnd('');
   };
@@ -897,64 +898,52 @@ export function PurchaseCreate({
                     />
                   </div>
                   <div className="space-y-2" data-testid="discount-contract-lines">
-                    {discountLines.map((line, index) => {
-                      const used = discountLines.map((l) => l.component_key);
+                    <p className="text-xs text-gray-500">Leave unused parts blank.</p>
+                    <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs text-gray-500">
+                      <span className="col-span-4">Part</span>
+                      <span className="col-span-3">Type</span>
+                      <span className="col-span-3">Value</span>
+                      <span className="col-span-2">Max qty (waive)</span>
+                    </div>
+                    {mergeDiscountLineDrafts(discountLines).map((line) => {
+                      const label = DISCOUNT_CONTRACT_COMPONENTS.find((c) => c.key === line.component_key)?.label
+                        ?? line.component_key;
                       return (
                         <div
-                          key={index}
+                          key={line.component_key}
                           className="grid grid-cols-12 gap-2 items-end border border-gray-200 rounded-md p-2"
+                          data-testid={`discount-contract-line-${line.component_key}`}
                         >
-                          <div className="col-span-12 sm:col-span-4">
-                            <Label className="mb-[6px] block">Component</Label>
-                            <select
-                              className="w-full border rounded-md px-2 py-2 bg-white text-sm"
-                              value={line.component_key}
-                              onChange={(e) => {
-                                const next = discountLines.map((l, i) =>
-                                  i === index ? { ...l, component_key: e.target.value } : l,
-                                );
-                                setDiscountLines(next);
-                              }}
-                              data-testid="discount-contract-line-component"
-                            >
-                              {DISCOUNT_CONTRACT_COMPONENTS.map((c) => (
-                                <option
-                                  key={c.key}
-                                  value={c.key}
-                                  disabled={c.key !== line.component_key && used.includes(c.key)}
-                                >
-                                  {c.label}
-                                </option>
-                              ))}
-                            </select>
+                          <div className="col-span-12 sm:col-span-4 text-sm font-medium text-gray-800">
+                            {label}
                           </div>
                           <div className="col-span-6 sm:col-span-3">
-                            <Label className="mb-[6px] block">Type</Label>
+                            <Label className="mb-[6px] sm:hidden block">Type</Label>
                             <select
                               className="w-full border rounded-md px-2 py-2 bg-white text-sm"
                               value={line.discount_type}
                               onChange={(e) => {
                                 const discount_type = e.target.value as DiscountType;
-                                const next = discountLines.map((l, i) =>
-                                  i === index
+                                const display = mergeDiscountLineDrafts(discountLines);
+                                setDiscountLines(display.map((l) =>
+                                  l.component_key === line.component_key
                                     ? {
                                       ...l,
                                       discount_type,
                                       max_qty: discount_type === 'waive_qty' ? l.max_qty : '',
                                     }
                                     : l,
-                                );
-                                setDiscountLines(next);
+                                ));
                               }}
-                              data-testid="discount-contract-line-type"
+                              data-testid={`discount-contract-line-type-${line.component_key}`}
                             >
                               {DISCOUNT_TYPES.map((t) => (
                                 <option key={t.value} value={t.value}>{t.label}</option>
                               ))}
                             </select>
                           </div>
-                          <div className="col-span-6 sm:col-span-2">
-                            <Label className="mb-[6px] block">
+                          <div className="col-span-6 sm:col-span-3">
+                            <Label className="mb-[6px] sm:hidden block">
                               {line.discount_type === 'fixed_hkd' ? 'Amount (HKD)'
                                 : line.discount_type === 'waive_qty' ? 'Units'
                                   : 'Percent'}
@@ -967,62 +956,40 @@ export function PurchaseCreate({
                               inputMode="decimal"
                               value={line.discount_value}
                               onChange={(e) => {
-                                const next = discountLines.map((l, i) =>
-                                  i === index ? { ...l, discount_value: e.target.value } : l,
-                                );
-                                setDiscountLines(next);
+                                const display = mergeDiscountLineDrafts(discountLines);
+                                setDiscountLines(display.map((l) =>
+                                  l.component_key === line.component_key
+                                    ? { ...l, discount_value: e.target.value }
+                                    : l,
+                                ));
                               }}
                               onWheel={e => e.currentTarget.blur()}
-                              data-testid="discount-contract-line-value"
+                              data-testid={`discount-contract-line-value-${line.component_key}`}
                             />
                           </div>
-                          {line.discount_type === 'waive_qty' && (
-                            <div className="col-span-6 sm:col-span-2">
-                              <Label className="mb-[6px] block">Max qty</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                step={1}
-                                value={line.max_qty}
-                                onChange={(e) => {
-                                  const next = discountLines.map((l, i) =>
-                                    i === index ? { ...l, max_qty: e.target.value } : l,
-                                  );
-                                  setDiscountLines(next);
-                                }}
-                                onWheel={e => e.currentTarget.blur()}
-                                data-testid="discount-contract-line-max-qty"
-                              />
-                            </div>
-                          )}
-                          <div className="col-span-6 sm:col-span-1 flex justify-end">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="text-xs"
-                              disabled={discountLines.length <= 1}
-                              onClick={() => setDiscountLines(discountLines.filter((_, i) => i !== index))}
-                              data-testid="discount-contract-remove-line"
-                            >
-                              Remove
-                            </Button>
+                          <div className="col-span-6 sm:col-span-2">
+                            <Label className="mb-[6px] sm:hidden block">Max qty</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              disabled={line.discount_type !== 'waive_qty'}
+                              value={line.discount_type === 'waive_qty' ? line.max_qty : ''}
+                              onChange={(e) => {
+                                const display = mergeDiscountLineDrafts(discountLines);
+                                setDiscountLines(display.map((l) =>
+                                  l.component_key === line.component_key
+                                    ? { ...l, max_qty: e.target.value }
+                                    : l,
+                                ));
+                              }}
+                              onWheel={e => e.currentTarget.blur()}
+                              data-testid={`discount-contract-line-max-qty-${line.component_key}`}
+                            />
                           </div>
                         </div>
                       );
                     })}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="text-xs"
-                      disabled={!DISCOUNT_CONTRACT_COMPONENTS.some((c) => !discountLines.some((l) => l.component_key === c.key))}
-                      onClick={() => setDiscountLines([
-                        ...discountLines,
-                        emptyDiscountLineDraft(discountLines.map((l) => l.component_key)),
-                      ])}
-                      data-testid="discount-contract-add-line"
-                    >
-                      Add line
-                    </Button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
