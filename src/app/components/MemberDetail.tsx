@@ -166,6 +166,12 @@ export interface Member {
   observations: { handedness: string; writingHand: string; preferredLanguage: string; interests: string; };
 }
 
+function viewAccountType(type: string | undefined): Member['accountType'] {
+  if (type === 'Corporate') return 'Corporate';
+  if (type === 'Agency' || type === 'TravelAgency') return 'Agency';
+  return 'Individual';
+}
+
 const MOCK_MEMBER: Member = {
   accountNumber: 'ACC-2024-1001',
   accountType: 'Individual',
@@ -573,6 +579,7 @@ export function MemberDetail({
     internalGrouping: memberData.internalGrouping,
     paymentMethod: memberData.paymentMethod,
     companyCode: memberData.companyCode,
+    accountType: viewAccountType(memberData.accountType),
   });
   const [appearanceForm, setAppearanceForm] = useState({ ...memberData.appearance });
   const [workForm, setWorkForm] = useState({ ...memberData.workInfo });
@@ -736,6 +743,7 @@ export function MemberDetail({
       paymentMethod: accountForm.paymentMethod as Member['paymentMethod'],
       internalGrouping: accountForm.internalGrouping,
       companyCode: accountForm.companyCode,
+      accountType: accountForm.accountType,
       appearance: appearanceForm,
       workInfo: workForm,
       observations: observationsForm,
@@ -755,7 +763,12 @@ export function MemberDetail({
   const handleCancel = () => {
     // Reset all form state back to current memberData
     setBasicForm({ title: memberData.title, firstName: memberData.firstName, lastName: memberData.lastName, email: memberData.email, phone: memberData.phone, nationality: memberData.nationality, passportNumber: memberData.passportNumber, dateOfBirth: memberData.dateOfBirth ?? '' });
-    setAccountForm({ internalGrouping: memberData.internalGrouping, paymentMethod: memberData.paymentMethod, companyCode: memberData.companyCode });
+    setAccountForm({
+      internalGrouping: memberData.internalGrouping,
+      paymentMethod: memberData.paymentMethod,
+      companyCode: memberData.companyCode,
+      accountType: viewAccountType(memberData.accountType),
+    });
     setAppearanceForm({ ...memberData.appearance });
     setWorkForm({ ...memberData.workInfo });
     setObservationsForm({ ...memberData.observations });
@@ -853,7 +866,7 @@ export function MemberDetail({
                   {memberData.status}
                 </Badge>
                 <Badge className="bg-purple-100 text-purple-700">
-                  {memberData.accountType}
+                  {isEditing ? accountForm.accountType : viewAccountType(memberData.accountType)}
                 </Badge>
                 {showMembershipBenefits && memberData.membershipType && (
                   <Badge className="bg-amber-100 text-amber-700">
@@ -1162,6 +1175,26 @@ export function MemberDetail({
           <Card className="p-6">
             <h3 className="mb-4">Account Information</h3>
             <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label>Account Type</label>
+                <select
+                  value={accountForm.accountType}
+                  onChange={e => setAccountForm(f => ({
+                    ...f,
+                    accountType: viewAccountType(e.target.value),
+                  }))}
+                  disabled={!isEditing}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                  data-testid="member-account-type"
+                >
+                  <option value="Individual">Individual</option>
+                  <option value="Corporate">Corporate</option>
+                  <option value="Agency">Agency</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Reporting label for lists and reports. Does not change contracts, login, or Group Admin.
+                </p>
+              </div>
               <div>
                 <label>Internal Grouping</label>
                 {/* Free-text: Corporate / Agency / Individual groups are free-form
