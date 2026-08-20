@@ -12,11 +12,10 @@ import {
 import {
   DISCOUNT_CONTRACT_COMPONENTS,
   DISCOUNT_CONTRACT_ENGINE_COPY,
-  DISCOUNT_TYPES,
   allDiscountLineDrafts,
   formatDiscountLineSummary,
-  mergeDiscountLineDrafts,
   parseDiscountLineDrafts,
+  staffPercentLineDrafts,
   type DiscountLineDraft,
   type DiscountType,
 } from '../../../../../lib/pricing/discountContractCatalog';
@@ -898,93 +897,47 @@ export function PurchaseCreate({
                     />
                   </div>
                   <div className="space-y-2" data-testid="discount-contract-lines">
-                    <p className="text-xs text-gray-500">Leave unused parts blank.</p>
+                    <p className="text-xs text-gray-500">Percent only. Leave unused parts blank.</p>
                     <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs text-gray-500">
-                      <span className="col-span-4">Part</span>
-                      <span className="col-span-3">Type</span>
-                      <span className="col-span-3">Value</span>
-                      <span className="col-span-2">Max qty (waive)</span>
+                      <span className="col-span-8">Part</span>
+                      <span className="col-span-4">Percent</span>
                     </div>
-                    {mergeDiscountLineDrafts(discountLines).map((line) => {
+                    {staffPercentLineDrafts(discountLines).map((line) => {
                       const label = DISCOUNT_CONTRACT_COMPONENTS.find((c) => c.key === line.component_key)?.label
                         ?? line.component_key;
                       return (
                         <div
                           key={line.component_key}
-                          className="grid grid-cols-12 gap-2 items-end border border-gray-200 rounded-md p-2"
+                          className="grid grid-cols-12 gap-2 items-center border border-gray-200 rounded-md p-2"
                           data-testid={`discount-contract-line-${line.component_key}`}
                         >
-                          <div className="col-span-12 sm:col-span-4 text-sm font-medium text-gray-800">
+                          <div className="col-span-12 sm:col-span-8 text-sm font-medium text-gray-800">
                             {label}
                           </div>
-                          <div className="col-span-6 sm:col-span-3">
-                            <Label className="mb-[6px] sm:hidden block">Type</Label>
-                            <select
-                              className="w-full border rounded-md px-2 py-2 bg-white text-sm"
-                              value={line.discount_type}
+                          <div className="col-span-12 sm:col-span-4">
+                            <Label className="mb-[6px] sm:hidden block">Percent</Label>
+                            <Input
+                              type="number"
+                              min={0.01}
+                              max={100}
+                              step="0.01"
+                              inputMode="decimal"
+                              value={line.discount_value}
                               onChange={(e) => {
-                                const discount_type = e.target.value as DiscountType;
-                                const display = mergeDiscountLineDrafts(discountLines);
+                                const display = staffPercentLineDrafts(discountLines);
                                 setDiscountLines(display.map((l) =>
                                   l.component_key === line.component_key
                                     ? {
                                       ...l,
-                                      discount_type,
-                                      max_qty: discount_type === 'waive_qty' ? l.max_qty : '',
+                                      discount_type: 'percentage',
+                                      discount_value: e.target.value,
+                                      max_qty: '',
                                     }
-                                    : l,
-                                ));
-                              }}
-                              data-testid={`discount-contract-line-type-${line.component_key}`}
-                            >
-                              {DISCOUNT_TYPES.map((t) => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="col-span-6 sm:col-span-3">
-                            <Label className="mb-[6px] sm:hidden block">
-                              {line.discount_type === 'fixed_hkd' ? 'Amount (HKD)'
-                                : line.discount_type === 'waive_qty' ? 'Units'
-                                  : 'Percent'}
-                            </Label>
-                            <Input
-                              type="number"
-                              min={line.discount_type === 'waive_qty' ? 1 : 0.01}
-                              max={line.discount_type === 'percentage' ? 100 : undefined}
-                              step={line.discount_type === 'waive_qty' ? 1 : '0.01'}
-                              inputMode="decimal"
-                              value={line.discount_value}
-                              onChange={(e) => {
-                                const display = mergeDiscountLineDrafts(discountLines);
-                                setDiscountLines(display.map((l) =>
-                                  l.component_key === line.component_key
-                                    ? { ...l, discount_value: e.target.value }
                                     : l,
                                 ));
                               }}
                               onWheel={e => e.currentTarget.blur()}
                               data-testid={`discount-contract-line-value-${line.component_key}`}
-                            />
-                          </div>
-                          <div className="col-span-6 sm:col-span-2">
-                            <Label className="mb-[6px] sm:hidden block">Max qty</Label>
-                            <Input
-                              type="number"
-                              min={1}
-                              step={1}
-                              disabled={line.discount_type !== 'waive_qty'}
-                              value={line.discount_type === 'waive_qty' ? line.max_qty : ''}
-                              onChange={(e) => {
-                                const display = mergeDiscountLineDrafts(discountLines);
-                                setDiscountLines(display.map((l) =>
-                                  l.component_key === line.component_key
-                                    ? { ...l, max_qty: e.target.value }
-                                    : l,
-                                ));
-                              }}
-                              onWheel={e => e.currentTarget.blur()}
-                              data-testid={`discount-contract-line-max-qty-${line.component_key}`}
                             />
                           </div>
                         </div>
