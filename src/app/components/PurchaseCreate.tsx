@@ -24,6 +24,9 @@ const localDateStr = (d: Date = new Date()): string =>
 // ─── Shared Types (exported for PurchaseManagement) ───────────────────────────
 
 export type PurchaseCategory = 'Individual' | 'Corporate' | 'Agency';
+/** M32 — one product per purchase. Not the account reporting badge. */
+export type PurchaseProduct = 'membership' | 'promo_batch' | 'credit_topup' | 'discount_contract';
+export type DiscountTypeChoice = 'percentage' | 'fixed_hkd';
 export type Tier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 export type TierOrNone = Tier | 'None';
 export type PaymentMethod = 'Bank Transfer' | 'Branch Transfer' | 'Corporate Account';
@@ -84,6 +87,8 @@ export interface PurchaseRecord {
   purchaseRef: string;
   purchaseDate: string;
   purchaseCategory: PurchaseCategory;
+  /** M32 staff-picked product. Reporting `purchaseCategory` stays the account badge. */
+  product?: PurchaseProduct;
   accountNumber: string;
   primaryName: string;
   primaryEmail: string;
@@ -94,6 +99,8 @@ export interface PurchaseRecord {
   bundleLabel?: string;
   sessionsAdded?: number;
   totalSessionsAfter?: number;
+  discountType?: DiscountTypeChoice;
+  discountValue?: number;
   packagePrice: number;
   paymentMethod: PaymentMethod;
   transactionRef: string;
@@ -166,6 +173,13 @@ export const TIER_META: Record<TierOrNone, TierMeta> = {
   Sapphire: { color: 'text-indigo-600', bg: 'bg-indigo-50', badgeBg: 'bg-indigo-100 text-indigo-700', borderColor: 'border-indigo-300', iconName: 'gem'    },
 };
 
+export const PURCHASE_PRODUCTS: { id: PurchaseProduct; label: string }[] = [
+  { id: 'membership', label: 'Membership' },
+  { id: 'promo_batch', label: 'Promo batch' },
+  { id: 'credit_topup', label: 'Credit top-up' },
+  { id: 'discount_contract', label: 'Discount contract' },
+];
+
 export const BUNDLE_COLORS: Record<string, string> = {
   'Basic Bundle':      'bg-slate-100 text-slate-700',
   'Standard Bundle':   'bg-blue-100 text-blue-700',
@@ -232,7 +246,7 @@ export interface PurchaseCreateProps {
   // opens with no account selected (header "New Contract" path).
   initialAccount?: AccountOption | null;
   onSubmit?: (
-    record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'purchaseDate' | 'transactionRef' | 'processedBy' | 'status'>,
+    record: Omit<PurchaseRecord, 'id' | 'purchaseRef' | 'transactionRef' | 'processedBy' | 'status'>,
     // 2026-07-02 — payment proof file is collected in the view (UI
     // lives here) but the upload-to-Azure call is owned by the
     // parent wrapper (it owns the apiClient). The wrapper receives
@@ -267,11 +281,8 @@ export function PurchaseCreate({
   const availableBundles   = sessionBundlesProp !== undefined ? sessionBundlesProp : SESSION_BUNDLES;
   const availableAccounts  = accountsProp !== undefined ? accountsProp : MOCK_ACCOUNTS;
 
-  // 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill items 1+2) —
-  // catFilter is now a real PurchaseCategory (no 'all' union member). Default
-  // = 'Individual' so the grading-package grid renders on first load without
-  // the user having to click a pill.
-  const [catFilter, setCatFilter]           = useState<PurchaseCategory>('Individual');
+  // M32 — staff pick one product. Account reporting type is not the switch.
+  const [selectedProduct, setSelectedProduct] = useState<PurchaseProduct>('membership');
   const [acctSearch, setAcctSearch]         = useState('');
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(initialAccount ?? null);
   const [selectedPackage, setSelectedPackage] = useState<PackageChoice | null>(null);
@@ -284,54 +295,68 @@ export function PurchaseCreate({
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofError, setPaymentProofError] = useState<string | null>(null);
   
-  // For Corporate / Travel Agency custom contract
+  // Promo batch / credit top-up (reused form bodies; no longer type-gated)
   const [promoCodeName, setPromoCodeName]       = useState('');
   const [promoCodeQuantity, setPromoCodeQuantity] = useState('');
-  const [vipAccountQuantity, setVipAccountQuantity] = useState(''); // New field for Corporate VIP account creation
+  const [vipAccountQuantity, setVipAccountQuantity] = useState('');
   const [creditBalance, setCreditBalance]       = useState('');
   const [totalPrice, setTotalPrice]             = useState('');
+  const [discountName, setDiscountName]         = useState('');
+  const [discountType, setDiscountType]         = useState<DiscountTypeChoice>('percentage');
+  const [discountValue, setDiscountValue]       = useState('');
+  const [discountStart, setDiscountStart]       = useState('');
+  const [discountEnd, setDiscountEnd]           = useState('');
 
-  const isIndividual = selectedAccount?.purchaseCategory === 'Individual';
-  const isTravelAgency = selectedAccount?.purchaseCategory === 'Agency';
-  const isCorporate = selectedAccount?.purchaseCategory === 'Corporate';
+  const showMembershipForm = selectedProduct === 'membership';
+  const showPromoForm = selectedProduct === 'promo_batch';
+  const showCreditForm = selectedProduct === 'credit_topup';
+  const showDiscountForm = selectedProduct === 'discount_contract';
 
-  // 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill item 3) —
-  // pill-driven booleans drive Section 2 form visibility. The account-derived
-  // booleans (isIndividual / isCorporate / isTravelAgency) are kept intact
-  // because canConfirm / handleConfirm / Order Summary still need them.
-  const showIndividualPackages = catFilter === 'Individual';
-  const showCorporateForm      = catFilter === 'Corporate';
-  const showAgencyForm         = catFilter === 'Agency';
-  
-  const canConfirm = selectedAccount 
-    ? (isIndividual 
-        ? !!selectedPackage 
-        : isTravelAgency
-        ? (!!creditBalance && !!totalPrice)
-        : isCorporate
-        ? (!!promoCodeQuantity && !!totalPrice)
-        : false)
-    : false;
+  const discountValueNum = parseFloat(discountValue);
+  const discountReady =
+    discountName.trim().length > 0
+    && Number.isFinite(discountValueNum)
+    && discountValueNum > 0
+    && (discountType !== 'percentage' || discountValueNum <= 100)
+    && !(discountStart && discountEnd && discountEnd < discountStart);
+
+  const canConfirm = !!selectedAccount && (
+    selectedProduct === 'membership' ? !!selectedPackage
+      : selectedProduct === 'promo_batch' ? (!!promoCodeQuantity && !!totalPrice)
+      : selectedProduct === 'credit_topup' ? (!!creditBalance && !!totalPrice)
+      : selectedProduct === 'discount_contract' ? discountReady
+      : false
+  );
+
+  const resetProductFields = () => {
+    setSelectedPackage(null);
+    setPromoCodeName('');
+    setPromoCodeQuantity('');
+    setVipAccountQuantity('');
+    setCreditBalance('');
+    setTotalPrice('');
+    setDiscountName('');
+    setDiscountType('percentage');
+    setDiscountValue('');
+    setDiscountStart('');
+    setDiscountEnd('');
+  };
 
   // ── Filtered account list ───────────────────────────────────────────────────
 
   const filteredAccounts = availableAccounts.filter(a => {
-    // 2026-07-05 round 6.2.106 — 'all' removed from catFilter union (T3-A);
-    // per-category match only. The dead `catFilter === 'all'` branch was
-    // dropped here because TypeScript flags the comparison as noOverlap.
-    const matchCat = a.purchaseCategory === catFilter;
+    // M32 — account reporting type is a badge, not a purchase filter.
     // 2026-07-12 round 6.2.134 — when parent owns search via onAccountSearch,
     // skip local name filter (accounts prop is already the API result page).
     // Standalone figma Make path keeps client-side filter; tokenize so
     // "ssky yuen" matches reversed "YUEN SSKY".
-    if (onAccountSearch) return matchCat;
+    if (onAccountSearch) return true;
     const tokens = acctSearch.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const matchSearch = tokens.length === 0 || tokens.every(t =>
+    return tokens.length === 0 || tokens.every(t =>
       a.primaryName.toLowerCase().includes(t) ||
       a.accountNumber.toLowerCase().includes(t) ||
       a.email.toLowerCase().includes(t),
     );
-    return matchCat && matchSearch;
   });
 
   const handleSelectAccount = (a: AccountOption) => {
@@ -352,14 +377,7 @@ export function PurchaseCreate({
     if (!selectedAccount) return;
     if (submittingRef.current || isSubmitting) return;
     
-    // For Individual: need selectedPackage
-    if (isIndividual && !selectedPackage) return;
-    
-    // For Corporate: need quantity and price
-    if (isCorporate && (!promoCodeQuantity || !totalPrice)) return;
-    
-    // For Travel Agency: need credit balance and price
-    if (isTravelAgency && (!creditBalance || !totalPrice)) return;
+    if (!canConfirm) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -370,8 +388,7 @@ export function PurchaseCreate({
     
     let record: PurchaseRecord;
 
-    if (isIndividual && selectedPackage) {
-      // Individual package purchase
+    if (selectedProduct === 'membership' && selectedPackage) {
       expiry.setMonth(expiry.getMonth() + selectedPackage.validityMonths);
       const expiryDate = localDateStr(expiry);
       
@@ -380,7 +397,8 @@ export function PurchaseCreate({
           id: newId,
           purchaseRef: `PKG-2025-${String(newId).padStart(5, '0')}`,
           purchaseDate: today,
-          purchaseCategory: 'Individual',
+          purchaseCategory: selectedAccount.purchaseCategory,
+          product: 'membership',
           accountNumber: selectedAccount.accountNumber,
           primaryName: selectedAccount.primaryName,
           primaryEmail: selectedAccount.email,
@@ -402,6 +420,7 @@ export function PurchaseCreate({
           purchaseRef: `BULK-2025-${String(newId).padStart(5, '0')}`,
           purchaseDate: today,
           purchaseCategory: selectedAccount.purchaseCategory,
+          product: 'membership',
           accountNumber: selectedAccount.accountNumber,
           primaryName: selectedAccount.primaryName,
           primaryEmail: selectedAccount.email,
@@ -417,9 +436,8 @@ export function PurchaseCreate({
           status: 'Pending Invoice',
         };
       }
-    } else if (isTravelAgency) {
-      // Travel Agency custom contract
-      expiry.setFullYear(expiry.getFullYear() + 1); // 12 months default
+    } else if (selectedProduct === 'credit_topup') {
+      expiry.setFullYear(expiry.getFullYear() + 1);
       const expiryDate = localDateStr(expiry);
       const balance = parseFloat(creditBalance);
       const price = parseFloat(totalPrice);
@@ -428,12 +446,13 @@ export function PurchaseCreate({
         id: newId,
         purchaseRef: `BULK-2025-${String(newId).padStart(5, '0')}`,
         purchaseDate: today,
-        purchaseCategory: 'Agency',
+        purchaseCategory: selectedAccount.purchaseCategory,
+        product: 'credit_topup',
         accountNumber: selectedAccount.accountNumber,
         primaryName: selectedAccount.primaryName,
         primaryEmail: selectedAccount.email,
         bundleLabel: 'Credit Balance Contract',
-        sessionsAdded: balance, // Using sessionsAdded to store credit balance
+        sessionsAdded: balance,
         totalSessionsAfter: (selectedAccount.currentSessions ?? 0) + balance,
         packagePrice: price,
         paymentMethod,
@@ -443,9 +462,29 @@ export function PurchaseCreate({
         expiryDate,
         status: 'Pending Invoice',
       };
+    } else if (selectedProduct === 'discount_contract') {
+      record = {
+        id: newId,
+        purchaseRef: `DISC-2025-${String(newId).padStart(5, '0')}`,
+        purchaseDate: discountStart,
+        purchaseCategory: selectedAccount.purchaseCategory,
+        product: 'discount_contract',
+        accountNumber: selectedAccount.accountNumber,
+        primaryName: selectedAccount.primaryName,
+        primaryEmail: selectedAccount.email,
+        bundleLabel: discountName.trim(),
+        discountType,
+        discountValue: discountValueNum,
+        packagePrice: 0,
+        paymentMethod,
+        transactionRef: transactionRef || `TXN-AUTO-${newId}`,
+        processedBy: 'HKIAL Staff',
+        notes: purchaseNotes,
+        expiryDate: discountEnd,
+        status: 'Pending Invoice',
+      };
     } else {
-      // Corporate custom contract
-      expiry.setFullYear(expiry.getFullYear() + 1); // 12 months default
+      expiry.setFullYear(expiry.getFullYear() + 1);
       const expiryDate = localDateStr(expiry);
       const qty = parseInt(promoCodeQuantity);
       const price = parseFloat(totalPrice);
@@ -454,7 +493,8 @@ export function PurchaseCreate({
         id: newId,
         purchaseRef: `BULK-2025-${String(newId).padStart(5, '0')}`,
         purchaseDate: today,
-        purchaseCategory: 'Corporate',
+        purchaseCategory: selectedAccount.purchaseCategory,
+        product: 'promo_batch',
         accountNumber: selectedAccount.accountNumber,
         primaryName: selectedAccount.primaryName,
         primaryEmail: selectedAccount.email,
@@ -476,6 +516,7 @@ export function PurchaseCreate({
         purchaseRef: record.purchaseRef,
         purchaseDate: record.purchaseDate,
         purchaseCategory: record.purchaseCategory,
+        product: record.product,
         accountNumber: record.accountNumber,
         primaryName: record.primaryName,
         primaryEmail: record.primaryEmail,
@@ -486,6 +527,8 @@ export function PurchaseCreate({
         bundleLabel: record.bundleLabel,
         sessionsAdded: record.sessionsAdded,
         totalSessionsAfter: record.totalSessionsAfter,
+        discountType: record.discountType,
+        discountValue: record.discountValue,
         packagePrice: record.packagePrice,
         paymentMethod: record.paymentMethod,
         transactionRef: record.transactionRef,
@@ -517,7 +560,7 @@ export function PurchaseCreate({
         </button>
         <h1 className="text-gray-900 mb-1">New Contract</h1>
         <p className="text-sm text-gray-500">
-          Select an account, choose a package, fill in payment details, then confirm.
+          Select an account, pick one product, fill in the details, then confirm.
         </p>
       </div>
 
@@ -530,33 +573,22 @@ export function PurchaseCreate({
           <Card className="p-6">
             <SectionHeader num={1} title="Select Account" done={!!selectedAccount} />
 
-            {/* ── 2026-07-05 round 6.2.105 ── drop 'All Types' pill per Sky directive.
-                 2026-07-05 round 6.2.106 ── default catFilter narrowed from 'all'
-                 to 'Individual' (T3-A); pill onClick extends reset per T3-C ── */}
-            <div className="flex flex-wrap gap-2 mb-4">
-              {/* ── 2026-07-05 round 6.2.106 (revive of 6.2.83 sec2-binds-to-pill item 4) ──
-                   Switching pill clears the per-category form fields so a stale "50000"
-                   or "100" never bleeds into the wrong form. selectedPackage reset ensures
-                   the right-column Order Summary badge drops cleanly. ── */}
-              {(['Individual', 'Corporate', 'Agency'] as const).map(cat => (
+            <div className="flex flex-wrap gap-2 mb-4" data-testid="purchase-product-picker">
+              {PURCHASE_PRODUCTS.map(prod => (
                 <button
-                  key={cat}
+                  key={prod.id}
+                  type="button"
                   onClick={() => {
-                    setCatFilter(cat);
-                    setSelectedPackage(null);
-                    setPromoCodeName('');
-                    setPromoCodeQuantity('');
-                    setVipAccountQuantity('');
-                    setCreditBalance('');
-                    setTotalPrice('');
+                    setSelectedProduct(prod.id);
+                    resetProductFields();
                   }}
                   className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
-                    catFilter === cat
+                    selectedProduct === prod.id
                       ? 'bg-[#0f2942] text-white border-[#0f2942]'
                       : 'text-gray-600 border-gray-300 hover:border-gray-400 bg-white'
                   }`}
                 >
-                  {cat}
+                  {prod.label}
                 </button>
               ))}
             </div>
@@ -638,10 +670,9 @@ export function PurchaseCreate({
 
           {/* ── Section 2: Select Package ── */}
           <Card className="p-6">
-            <SectionHeader num={2} title="Select Package" done={!!selectedPackage} />
+            <SectionHeader num={2} title="Product details" done={canConfirm} />
 
-            {/* Individual → Grading packages (2-column grid) */}
-            {showIndividualPackages && (
+            {showMembershipForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
                   Grading packages include booking credits valid for 12 months.
@@ -677,11 +708,10 @@ export function PurchaseCreate({
               </>
             )}
 
-            {/* Corporate → Promo Code fields */}
-            {showCorporateForm && (
+            {showPromoForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Enter contract details for Corporate account.
+                  Promo batch: name, quantity, and billing amount. One product per purchase.
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -778,11 +808,10 @@ export function PurchaseCreate({
               </>
             )}
 
-            {/* Travel Agency → Credit balance fields */}
-            {showAgencyForm && (
+            {showCreditForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Enter contract details for Agency account.
+                  Credit top-up: charging amount and billing amount. Separate from promo batch.
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -833,9 +862,88 @@ export function PurchaseCreate({
                 </div>
               </>
             )}
+
+            {showDiscountForm && (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  Whole-booking discount: percentage or fixed HKD, with an optional date range.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="discountName" className="mb-[10px] block">
+                      Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="discountName"
+                      placeholder="e.g. Corporate 15%"
+                      value={discountName}
+                      onChange={e => setDiscountName(e.target.value)}
+                      data-testid="discount-contract-name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="discountType" className="mb-[10px] block">
+                      Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={discountType}
+                      onValueChange={(v: DiscountTypeChoice) => setDiscountType(v)}
+                    >
+                      <SelectTrigger id="discountType" data-testid="discount-contract-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="fixed_hkd">Fixed HKD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="discountValue" className="mb-[10px] block">
+                      {discountType === 'fixed_hkd' ? 'Amount (HKD)' : 'Percent'} <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="discountValue"
+                      type="number"
+                      min="0.01"
+                      max={discountType === 'percentage' ? 100 : undefined}
+                      step="0.01"
+                      inputMode="decimal"
+                      placeholder={discountType === 'fixed_hkd' ? 'e.g. 800' : 'e.g. 15'}
+                      value={discountValue}
+                      onChange={e => setDiscountValue(e.target.value)}
+                      onWheel={e => e.currentTarget.blur()}
+                      data-testid="discount-contract-value"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="discountStart" className="mb-[10px] block">Start date</Label>
+                      <Input
+                        id="discountStart"
+                        type="date"
+                        value={discountStart}
+                        onChange={e => setDiscountStart(e.target.value)}
+                        data-testid="discount-contract-start"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="discountEnd" className="mb-[10px] block">End date</Label>
+                      <Input
+                        id="discountEnd"
+                        type="date"
+                        value={discountEnd}
+                        onChange={e => setDiscountEnd(e.target.value)}
+                        data-testid="discount-contract-end"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </Card>
 
-          {/* ── Section 3: Payment Details ── */}
+          {selectedProduct !== 'discount_contract' && (
           <Card className="p-6">
             <SectionHeader num={3} title="Payment Details" done={false} />
 
@@ -941,6 +1049,7 @@ export function PurchaseCreate({
               </div>
             </div>
           </Card>
+          )}
 
           {/* ── Action buttons ── */}
           <div className="flex items-center justify-between pb-6">
@@ -1006,8 +1115,7 @@ export function PurchaseCreate({
                     )}
                   </div>
 
-                  {/* Package or Custom Contract */}
-                  {isIndividual && selectedPackage ? (
+                  {selectedProduct === 'membership' && selectedPackage ? (
                     <div>
                       <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
                         {selectedPackage.kind === 'grading' ? 'Grading Package' : 'Session Bundle'}
@@ -1040,9 +1148,9 @@ export function PurchaseCreate({
                         </div>
                       )}
                     </div>
-                  ) : isCorporate && (promoCodeQuantity || totalPrice) ? (
+                  ) : selectedProduct === 'promo_batch' && (promoCodeQuantity || totalPrice) ? (
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Custom Contract</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Promo batch</p>
                       <div className="p-3 rounded-lg border-2 border-blue-200 bg-blue-50">
                         {promoCodeName && (
                           <div className="flex items-center gap-2 mb-2">
@@ -1058,9 +1166,9 @@ export function PurchaseCreate({
                         )}
                       </div>
                     </div>
-                  ) : isTravelAgency && (creditBalance || totalPrice) ? (
+                  ) : selectedProduct === 'credit_topup' && (creditBalance || totalPrice) ? (
                     <div>
-                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Credit Balance Contract</p>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Credit top-up</p>
                       <div className="p-3 rounded-lg border-2 border-purple-200 bg-purple-50">
                         <div className="flex items-center gap-2 mb-2">
                           <Package className="w-4 h-4 text-purple-600" />
@@ -1074,10 +1182,34 @@ export function PurchaseCreate({
                         )}
                       </div>
                     </div>
+                  ) : selectedProduct === 'discount_contract' && (discountName || discountValue) ? (
+                    <div>
+                      <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Discount contract</p>
+                      <div className="p-3 rounded-lg border-2 border-indigo-200 bg-indigo-50">
+                        {discountName && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-4 h-4 text-indigo-600" />
+                            <span className="text-sm text-gray-900">{discountName}</span>
+                          </div>
+                        )}
+                        {discountValue && (
+                          <p className="text-xs text-gray-500">
+                            {discountType === 'fixed_hkd'
+                              ? `HKD ${parseFloat(discountValue).toLocaleString()}`
+                              : `${discountValue}%`}
+                          </p>
+                        )}
+                        {(discountStart || discountEnd) && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {discountStart || '—'} → {discountEnd || '—'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <div className="py-4 rounded-xl border-2 border-dashed border-gray-200 text-center">
                       <p className="text-xs text-gray-400">
-                        {isIndividual ? 'No package selected yet' : 'Enter contract details'}
+                        {selectedProduct === 'membership' ? 'No package selected yet' : 'Enter product details'}
                       </p>
                     </div>
                   )}
@@ -1085,28 +1217,38 @@ export function PurchaseCreate({
                   {/* Price */}
                   <div className="border-t pt-3 space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">{isIndividual ? 'Package price' : 'Contract price'}</span>
+                      <span className="text-gray-500">
+                        {selectedProduct === 'membership' ? 'Package price'
+                          : selectedProduct === 'discount_contract' ? 'Discount'
+                          : 'Contract price'}
+                      </span>
                       <span className="text-gray-900">
-                        {isIndividual && selectedPackage 
+                        {selectedProduct === 'membership' && selectedPackage
                           ? `HKD ${selectedPackage.price.toLocaleString()}`
-                          : !isIndividual && totalPrice
+                          : selectedProduct === 'discount_contract' && discountValue
+                          ? (discountType === 'fixed_hkd'
+                            ? `HKD ${parseFloat(discountValue).toLocaleString()}`
+                            : `${discountValue}%`)
+                          : selectedProduct !== 'membership' && selectedProduct !== 'discount_contract' && totalPrice
                           ? `HKD ${parseFloat(totalPrice).toLocaleString()}`
                           : '—'}
                       </span>
                     </div>
+                    {selectedProduct !== 'discount_contract' && (
                     <div className="flex items-center justify-between border-t pt-2">
                       <span className="text-sm text-gray-900">Total</span>
                       <span className="text-gray-900">
-                        {isIndividual && selectedPackage 
+                        {selectedProduct === 'membership' && selectedPackage
                           ? `HKD ${selectedPackage.price.toLocaleString()}`
-                          : !isIndividual && totalPrice
+                          : totalPrice
                           ? `HKD ${parseFloat(totalPrice).toLocaleString()}`
                           : '—'}
                       </span>
                     </div>
+                    )}
                   </div>
 
-                  {/* Payment method */}
+                  {selectedProduct !== 'discount_contract' && (
                   <div className="border-t pt-3">
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Payment</p>
                     <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
@@ -1114,6 +1256,7 @@ export function PurchaseCreate({
                       <span className="text-sm text-gray-700">{paymentMethod}</span>
                     </div>
                   </div>
+                  )}
                 </div>
               )}
             </Card>
