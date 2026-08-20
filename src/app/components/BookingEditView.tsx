@@ -366,6 +366,8 @@ export interface BookingFormData {
    * Keys: `{product}:{key}` (premiere_suite:base) or `addon:{name}`.
    */
   priceOverrides?: Record<string, number>;
+  /** Optional staff reason for unit-price overrides. Empty allowed. */
+  priceOverrideReason?: string;
   assignedStaffIds: number[];
   paymentMode: EditPaymentMode;
   specialRequests?: string;
@@ -491,6 +493,7 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   selectedAddonKeys: [],
   catalogAddonSelections: [],
   priceOverrides: {},
+  priceOverrideReason: '',
   assignedStaffIds: [],
   paymentMode:      'Upfront',
   specialRequests:  '',

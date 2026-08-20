@@ -42,6 +42,7 @@ import type {
   EditPassenger,
   EditNonFlyingGuest,
 } from './BookingEditView';
+import { resolveCatalogOriginalUnitPrice } from '../../../../../lib/pricing/priceOverrides';
 // 2026-07-09 (round 6.2.129, M11 residual) — single source of truth
 // for persistable add-on keys. Pre-6.2.129 this page kept a 22-item
 // drifted list (names that did not match bookable_items.name_en)
@@ -254,7 +255,13 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // Wrapper populates this from the same
   // `POST /api/bookings/price-preview` response that supplies
   // `livePreviewTotal`.
-  livePreviewBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number; product?: string }>;
+  livePreviewBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number; product?: string; original_unit_price?: number | null }>;
+  /**
+   * Wrapper-owned optional override reason. When provided (including
+   * empty string), the Service Items field uses this instead of
+   * formData.priceOverrideReason.
+   */
+  priceOverrideReason?: string;
   // 2026-06-11 — round 6.2.34 UX. Wrapper pre-fetches the
   // booking's account (for the "View Customer Profile"
   // dialog) on mount + on account change, then maps the
@@ -509,7 +516,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   flightLastCheckedLabel?: string | null;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -1014,25 +1021,40 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       },
     });
   };
+  const resolvedPriceOverrideReason = priceOverrideReasonProp !== undefined
+    ? priceOverrideReasonProp
+    : (formData?.priceOverrideReason ?? '');
   const unitPriceInput = (overrideKey: string, catalogUnit: number, testId: string) => {
-    const value = formData?.priceOverrides?.[overrideKey] ?? catalogUnit;
+    const original = Number.isFinite(catalogUnit) && catalogUnit >= 0 ? catalogUnit : 0;
+    const value = formData?.priceOverrides?.[overrideKey] ?? original;
+    const originalLabel = (
+      <p className="text-[11px] text-gray-400" data-testid={`${testId}-original`}>
+        Original HK${original.toLocaleString()}
+      </p>
+    );
     if (!onFormChange) {
       return (
-        <span className="text-sm">
-          {catalogUnit > 0 ? `HK$${catalogUnit.toLocaleString()}` : '—'}
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          {originalLabel}
+          <span className="text-sm">
+            {Number(value) > 0 ? `HK$${Number(value).toLocaleString()}` : '—'}
+          </span>
+        </div>
       );
     }
     return (
-      <input
-        type="number"
-        min="0"
-        step="0.01"
-        value={Number.isFinite(value) ? value : 0}
-        onChange={(e) => writeUnitPriceOverride(overrideKey, e.target.value)}
-        className="w-32 px-2 py-1 border rounded text-right"
-        data-testid={testId}
-      />
+      <div className="flex flex-col items-end gap-0.5">
+        {originalLabel}
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={Number.isFinite(value) ? value : 0}
+          onChange={(e) => writeUnitPriceOverride(overrideKey, e.target.value)}
+          className="w-32 px-2 py-1 border rounded text-right"
+          data-testid={testId}
+        />
+      </div>
     );
   };
   const serviceItemProductRows = (livePreviewBreakdown ?? []).filter(
@@ -3362,6 +3384,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit quantity, unit price, and discount, including Premiere Suite and Lounge Deluxe.</p>
           </div>
         </div>
+        {onFormChange && (
+          <div className="mb-4">
+            <label htmlFor="service-items-price-override-reason" className="text-xs text-gray-600">
+              Override reason (optional)
+            </label>
+            <textarea
+              id="service-items-price-override-reason"
+              data-testid="service-items-price-override-reason"
+              className="w-full mt-1 px-3 py-2 border rounded text-sm resize-none"
+              rows={2}
+              value={resolvedPriceOverrideReason}
+              onChange={(e) => onFormChange({ priceOverrideReason: e.target.value })}
+              placeholder="Optional reason for this booking's unit-price overrides"
+            />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b">
@@ -3389,7 +3427,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               )}
               {serviceItemProductRows.map((line) => {
                 const overrideKey = catalogOverrideKey(line);
-                const unit = Number(formData?.priceOverrides?.[overrideKey] ?? line.unit_price ?? 0);
+                const original = resolveCatalogOriginalUnitPrice(line, Number(line.unit_price ?? 0));
+                const unit = Number(formData?.priceOverrides?.[overrideKey] ?? original);
                 const qty = Math.max(1, Number(line.qty ?? 1));
                 const subtotal = unit * qty;
                 return (
@@ -3399,7 +3438,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput(overrideKey, Number(line.unit_price ?? 0), `service-items-unit-price-${overrideKey}`)}
+                      {unitPriceInput(overrideKey, original, `service-items-unit-price-${overrideKey}`)}
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
@@ -3513,10 +3552,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   (a) => a.name === 'Limousine Transfer',
                 );
                 const limoQty = limoAddon?.quantity ?? 1;
+                const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
                 const limoUnit = Number(
                   formData?.priceOverrides?.['addon:Limousine Transfer']
-                  ?? limoAddon?.unitPrice
-                  ?? 800,
+                  ?? limoCatalog,
                 );
                 const limoSubtotal = limoUnit * Number(limoQty ?? 1);
                 const limoDestinations = limoAddon?.destinations ?? [];
@@ -3551,7 +3590,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {unitPriceInput('addon:Limousine Transfer', limoUnit, 'service-items-unit-price-addon:Limousine Transfer')}
+                        {unitPriceInput('addon:Limousine Transfer', limoCatalog, 'service-items-unit-price-addon:Limousine Transfer')}
                       </td>
                       <td className="px-4 py-3 text-right">—</td>
                       <td className="px-4 py-3 text-right font-medium">HK${limoSubtotal.toLocaleString()}</td>
@@ -3798,10 +3837,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowSecurity && (() => {
                 const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
                 const qty = Number(securityAddon?.quantity ?? 1);
+                const catalog = Number(securityAddon?.unitPrice ?? 1200);
                 const unit = Number(
                   formData?.priceOverrides?.['addon:Security Escort Service']
-                  ?? securityAddon?.unitPrice
-                  ?? 1200,
+                  ?? catalog,
                 );
                 const subtotal = unit * qty;
                 return (
@@ -3820,7 +3859,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput('addon:Security Escort Service', unit, 'service-items-unit-price-addon:Security Escort Service')}
+                      {unitPriceInput('addon:Security Escort Service', catalog, 'service-items-unit-price-addon:Security Escort Service')}
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">HK${subtotal.toLocaleString()}</td>
@@ -3831,10 +3870,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowWheelchair && (() => {
                 const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
                 const qty = Number(wcAddon?.quantity ?? 1);
+                const catalog = Number(wcAddon?.unitPrice ?? 0);
                 const unit = Number(
                   formData?.priceOverrides?.['addon:Wheelchair Assistance']
-                  ?? wcAddon?.unitPrice
-                  ?? 0,
+                  ?? catalog,
                 );
                 const subtotal = unit * qty;
                 return (
@@ -3854,7 +3893,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput('addon:Wheelchair Assistance', unit, 'service-items-unit-price-addon:Wheelchair Assistance')}
+                      {unitPriceInput('addon:Wheelchair Assistance', catalog, 'service-items-unit-price-addon:Wheelchair Assistance')}
                     </td>
                     <td className="px-4 py-3 text-right">—</td>
                     <td className="px-4 py-3 text-right font-medium">{subtotal > 0 ? `HK$${subtotal.toLocaleString()}` : 'HK$0'}</td>
