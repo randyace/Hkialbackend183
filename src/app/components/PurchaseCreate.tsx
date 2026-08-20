@@ -615,18 +615,16 @@ export function PurchaseCreate({
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <CategoryBadge cat={a.purchaseCategory} />
-                      {a.purchaseCategory === 'Individual' ? (
+                      {a.creditBalanceHKD != null ? (
+                        // Wallet HKD follows credit_facility (wrapper), not purchaseCategory.
+                        <p className="text-xs text-gray-400">
+                          HKD {(a.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                      ) : (
                         <div className="flex flex-col items-end gap-0.5">
                           <TierBadge tier={a.currentTier ?? 'None'} />
                           <p className="text-xs text-gray-400">{(a.currentCredits ?? 0) === -1 ? 'Unlimited' : `${a.currentCredits ?? 0} credits`}</p>
                         </div>
-                      ) : (
-                        // 2026-07-14 round 6.2.147 — H3 smell fix. For Corp/Agency,
-                        // `currentSessions` is undefined (no backend session-count
-                        // column). Render the HKD credit balance (M51 pattern).
-                        <p className="text-xs text-gray-400">
-                          HKD {(a.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
                       )}
                     </div>
                   </div>
@@ -993,20 +991,17 @@ export function PurchaseCreate({
                         <p className="text-xs text-gray-500">{selectedAccount.accountNumber}</p>
                       </div>
                     </div>
-                    {selectedAccount.purchaseCategory === 'Individual' ? (
-                      <div className="flex items-center justify-between mt-2 px-1">
-                        <span className="text-xs text-gray-400">Current tier</span>
-                        <TierBadge tier={selectedAccount.currentTier ?? 'None'} />
-                      </div>
-                    ) : (
-                      // 2026-07-14 round 6.2.147 — H3 smell fix. For Corp/Agency,
-                      // show HKD credit balance (M51 pattern) instead of bogus
-                      // "Current sessions" derived from `credit_balance`.
+                    {selectedAccount.creditBalanceHKD != null ? (
                       <div className="flex items-center justify-between mt-2 px-1">
                         <span className="text-xs text-gray-400">Credit balance</span>
                         <span className="text-xs text-gray-600">
                           HKD {(selectedAccount.creditBalanceHKD ?? 0).toLocaleString('en-HK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between mt-2 px-1">
+                        <span className="text-xs text-gray-400">Current tier</span>
+                        <TierBadge tier={selectedAccount.currentTier ?? 'None'} />
                       </div>
                     )}
                   </div>

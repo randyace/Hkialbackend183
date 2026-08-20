@@ -447,6 +447,10 @@ export interface CreateBookingProps {
     phone: string;
     membership_type?: string;
     company_name?: string;
+    company?: Array<{
+      id?: number;
+      company_name?: string;
+    }>;
     // Round 6.2.136 — Individual membership quotas (from Account.show).
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
@@ -646,6 +650,35 @@ export interface CreateBookingProps {
    * inside the Add-on Services card.
    */
   catalogAddonSlot?: React.ReactNode;
+  /**
+   * Wrapper-owned payment modes (settlement / credit facility).
+   * When provided, do not type-gate the dropdown. Absent = standalone
+   * mock uses the local reporting-label table.
+   */
+  paymentModeOptions?: PaymentMode[];
+  /** Wrapper default when the current value is missing or not in options. */
+  defaultPaymentMode?: PaymentMode | '';
+  /**
+   * Wrapper-owned membership species (D2). When provided (including false),
+   * Membership tier + free LD/PS follow this flag, not Individual type.
+   * Absent = standalone mock still Individual-gates.
+   */
+  showMembershipBenefits?: boolean;
+  /**
+   * Wrapper-owned Travel Agency panel (linked travel_agency row).
+   * When provided (including false), do not Agency-type-gate the panel.
+   */
+  showTravelAgency?: boolean;
+  /**
+   * Wrapper-owned Account Credit card (credit facility / credit numbers).
+   * When provided (including false), do not Agency-type-gate the card.
+   */
+  showAccountCredit?: boolean;
+  /**
+   * Wrapper-owned Company Name field (company relation / company_name).
+   * When provided (including false), do not Corporate-type-gate the field.
+   */
+  showCompanyName?: boolean;
 }
 
 // 2026-06-23 — phone-region code typeahead + number filter, shared
@@ -1166,6 +1199,12 @@ export function CreateBooking({
   regionCodes = [],
   catalogAddonSlot,
   onFlightLookup,
+  paymentModeOptions: paymentModeOptionsProp,
+  defaultPaymentMode = '',
+  showMembershipBenefits: showMembershipBenefitsProp,
+  showTravelAgency: showTravelAgencyProp,
+  showAccountCredit: showAccountCreditProp,
+  showCompanyName: showCompanyNameProp,
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -1203,12 +1242,24 @@ export function CreateBooking({
   const [useMembershipPsFree, setUseMembershipPsFree] = useState(false);
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const showMembershipBenefits = showMembershipBenefitsProp !== undefined
+    ? showMembershipBenefitsProp
+    : accountType === 'Individual';
+  const showTravelAgency = showTravelAgencyProp !== undefined
+    ? showTravelAgencyProp
+    : accountType === 'Agency';
+  const showAccountCredit = showAccountCreditProp !== undefined
+    ? showAccountCreditProp
+    : accountType === 'Agency';
+  const showCompanyName = showCompanyNameProp !== undefined
+    ? showCompanyNameProp
+    : accountType === 'Corporate';
 
   // 2026-06-09 round 6.2.28 / 6.2.136 / 2026-07-17 — when an account is
-  // selected, load Membership Tier from the account. Individual members
-  // do NOT get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
-  // Account Discount stays blank for Individual (staff override only).
-  // Agency: auto-fill Account Discount from travel_agencies.discount_rate
+  // selected, load Membership Tier from the account. Members do NOT get
+  // a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill). Account
+  // Discount stays blank for members (staff override only). Agency:
+  // auto-fill Account Discount from travel_agencies.discount_rate
   // (spec §9 — Agency default). Free LD / PS quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
@@ -1219,19 +1270,22 @@ export function CreateBooking({
     setUseMembershipLdFree(false);
     setUseMembershipPsFree(false);
 
-    const isAgencyAccount =
-      selectedAccount?.type === 'TravelAgency'
-      || selectedAccount?.type === 'Agency'
-      || accountType === 'Agency';
     const agencyRate = Number(
       selectedAccount?.travel_agency?.[0]?.discount_rate ?? NaN,
     );
-    if (isAgencyAccount && Number.isFinite(agencyRate) && agencyRate > 0) {
+    if (Number.isFinite(agencyRate) && agencyRate > 0) {
       setAccountDiscountPct(Math.max(0, Math.min(100, Math.round(agencyRate))));
     } else {
       setAccountDiscountPct('');
     }
   }, [selectedAccount, accountType]);
+
+  useEffect(() => {
+    if (!showMembershipBenefits) {
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
+    }
+  }, [showMembershipBenefits]);
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
@@ -1735,10 +1789,19 @@ export function CreateBooking({
       }
     : null;
 
-  // Agency: always default Payment Mode to On-Credit when the linked
-  // agency (or Agency account type) is in play. travel_agencies rows do
-  // not persist payment_method, so never leave paymentMode blank / undefined.
+  // Payment mode default follows wrapper options (settlement / credit
+  // facility). Mock / standalone still defaults Agency to On-Credit.
   useEffect(() => {
+    if (paymentModeOptionsProp && paymentModeOptionsProp.length > 0) {
+      setPaymentMode((current) => {
+        if (current && paymentModeOptionsProp.includes(current)) return current;
+        if (defaultPaymentMode && paymentModeOptionsProp.includes(defaultPaymentMode)) {
+          return defaultPaymentMode;
+        }
+        return '';
+      });
+      return;
+    }
     const isAgency =
       accountType === 'Agency'
       || selectedAccount?.type === 'TravelAgency'
@@ -1746,7 +1809,7 @@ export function CreateBooking({
     if (isAgency && (selectedAgencyCode || selectedAccount?.travel_agency?.[0])) {
       setPaymentMode('On-Credit');
     }
-  }, [selectedAgencyCode, selectedAccount, accountType]);
+  }, [selectedAgencyCode, selectedAccount, accountType, paymentModeOptionsProp, defaultPaymentMode]);
 
   // ─── Passenger handlers ──────────────────────────────────────────────────────
   const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string) =>
@@ -1963,14 +2026,6 @@ export function CreateBooking({
         message: 'Please enter the account number.',
       });
     }
-    if (accountType === 'Agency' && !paymentMode) {
-      issues.push({
-        fieldId: 'create-payment-mode',
-        key: 'paymentMode',
-        label: 'Payment Mode',
-        message: 'Please select the payment mode for agency booking.',
-      });
-    }
     if (!visitDate) {
       issues.push({
         fieldId: 'create-visit-date',
@@ -2162,12 +2217,17 @@ export function CreateBooking({
     onSubmit?.(formData);
   };
 
-  const paymentModeOptions = (): PaymentMode[] => {
+  const mockPaymentModeOptions = (): PaymentMode[] => {
     if (accountType === 'Individual')    return ['Upfront', 'Net Upfront'];
     if (accountType === 'Corporate')     return ['Bulk Purchase/Monthly Invoice'];
     if (accountType === 'Agency') return ['Upfront', 'Net Upfront', 'On-Credit'];
-    if (accountType === 'Agency') return ['Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
+  };
+  const resolvedPaymentModeOptions = (): PaymentMode[] => {
+    if (paymentModeOptionsProp && paymentModeOptionsProp.length > 0) {
+      return paymentModeOptionsProp;
+    }
+    return mockPaymentModeOptions();
   };
 
   // Dev Quick Fill — inject modal values into local form state.
@@ -2318,8 +2378,8 @@ export function CreateBooking({
             )}
           </div>
 
-          {/* Travel Agency (read-only — 2026-06-14 round 6.2.37) */}
-          {accountType === 'Agency' && (
+          {/* Travel Agency — linked travel_agency row, not Agency type (D2). */}
+          {showTravelAgency && (
             <div className="mb-6 space-y-4">
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Travel Agency</label>
@@ -2334,7 +2394,7 @@ export function CreateBooking({
                   </div>
                 ) : (
                   <div className="w-full px-3 py-2 border border-dashed border-gray-300 rounded-md text-sm bg-gray-50 text-gray-500 italic">
-                    Search and select an Agency-typed account below — the agency is linked to the account and cannot be chosen ad-hoc.
+                    Search and select an account with a linked travel agency — the agency cannot be chosen ad-hoc.
                   </div>
                 )}
               </div>
@@ -2350,60 +2410,60 @@ export function CreateBooking({
                   </div>
                 </div>
               )}
-              {/* Round 6.2.143 / 2026-07-28 — Agency available credit.
-                  available = balance − on_hold + limit. Hold is placed at
-                  create for OnCredit and captured at Approved. */}
-              {selectedAccount && (selectedAccount.credit_balance != null && selectedAccount.credit_balance !== '') && (
-                <div
-                  className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3"
-                  data-testid="create-booking-agency-credit-card"
-                >
-                  <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
-                    {(() => {
-                      const balance = Number(selectedAccount.credit_balance) || 0;
-                      const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
-                      const limit = Number(selectedAccount.credit_limit ?? 0) || 0;
-                      const available = balance - onHold + limit;
-                      const fmt = (n: number) =>
-                        n.toLocaleString(undefined, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 2,
-                        });
-                      return (
-                        <>
-                          <p className="text-sm text-purple-700 mt-0.5">
-                            Available:{' '}
-                            <strong data-testid="create-booking-credit-available">
-                              HKD {fmt(available)}
-                            </strong>
-                            <span className="text-purple-600/90" data-testid="create-booking-credit-balance">
-                              {' '}· Balance HKD {fmt(balance)}
+            </div>
+          )}
+          {/* Credit card — credit facility / numbers, not Agency type (D2 / D6). */}
+          {showAccountCredit && selectedAccount && (
+            <div className="mb-6">
+              <div
+                className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3"
+                data-testid="create-booking-agency-credit-card"
+              >
+                <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
+                  {(() => {
+                    const balance = Number(selectedAccount.credit_balance) || 0;
+                    const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
+                    const limit = Number(selectedAccount.credit_limit ?? 0) || 0;
+                    const available = balance - onHold + limit;
+                    const fmt = (n: number) =>
+                      n.toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2,
+                      });
+                    return (
+                      <>
+                        <p className="text-sm text-purple-700 mt-0.5">
+                          Available:{' '}
+                          <strong data-testid="create-booking-credit-available">
+                            HKD {fmt(available)}
+                          </strong>
+                          <span className="text-purple-600/90" data-testid="create-booking-credit-balance">
+                            {' '}· Balance HKD {fmt(balance)}
+                          </span>
+                          {onHold > 0 ? (
+                            <span className="text-purple-600/90" data-testid="create-booking-credit-on-hold">
+                              {' '}· On hold HKD {fmt(onHold)}
                             </span>
-                            {onHold > 0 ? (
-                              <span className="text-purple-600/90" data-testid="create-booking-credit-on-hold">
-                                {' '}· On hold HKD {fmt(onHold)}
-                              </span>
-                            ) : null}
-                            {limit > 0 ? (
-                              <span className="text-purple-600/90" data-testid="create-booking-credit-limit">
-                                {' '}· Limit HKD {fmt(limit)}
-                              </span>
-                            ) : null}
+                          ) : null}
+                          {limit > 0 ? (
+                            <span className="text-purple-600/90" data-testid="create-booking-credit-limit">
+                              {' '}· Limit HKD {fmt(limit)}
+                            </span>
+                          ) : null}
+                        </p>
+                        {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
+                          <p className="text-xs text-purple-600 mt-1">
+                            OnCredit places a <strong>hold at create</strong>; balance is captured when the
+                            booking is <strong>Approved</strong>. Available already subtracts open holds.
                           </p>
-                          {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
-                            <p className="text-xs text-purple-600 mt-1">
-                              OnCredit places a <strong>hold at create</strong>; balance is captured when the
-                              booking is <strong>Approved</strong>. Available already subtracts open holds.
-                            </p>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -2501,15 +2561,15 @@ export function CreateBooking({
                     className="w-full px-3 py-2 border border-gray-200 rounded-md text-sm bg-gray-50" />
                 </div>
               </div>
-            {accountType === 'Corporate' && (
+            {showCompanyName && (
               <div className="col-span-2">
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Company Name</label>
                 <input type="text" value={companyName} onChange={e => setCompanyName(e.target.value)}
-                  placeholder="Corporate account company name"
+                  placeholder="Account company name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             )}
-            {accountType === 'Individual' && (
+            {showMembershipBenefits && (
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
                 <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)} disabled={!!selectedAccount}>
@@ -2522,7 +2582,7 @@ export function CreateBooking({
                 </Select>
               </div>
             )}
-            {accountType === 'Individual' && selectedAccount && (
+            {showMembershipBenefits && selectedAccount && (
               <div className="col-span-2 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
                 <p className="text-sm font-medium text-[#0f2942] mb-2">Membership benefits</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -2588,7 +2648,7 @@ export function CreateBooking({
               <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setFieldErrors((prev) => { if (!prev.paymentMode) return prev; const n = { ...prev }; delete n.paymentMode; return n; }); }}>
                 <SelectTrigger className={fieldErrors.paymentMode ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select payment mode" /></SelectTrigger>
                 <SelectContent>
-                  {paymentModeOptions().map(m => (
+                  {resolvedPaymentModeOptions().map(m => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
@@ -2630,8 +2690,8 @@ export function CreateBooking({
               <p className="text-xs text-gray-500 mt-1">
                 {selectedAgency
                   ? <>Default {selectedAgency.discountRate}% (Agency){accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}</>
-                  : accountType === 'Individual'
-                    ? <>Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %</>
+                  : showMembershipBenefits
+                    ? <>Optional staff override only — members use free LD / PS upgrade benefits, not a tier %</>
                     : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
