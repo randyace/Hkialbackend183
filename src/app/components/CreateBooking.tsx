@@ -646,6 +646,14 @@ export interface CreateBookingProps {
    * inside the Add-on Services card.
    */
   catalogAddonSlot?: React.ReactNode;
+  /**
+   * Wrapper-owned payment modes (settlement / credit facility).
+   * When provided, do not type-gate the dropdown. Absent = standalone
+   * mock uses the local reporting-label table.
+   */
+  paymentModeOptions?: PaymentMode[];
+  /** Wrapper default when the current value is missing or not in options. */
+  defaultPaymentMode?: PaymentMode | '';
 }
 
 // 2026-06-23 — phone-region code typeahead + number filter, shared
@@ -1166,6 +1174,8 @@ export function CreateBooking({
   regionCodes = [],
   catalogAddonSlot,
   onFlightLookup,
+  paymentModeOptions: paymentModeOptionsProp,
+  defaultPaymentMode = '',
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -1735,10 +1745,19 @@ export function CreateBooking({
       }
     : null;
 
-  // Agency: always default Payment Mode to On-Credit when the linked
-  // agency (or Agency account type) is in play. travel_agencies rows do
-  // not persist payment_method, so never leave paymentMode blank / undefined.
+  // Payment mode default follows wrapper options (settlement / credit
+  // facility). Mock / standalone still defaults Agency to On-Credit.
   useEffect(() => {
+    if (paymentModeOptionsProp && paymentModeOptionsProp.length > 0) {
+      setPaymentMode((current) => {
+        if (current && paymentModeOptionsProp.includes(current)) return current;
+        if (defaultPaymentMode && paymentModeOptionsProp.includes(defaultPaymentMode)) {
+          return defaultPaymentMode;
+        }
+        return '';
+      });
+      return;
+    }
     const isAgency =
       accountType === 'Agency'
       || selectedAccount?.type === 'TravelAgency'
@@ -1746,7 +1765,7 @@ export function CreateBooking({
     if (isAgency && (selectedAgencyCode || selectedAccount?.travel_agency?.[0])) {
       setPaymentMode('On-Credit');
     }
-  }, [selectedAgencyCode, selectedAccount, accountType]);
+  }, [selectedAgencyCode, selectedAccount, accountType, paymentModeOptionsProp, defaultPaymentMode]);
 
   // ─── Passenger handlers ──────────────────────────────────────────────────────
   const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string) =>
@@ -2162,12 +2181,17 @@ export function CreateBooking({
     onSubmit?.(formData);
   };
 
-  const paymentModeOptions = (): PaymentMode[] => {
+  const mockPaymentModeOptions = (): PaymentMode[] => {
     if (accountType === 'Individual')    return ['Upfront', 'Net Upfront'];
     if (accountType === 'Corporate')     return ['Bulk Purchase/Monthly Invoice'];
     if (accountType === 'Agency') return ['Upfront', 'Net Upfront', 'On-Credit'];
-    if (accountType === 'Agency') return ['Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
     return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
+  };
+  const resolvedPaymentModeOptions = (): PaymentMode[] => {
+    if (paymentModeOptionsProp && paymentModeOptionsProp.length > 0) {
+      return paymentModeOptionsProp;
+    }
+    return mockPaymentModeOptions();
   };
 
   // Dev Quick Fill — inject modal values into local form state.
@@ -2588,7 +2612,7 @@ export function CreateBooking({
               <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setFieldErrors((prev) => { if (!prev.paymentMode) return prev; const n = { ...prev }; delete n.paymentMode; return n; }); }}>
                 <SelectTrigger className={fieldErrors.paymentMode ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select payment mode" /></SelectTrigger>
                 <SelectContent>
-                  {paymentModeOptions().map(m => (
+                  {resolvedPaymentModeOptions().map(m => (
                     <SelectItem key={m} value={m}>{m}</SelectItem>
                   ))}
                 </SelectContent>
