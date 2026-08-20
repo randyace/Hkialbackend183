@@ -46,6 +46,16 @@ interface BreakdownLineItem {
   product?: string;
 }
 
+export interface InvoiceHistoryEntry {
+  id: number;
+  invoiceNo: string;
+  invoiceType: string;
+  status: string;
+  totalAmount: number;
+  sentAt: string | null;
+  createdAt: string | null;
+}
+
 interface BookingInvoiceDialogProps {
   open: boolean;
   onClose: () => void;
@@ -102,6 +112,51 @@ interface BookingInvoiceDialogProps {
   onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
   /** Distinguishes unpaid invoice preview from paid receipt preview. */
   documentType?: 'invoice' | 'receipt';
+  /** All persisted invoices for this booking (newest first). */
+  invoiceHistory?: InvoiceHistoryEntry[];
+}
+
+function formatInvoiceTypeLabel(invoiceType: string): string {
+  if (invoiceType === 'pos_fnb') {
+    return 'F&B (POS)';
+  }
+  return 'Booking Fee';
+}
+
+function getInvoiceTypeBadgeClass(invoiceType: string): string {
+  if (invoiceType === 'pos_fnb') {
+    return 'bg-orange-100 text-orange-800 border-orange-200';
+  }
+  return 'bg-blue-100 text-blue-800 border-blue-200';
+}
+
+function getInvoiceStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'Paid':
+      return 'bg-green-100 text-green-800 border-green-200';
+    case 'Voided':
+      return 'bg-gray-100 text-gray-600 border-gray-200';
+    case 'Sent':
+    default:
+      return 'bg-amber-100 text-amber-800 border-amber-200';
+  }
+}
+
+function formatInvoiceTimestamp(value: string | null | undefined): string {
+  if (!value) {
+    return '—';
+  }
+  const parsed = new Date(value.replace(' ', 'T'));
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return parsed.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function formatReceiptDate(value?: string): string {
@@ -140,6 +195,7 @@ export function BookingInvoiceDialog({
   authToken,
   onInvoiceSent,
   documentType = 'invoice',
+  invoiceHistory = [],
 }: BookingInvoiceDialogProps) {
   const isInvoice = documentType === 'invoice';
   const documentLabel = isInvoice ? 'Invoice' : 'Receipt';
@@ -157,6 +213,7 @@ export function BookingInvoiceDialog({
   // action is in flight (otherwise the dialog looks frozen
   // until the parent refetch updates the badge).
   const [isSendingInvoice, setIsSendingInvoice] = useState(false);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
 
   // 2026-06-27 — "Send Invoice & Payment Link" handler.
   //
@@ -222,6 +279,62 @@ export function BookingInvoiceDialog({
   };
 
   const handleDownloadPdf = async () => {
+    await handleDownloadInvoicePdf(undefined, `${documentLabel}-${booking.bookingNo || bookingId}`);
+  };
+
+  const handleDownloadInvoicePdf = async (
+    invoiceId?: number,
+    filename?: string,
+    docTypeOverride?: 'invoice' | 'receipt',
+  ) => {
+    if (!token) {
+      toast.error('Not signed in. Please log in to download.');
+      return;
+    }
+    const docType = docTypeOverride ?? documentType;
+    try {
+      const apiRoot = (baseUrl || '').replace(/\/$/, '');
+      const query = new URLSearchParams({ type: docType });
+      if (invoiceId != null) {
+        query.set('invoice_id', String(invoiceId));
+      }
+      const response = await fetch(
+        `${apiRoot}/bookings/${bookingId}/document.pdf?${query.toString()}`,
+        {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/pdf',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const buffer = await response.arrayBuffer();
+      const head = new TextDecoder('utf-8').decode(buffer.slice(0, 5));
+      if (head !== '%PDF-') {
+        const contentType = response.headers.get('content-type') ?? 'unknown';
+        throw new Error(`Invoice endpoint returned non-PDF content (${contentType})`);
+      }
+      const blob = new Blob([buffer], { type: 'application/pdf' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename ?? `${documentLabel}-${booking.bookingNo || bookingId}.pdf`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      toast.success(`${documentLabel} downloaded`);
+    } catch (err) {
+      toast.error('Failed to download PDF', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    }
+  };
+
+  const handleDownloadPdfLegacy = async () => {
     if (!token) {
       toast.error('Not signed in. Please log in to download.');
       return;
@@ -325,6 +438,24 @@ export function BookingInvoiceDialog({
     }
   };
 
+  const handleDownloadHistoryPdf = async (entry: InvoiceHistoryEntry) => {
+    if (downloadingInvoiceId != null) {
+      return;
+    }
+
+    setDownloadingInvoiceId(entry.id);
+    try {
+      const docType = entry.status === 'Paid' ? 'receipt' : 'invoice';
+      await handleDownloadInvoicePdf(
+        entry.id,
+        `${docType === 'receipt' ? 'Receipt' : 'Invoice'}-${entry.invoiceNo}.pdf`,
+        docType,
+      );
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
+
   const issueDate = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: '2-digit',
@@ -342,10 +473,100 @@ export function BookingInvoiceDialog({
           <DialogTitle>{documentLabel.toUpperCase()} - {booking.bookingNo}</DialogTitle>
           <DialogDescription>
             {isInvoice
-              ? 'Review and send invoice for this booking'
+              ? 'Review invoice history, preview the current document, and send a new booking-fee invoice when ready.'
               : 'Review and download receipt for this confirmed payment'}
           </DialogDescription>
         </DialogHeader>
+
+        <section className="space-y-3">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-900">
+            Invoice History
+          </h3>
+          {invoiceHistory.length === 0 ? (
+            <Card className="p-4 text-sm text-gray-500">
+              No invoices have been sent for this booking yet.
+            </Card>
+          ) : (
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Invoice No.
+                      </th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="px-4 py-2.5 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                        Sent Date
+                      </th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-36">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {invoiceHistory.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50/60">
+                        <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">
+                          {entry.invoiceNo}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant="outline"
+                            className={getInvoiceTypeBadgeClass(entry.invoiceType)}
+                          >
+                            {formatInvoiceTypeLabel(entry.invoiceType)}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-gray-900 whitespace-nowrap">
+                          {entry.totalAmount > 0
+                            ? `HK$ ${entry.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : 'Complimentary'}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge
+                            variant="outline"
+                            className={getInvoiceStatusBadgeClass(entry.status)}
+                          >
+                            {entry.status}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700 whitespace-nowrap">
+                          {formatInvoiceTimestamp(entry.sentAt ?? entry.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void handleDownloadHistoryPdf(entry)}
+                            disabled={downloadingInvoiceId === entry.id}
+                            data-testid={`invoice-history-download-${entry.id}`}
+                          >
+                            {downloadingInvoiceId === entry.id ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-1.5" />
+                            )}
+                            View / Download PDF
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+        </section>
 
         <div className="w-full overflow-x-auto">
           <div className="min-w-[800px] bg-white space-y-6 border border-black p-6">

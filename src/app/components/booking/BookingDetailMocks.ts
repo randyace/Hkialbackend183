@@ -118,6 +118,16 @@ export interface Booking {
   }>;
   status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+  /** All persisted invoices for this booking (newest first). */
+  invoiceHistory?: Array<{
+    id: number;
+    invoiceNo: string;
+    invoiceType: string;
+    status: string;
+    totalAmount: number;
+    sentAt: string | null;
+    createdAt: string | null;
+  }>;
   services: string[];
   amount: string | 'Pending Calculation' | 'Re-calculation' | 'Manual Adjustment';
   totalPrice?: number;

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import {
   Download, FileText, Calendar, TrendingUp, Users, DollarSign,
-  Clock, Target, AlertTriangle, Ticket, UserPlus, Heart,
+  Clock, Target, AlertTriangle, Ticket, UserPlus, Heart, Wallet,
   ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2,
 } from 'lucide-react';
 import {
@@ -940,6 +940,14 @@ const ANALYTICS_TABS = [
     badge: 'bg-amber-100 text-amber-700',
     Component: ExistingCustomerReport,
   },
+  {
+    id: 'customer-spending',
+    label: 'Customer Spending',
+    icon: Wallet,
+    accent: 'border-teal-500',
+    badge: 'bg-teal-100 text-teal-700',
+    Component: null,
+  },
 ];
 
 // ── Main Reports Component ───────────────────────────────────────────────────
@@ -948,9 +956,10 @@ export interface ReportsProps {
   reportData?: ReportsData;
   isLoading?: boolean;
   onExport?: (reportType: string) => void;
+  customerSpendingContent?: ReactNode;
 }
 
-export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) {
+export function Reports({ reportData, isLoading, onExport, customerSpendingContent }: ReportsProps = {}) {
   const [activeTab, setActiveTab] = useState<string>('operational');
 
   const activeReport = ANALYTICS_TABS.find(t => t.id === activeTab)!;
@@ -1004,7 +1013,7 @@ export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) 
                 </p>
               </div>
             </div>
-            {isAnalytics && (
+            {isAnalytics && activeTab !== 'customer-spending' && (
               <Button
                 size="sm"
                 className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white gap-2 flex-shrink-0"
@@ -1033,6 +1042,7 @@ export function Reports({ reportData, isLoading, onExport }: ReportsProps = {}) 
           {activeTab === 'coupon'      && <CouponConversionReport data={reportData?.coupon} />}
           {activeTab === 'new-client'  && <NewClientReport       data={reportData?.newClient} />}
           {activeTab === 'existing'    && <ExistingCustomerReport data={reportData?.existingCustomer} />}
+          {activeTab === 'customer-spending' && customerSpendingContent}
         </Card>
       </section>
     </div>

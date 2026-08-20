@@ -4632,6 +4632,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         onInvoiceSent={onInvoiceSent}
         apiBaseUrl={apiBaseUrl}
         authToken={authToken}
+        invoiceHistory={booking.invoiceHistory ?? []}
       />
 
       {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}
