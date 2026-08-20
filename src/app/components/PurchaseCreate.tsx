@@ -9,6 +9,16 @@ import {
   ArrowLeft, Search, User, Building2, Plane, Star, Gem, Award, Trophy,
   CheckCircle, TrendingUp, Package, CreditCard, Info, FileText, X,
 } from 'lucide-react';
+import {
+  DISCOUNT_CONTRACT_COMPONENTS,
+  DISCOUNT_CONTRACT_ENGINE_COPY,
+  DISCOUNT_TYPES,
+  emptyDiscountLineDraft,
+  formatDiscountLineSummary,
+  parseDiscountLineDrafts,
+  type DiscountLineDraft,
+  type DiscountType,
+} from '../../../../../lib/pricing/discountContractCatalog';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -26,7 +36,7 @@ const localDateStr = (d: Date = new Date()): string =>
 export type PurchaseCategory = 'Individual' | 'Corporate' | 'Agency';
 /** M32 — one product per purchase. Not the account reporting badge. */
 export type PurchaseProduct = 'membership' | 'promo_batch' | 'credit_topup' | 'discount_contract';
-export type DiscountTypeChoice = 'percentage' | 'fixed_hkd';
+export type DiscountTypeChoice = DiscountType;
 export type Tier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 export type TierOrNone = Tier | 'None';
 export type PaymentMethod = 'Bank Transfer' | 'Branch Transfer' | 'Corporate Account';
@@ -101,6 +111,12 @@ export interface PurchaseRecord {
   totalSessionsAfter?: number;
   discountType?: DiscountTypeChoice;
   discountValue?: number;
+  discountLines?: Array<{
+    component_key: string;
+    discount_type: DiscountTypeChoice;
+    discount_value: number;
+    max_qty?: number | null;
+  }>;
   packagePrice: number;
   paymentMethod: PaymentMethod;
   transactionRef: string;
@@ -302,8 +318,7 @@ export function PurchaseCreate({
   const [creditBalance, setCreditBalance]       = useState('');
   const [totalPrice, setTotalPrice]             = useState('');
   const [discountName, setDiscountName]         = useState('');
-  const [discountType, setDiscountType]         = useState<DiscountTypeChoice>('percentage');
-  const [discountValue, setDiscountValue]       = useState('');
+  const [discountLines, setDiscountLines]       = useState<DiscountLineDraft[]>([emptyDiscountLineDraft()]);
   const [discountStart, setDiscountStart]       = useState('');
   const [discountEnd, setDiscountEnd]           = useState('');
 
@@ -312,12 +327,10 @@ export function PurchaseCreate({
   const showCreditForm = selectedProduct === 'credit_topup';
   const showDiscountForm = selectedProduct === 'discount_contract';
 
-  const discountValueNum = parseFloat(discountValue);
+  const parsedDiscountLines = parseDiscountLineDrafts(discountLines);
   const discountReady =
     discountName.trim().length > 0
-    && Number.isFinite(discountValueNum)
-    && discountValueNum > 0
-    && (discountType !== 'percentage' || discountValueNum <= 100)
+    && parsedDiscountLines.ok
     && !(discountStart && discountEnd && discountEnd < discountStart);
 
   const canConfirm = !!selectedAccount && (
@@ -336,8 +349,7 @@ export function PurchaseCreate({
     setCreditBalance('');
     setTotalPrice('');
     setDiscountName('');
-    setDiscountType('percentage');
-    setDiscountValue('');
+    setDiscountLines([emptyDiscountLineDraft()]);
     setDiscountStart('');
     setDiscountEnd('');
   };
@@ -462,7 +474,8 @@ export function PurchaseCreate({
         expiryDate,
         status: 'Pending Invoice',
       };
-    } else if (selectedProduct === 'discount_contract') {
+    } else if (selectedProduct === 'discount_contract' && parsedDiscountLines.ok) {
+      const firstLine = parsedDiscountLines.lines[0];
       record = {
         id: newId,
         purchaseRef: `DISC-2025-${String(newId).padStart(5, '0')}`,
@@ -473,8 +486,9 @@ export function PurchaseCreate({
         primaryName: selectedAccount.primaryName,
         primaryEmail: selectedAccount.email,
         bundleLabel: discountName.trim(),
-        discountType,
-        discountValue: discountValueNum,
+        discountType: firstLine?.discount_type,
+        discountValue: firstLine?.discount_value,
+        discountLines: parsedDiscountLines.lines,
         packagePrice: 0,
         paymentMethod,
         transactionRef: transactionRef || `TXN-AUTO-${newId}`,
@@ -529,6 +543,7 @@ export function PurchaseCreate({
         totalSessionsAfter: record.totalSessionsAfter,
         discountType: record.discountType,
         discountValue: record.discountValue,
+        discountLines: record.discountLines,
         packagePrice: record.packagePrice,
         paymentMethod: record.paymentMethod,
         transactionRef: record.transactionRef,
@@ -866,7 +881,7 @@ export function PurchaseCreate({
             {showDiscountForm && (
               <>
                 <p className="text-sm text-gray-500 mb-4">
-                  Whole-booking discount: percentage or fixed HKD, with an optional date range.
+                  {DISCOUNT_CONTRACT_ENGINE_COPY}
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -875,46 +890,139 @@ export function PurchaseCreate({
                     </Label>
                     <Input
                       id="discountName"
-                      placeholder="e.g. Corporate 15%"
+                      placeholder="e.g. Summer"
                       value={discountName}
                       onChange={e => setDiscountName(e.target.value)}
                       data-testid="discount-contract-name"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="discountType" className="mb-[10px] block">
-                      Type <span className="text-red-500">*</span>
-                    </Label>
-                    <Select
-                      value={discountType}
-                      onValueChange={(v: DiscountTypeChoice) => setDiscountType(v)}
+                  <div className="space-y-2" data-testid="discount-contract-lines">
+                    {discountLines.map((line, index) => {
+                      const used = discountLines.map((l) => l.component_key);
+                      return (
+                        <div
+                          key={index}
+                          className="grid grid-cols-12 gap-2 items-end border border-gray-200 rounded-md p-2"
+                        >
+                          <div className="col-span-12 sm:col-span-4">
+                            <Label className="mb-[6px] block">Component</Label>
+                            <select
+                              className="w-full border rounded-md px-2 py-2 bg-white text-sm"
+                              value={line.component_key}
+                              onChange={(e) => {
+                                const next = discountLines.map((l, i) =>
+                                  i === index ? { ...l, component_key: e.target.value } : l,
+                                );
+                                setDiscountLines(next);
+                              }}
+                              data-testid="discount-contract-line-component"
+                            >
+                              {DISCOUNT_CONTRACT_COMPONENTS.map((c) => (
+                                <option
+                                  key={c.key}
+                                  value={c.key}
+                                  disabled={c.key !== line.component_key && used.includes(c.key)}
+                                >
+                                  {c.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-6 sm:col-span-3">
+                            <Label className="mb-[6px] block">Type</Label>
+                            <select
+                              className="w-full border rounded-md px-2 py-2 bg-white text-sm"
+                              value={line.discount_type}
+                              onChange={(e) => {
+                                const discount_type = e.target.value as DiscountType;
+                                const next = discountLines.map((l, i) =>
+                                  i === index
+                                    ? {
+                                      ...l,
+                                      discount_type,
+                                      max_qty: discount_type === 'waive_qty' ? l.max_qty : '',
+                                    }
+                                    : l,
+                                );
+                                setDiscountLines(next);
+                              }}
+                              data-testid="discount-contract-line-type"
+                            >
+                              {DISCOUNT_TYPES.map((t) => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="col-span-6 sm:col-span-2">
+                            <Label className="mb-[6px] block">
+                              {line.discount_type === 'fixed_hkd' ? 'Amount (HKD)'
+                                : line.discount_type === 'waive_qty' ? 'Units'
+                                  : 'Percent'}
+                            </Label>
+                            <Input
+                              type="number"
+                              min={line.discount_type === 'waive_qty' ? 1 : 0.01}
+                              max={line.discount_type === 'percentage' ? 100 : undefined}
+                              step={line.discount_type === 'waive_qty' ? 1 : '0.01'}
+                              inputMode="decimal"
+                              value={line.discount_value}
+                              onChange={(e) => {
+                                const next = discountLines.map((l, i) =>
+                                  i === index ? { ...l, discount_value: e.target.value } : l,
+                                );
+                                setDiscountLines(next);
+                              }}
+                              onWheel={e => e.currentTarget.blur()}
+                              data-testid="discount-contract-line-value"
+                            />
+                          </div>
+                          {line.discount_type === 'waive_qty' && (
+                            <div className="col-span-6 sm:col-span-2">
+                              <Label className="mb-[6px] block">Max qty</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={line.max_qty}
+                                onChange={(e) => {
+                                  const next = discountLines.map((l, i) =>
+                                    i === index ? { ...l, max_qty: e.target.value } : l,
+                                  );
+                                  setDiscountLines(next);
+                                }}
+                                onWheel={e => e.currentTarget.blur()}
+                                data-testid="discount-contract-line-max-qty"
+                              />
+                            </div>
+                          )}
+                          <div className="col-span-6 sm:col-span-1 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="text-xs"
+                              disabled={discountLines.length <= 1}
+                              onClick={() => setDiscountLines(discountLines.filter((_, i) => i !== index))}
+                              data-testid="discount-contract-remove-line"
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-xs"
+                      disabled={!DISCOUNT_CONTRACT_COMPONENTS.some((c) => !discountLines.some((l) => l.component_key === c.key))}
+                      onClick={() => setDiscountLines([
+                        ...discountLines,
+                        emptyDiscountLineDraft(discountLines.map((l) => l.component_key)),
+                      ])}
+                      data-testid="discount-contract-add-line"
                     >
-                      <SelectTrigger id="discountType" data-testid="discount-contract-type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                        <SelectItem value="fixed_hkd">Fixed HKD</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="discountValue" className="mb-[10px] block">
-                      {discountType === 'fixed_hkd' ? 'Amount (HKD)' : 'Percent'} <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="discountValue"
-                      type="number"
-                      min="0.01"
-                      max={discountType === 'percentage' ? 100 : undefined}
-                      step="0.01"
-                      inputMode="decimal"
-                      placeholder={discountType === 'fixed_hkd' ? 'e.g. 800' : 'e.g. 15'}
-                      value={discountValue}
-                      onChange={e => setDiscountValue(e.target.value)}
-                      onWheel={e => e.currentTarget.blur()}
-                      data-testid="discount-contract-value"
-                    />
+                      Add line
+                    </Button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1182,7 +1290,7 @@ export function PurchaseCreate({
                         )}
                       </div>
                     </div>
-                  ) : selectedProduct === 'discount_contract' && (discountName || discountValue) ? (
+                  ) : selectedProduct === 'discount_contract' && (discountName || parsedDiscountLines.ok) ? (
                     <div>
                       <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Discount contract</p>
                       <div className="p-3 rounded-lg border-2 border-indigo-200 bg-indigo-50">
@@ -1192,12 +1300,17 @@ export function PurchaseCreate({
                             <span className="text-sm text-gray-900">{discountName}</span>
                           </div>
                         )}
-                        {discountValue && (
-                          <p className="text-xs text-gray-500">
-                            {discountType === 'fixed_hkd'
-                              ? `HKD ${parseFloat(discountValue).toLocaleString()}`
-                              : `${discountValue}%`}
-                          </p>
+                        {parsedDiscountLines.ok && (
+                          <div className="flex flex-wrap gap-1">
+                            {parsedDiscountLines.lines.map((line, i) => (
+                              <span
+                                key={`${line.component_key}-${i}`}
+                                className="inline-flex items-center rounded-full bg-white border border-indigo-100 px-2 py-0.5 text-xs text-indigo-900"
+                              >
+                                {formatDiscountLineSummary(line)}
+                              </span>
+                            ))}
+                          </div>
                         )}
                         {(discountStart || discountEnd) && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -1225,10 +1338,8 @@ export function PurchaseCreate({
                       <span className="text-gray-900">
                         {selectedProduct === 'membership' && selectedPackage
                           ? `HKD ${selectedPackage.price.toLocaleString()}`
-                          : selectedProduct === 'discount_contract' && discountValue
-                          ? (discountType === 'fixed_hkd'
-                            ? `HKD ${parseFloat(discountValue).toLocaleString()}`
-                            : `${discountValue}%`)
+                          : selectedProduct === 'discount_contract' && parsedDiscountLines.ok
+                          ? `${parsedDiscountLines.lines.length} line${parsedDiscountLines.lines.length === 1 ? '' : 's'}`
                           : selectedProduct !== 'membership' && selectedProduct !== 'discount_contract' && totalPrice
                           ? `HKD ${parseFloat(totalPrice).toLocaleString()}`
                           : '—'}
