@@ -654,6 +654,12 @@ export interface CreateBookingProps {
   paymentModeOptions?: PaymentMode[];
   /** Wrapper default when the current value is missing or not in options. */
   defaultPaymentMode?: PaymentMode | '';
+  /**
+   * Wrapper-owned membership species (D2). When provided (including false),
+   * Membership tier + free LD/PS follow this flag, not Individual type.
+   * Absent = standalone mock still Individual-gates.
+   */
+  showMembershipBenefits?: boolean;
 }
 
 // 2026-06-23 — phone-region code typeahead + number filter, shared
@@ -1176,6 +1182,7 @@ export function CreateBooking({
   onFlightLookup,
   paymentModeOptions: paymentModeOptionsProp,
   defaultPaymentMode = '',
+  showMembershipBenefits: showMembershipBenefitsProp,
 }: CreateBookingProps) {
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
@@ -1213,12 +1220,15 @@ export function CreateBooking({
   const [useMembershipPsFree, setUseMembershipPsFree] = useState(false);
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const showMembershipBenefits = showMembershipBenefitsProp !== undefined
+    ? showMembershipBenefitsProp
+    : accountType === 'Individual';
 
   // 2026-06-09 round 6.2.28 / 6.2.136 / 2026-07-17 — when an account is
-  // selected, load Membership Tier from the account. Individual members
-  // do NOT get a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill).
-  // Account Discount stays blank for Individual (staff override only).
-  // Agency: auto-fill Account Discount from travel_agencies.discount_rate
+  // selected, load Membership Tier from the account. Members do NOT get
+  // a tier % discount (removed MEMBERSHIP_DISCOUNT auto-fill). Account
+  // Discount stays blank for members (staff override only). Agency:
+  // auto-fill Account Discount from travel_agencies.discount_rate
   // (spec §9 — Agency default). Free LD / PS quotas render separately.
   useEffect(() => {
     if (selectedAccount?.membership_type) {
@@ -1242,6 +1252,13 @@ export function CreateBooking({
       setAccountDiscountPct('');
     }
   }, [selectedAccount, accountType]);
+
+  useEffect(() => {
+    if (!showMembershipBenefits) {
+      setUseMembershipLdFree(false);
+      setUseMembershipPsFree(false);
+    }
+  }, [showMembershipBenefits]);
 
   // ── Flight ──────────────────────────────────────────────────────────────────
   const [flightType, setFlightType] = useState<FlightType>('Departure');
@@ -2533,7 +2550,7 @@ export function CreateBooking({
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             )}
-            {accountType === 'Individual' && (
+            {showMembershipBenefits && (
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Membership Tier</label>
                 <Select value={membershipTier} onValueChange={v => setMembershipTier(v as MembershipTier)} disabled={!!selectedAccount}>
@@ -2546,7 +2563,7 @@ export function CreateBooking({
                 </Select>
               </div>
             )}
-            {accountType === 'Individual' && selectedAccount && (
+            {showMembershipBenefits && selectedAccount && (
               <div className="col-span-2 rounded-md border border-indigo-100 bg-indigo-50/60 px-4 py-3">
                 <p className="text-sm font-medium text-[#0f2942] mb-2">Membership benefits</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
@@ -2654,8 +2671,8 @@ export function CreateBooking({
               <p className="text-xs text-gray-500 mt-1">
                 {selectedAgency
                   ? <>Default {selectedAgency.discountRate}% (Agency){accountDiscountPct !== '' && <> · override {accountDiscountPct}%</>}</>
-                  : accountType === 'Individual'
-                    ? <>Optional staff override only — Individual members use free LD / PS upgrade benefits, not a tier %</>
+                  : showMembershipBenefits
+                    ? <>Optional staff override only — members use free LD / PS upgrade benefits, not a tier %</>
                     : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
