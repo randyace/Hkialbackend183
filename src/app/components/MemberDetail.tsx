@@ -142,7 +142,7 @@ export interface Member {
   passportNumber: string;
   dateOfBirth?: string;
   internalGrouping: string;
-  paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase';
+  paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase' | 'Bulk Purchase/Monthly Invoice';
   companyCode: string;
   bulkPurchaseCode?: string;
   membershipNumber?: string;
@@ -237,6 +237,12 @@ export interface MemberDetailProps {
    * flag, not Individual type. Absent = standalone mock still Individual-gates.
    */
   showMembershipBenefits?: boolean;
+  /**
+   * Wrapper-owned payment-method editor options (D2 / D13). When provided,
+   * do not Individual-gate the dropdown. Absent = standalone mock still
+   * Individual-gates (Upfront pair vs all four).
+   */
+  paymentMethodOptions?: string[];
 
   // ── Delete callbacks ─────────────────────────────────────────────────────
   onDeleteAllergy?: (id: number) => void;
@@ -446,6 +452,7 @@ export function MemberDetail({
 
   contractsTabContent,
   showMembershipBenefits: showMembershipBenefitsProp,
+  paymentMethodOptions: paymentMethodOptionsProp,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
   onDeletePreference,
@@ -535,6 +542,11 @@ export function MemberDetail({
   const showMembershipBenefits = showMembershipBenefitsProp !== undefined
     ? showMembershipBenefitsProp
     : memberData.accountType === 'Individual';
+  const paymentMethodOptions = paymentMethodOptionsProp !== undefined
+    ? paymentMethodOptionsProp
+    : (memberData.accountType === 'Individual'
+      ? [...INDIVIDUAL_PAYMENT_METHODS]
+      : [...ALL_PAYMENT_METHODS]);
 
   // ── Controlled form state (seeded from memberData) ──────────────────────────
   const [basicForm, setBasicForm] = useState({
@@ -1092,19 +1104,12 @@ export function MemberDetail({
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 >
                   <option value="">Not set</option>
-                  {(memberData.accountType === 'Individual'
-                    ? INDIVIDUAL_PAYMENT_METHODS
-                    : ALL_PAYMENT_METHODS
-                  ).map(pm => (
+                  {paymentMethodOptions.map(pm => (
                     <option key={pm} value={pm}>{pm}</option>
                   ))}
-                  {/* Show legacy value if outside the allowed set (e.g. old On-Credit on Individual) so staff can see and change it */}
+                  {/* Show legacy value if outside the allowed set so staff can see and change it */}
                   {accountForm.paymentMethod &&
-                    !(
-                      memberData.accountType === 'Individual'
-                        ? (INDIVIDUAL_PAYMENT_METHODS as readonly string[])
-                        : (ALL_PAYMENT_METHODS as readonly string[])
-                    ).includes(accountForm.paymentMethod) && (
+                    !paymentMethodOptions.includes(accountForm.paymentMethod) && (
                       <option value={accountForm.paymentMethod}>{accountForm.paymentMethod}</option>
                     )}
                 </select>
