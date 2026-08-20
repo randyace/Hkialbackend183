@@ -231,6 +231,12 @@ export interface MemberDetailProps {
 
   /** Contracts tab body — supplied by parent container. */
   contractsTabContent?: ReactNode;
+  /**
+   * Wrapper-owned membership species (D2). When provided (including false),
+   * membership badge, Free LD/PS cells, and membership fields follow this
+   * flag, not Individual type. Absent = standalone mock still Individual-gates.
+   */
+  showMembershipBenefits?: boolean;
 
   // ── Delete callbacks ─────────────────────────────────────────────────────
   onDeleteAllergy?: (id: number) => void;
@@ -439,6 +445,7 @@ export function MemberDetail({
   loginHistory: loginHistoryProp = [],
 
   contractsTabContent,
+  showMembershipBenefits: showMembershipBenefitsProp,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
   onDeletePreference,
@@ -525,6 +532,9 @@ export function MemberDetail({
 }: MemberDetailProps) {
   // Use passed member or fall back to mock — single source of truth
   const memberData: Member = memberProp ?? MOCK_MEMBER;
+  const showMembershipBenefits = showMembershipBenefitsProp !== undefined
+    ? showMembershipBenefitsProp
+    : memberData.accountType === 'Individual';
 
   // ── Controlled form state (seeded from memberData) ──────────────────────────
   const [basicForm, setBasicForm] = useState({
@@ -823,7 +833,7 @@ export function MemberDetail({
                 <Badge className="bg-purple-100 text-purple-700">
                   {memberData.accountType}
                 </Badge>
-                {memberData.accountType === 'Individual' && memberData.membershipType && (
+                {showMembershipBenefits && memberData.membershipType && (
                   <Badge className="bg-amber-100 text-amber-700">
                     {memberData.membershipType} Member
                   </Badge>
@@ -853,7 +863,7 @@ export function MemberDetail({
                       )}
                     </p>
                   </div>
-                  {memberData.accountType === 'Individual' ? (
+                  {showMembershipBenefits ? (
                     <>
                       <div>
                         <span className="text-gray-600">Free LD Entries</span>
@@ -1110,8 +1120,8 @@ export function MemberDetail({
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
               </div>
-              {/* Only show membership fields for Individual accounts */}
-              {memberData.accountType === 'Individual' && (
+              {/* Membership fields follow species (wrapper flag); mock still Individual-gates. */}
+              {showMembershipBenefits && (
                 <>
                   <div>
                     <label>Membership Number</label>
