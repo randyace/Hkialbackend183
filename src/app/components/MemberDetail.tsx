@@ -238,6 +238,12 @@ export interface MemberDetailProps {
    */
   showMembershipBenefits?: boolean;
   /**
+   * Wrapper-owned credit facility (D2). When provided (including false),
+   * On Hold / Available cells follow this flag, independent of membership.
+   * Absent = standalone mock still membership-ternary-gates extras.
+   */
+  showCreditExtras?: boolean;
+  /**
    * Wrapper-owned payment-method editor options (D2 / D13). When provided,
    * do not Individual-gate the dropdown. Absent = standalone mock still
    * Individual-gates (Upfront pair vs all four).
@@ -452,6 +458,7 @@ export function MemberDetail({
 
   contractsTabContent,
   showMembershipBenefits: showMembershipBenefitsProp,
+  showCreditExtras: showCreditExtrasProp,
   paymentMethodOptions: paymentMethodOptionsProp,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
@@ -542,6 +549,9 @@ export function MemberDetail({
   const showMembershipBenefits = showMembershipBenefitsProp !== undefined
     ? showMembershipBenefitsProp
     : memberData.accountType === 'Individual';
+  const showCreditExtras = showCreditExtrasProp !== undefined
+    ? showCreditExtrasProp
+    : memberData.accountType !== 'Individual';
   const paymentMethodOptions = paymentMethodOptionsProp !== undefined
     ? paymentMethodOptionsProp
     : (memberData.accountType === 'Individual'
@@ -875,72 +885,145 @@ export function MemberDetail({
                       )}
                     </p>
                   </div>
-                  {showMembershipBenefits ? (
+                  {showCreditExtrasProp !== undefined ? (
                     <>
-                      <div>
-                        <span className="text-gray-600">Free LD Entries</span>
-                        <p
-                          className="font-semibold text-[#0f2942]"
-                          data-testid="member-ld-remaining"
-                        >
-                          {memberData.ldEntriesRemaining === -1
-                            ? <span className="text-amber-700">Unlimited</span>
-                            : (memberData.ldEntriesRemaining == null
+                      {showMembershipBenefits && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">Free LD Entries</span>
+                            <p
+                              className="font-semibold text-[#0f2942]"
+                              data-testid="member-ld-remaining"
+                            >
+                              {memberData.ldEntriesRemaining === -1
+                                ? <span className="text-amber-700">Unlimited</span>
+                                : (memberData.ldEntriesRemaining == null
+                                    ? <span className="text-gray-400">—</span>
+                                    : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Free PS Upgrades</span>
+                            <p
+                              className="font-semibold text-[#0f2942]"
+                              data-testid="member-ps-remaining"
+                            >
+                              {memberData.psFreeUpgradesRemaining == null
                                 ? <span className="text-gray-400">—</span>
-                                : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Free PS Upgrades</span>
-                        <p
-                          className="font-semibold text-[#0f2942]"
-                          data-testid="member-ps-remaining"
-                        >
-                          {memberData.psFreeUpgradesRemaining == null
-                            ? <span className="text-gray-400">—</span>
-                            : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>}
-                        </p>
-                      </div>
+                                : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>}
+                            </p>
+                          </div>
+                        </>
+                      )}
+                      {showCreditExtras && (
+                        <>
+                          <div>
+                            <span className="text-gray-600">On Hold</span>
+                            <p
+                              className="font-semibold text-[#0f2942]"
+                              data-testid="member-credit-on-hold"
+                            >
+                              {memberData.creditOnHold == null || memberData.creditOnHold === 0 ? (
+                                <span className="text-gray-400">—</span>
+                              ) : (
+                                <span className="text-amber-700">
+                                  HK${memberData.creditOnHold.toLocaleString(undefined, {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Available</span>
+                            <p
+                              className="font-semibold text-[#0f2942]"
+                              data-testid="member-credit-available"
+                            >
+                              {memberData.creditAvailable == null && memberData.creditBalance == null ? (
+                                <span className="text-gray-400">—</span>
+                              ) : (
+                                <span className="text-green-700">
+                                  HK${(memberData.creditAvailable ?? memberData.creditBalance ?? 0).toLocaleString(undefined, {
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
-                    <>
-                      <div>
-                        <span className="text-gray-600">On Hold</span>
-                        <p
-                          className="font-semibold text-[#0f2942]"
-                          data-testid="member-credit-on-hold"
-                        >
-                          {memberData.creditOnHold == null || memberData.creditOnHold === 0 ? (
-                            <span className="text-gray-400">—</span>
-                          ) : (
-                            <span className="text-amber-700">
-                              HK${memberData.creditOnHold.toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Available</span>
-                        <p
-                          className="font-semibold text-[#0f2942]"
-                          data-testid="member-credit-available"
-                        >
-                          {memberData.creditAvailable == null && memberData.creditBalance == null ? (
-                            <span className="text-gray-400">—</span>
-                          ) : (
-                            <span className="text-green-700">
-                              HK${(memberData.creditAvailable ?? memberData.creditBalance ?? 0).toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2,
-                              })}
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </>
+                    showMembershipBenefits ? (
+                      <>
+                        <div>
+                          <span className="text-gray-600">Free LD Entries</span>
+                          <p
+                            className="font-semibold text-[#0f2942]"
+                            data-testid="member-ld-remaining"
+                          >
+                            {memberData.ldEntriesRemaining === -1
+                              ? <span className="text-amber-700">Unlimited</span>
+                              : (memberData.ldEntriesRemaining == null
+                                  ? <span className="text-gray-400">—</span>
+                                  : <span className="text-amber-700">{memberData.ldEntriesRemaining}</span>)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Free PS Upgrades</span>
+                          <p
+                            className="font-semibold text-[#0f2942]"
+                            data-testid="member-ps-remaining"
+                          >
+                            {memberData.psFreeUpgradesRemaining == null
+                              ? <span className="text-gray-400">—</span>
+                              : <span className="text-amber-700">{memberData.psFreeUpgradesRemaining}</span>}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <span className="text-gray-600">On Hold</span>
+                          <p
+                            className="font-semibold text-[#0f2942]"
+                            data-testid="member-credit-on-hold"
+                          >
+                            {memberData.creditOnHold == null || memberData.creditOnHold === 0 ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <span className="text-amber-700">
+                                HK${memberData.creditOnHold.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-600">Available</span>
+                          <p
+                            className="font-semibold text-[#0f2942]"
+                            data-testid="member-credit-available"
+                          >
+                            {memberData.creditAvailable == null && memberData.creditBalance == null ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <span className="text-green-700">
+                                HK${(memberData.creditAvailable ?? memberData.creditBalance ?? 0).toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </>
+                    )
                   )}
                 </div>
               </div>
