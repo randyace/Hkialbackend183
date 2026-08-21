@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
+import { REGION_CODES } from '../../../../../utils/regionCodes';
+import { splitContactPhone } from '../../../../../utils/splitContactPhone';
+import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { useAuthContextOptional } from '../../../../../providers/AuthProvider';
 import { hasPermission } from '../../../../../lib/permissions';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
@@ -287,6 +290,13 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   // `livePreviewTotal`.
   livePreviewBreakdown?: Array<{ key: string; label: string; qty: number; unit_price: number; subtotal: number; product?: string; original_unit_price?: number | null }>;
   /**
+   * Same region-code list as Create Booking / Account Creation
+   * (`GET /api/lookups/region-codes` or the shared FALLBACK). Codes
+   * include the leading `+` (e.g. +852). When omitted, the view uses
+   * the parent `REGION_CODES` mirror so Hong Kong is always selectable.
+   */
+  regionCodes?: { code: string; name: string }[];
+  /**
    * Wrapper-owned optional override reason. When provided (including
    * empty string), the Service Items field uses this instead of
    * formData.priceOverrideReason.
@@ -546,7 +556,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   flightLastCheckedLabel?: string | null;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -816,7 +826,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   }, [vipPS, vipLD]);
 
   const updatePassenger = (idx: number, field: keyof PassengerDetail, value: string | number | undefined) => {
-    setPassengers(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+    const nextValue =
+      (field === 'firstName' || field === 'lastName') && typeof value === 'string'
+        ? sanitizeEnglishName(value)
+        : value;
+    setPassengers(prev => prev.map((p, i) => i === idx ? { ...p, [field]: nextValue } : p));
   };
 
   // ── Add New Item (add-on services) ─────────────────────────────────────────
@@ -1122,13 +1136,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // initialised from `booking.contactPerson` (standalone demo
   // mode + first-render flash). onChange dispatches to
   // `onFormChange` when available, else to local state.
+  const displayRegionCodes = (regionCodesProp && regionCodesProp.length > 0) ? regionCodesProp : REGION_CODES;
   const parsePhone = (raw: string | undefined): { regionCode: string; contactNo: string } => {
-    if (!raw) return { regionCode: '', contactNo: '' };
-    // Match "+XXX" or "+XX-XXX" prefix followed by whitespace or
-    // a dash, then the local number.
-    const m = raw.match(/^(\+\d+(?:-\d+)?)[\s\-]+(.+)$/);
-    if (m) return { regionCode: m[1], contactNo: m[2] };
-    return { regionCode: '', contactNo: raw };
+    const split = splitContactPhone(raw, displayRegionCodes);
+    return { regionCode: split.regionCode, contactNo: split.contactNumber };
   };
   const initialPhone = parsePhone(booking.contactPerson?.phone);
   const [localContactName,  setLocalContactName]  = useState(booking.contactPerson?.name ?? '');
@@ -1635,7 +1646,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   }, [nonFlyingPS, nonFlyingLD]);
 
   const updateNonFlyingGuest = (idx: number, field: keyof NonFlyingGuest, value: string | number | undefined) => {
-    setNonFlyingGuests(prev => prev.map((g, i) => i === idx ? { ...g, [field]: value } : g));
+    const nextValue =
+      (field === 'firstName' || field === 'lastName') && typeof value === 'string'
+        ? sanitizeEnglishName(value)
+        : value;
+    setNonFlyingGuests(prev => prev.map((g, i) => i === idx ? { ...g, [field]: nextValue } : g));
   };
 
   // Sync voucher toggle arrays when guest counts change
@@ -2772,19 +2787,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 value={regionCode}
                 onChange={e => setRegionCode(e.target.value)}
                 aria-label="Region code"
-                className="w-28 px-2 py-2 border rounded text-sm bg-white"
+                className="w-36 px-2 py-2 border rounded text-sm bg-white"
               >
-                <option value="">—</option>
-                <option value="+852">+852 (HK)</option>
-                <option value="+86">+86 (CN)</option>
-                <option value="+1">+1 (US/CA)</option>
-                <option value="+44">+44 (UK)</option>
-                <option value="+81">+81 (JP)</option>
-                <option value="+65">+65 (SG)</option>
-                <option value="+61">+61 (AU)</option>
-                <option value="+886">+886 (TW)</option>
-                <option value="+853">+853 (MO)</option>
-                <option value="+82">+82 (KR)</option>
+                {displayRegionCodes.map((r) => (
+                  <option key={r.code} value={r.code}>{r.code} {r.name}</option>
+                ))}
               </select>
               <input
                 type="tel"

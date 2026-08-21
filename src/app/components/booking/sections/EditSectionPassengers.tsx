@@ -28,6 +28,7 @@ import {
   isChildrenAgeGroup,
   parseGuestAge,
 } from '../../../../../../../lib/guestAgeGroup';
+import { sanitizeEnglishName } from '../../../../../../../utils/englishName';
 
 // Spec (Sky 2026-06-10 age-dropdown normalize): ONLY these 3 labels.
 // Pre-rename wire values are normalised on read by mapPassengerAgeGroup
@@ -101,7 +102,7 @@ export function EditSectionPassengers({
                   <input
                     type="text"
                     value={p.firstName}
-                    onChange={e => updatePassenger(i, { firstName: e.target.value })}
+                    onChange={e => updatePassenger(i, { firstName: sanitizeEnglishName(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
                   />
                 </div>
@@ -110,7 +111,7 @@ export function EditSectionPassengers({
                   <input
                     type="text"
                     value={p.lastName}
-                    onChange={e => updatePassenger(i, { lastName: e.target.value })}
+                    onChange={e => updatePassenger(i, { lastName: sanitizeEnglishName(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
                   />
                 </div>

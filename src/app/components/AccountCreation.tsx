@@ -9,6 +9,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { toast } from 'sonner';
 import { Building2, Plane, X, UserPlus } from 'lucide-react';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import { REGION_CODES } from '../../../../../utils/regionCodes';
+import { sanitizeEnglishName } from '../../../../../utils/englishName';
 
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
@@ -181,7 +183,7 @@ const emptySubForm = (id: number): CorporateSubForm => ({
   firstName: '',
   lastName: '',
   email: '',
-  regionCode: '',
+  regionCode: '+852',
   contactNumber: '',
   paymentMethod: 'Upfront',
   remarks: '',
@@ -215,7 +217,7 @@ export function AccountCreation({
   isSubmitting = false,
   fieldErrors = {},
 }: AccountCreationProps = {}) {
-  const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : null;
+  const displayRegionCodes = regionCodesProp && regionCodesProp.length > 0 ? regionCodesProp : REGION_CODES;
   void _countries; // nationality uses NationalityTypeahead (local ISO list); prop kept for wrapper compat
   const [accountType, setAccountType] = useState<'individual' | 'corporate' | 'travel-agency'>(
     type === 'corporate' ? 'corporate' : type === 'travel-agency' ? 'travel-agency' : 'individual'
@@ -241,14 +243,17 @@ export function AccountCreation({
     setCorporateForms(prev => prev.length > 1 ? prev.filter(f => f.id !== id) : prev);
 
   const updateCorporateForm = (id: number, field: keyof Omit<CorporateSubForm, 'id'>, value: string) =>
-    setCorporateForms(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
+    setCorporateForms(prev => prev.map(f => f.id === id ? {
+      ...f,
+      [field]: (field === 'firstName' || field === 'lastName') ? sanitizeEnglishName(value) : value,
+    } : f));
 
   // ── Individual / Travel Agency form data ─────────────────────────────────
   const [formData, setFormData] = useState({
     title: '',
     firstName: '',
     lastName: '',
-    regionCode: '',
+    regionCode: '+852',
     contactNumber: '',
     email: '',
     nationality: '',
@@ -620,11 +625,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
-                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="Enter first name" required />
+                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: sanitizeEnglishName(e.target.value)})} placeholder="Enter first name" required />
                     </div>
                     <div>
                       <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
-                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder="Enter last name" required />
+                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: sanitizeEnglishName(e.target.value)})} placeholder="Enter last name" required />
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>
@@ -696,11 +701,11 @@ export function AccountCreation({
                     </div>
                     <div>
                       <Label htmlFor="firstName" style={{ marginBottom: 10 }}>First Name *</Label>
-                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} placeholder="Enter first name" required />
+                      <Input id="firstName" value={formData.firstName} onChange={e => setFormData({...formData, firstName: sanitizeEnglishName(e.target.value)})} placeholder="Enter first name" required />
                     </div>
                     <div>
                       <Label htmlFor="lastName" style={{ marginBottom: 10 }}>Last Name *</Label>
-                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} placeholder="Enter last name" required />
+                      <Input id="lastName" value={formData.lastName} onChange={e => setFormData({...formData, lastName: sanitizeEnglishName(e.target.value)})} placeholder="Enter last name" required />
                     </div>
                     <div>
                       <Label htmlFor="email" style={{ marginBottom: 10 }}>Email *</Label>

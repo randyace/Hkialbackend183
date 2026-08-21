@@ -22,6 +22,7 @@ import {
 } from './ui/tabs';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { countryNameFor } from '../../../../../utils/countries';
+import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
@@ -1101,7 +1102,7 @@ export function MemberDetail({
                 <input
                   type="text"
                   value={basicForm.firstName}
-                  onChange={e => setBasicForm(f => ({ ...f, firstName: e.target.value }))}
+                  onChange={e => setBasicForm(f => ({ ...f, firstName: sanitizeEnglishName(e.target.value) }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -1111,7 +1112,7 @@ export function MemberDetail({
                 <input
                   type="text"
                   value={basicForm.lastName}
-                  onChange={e => setBasicForm(f => ({ ...f, lastName: e.target.value }))}
+                  onChange={e => setBasicForm(f => ({ ...f, lastName: sanitizeEnglishName(e.target.value) }))}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
@@ -2862,7 +2863,7 @@ export function MemberDetail({
                   <input
                   type="text"
                   value={movementFormProp.firstName || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, firstName: e.target.value })}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, firstName: sanitizeEnglishName(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
                 </div>
@@ -2871,7 +2872,7 @@ export function MemberDetail({
                   <input
                   type="text"
                   value={movementFormProp.lastName || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, lastName: e.target.value })}
+                  onChange={e => onMovementFormChange?.({ ...movementFormProp, lastName: sanitizeEnglishName(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
                 </div>
@@ -3079,7 +3080,7 @@ export function MemberDetail({
                 <input
                   type="text"
                   value={activeSpouseForm.firstName}
-                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, firstName: e.target.value }); setMockSpouseForm(f => ({ ...f, firstName: e.target.value })); }}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, firstName: sanitizeEnglishName(e.target.value) }); setMockSpouseForm(f => ({ ...f, firstName: sanitizeEnglishName(e.target.value) })); }}
                   placeholder="First name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
@@ -3089,7 +3090,7 @@ export function MemberDetail({
                 <input
                   type="text"
                   value={activeSpouseForm.lastName}
-                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, lastName: e.target.value }); setMockSpouseForm(f => ({ ...f, lastName: e.target.value })); }}
+                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, lastName: sanitizeEnglishName(e.target.value) }); setMockSpouseForm(f => ({ ...f, lastName: sanitizeEnglishName(e.target.value) })); }}
                   placeholder="Last name"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />

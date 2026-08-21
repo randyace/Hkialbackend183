@@ -31,6 +31,7 @@ import {
   missingChildAgeField,
   parseGuestAge,
 } from '../../../../../../../lib/guestAgeGroup';
+import { sanitizeEnglishName } from '../../../../../../../utils/englishName';
 
 // Spec (Sky 2026-06-10): ONLY the 3 canonical labels. Legacy aliases are
 // normalised on read by mapPassengerAgeGroup — not offered in the UI.
@@ -102,7 +103,7 @@ export function EditSectionNFGs({
                   <input
                     type="text"
                     value={g.firstName}
-                    onChange={e => updateNfg(i, { firstName: e.target.value })}
+                    onChange={e => updateNfg(i, { firstName: sanitizeEnglishName(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
                   />
                 </div>
@@ -111,7 +112,7 @@ export function EditSectionNFGs({
                   <input
                     type="text"
                     value={g.lastName}
-                    onChange={e => updateNfg(i, { lastName: e.target.value })}
+                    onChange={e => updateNfg(i, { lastName: sanitizeEnglishName(e.target.value) })}
                     className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm"
                   />
                 </div>
