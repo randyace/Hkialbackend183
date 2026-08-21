@@ -116,6 +116,15 @@ interface BookingInvoiceDialogProps {
   invoiceHistory?: InvoiceHistoryEntry[];
 }
 
+function isInvoiceDiscountLine(line: { key?: string; subtotal?: number }): boolean {
+  const key = String(line.key ?? '');
+  return (line.subtotal != null && line.subtotal < 0)
+    || key === 'account_discount'
+    || key === 'contract_discount'
+    || key === 'promo_discount'
+    || key.startsWith('membership_');
+}
+
 function formatInvoiceTypeLabel(invoiceType: string): string {
   if (invoiceType === 'pos_fnb') {
     return 'F&B (POS)';
@@ -696,14 +705,18 @@ export function BookingInvoiceDialog({
                     // toggles) without re-introducing the slug.
                     <tr key={`${line.product ?? 'unknown'}::${line.key}::${idx}`}>
                       <td className="px-6 py-4">
-                        <p className="font-medium">{line.label}</p>
+                        <p className={`font-medium${isInvoiceDiscountLine(line) ? ' text-green-700' : ''}`}>{line.label}</p>
                       </td>
-                      <td className="px-6 py-4 text-center">{line.qty}</td>
+                      <td className="px-6 py-4 text-center">{isInvoiceDiscountLine(line) ? '—' : line.qty}</td>
                       <td className="px-6 py-4 text-right text-gray-700 whitespace-nowrap">
-                        HK${(line.unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {isInvoiceDiscountLine(line)
+                          ? '—'
+                          : `HK$${(line.unit_price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium whitespace-nowrap">
-                        HK${(line.subtotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td className={`px-6 py-4 text-right font-medium whitespace-nowrap${isInvoiceDiscountLine(line) ? ' text-green-700' : ''}`}>
+                        {isInvoiceDiscountLine(line)
+                          ? `− HK$${Math.abs(line.subtotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : `HK$${(line.subtotal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       </td>
                     </tr>
                   ))
