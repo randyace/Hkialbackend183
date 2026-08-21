@@ -12,6 +12,45 @@ import { NationalityTypeahead } from '../../../../../components/NationalityTypea
 
 const filterContactNumber = (v: string) => v.replace(/[^0-9-]/g, '');
 
+/** Same four labels as Member Detail. Values are canonical API strings (D15). */
+const SETTLEMENT_OPTIONS = [
+  'Upfront',
+  'Net Upfront',
+  'On-Credit',
+  'Bulk Purchase/Monthly Invoice',
+] as const;
+
+function SettlementRadios({
+  idPrefix,
+  value,
+  onChange,
+}: {
+  idPrefix: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <Label style={{ marginBottom: 10 }}>Payment Method *</Label>
+      <RadioGroup
+        value={value}
+        onValueChange={onChange}
+        className="flex flex-wrap gap-4 mt-2"
+      >
+        {SETTLEMENT_OPTIONS.map((label) => {
+          const id = `${idPrefix}-${label.replace(/[^a-zA-Z0-9]+/g, '-').toLowerCase()}`;
+          return (
+            <div key={label} className="flex items-center space-x-2">
+              <RadioGroupItem value={label} id={id} />
+              <Label htmlFor={id} className="cursor-pointer">{label}</Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
+    </div>
+  );
+}
+
 function RegionCodeCombobox({
   id,
   value,
@@ -144,7 +183,7 @@ const emptySubForm = (id: number): CorporateSubForm => ({
   email: '',
   regionCode: '',
   contactNumber: '',
-  paymentMethod: 'upfront',
+  paymentMethod: 'Upfront',
   remarks: '',
 });
 
@@ -214,7 +253,7 @@ export function AccountCreation({
     email: '',
     nationality: '',
     passportNumber: '',
-    paymentMethod: 'upfront',
+    paymentMethod: 'Upfront',
     remarks: '',
   });
 
@@ -488,20 +527,11 @@ export function AccountCreation({
                       </div>
                     </div>
 
-                    {/* Payment Method */}
-                    <div>
-                      <Label style={{ marginBottom: 10 }}>Payment Method *</Label>
-                      <RadioGroup value={subForm.paymentMethod}
-                        onValueChange={v => updateCorporateForm(subForm.id, 'paymentMethod', v)}
-                        className="flex flex-wrap gap-4 mt-2">
-                        {([['upfront', 'Upfront'], ['net-upfront', 'Net Upfront'], ['on-credit', 'On-Credit']] as const).map(([val, lbl]) => (
-                          <div key={val} className="flex items-center space-x-2">
-                            <RadioGroupItem value={val} id={`pm-${subForm.id}-${val}`} />
-                            <Label htmlFor={`pm-${subForm.id}-${val}`} className="cursor-pointer">{lbl}</Label>
-                          </div>
-                        ))}
-                      </RadioGroup>
-                    </div>
+                    <SettlementRadios
+                      idPrefix={`pm-${subForm.id}`}
+                      value={subForm.paymentMethod}
+                      onChange={v => updateCorporateForm(subForm.id, 'paymentMethod', v)}
+                    />
 
                     {/* Remarks */}
                     <div>
@@ -726,6 +756,13 @@ export function AccountCreation({
         {/* Common fields for Individual/Agency */}
         {accountType !== 'corporate' && (
           <>
+            <div id="paymentMethod">
+              <SettlementRadios
+                idPrefix="paymentMethod"
+                value={formData.paymentMethod}
+                onChange={v => setFormData({ ...formData, paymentMethod: v })}
+              />
+            </div>
             <div>
               <Label htmlFor="remarks" style={{ marginBottom: 10 }}>Remarks (optional)</Label>
               <Textarea id="remarks" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})} placeholder="Enter any additional remarks" />
