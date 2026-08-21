@@ -159,6 +159,20 @@ interface PendingBooking {
     from: string;
     to: string;
   }>;
+  // 2026-08-21 — Round 6.2.x (staff review shows supervisor
+  // push-back). Mirror the round 6.2.79-B Supervisor Decision
+  // surface (see `figma-ui/BookingDetail.tsx:2119-2139` +
+  // `services/bookingService.ts:1172-1176`). Pre-this-round the
+  // staff review page had no place to surface the supervisor's
+  // push-back reason, so staff re-reviewing a pushed-back
+  // booking had no idea why. The wrapper already preserves
+  // these fields at runtime via `...base` spread in
+  // `mapApiBookingToPending` (parent repo
+  // `BookingReviewPage.tsx:277`); declaring them here makes the
+  // view type-safe and pins the contract.
+  supervisorRejectionReason?: string;
+  supervisorRejectedAt?: string;
+  supervisorRejectedByName?: string;
 }
 
 // ── Supplementary Mock Data ───────────────────────────────────────────────────
@@ -571,6 +585,59 @@ export function BookingReviewPage({
             : 'Staff review complete. Please give final approval or rejection.'}
         </div>
       </div>
+
+      {/* ── Supervisor Decision card ──
+          2026-08-21 — Round 6.2.x. Surfaces the supervisor's
+          push-back / reject reason and timestamp + supervisor
+          name when a supervisor has acted on this booking.
+          Mirrors the round 6.2.79-B (Bug #1) BookingDetail
+          Supervisor Decision card
+          (`figma-ui/BookingDetail.tsx:2119-2139`).
+
+          Renders when EITHER `supervisorRejectionReason`
+          OR `supervisorRejectedAt` is set (the supervisor
+          has at minimum stamped the booking). The reason text
+          block renders only when the reason is non-empty
+          (supervisor APPROVED has no reason). The card is
+          ADDITIVE — staff rejection (separate `rejectionReason`
+          field) is unrelated and the existing Rejection Reason
+          card on BookingDetail continues to render the staff's
+          reason when present.
+
+          Prominently placed BEFORE the booking-detail grid so
+          staff re-reviewing a pushed-back booking sees the
+          reason before scrolling to action buttons. */}
+      {(booking.supervisorRejectionReason || booking.supervisorRejectedAt) && (
+        <Card
+          className="p-6 border-amber-200 bg-amber-50"
+          data-testid="supervisor-decision-card"
+        >
+          <h3 className="text-sm uppercase tracking-wide text-amber-700 mb-2 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4" />
+            Supervisor Decision
+          </h3>
+          {booking.supervisorRejectionReason && (
+            <p
+              className="text-sm text-amber-900 mb-2"
+              data-testid="supervisor-reason-text"
+            >
+              {booking.supervisorRejectionReason}
+            </p>
+          )}
+          <div className="flex items-center gap-4 text-xs text-amber-700">
+            {booking.supervisorRejectedByName && (
+              <span data-testid="supervisor-name">
+                By <strong>{booking.supervisorRejectedByName}</strong>
+              </span>
+            )}
+            {booking.supervisorRejectedAt && (
+              <span data-testid="supervisor-timestamp">
+                {new Date(booking.supervisorRejectedAt).toLocaleString()}
+              </span>
+            )}
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* ════════════════════════════════════════════════════
