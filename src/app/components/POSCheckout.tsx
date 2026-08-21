@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Receipt, Printer, Mail, Check, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Receipt,
+  Printer,
+  Mail,
+  Check,
+  Loader2,
+  RefreshCw,
+  Copy,
+  QrCode,
+} from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 
@@ -37,9 +47,12 @@ export interface POSCheckoutProps {
   guestEmail?: string;
   isWalkIn?: boolean;
   orderPaymentStatus?: string;
+  paymentLinkUrl?: string | null;
+  isRefreshingPaymentStatus?: boolean;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
   onSendPaymentEmail?: (email: string) => void | Promise<void>;
+  onRefreshPaymentStatus?: () => void | Promise<void>;
 }
 
 function paymentStatusBadgeClass(status: string): string {
@@ -61,18 +74,72 @@ export function POSCheckout({
   guestEmail: guestEmailProp = '',
   isWalkIn = false,
   orderPaymentStatus = 'Unpaid',
+  paymentLinkUrl = null,
+  isRefreshingPaymentStatus = false,
   onBack = () => {},
   onComplete,
   onSendPaymentEmail,
+  onRefreshPaymentStatus,
 }: POSCheckoutProps = {}) {
   const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSendingPaymentEmail, setIsSendingPaymentEmail] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [isQrLoading, setIsQrLoading] = useState(false);
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setPaymentEmail(guestEmailProp);
   }, [guestEmailProp]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isQrOpen || !paymentLinkUrl) {
+      return;
+    }
+
+    let cancelled = false;
+    setIsQrLoading(true);
+    setQrError(null);
+    setQrDataUrl(null);
+
+    void (async () => {
+      try {
+        const QRCode = (await import('qrcode')).default;
+        const dataUrl = await QRCode.toDataURL(paymentLinkUrl, {
+          width: 256,
+          margin: 2,
+          color: { dark: '#0f2942', light: '#ffffff' },
+        });
+        if (!cancelled) {
+          setQrDataUrl(dataUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          setQrError('Could not generate QR code.');
+        }
+      } finally {
+        if (!cancelled) {
+          setIsQrLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isQrOpen, paymentLinkUrl]);
 
   const bookingData: BookingData = bookingDataProp ?? {
     bookingNo: bookingNoProp ?? '—',
@@ -95,6 +162,7 @@ export function POSCheckout({
   const serviceCharge = fnbSubtotal * 0.1;
   const totalAmount = bookingData.loungeAccess + fnbSubtotal;
   const requiresPayment = fnbSubtotal > 0;
+  const hasPaymentLink = Boolean(paymentLinkUrl?.trim());
 
   const handleSendPaymentEmail = async () => {
     const email = paymentEmail.trim();
@@ -111,6 +179,33 @@ export function POSCheckout({
     } finally {
       setIsSendingPaymentEmail(false);
     }
+  };
+
+  const handleRefreshPaymentStatus = async () => {
+    if (!onRefreshPaymentStatus || isRefreshingPaymentStatus) {
+      return;
+    }
+    await Promise.resolve(onRefreshPaymentStatus());
+  };
+
+  const handleCopyPaymentLink = async () => {
+    if (!paymentLinkUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(paymentLinkUrl);
+      setCopyFeedback('copied');
+    } catch {
+      setCopyFeedback('failed');
+    }
+
+    if (copyResetTimerRef.current) {
+      clearTimeout(copyResetTimerRef.current);
+    }
+    copyResetTimerRef.current = setTimeout(() => {
+      setCopyFeedback('idle');
+    }, 2000);
   };
 
   const handleCompleteCheckout = () => {
@@ -284,9 +379,33 @@ export function POSCheckout({
                 </p>
               </div>
               {requiresPayment ? (
-                <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
-                  {orderPaymentStatus}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={paymentStatusBadgeClass(orderPaymentStatus)}
+                    data-testid="pos-payment-status-badge"
+                  >
+                    {orderPaymentStatus}
+                  </Badge>
+                  {onRefreshPaymentStatus ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => void handleRefreshPaymentStatus()}
+                      disabled={isRefreshingPaymentStatus}
+                      aria-label="Refresh payment status"
+                      data-testid="pos-refresh-payment-status-button"
+                    >
+                      {isRefreshingPaymentStatus ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
@@ -329,6 +448,51 @@ export function POSCheckout({
                     </>
                   )}
                 </Button>
+
+                {hasPaymentLink && paymentLinkUrl ? (
+                  <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <Label htmlFor="payment-link-url" className="text-sm">
+                      Payment link
+                    </Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="payment-link-url"
+                        type="text"
+                        readOnly
+                        value={paymentLinkUrl}
+                        className="bg-white font-mono text-xs"
+                        data-testid="pos-payment-link-url-input"
+                      />
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => void handleCopyPaymentLink()}
+                          data-testid="pos-copy-payment-link-button"
+                        >
+                          <Copy className="w-4 h-4 mr-2" />
+                          {copyFeedback === 'copied'
+                            ? 'Copied'
+                            : copyFeedback === 'failed'
+                              ? 'Copy failed'
+                              : 'Copy'}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setIsQrOpen(true)}
+                          data-testid="pos-show-qr-code-button"
+                        >
+                          <QrCode className="w-4 h-4 mr-2" />
+                          Show QR Code
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Share this link or QR if the guest has not received the email yet.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             )}
           </Card>
@@ -361,11 +525,31 @@ export function POSCheckout({
                   <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
                 {requiresPayment ? (
-                  <div className="flex justify-between text-sm mt-2">
+                  <div className="flex justify-between items-center text-sm mt-2 gap-2">
                     <span className="text-gray-600">Payment Status</span>
-                    <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
-                      {orderPaymentStatus}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
+                        {orderPaymentStatus}
+                      </Badge>
+                      {onRefreshPaymentStatus ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => void handleRefreshPaymentStatus()}
+                          disabled={isRefreshingPaymentStatus}
+                          aria-label="Refresh payment status"
+                          data-testid="pos-refresh-payment-status-summary-button"
+                        >
+                          {isRefreshingPaymentStatus ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -421,6 +605,58 @@ export function POSCheckout({
           </Card>
         </div>
       </div>
+
+      {isQrOpen && paymentLinkUrl ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pos-payment-qr-title"
+          data-testid="pos-payment-qr-dialog"
+          onClick={() => setIsQrOpen(false)}
+        >
+          <Card
+            className="w-full max-w-sm p-6 space-y-4 bg-white"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <h3 id="pos-payment-qr-title" className="text-lg font-semibold">
+                Scan to pay
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Guest can scan this QR code with their phone camera.
+              </p>
+            </div>
+
+            <div className="flex min-h-[256px] items-center justify-center rounded-lg border border-gray-200 bg-white p-4">
+              {isQrLoading ? (
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+              ) : qrError ? (
+                <p className="text-sm text-red-600 text-center">{qrError}</p>
+              ) : qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt="Payment link QR code"
+                  width={256}
+                  height={256}
+                  className="h-64 w-64"
+                  data-testid="pos-payment-qr-image"
+                />
+              ) : null}
+            </div>
+
+            <Button
+              type="button"
+              className="w-full"
+              variant="outline"
+              onClick={() => setIsQrOpen(false)}
+              data-testid="pos-payment-qr-close-button"
+            >
+              Close
+            </Button>
+          </Card>
+        </div>
+      ) : null}
     </div>
   );
 }
