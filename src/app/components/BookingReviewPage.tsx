@@ -1309,6 +1309,33 @@ export function BookingReviewPage({
                     </div>
                   </div>
                 )}
+                {reviewStage === 'supervisor' && booking.requestType === 'New Booking Request' && (
+                  <div
+                    className={`rounded-md border p-3 ${
+                      autoSendInvoice
+                        ? 'border-green-200 bg-green-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                    data-testid="auto-send-invoice-status"
+                  >
+                    <p className="text-sm font-medium text-gray-800 mb-1">
+                      Auto send invoice
+                    </p>
+                    <p
+                      className={`text-sm font-semibold ${
+                        autoSendInvoice ? 'text-green-800' : 'text-gray-700'
+                      }`}
+                      data-testid="auto-send-invoice-value"
+                    >
+                      {autoSendInvoice ? 'Yes' : 'No'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {autoSendInvoice
+                        ? 'Approving will email the invoice and payment link.'
+                        : 'Invoice will not send automatically on approval.'}
+                    </p>
+                  </div>
+                )}
                 <Button
                   className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
                   onClick={handleApprove}

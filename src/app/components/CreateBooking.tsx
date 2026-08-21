@@ -4132,14 +4132,25 @@ export function CreateBooking({
           <Card className="p-6">
             <h2 className="mb-5">Price Breakdown</h2>
             <div className="space-y-2 text-sm max-w-md ml-auto">
-              {liveBreakdown.map((item, i) => (
-                <div key={i} className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-600">
-                    {item.label}{item.qty > 1 ? ` × ${item.qty}` : ''}
+              {liveBreakdown.map((item, i) => {
+                const isDiscount = item.subtotal < 0
+                  || item.key === 'account_discount'
+                  || item.key === 'contract_discount'
+                  || item.key === 'promo_discount'
+                  || (typeof item.key === 'string' && item.key.startsWith('membership_'));
+                return (
+                <div key={i} className="flex justify-between py-1.5 border-b border-gray-100" data-testid={isDiscount ? `create-price-discount-${item.key}` : undefined}>
+                  <span className={isDiscount ? 'text-green-700' : 'text-gray-600'}>
+                    {item.label}{!isDiscount && item.qty > 1 ? ` × ${item.qty}` : ''}
                   </span>
-                  <span>HK${item.subtotal.toLocaleString()}</span>
+                  <span className={isDiscount ? 'font-medium text-green-700' : undefined}>
+                    {isDiscount
+                      ? `− HK$${Math.abs(item.subtotal).toLocaleString()}`
+                      : `HK$${item.subtotal.toLocaleString()}`}
+                  </span>
                 </div>
-              ))}
+                );
+              })}
               <div className="flex justify-between py-2 border-t border-gray-200">
                 <span className="font-semibold text-gray-900">Total</span>
                 <span className="text-xl font-bold text-[#0f2942]">HK${liveTotal.toLocaleString()}</span>

@@ -205,6 +205,36 @@ interface BookingDetailProps {
   showTransit?: boolean;
 }
 
+type BookingDiscountKind = 'contract' | 'account' | 'membership' | 'promo' | 'agency' | 'other';
+
+function classifyBookingDiscountKind(key: string): BookingDiscountKind {
+  if (key === 'contract_discount') return 'contract';
+  if (key === 'account_discount') return 'account';
+  if (key === 'promo_discount') return 'promo';
+  if (key === 'agency_discount') return 'agency';
+  if (key.startsWith('membership_')) return 'membership';
+  return 'other';
+}
+
+function isBookingDiscountBreakdownLine(line: { key?: string; subtotal?: number }): boolean {
+  const key = String(line.key ?? '');
+  if (Number(line.subtotal) === 0) return false;
+  return key === 'contract_discount'
+    || key === 'account_discount'
+    || key === 'promo_discount'
+    || key.startsWith('membership_')
+    || Number(line.subtotal) < 0;
+}
+
+const BOOKING_DISCOUNT_KIND_META: Record<BookingDiscountKind, { badge: string; rowClass: string; textClass: string; amountClass: string; badgeClass: string; iconClass: string }> = {
+  contract: { badge: 'Contract', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
+  account: { badge: 'Account', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
+  agency: { badge: 'Agency', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
+  membership: { badge: 'Membership', rowClass: 'bg-indigo-50/60', textClass: 'text-indigo-800', amountClass: 'text-indigo-700', badgeClass: 'bg-indigo-100 text-indigo-700', iconClass: 'text-indigo-600' },
+  promo: { badge: 'Promo', rowClass: 'bg-violet-50/60', textClass: 'text-violet-800', amountClass: 'text-violet-700', badgeClass: 'bg-violet-100 text-violet-700', iconClass: 'text-violet-600' },
+  other: { badge: 'Discount', rowClass: 'bg-emerald-50/60', textClass: 'text-emerald-800', amountClass: 'text-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-700', iconClass: 'text-emerald-600' },
+};
+
 // ── Passenger detail types ────────────────────────��─────────────────────────
 // ── MOCK constant (isolated) — container passes real booking via prop ─────────
 const MOCK_BOOKING_ID = 1;
@@ -1732,6 +1762,46 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     return Number.isFinite(n) ? n : 0;
   };
   const amountDueAfterVouchers = parseAmount(booking.amount);
+  const sourcePriceBreakdown =
+    (livePreviewBreakdown && livePreviewBreakdown.length > 0)
+      ? livePreviewBreakdown
+      : (booking.priceBreakdown ?? []);
+  const serviceItemsDiscountLines = sourcePriceBreakdown.filter(isBookingDiscountBreakdownLine);
+  const serviceItemsPayable = livePreviewTotal != null ? livePreviewTotal : amountDueAfterVouchers;
+  const discountsPayable = livePreviewTotal != null
+    ? livePreviewTotal
+    : (booking.finalAmountValue
+      ?? (booking.totalPrice != null ? Number(booking.totalPrice) : amountDueAfterVouchers));
+  const breakdownDiscountTotal = serviceItemsDiscountLines.reduce(
+    (sum, line) => sum + Number(line.subtotal || 0),
+    0,
+  );
+  const discountsOriginal = booking.originalAmountValue
+    ?? (discountsPayable - breakdownDiscountTotal);
+  const showLegacyAgencyDiscountRow = Boolean(
+    booking.agencyDiscountRate
+    && booking.originalAmountValue != null
+    && booking.finalAmountValue != null
+    && serviceItemsDiscountLines.length === 0,
+  );
+  const unifiedDiscountLines = [
+    ...serviceItemsDiscountLines.map((line) => ({
+      key: String(line.key),
+      label: line.label || String(line.key),
+      subtotal: Number(line.subtotal) || 0,
+      kind: classifyBookingDiscountKind(String(line.key)),
+    })),
+    ...(showLegacyAgencyDiscountRow ? [{
+      key: 'agency_discount',
+      label: `Agency Discount (${booking.agencyDiscountRate}%)`,
+      subtotal: -Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)),
+      kind: 'agency' as const,
+    }] : []),
+  ];
+  const unifiedDiscountTotal = unifiedDiscountLines.reduce(
+    (sum, line) => sum + Number(line.subtotal || 0),
+    0,
+  );
 
   // Toggle a single passenger's voucher
   const togglePassengerVoucher = (idx: number) => {
@@ -3273,106 +3343,74 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         )}
       </Card>
 
-      {/* Pricing Information — Agency Discount Breakdown */}
-      {booking.agencyDiscountRate && booking.originalAmountValue && booking.finalAmountValue ? (
-        <Card className="p-6 border-green-200 bg-green-50/40">
+      {/* One discounts section — contract, membership, promo, and agency rows share
+          a single original → payable stack so mixed discounts cannot each restate
+          HK$6,500 → HK$4,400 on their own. */}
+      {unifiedDiscountLines.length > 0 ? (
+        <Card className="p-6 border-emerald-200 bg-emerald-50/30" data-testid="booking-detail-discounts-card">
           <div className="flex items-center gap-2 mb-4">
-            <BadgePercent className="w-5 h-5 text-green-700" />
-            <h3 className="text-sm uppercase tracking-wide text-green-800">Agency Discount Applied</h3>
+            <BadgePercent className="w-5 h-5 text-emerald-700" />
+            <h3 className="text-sm uppercase tracking-wide text-emerald-800">Discounts Applied</h3>
           </div>
 
-          {/* Agency Info Banner */}
-          <div className="flex items-center gap-3 bg-white border border-green-200 rounded-lg px-4 py-3 mb-5">
-            <Building2 className="w-5 h-5 text-orange-600 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">{booking.agencyName}</p>
-              <p className="text-xs text-gray-500">{booking.agencyCode} · Default Discount Rate: <span className="text-green-700 font-medium">{booking.agencyDiscountRate}%</span></p>
-            </div>
-            <span className="ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-semibold">
-              <BadgePercent className="w-3.5 h-3.5" />
-              {booking.agencyDiscountRate}% OFF
-            </span>
-          </div>
-
-          {/* Pricing Breakdown */}
-          <div className="bg-white border border-green-100 rounded-lg divide-y divide-gray-100">
-            <div className="flex items-center justify-between px-5 py-3">
-              <span className="text-sm text-gray-600">Base Service Amount</span>
-              <span className="text-sm font-medium text-gray-800">HK${booking.originalAmountValue.toLocaleString()}</span>
-            </div>
-            <div className="flex items-center justify-between px-5 py-3 bg-green-50/60">
-              <div className="flex items-center gap-2">
-                <BadgePercent className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-green-800">Agency Discount ({booking.agencyDiscountRate}%)</span>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Auto-applied</span>
+          {booking.agencyDiscountRate ? (
+            <div className="flex items-center gap-3 bg-white border border-emerald-200 rounded-lg px-4 py-3 mb-5">
+              <Building2 className="w-5 h-5 text-orange-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{booking.agencyName}</p>
+                <p className="text-xs text-gray-500">{booking.agencyCode} · Default Discount Rate: <span className="text-emerald-700 font-medium">{booking.agencyDiscountRate}%</span></p>
               </div>
-              <span className="text-sm font-medium text-green-700">
-                − HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}
+              <span className="ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-semibold">
+                <BadgePercent className="w-3.5 h-3.5" />
+                {booking.agencyDiscountRate}% OFF
               </span>
             </div>
-            <div className="flex items-center justify-between px-5 py-4 bg-green-50">
+          ) : null}
+
+          <div className="bg-white border border-emerald-100 rounded-lg divide-y divide-gray-100">
+            <div className="flex items-center justify-between px-5 py-3">
+              <span className="text-sm text-gray-600">Base Service Amount</span>
+              <span className="text-sm font-medium text-gray-800">HK${discountsOriginal.toLocaleString()}</span>
+            </div>
+            {unifiedDiscountLines.map((line) => {
+              const meta = BOOKING_DISCOUNT_KIND_META[line.kind];
+              const Icon = line.kind === 'membership' ? Gem : line.kind === 'promo' ? Tag : BadgePercent;
+              return (
+                <div
+                  key={line.key}
+                  className={`flex items-center justify-between px-5 py-3 ${meta.rowClass}`}
+                  data-testid={`discount-card-row-${line.key}`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className={`w-4 h-4 flex-shrink-0 ${meta.iconClass}`} />
+                    <span className={`text-sm ${meta.textClass}`}>{line.label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${meta.badgeClass}`}>{meta.badge}</span>
+                  </div>
+                  <span className={`text-sm font-medium flex-shrink-0 ml-3 ${meta.amountClass}`}>
+                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="flex items-center justify-between px-5 py-4 bg-emerald-50">
               <span className="font-semibold text-gray-900">Total Payable</span>
               <div className="text-right">
-                <p className="text-xs text-gray-400 line-through">HK${booking.originalAmountValue.toLocaleString()}</p>
-                <p className="text-xl font-semibold text-green-700">HK${booking.finalAmountValue.toLocaleString()}</p>
+                <p className="text-xs text-gray-400 line-through">HK${discountsOriginal.toLocaleString()}</p>
+                <p className="text-xl font-semibold text-emerald-700" data-testid="discounts-card-payable">
+                  HK${discountsPayable.toLocaleString()}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2 mt-3">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            <p className="text-xs text-green-700">
-              Discount automatically applied based on <strong>{booking.agencyName}</strong>'s contracted rate. 
-              Total savings: <strong>HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}</strong>
+            <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <p className="text-xs text-emerald-700">
+              Total savings: <strong>HK${Math.abs(unifiedDiscountTotal).toLocaleString()}</strong>
             </p>
           </div>
         </Card>
       ) : null}
-
-      {/* Round 6.2.137 — Membership free PS/LD waiver (persisted price_breakdown) */}
-      {(() => {
-        const membershipLines = (booking.priceBreakdown ?? []).filter(
-          (line) => typeof line.key === 'string' && line.key.startsWith('membership_'),
-        );
-        if (membershipLines.length === 0) return null;
-        const original = booking.originalAmountValue
-          ?? membershipLines.reduce((sum, line) => sum + Math.abs(Number(line.subtotal) || 0), 0);
-        const final = booking.finalAmountValue
-          ?? (booking.totalPrice != null ? Number(booking.totalPrice) : Math.max(0, original - membershipLines.reduce((s, l) => s + Math.abs(Number(l.subtotal) || 0), 0)));
-        return (
-          <Card className="p-6 border-indigo-200 bg-indigo-50/40" data-testid="membership-benefit-pricing-card">
-            <div className="flex items-center gap-2 mb-4">
-              <Gem className="w-5 h-5 text-indigo-700" />
-              <h3 className="text-sm uppercase tracking-wide text-indigo-800">Membership Benefit Applied</h3>
-            </div>
-            <div className="bg-white border border-indigo-100 rounded-lg divide-y divide-gray-100">
-              <div className="flex items-center justify-between px-5 py-3">
-                <span className="text-sm text-gray-600">Base Service Amount</span>
-                <span className="text-sm font-medium text-gray-800">HK${original.toLocaleString()}</span>
-              </div>
-              {membershipLines.map((line) => (
-                <div key={line.key} className="flex items-center justify-between px-5 py-3 bg-indigo-50/60">
-                  <div className="flex items-center gap-2">
-                    <Gem className="w-4 h-4 text-indigo-600" />
-                    <span className="text-sm text-indigo-800">{line.label || line.key}</span>
-                    <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Waived</span>
-                  </div>
-                  <span className="text-sm font-medium text-indigo-700">
-                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between px-5 py-4 bg-indigo-50">
-                <span className="font-semibold text-gray-900">Total Payable</span>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400 line-through">HK${original.toLocaleString()}</p>
-                  <p className="text-xl font-semibold text-indigo-700">HK${final.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-          </Card>
-        );
-      })()}
 
       {/* 12. Service Items — canonical line-price editor (Sky 2026-08-17).
           Client wants free-edit unit prices for PS, LD, addons, etc.
@@ -3381,7 +3419,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="flex items-center justify-between mb-4">
           <div>
           <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
-            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit quantity, unit price, and discount, including Premiere Suite and Lounge Deluxe.</p>
+            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit unit prices of Premiere Suite, Lounge Deluxe, guests, extra hours, and add-ons. Contract, account, promo, and membership discounts apply after those prices and are listed below the lines.</p>
           </div>
         </div>
         {onFormChange && (
@@ -4386,13 +4424,31 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </span>
                 </td>
               </tr>
+              {serviceItemsDiscountLines.map((line, idx) => {
+                const kind = classifyBookingDiscountKind(String(line.key));
+                const meta = BOOKING_DISCOUNT_KIND_META[kind];
+                return (
+                <tr key={`service-items-discount-${line.key}-${idx}`} className="bg-green-50" data-testid={`service-items-discount-${line.key}`}>
+                  <td colSpan={3} className="px-4 py-2 text-right">
+                    <span className={`inline-flex items-center gap-1.5 text-sm ${meta.textClass}`}>
+                      <BadgePercent className="w-3.5 h-3.5" />
+                      {line.label || line.key}
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${meta.badgeClass}`}>{meta.badge}</span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700" colSpan={2}>
+                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
+                  </td>
+                </tr>
+                );
+              })}
               {/* Total */}
               <tr className="bg-gray-100">
                 <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-900">
                   {totalVouchersApplied > 0 ? 'Amount Payable (after entry vouchers):' : 'Total Amount:'}
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-green-600 text-base">
-                  HK${amountDueAfterVouchers.toLocaleString()}
+                  HK${serviceItemsPayable.toLocaleString()}
                 </td>
               </tr>
             </tfoot>
@@ -4507,7 +4563,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         {booking.promoCode?.code
           && booking.originalAmountValue != null
           && booking.finalAmountValue != null
-          && booking.originalAmountValue !== booking.finalAmountValue && (
+          && booking.originalAmountValue !== booking.finalAmountValue
+          && !unifiedDiscountLines.some((line) => line.kind === 'promo') && (
           <div
             data-testid="pricing-promo-deduction-row"
             className="mt-3 flex items-center justify-between px-4 py-2 bg-indigo-50 border border-indigo-100 rounded"
