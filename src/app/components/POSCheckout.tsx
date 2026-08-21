@@ -44,6 +44,8 @@ export interface POSCheckoutProps {
   bookingData?: BookingData;
   orderItems?: OrderItem[];
   fnbSubtotal?: number;
+  paidFnbAmount?: number;
+  outstandingFnbAmount?: number;
   guestEmail?: string;
   isWalkIn?: boolean;
   orderPaymentStatus?: string;
@@ -71,6 +73,8 @@ export function POSCheckout({
   bookingData: bookingDataProp,
   orderItems: orderItemsProp,
   fnbSubtotal: fnbSubtotalProp,
+  paidFnbAmount: paidFnbAmountProp,
+  outstandingFnbAmount: outstandingFnbAmountProp,
   guestEmail: guestEmailProp = '',
   isWalkIn = false,
   orderPaymentStatus = 'Unpaid',
@@ -159,10 +163,18 @@ export function POSCheckout({
     (sum, item) => sum + item.lineTotal,
     0,
   );
+  const paidFnbAmount = Math.max(0, paidFnbAmountProp ?? 0);
+  const outstandingFnbAmount = Math.max(
+    0,
+    outstandingFnbAmountProp ?? Math.max(0, fnbSubtotal - paidFnbAmount),
+  );
   const serviceCharge = fnbSubtotal * 0.1;
-  const totalAmount = bookingData.loungeAccess + fnbSubtotal;
-  const requiresPayment = fnbSubtotal > 0;
-  const hasPaymentLink = Boolean(paymentLinkUrl?.trim());
+  const totalAmount = bookingData.loungeAccess + outstandingFnbAmount;
+  const requiresPayment = outstandingFnbAmount > 0;
+  const hasPaymentLink = requiresPayment && Boolean(paymentLinkUrl?.trim());
+  const displayPaymentStatus = requiresPayment
+    ? (hasPaymentLink ? 'Pending' : orderPaymentStatus)
+    : 'Paid';
 
   const handleSendPaymentEmail = async () => {
     const email = paymentEmail.trim();
@@ -290,7 +302,7 @@ export function POSCheckout({
           </div>
         </div>
         <Badge className="bg-green-600 text-white text-lg px-4 py-2">
-          Total: HKD {totalAmount.toFixed(2)}
+          Outstanding: HKD {totalAmount.toFixed(2)}
         </Badge>
       </div>
 
@@ -382,10 +394,10 @@ export function POSCheckout({
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={paymentStatusBadgeClass(orderPaymentStatus)}
+                    className={paymentStatusBadgeClass(displayPaymentStatus)}
                     data-testid="pos-payment-status-badge"
                   >
-                    {orderPaymentStatus}
+                    {displayPaymentStatus}
                   </Badge>
                   {onRefreshPaymentStatus ? (
                     <Button
@@ -411,7 +423,9 @@ export function POSCheckout({
 
             {!requiresPayment ? (
               <p className="text-sm text-gray-500">
-                No F&amp;B charges on this order. You can complete checkout without sending a payment link.
+                {fnbSubtotal > 0
+                  ? 'F&amp;B balance is fully paid. You can complete checkout.'
+                  : 'No F&amp;B charges on this order. You can complete checkout without sending a payment link.'}
               </p>
             ) : isWalkIn ? (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
@@ -445,6 +459,9 @@ export function POSCheckout({
                     <>
                       <Mail className="w-4 h-4 mr-2" />
                       Send Payment Email
+                      {outstandingFnbAmount > 0
+                        ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
+                        : ''}
                     </>
                   )}
                 </Button>
@@ -492,7 +509,11 @@ export function POSCheckout({
                       Share this link or QR if the guest has not received the email yet.
                     </p>
                   </div>
-                ) : null}
+                ) : (
+                  <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    Outstanding balance HKD {outstandingFnbAmount.toFixed(2)}. Send a payment email to generate a new Adyen link for the unpaid amount.
+                  </p>
+                )}
               </div>
             )}
           </Card>
@@ -524,12 +545,20 @@ export function POSCheckout({
                   <span className="text-gray-600">F&amp;B Total</span>
                   <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
+                {paidFnbAmount > 0 ? (
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-gray-600">Amount Paid</span>
+                    <span className="font-semibold text-green-700" data-testid="pos-paid-fnb-amount">
+                      - HKD {paidFnbAmount.toFixed(2)}
+                    </span>
+                  </div>
+                ) : null}
                 {requiresPayment ? (
                   <div className="flex justify-between items-center text-sm mt-2 gap-2">
                     <span className="text-gray-600">Payment Status</span>
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={paymentStatusBadgeClass(orderPaymentStatus)}>
-                        {orderPaymentStatus}
+                      <Badge variant="outline" className={paymentStatusBadgeClass(displayPaymentStatus)}>
+                        {displayPaymentStatus}
                       </Badge>
                       {onRefreshPaymentStatus ? (
                         <Button
@@ -556,8 +585,13 @@ export function POSCheckout({
 
               <div className="border-t pt-3">
                 <div className="flex justify-between text-lg">
-                  <span className="font-semibold">Total Amount</span>
-                  <span className="font-bold text-blue-600">HKD {totalAmount.toFixed(2)}</span>
+                  <span className="font-semibold">Outstanding Balance</span>
+                  <span
+                    className="font-bold text-blue-600"
+                    data-testid="pos-outstanding-fnb-amount"
+                  >
+                    HKD {totalAmount.toFixed(2)}
+                  </span>
                 </div>
               </div>
             </div>
