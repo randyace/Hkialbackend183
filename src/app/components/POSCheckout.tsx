@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Copy,
   QrCode,
+  Download,
 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -39,6 +40,15 @@ interface BookingData {
   creditBalance: number;
 }
 
+export interface POSCheckoutPaymentHistoryItem {
+  id: number;
+  invoiceNo: string;
+  invoiceType: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string | null;
+}
+
 export interface POSCheckoutProps {
   bookingNo?: string;
   bookingData?: BookingData;
@@ -50,21 +60,105 @@ export interface POSCheckoutProps {
   isWalkIn?: boolean;
   orderPaymentStatus?: string;
   paymentLinkUrl?: string | null;
+  paymentHistory?: POSCheckoutPaymentHistoryItem[];
   isRefreshingPaymentStatus?: boolean;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
   onSendPaymentEmail?: (email: string) => void | Promise<void>;
   onRefreshPaymentStatus?: () => void | Promise<void>;
+  onDownloadInvoice?: (entry: POSCheckoutPaymentHistoryItem) => void | Promise<void>;
 }
 
 function paymentStatusBadgeClass(status: string): string {
   switch (status) {
     case 'Paid':
       return 'bg-green-100 text-green-800 border-green-200';
+    case 'Sent':
     case 'Pending':
       return 'bg-amber-100 text-amber-800 border-amber-200';
+    case 'Voided':
+      return 'bg-gray-100 text-gray-600 border-gray-200';
     default:
       return 'bg-gray-100 text-gray-700 border-gray-200';
+  }
+}
+
+function invoiceTypeLabel(invoiceType: string): string {
+  return invoiceType === 'pos_fnb' ? 'F&B' : 'Booking Fee';
+}
+
+function formatHistoryAmount(amount: number): string {
+  return `HK$ ${amount.toLocaleString('en-HK', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatHistoryDateTime(iso: string | null): string {
+  if (!iso) {
+    return '—';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return date.toLocaleString('en-HK', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * Clipboard write with a synchronous fallback. `navigator.clipboard` often
+ * rejects on non-secure origins, iframe permission policies, or denied
+ * permissions — the textarea path still works from a user click.
+ */
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator !== 'undefined'
+    && window.isSecureContext
+    && typeof navigator.clipboard?.writeText === 'function'
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to legacy path.
+    }
+  }
+
+  try {
+    const input = document.getElementById('payment-link-url');
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+      input.select();
+      input.setSelectionRange(0, text.length);
+      if (document.execCommand('copy')) {
+        input.setSelectionRange(0, 0);
+        input.blur();
+        return true;
+      }
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '-9999px';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
   }
 }
 
@@ -79,11 +173,13 @@ export function POSCheckout({
   isWalkIn = false,
   orderPaymentStatus = 'Unpaid',
   paymentLinkUrl = null,
+  paymentHistory = [],
   isRefreshingPaymentStatus = false,
   onBack = () => {},
   onComplete,
   onSendPaymentEmail,
   onRefreshPaymentStatus,
+  onDownloadInvoice,
 }: POSCheckoutProps = {}) {
   const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -94,6 +190,7 @@ export function POSCheckout({
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [qrError, setQrError] = useState<string | null>(null);
   const [isQrLoading, setIsQrLoading] = useState(false);
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -200,17 +297,25 @@ export function POSCheckout({
     await Promise.resolve(onRefreshPaymentStatus());
   };
 
+  const handleDownloadInvoice = async (entry: POSCheckoutPaymentHistoryItem) => {
+    if (!onDownloadInvoice || downloadingInvoiceId != null) {
+      return;
+    }
+    setDownloadingInvoiceId(entry.id);
+    try {
+      await Promise.resolve(onDownloadInvoice(entry));
+    } finally {
+      setDownloadingInvoiceId(null);
+    }
+  };
+
   const handleCopyPaymentLink = async () => {
     if (!paymentLinkUrl) {
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(paymentLinkUrl);
-      setCopyFeedback('copied');
-    } catch {
-      setCopyFeedback('failed');
-    }
+    const copied = await copyTextToClipboard(paymentLinkUrl);
+    setCopyFeedback(copied ? 'copied' : 'failed');
 
     if (copyResetTimerRef.current) {
       clearTimeout(copyResetTimerRef.current);
@@ -514,6 +619,69 @@ export function POSCheckout({
                     Outstanding balance HKD {outstandingFnbAmount.toFixed(2)}. Send a payment email to generate a new Adyen link for the unpaid amount.
                   </p>
                 )}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6" data-testid="pos-payment-history-card">
+            <div className="mb-4">
+              <h3 className="text-lg">Payment History</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Invoice audit trail for this checkout session.
+              </p>
+            </div>
+
+            {paymentHistory.length === 0 ? (
+              <p className="text-sm text-gray-500" data-testid="pos-payment-history-empty">
+                No payment history found.
+              </p>
+            ) : (
+              <div className="space-y-3" data-testid="pos-payment-history-list">
+                {paymentHistory.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                    data-testid={`pos-payment-history-row-${entry.id}`}
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-sm truncate">{entry.invoiceNo}</p>
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 border-slate-200">
+                          {invoiceTypeLabel(entry.invoiceType)}
+                        </Badge>
+                        <Badge variant="outline" className={paymentStatusBadgeClass(entry.status)}>
+                          {entry.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {formatHistoryDateTime(entry.createdAt)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <p className="font-semibold text-sm whitespace-nowrap">
+                        {formatHistoryAmount(entry.totalAmount)}
+                      </p>
+                      {onDownloadInvoice ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => void handleDownloadInvoice(entry)}
+                          disabled={downloadingInvoiceId === entry.id}
+                          aria-label={`Download invoice ${entry.invoiceNo}`}
+                          data-testid={`pos-payment-history-download-${entry.id}`}
+                        >
+                          {downloadingInvoiceId === entry.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </Card>
