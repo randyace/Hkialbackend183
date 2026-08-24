@@ -9,6 +9,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Switch } from './ui/switch';
 
 /** Carbon dayOfWeek: 0=Sun … 6=Sat */
 export const MENU_DAY_OPTIONS = [
@@ -331,17 +332,18 @@ export function PosMenuEdit({
               </div>
             </div>
 
-            <div className="md:col-span-2 flex items-center gap-2">
-              <input
+            <div className="md:col-span-2 flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">Active</p>
+                <p className="text-xs text-gray-500">
+                  Available for ordering when schedule matches
+                </p>
+              </div>
+              <Switch
                 id="menu-active"
-                type="checkbox"
                 checked={formData.isActive}
-                onChange={(e) => patch('isActive', e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
+                onCheckedChange={(checked) => patch('isActive', checked)}
               />
-              <Label htmlFor="menu-active">
-                Active (Available for ordering when schedule matches)
-              </Label>
             </div>
           </div>
         </Card>
