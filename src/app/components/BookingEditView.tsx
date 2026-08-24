@@ -55,6 +55,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { toast } from 'sonner';
 import { missingChildAgeField } from '../../../../../lib/guestAgeGroup';
+import type { ItemOverride } from '../../../../../lib/pricing/priceOverrides';
 import {
   EditSectionAccountInfo,
   EditSectionFlight,
@@ -366,6 +367,9 @@ export interface BookingFormData {
    * Keys: `{product}:{key}` (premiere_suite:base) or `addon:{name}`.
    */
   priceOverrides?: Record<string, number>;
+  /** Per-line staff discount (HK$). Keys match priceOverrides. */
+  itemOverrides?: Record<string, ItemOverride>;
+  lineDiscounts?: Record<string, number>;
   /** Optional staff reason for unit-price overrides. Empty allowed. */
   priceOverrideReason?: string;
   assignedStaffIds: number[];
@@ -493,6 +497,8 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   selectedAddonKeys: [],
   catalogAddonSelections: [],
   priceOverrides: {},
+  itemOverrides: {},
+  lineDiscounts: {},
   priceOverrideReason: '',
   assignedStaffIds: [],
   paymentMode:      'Upfront',
