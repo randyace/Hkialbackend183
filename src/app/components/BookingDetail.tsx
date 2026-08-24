@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Building2, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Gem, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
 import { REGION_CODES } from '../../../../../utils/regionCodes';
 import { splitContactPhone } from '../../../../../utils/splitContactPhone';
@@ -46,6 +46,9 @@ import type {
   EditNonFlyingGuest,
 } from './BookingEditView';
 import {
+  discountAmountFromPercent,
+  discountPercentFromAmount,
+  lineBaseTotal,
   lineDiscountsFromItemOverrides,
   lineRowSubtotal,
   mergePriceOverridesFromItemOverrides,
@@ -1086,88 +1089,92 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const resolvedPriceOverrideReason = priceOverrideReasonProp !== undefined
     ? priceOverrideReasonProp
     : (formData?.priceOverrideReason ?? '');
-  const spreadsheetInputClass =
-    'w-24 px-2 py-1 bg-white border border-gray-200 rounded text-right text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
-  const resolvedUnitPrice = (overrideKey: string, catalogUnit: number): number => {
-    const fromItem = itemOverrides[overrideKey]?.unitPrice;
-    if (typeof fromItem === 'number' && Number.isFinite(fromItem)) return fromItem;
-    const fromMap = formData?.priceOverrides?.[overrideKey];
-    if (typeof fromMap === 'number' && Number.isFinite(fromMap)) return fromMap;
-    return Number.isFinite(catalogUnit) && catalogUnit >= 0 ? catalogUnit : 0;
+  const spinlessInputClass =
+    'px-2 py-1 bg-white border border-gray-200 rounded text-right text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
+  const catalogPriceLabel = (catalogUnit: number, testId: string) => {
+    const n = Number.isFinite(catalogUnit) && catalogUnit >= 0 ? catalogUnit : 0;
+    return (
+      <span className="text-sm text-gray-800" data-testid={testId}>
+        {`HK$${n.toLocaleString()}`}
+      </span>
+    );
   };
   const resolvedDiscountAmount = (overrideKey: string): number => {
     const n = Number(itemOverrides[overrideKey]?.discountAmount ?? 0);
     return Number.isFinite(n) && n >= 0 ? n : 0;
   };
-  const unitPriceInput = (overrideKey: string, catalogUnit: number, testId: string) => {
-    const original = Number.isFinite(catalogUnit) && catalogUnit >= 0 ? catalogUnit : 0;
-    const value = resolvedUnitPrice(overrideKey, original);
-    const showOriginal = Math.abs(value - original) > 0.009;
-    const originalLabel = showOriginal ? (
-      <p className="text-[11px] text-gray-400" data-testid={`${testId}-original`}>
-        Original HK${original.toLocaleString()}
-      </p>
-    ) : null;
-    if (!onFormChange) {
-      return (
-        <div className="flex flex-col items-end gap-0.5">
-          {originalLabel}
-          <span className="text-sm">
-            {Number(value) > 0 ? `HK$${Number(value).toLocaleString()}` : '—'}
-          </span>
-        </div>
-      );
+  const discountAmountInput = (
+    overrideKey: string,
+    catalogUnit: number,
+    qty: number,
+    amountTestId: string,
+  ) => {
+    const baseTotal = lineBaseTotal(catalogUnit, qty);
+    const amount = resolvedDiscountAmount(overrideKey);
+    const storedPct = itemOverrides[overrideKey]?.discountPercent;
+    const percent = typeof storedPct === 'number' && Number.isFinite(storedPct)
+      ? storedPct
+      : discountPercentFromAmount(baseTotal, amount);
+    const percentTestId = amountTestId.replace('discount-amount', 'discount-percent');
+    if (baseTotal <= 0) {
+      return <span className="text-sm text-gray-500">—</span>;
     }
-    return (
-      <div className="flex flex-col items-end gap-0.5">
-        {originalLabel}
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (!Number.isFinite(n) || n < 0) return;
-            writeItemOverride(overrideKey, { unitPrice: Math.round(n * 100) / 100 });
-          }}
-          className={spreadsheetInputClass}
-          data-testid={testId}
-        />
-      </div>
-    );
-  };
-  const discountAmountInput = (overrideKey: string, testId: string) => {
-    const value = resolvedDiscountAmount(overrideKey);
     if (!onFormChange) {
       return (
         <span className="text-sm text-gray-700">
-          {value > 0 ? `− HK$${value.toLocaleString()}` : '—'}
+          {amount > 0 ? `− HK$${amount.toLocaleString()}` : '—'}
         </span>
       );
     }
     return (
-      <div className="inline-flex items-center justify-end gap-1">
-        <span className="text-xs text-gray-500 whitespace-nowrap">− HK$</span>
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (!Number.isFinite(n) || n < 0) return;
-            writeItemOverride(overrideKey, { discountAmount: Math.round(n * 100) / 100 });
-          }}
-          className={spreadsheetInputClass}
-          data-testid={testId}
-        />
+      <div className="inline-flex items-center justify-end gap-2">
+        <div className="inline-flex items-center gap-1">
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={Number.isFinite(percent) ? percent : 0}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (!Number.isFinite(n) || n < 0) return;
+              const pct = Math.min(100, n);
+              writeItemOverride(overrideKey, {
+                discountPercent: Math.round(pct * 100) / 100,
+                discountAmount: discountAmountFromPercent(baseTotal, pct),
+              });
+            }}
+            className={`w-16 ${spinlessInputClass}`}
+            data-testid={percentTestId}
+          />
+          <span className="text-xs text-gray-500">%</span>
+        </div>
+        <div className="inline-flex items-center gap-1">
+          <span className="text-xs text-gray-500 whitespace-nowrap">− HK$</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={Number.isFinite(amount) ? amount : 0}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (!Number.isFinite(n) || n < 0) return;
+              const amt = Math.min(baseTotal, Math.round(n * 100) / 100);
+              writeItemOverride(overrideKey, {
+                discountAmount: amt,
+                discountPercent: discountPercentFromAmount(baseTotal, amt),
+              });
+            }}
+            className={`w-24 ${spinlessInputClass}`}
+            data-testid={amountTestId}
+          />
+        </div>
       </div>
     );
   };
   const lineSubtotalLabel = (overrideKey: string, catalogUnit: number, qty: number): string => {
     const sub = lineRowSubtotal(
-      resolvedUnitPrice(overrideKey, catalogUnit),
+      catalogUnit,
       qty,
       resolvedDiscountAmount(overrideKey),
     );
@@ -1855,39 +1862,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       : (booking.priceBreakdown ?? []);
   const serviceItemsDiscountLines = sourcePriceBreakdown.filter(isBookingDiscountBreakdownLine);
   const serviceItemsPayable = livePreviewTotal != null ? livePreviewTotal : amountDueAfterVouchers;
-  const discountsPayable = livePreviewTotal != null
-    ? livePreviewTotal
-    : (booking.finalAmountValue
-      ?? (booking.totalPrice != null ? Number(booking.totalPrice) : amountDueAfterVouchers));
-  const breakdownDiscountTotal = serviceItemsDiscountLines.reduce(
-    (sum, line) => sum + Number(line.subtotal || 0),
-    0,
-  );
-  const discountsOriginal = booking.originalAmountValue
-    ?? (discountsPayable - breakdownDiscountTotal);
   const showLegacyAgencyDiscountRow = Boolean(
     booking.agencyDiscountRate
     && booking.originalAmountValue != null
     && booking.finalAmountValue != null
     && serviceItemsDiscountLines.length === 0,
   );
-  const unifiedDiscountLines = [
-    ...serviceItemsDiscountLines.map((line) => ({
-      key: String(line.key),
-      label: line.label || String(line.key),
-      subtotal: Number(line.subtotal) || 0,
-      kind: classifyBookingDiscountKind(String(line.key)),
-    })),
-    ...(showLegacyAgencyDiscountRow ? [{
-      key: 'agency_discount',
-      label: `Agency Discount (${booking.agencyDiscountRate}%)`,
-      subtotal: -Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)),
-      kind: 'agency' as const,
-    }] : []),
-  ];
-  const unifiedDiscountTotal = unifiedDiscountLines.reduce(
-    (sum, line) => sum + Number(line.subtotal || 0),
-    0,
+  const breakdownHasPromoDiscount = serviceItemsDiscountLines.some(
+    (line) => classifyBookingDiscountKind(String(line.key)) === 'promo',
   );
 
   // Toggle a single passenger's voucher
@@ -3422,75 +3404,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         )}
       </Card>
 
-      {/* One discounts section — contract, membership, promo, and agency rows share
-          a single original → payable stack so mixed discounts cannot each restate
-          HK$6,500 → HK$4,400 on their own. */}
-      {unifiedDiscountLines.length > 0 ? (
-        <Card className="p-6 border-emerald-200 bg-emerald-50/30" data-testid="booking-detail-discounts-card">
-          <div className="flex items-center gap-2 mb-4">
-            <BadgePercent className="w-5 h-5 text-emerald-700" />
-            <h3 className="text-sm uppercase tracking-wide text-emerald-800">Discounts Applied</h3>
-          </div>
-
-          {booking.agencyDiscountRate ? (
-            <div className="flex items-center gap-3 bg-white border border-emerald-200 rounded-lg px-4 py-3 mb-5">
-              <Building2 className="w-5 h-5 text-orange-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900">{booking.agencyName}</p>
-                <p className="text-xs text-gray-500">{booking.agencyCode} · Default Discount Rate: <span className="text-emerald-700 font-medium">{booking.agencyDiscountRate}%</span></p>
-              </div>
-              <span className="ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-sm font-semibold">
-                <BadgePercent className="w-3.5 h-3.5" />
-                {booking.agencyDiscountRate}% OFF
-              </span>
-            </div>
-          ) : null}
-
-          <div className="bg-white border border-emerald-100 rounded-lg divide-y divide-gray-100">
-            <div className="flex items-center justify-between px-5 py-3">
-              <span className="text-sm text-gray-600">Base Service Amount</span>
-              <span className="text-sm font-medium text-gray-800">HK${discountsOriginal.toLocaleString()}</span>
-            </div>
-            {unifiedDiscountLines.map((line) => {
-              const meta = BOOKING_DISCOUNT_KIND_META[line.kind];
-              const Icon = line.kind === 'membership' ? Gem : line.kind === 'promo' ? Tag : BadgePercent;
-              return (
-                <div
-                  key={line.key}
-                  className={`flex items-center justify-between px-5 py-3 ${meta.rowClass}`}
-                  data-testid={`discount-card-row-${line.key}`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className={`w-4 h-4 flex-shrink-0 ${meta.iconClass}`} />
-                    <span className={`text-sm ${meta.textClass}`}>{line.label}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${meta.badgeClass}`}>{meta.badge}</span>
-                  </div>
-                  <span className={`text-sm font-medium flex-shrink-0 ml-3 ${meta.amountClass}`}>
-                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
-                  </span>
-                </div>
-              );
-            })}
-            <div className="flex items-center justify-between px-5 py-4 bg-emerald-50">
-              <span className="font-semibold text-gray-900">Total Payable</span>
-              <div className="text-right">
-                <p className="text-xs text-gray-400 line-through">HK${discountsOriginal.toLocaleString()}</p>
-                <p className="text-xl font-semibold text-emerald-700" data-testid="discounts-card-payable">
-                  HK${discountsPayable.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 mt-3">
-            <CheckCircle className="w-4 h-4 text-emerald-600" />
-            <p className="text-xs text-emerald-700">
-              Total savings: <strong>HK${Math.abs(unifiedDiscountTotal).toLocaleString()}</strong>
-            </p>
-          </div>
-        </Card>
-      ) : null}
-
       {/* 12. Service Items — canonical line-price editor (Sky 2026-08-17).
           Client wants free-edit unit prices for PS, LD, addons, etc.
           Do not replace this table with Create's read-only Price Breakdown. */}
@@ -3498,7 +3411,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="flex items-center justify-between mb-4">
           <div>
           <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
-            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit unit prices of Premiere Suite, Lounge Deluxe, guests, extra hours, and add-ons. Contract, account, promo, and membership discounts apply after those prices and are listed below the lines.</p>
+            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Unit prices are catalog list prices. Staff may apply a per-line discount as a percent or HK$ amount. Contract, account, promo, and membership discounts apply after those prices and are listed below the lines.</p>
           </div>
         </div>
         {onFormChange && (
@@ -3553,10 +3466,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput(overrideKey, original, `service-items-unit-price-${overrideKey}`)}
+                      {catalogPriceLabel(original, `service-items-unit-price-${overrideKey}`)}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput(overrideKey, `service-items-discount-amount-${overrideKey}`)}
+                      {discountAmountInput(overrideKey, original, qty, `service-items-discount-amount-${overrideKey}`)}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
                       {lineSubtotalLabel(overrideKey, original, qty)}
@@ -3704,10 +3617,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {unitPriceInput('addon:Limousine Transfer', limoCatalog, 'service-items-unit-price-addon:Limousine Transfer')}
+                        {catalogPriceLabel(limoCatalog, 'service-items-unit-price-addon:Limousine Transfer')}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {discountAmountInput('addon:Limousine Transfer', 'service-items-discount-amount-addon:Limousine Transfer')}
+                        {discountAmountInput('addon:Limousine Transfer', limoCatalog, Number(limoQty ?? 1), 'service-items-discount-amount-addon:Limousine Transfer')}
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
                         {lineSubtotalLabel('addon:Limousine Transfer', limoCatalog, Number(limoQty ?? 1))}
@@ -3820,10 +3733,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput('addon:In-Lounge Shopping', 500, 'service-items-unit-price-addon:In-Lounge Shopping')}
+                      {catalogPriceLabel(500, 'service-items-unit-price-addon:In-Lounge Shopping')}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:In-Lounge Shopping', 'service-items-discount-amount-addon:In-Lounge Shopping')}
+                      {discountAmountInput('addon:In-Lounge Shopping', 500, 1, 'service-items-discount-amount-addon:In-Lounge Shopping')}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
                       {lineSubtotalLabel('addon:In-Lounge Shopping', 500, 1)}
@@ -3974,10 +3887,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput('addon:Security Escort Service', catalog, 'service-items-unit-price-addon:Security Escort Service')}
+                      {catalogPriceLabel(catalog, 'service-items-unit-price-addon:Security Escort Service')}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:Security Escort Service', 'service-items-discount-amount-addon:Security Escort Service')}
+                      {discountAmountInput('addon:Security Escort Service', catalog, qty, 'service-items-discount-amount-addon:Security Escort Service')}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
                       {lineSubtotalLabel('addon:Security Escort Service', catalog, qty)}
@@ -4007,10 +3920,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {unitPriceInput('addon:Wheelchair Assistance', catalog, 'service-items-unit-price-addon:Wheelchair Assistance')}
+                      {catalogPriceLabel(catalog, 'service-items-unit-price-addon:Wheelchair Assistance')}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:Wheelchair Assistance', 'service-items-discount-amount-addon:Wheelchair Assistance')}
+                      {discountAmountInput('addon:Wheelchair Assistance', catalog, qty, 'service-items-discount-amount-addon:Wheelchair Assistance')}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
                       {lineSubtotalLabel('addon:Wheelchair Assistance', catalog, qty)}
@@ -4066,10 +3979,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {unitPriceInput(`addon:${row.name}`, row.unitPrice, `service-items-unit-price-addon:${row.name}`)}
+                    {catalogPriceLabel(row.unitPrice, `service-items-unit-price-addon:${row.name}`)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {discountAmountInput(`addon:${row.name}`, `service-items-discount-amount-addon:${row.name}`)}
+                    {discountAmountInput(`addon:${row.name}`, row.unitPrice, Number(row.quantity ?? 1), `service-items-discount-amount-addon:${row.name}`)}
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
                     {lineSubtotalLabel(`addon:${row.name}`, row.unitPrice, Number(row.quantity ?? 1))}
@@ -4448,14 +4361,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {totalVouchersApplied > 0 && (
                 <>
                   <tr className="bg-amber-50">
-                    <td colSpan={3} className="px-4 py-2 text-right">
+                    <td colSpan={5} className="px-4 py-2 text-right">
                       <span className="inline-flex items-center gap-1.5 text-sm text-amber-700">
                         <Ticket className="w-3.5 h-3.5" />
-                        Entry Vouchers Applied ({totalVouchersApplied} × HK${voucherUnitValue.toLocaleString()} — Account Owner &amp; Spouse):
+                        Entry Vouchers Applied ({totalVouchersApplied} — Account Owner &amp; Spouse)
                       </span>
-                    </td>
-                    <td className="px-4 py-2 text-right text-sm font-medium text-amber-700" colSpan={2}>
-                      − HK${voucherTotal.toLocaleString()}
                     </td>
                   </tr>
                   <tr className="bg-amber-50">
@@ -4520,6 +4430,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </tr>
                 );
               })}
+              {showLegacyAgencyDiscountRow && (
+                <tr className="bg-green-50" data-testid="service-items-discount-agency_discount">
+                  <td colSpan={3} className="px-4 py-2 text-right">
+                    <span className={`inline-flex items-center gap-1.5 text-sm ${BOOKING_DISCOUNT_KIND_META.agency.textClass}`}>
+                      <BadgePercent className="w-3.5 h-3.5" />
+                      Agency Discount ({booking.agencyDiscountRate}%)
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${BOOKING_DISCOUNT_KIND_META.agency.badgeClass}`}>
+                        {BOOKING_DISCOUNT_KIND_META.agency.badge}
+                      </span>
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700" colSpan={2}>
+                    − HK${Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)).toLocaleString()}
+                  </td>
+                </tr>
+              )}
               {/* Total */}
               <tr className="bg-gray-100">
                 <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-900">
@@ -4642,7 +4568,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           && booking.originalAmountValue != null
           && booking.finalAmountValue != null
           && booking.originalAmountValue !== booking.finalAmountValue
-          && !unifiedDiscountLines.some((line) => line.kind === 'promo') && (
+          && !breakdownHasPromoDiscount && (
           <div
             data-testid="pricing-promo-deduction-row"
             className="mt-3 flex items-center justify-between px-4 py-2 bg-indigo-50 border border-indigo-100 rounded"
