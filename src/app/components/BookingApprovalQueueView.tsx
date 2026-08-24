@@ -48,6 +48,8 @@ export interface QueueBooking {
   paymentMode: QueuePaymentMode;
   amount: string;
   submittedAt: string;
+  /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
+  updatedAt?: string;
   isAdHoc?: boolean;
 }
 
@@ -60,7 +62,7 @@ const MOCK_QUEUE_BOOKINGS: QueueBooking[] = [
     membershipTier: 'Gold', suite: 'Premier Suite A',
     dateTime: '2026-04-15 09:00', flightNo: 'CX234', flightTime: '12:30',
     numberOfGuests: 2, nonFlyingGuests: 0, paymentMode: 'Upfront',
-    amount: 'HK$7,600', submittedAt: '2026-04-10 14:22', isAdHoc: false,
+    amount: 'HK$7,600', submittedAt: '2026-04-10 14:22', updatedAt: '2026-04-10 16:05', isAdHoc: false,
   },
   {
     id: 2, bookingNo: 'A-202604-000002', requestType: 'Edit Booking Request',
@@ -270,13 +272,14 @@ export function BookingApprovalQueue({
                 >
                   Submitted <SortIcon field="submittedAt" />
                 </th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Updated At</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wide text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400">
+                  <td colSpan={9} className="text-center py-12 text-gray-400">
                     <Filter className="w-8 h-8 mx-auto mb-2 opacity-30" />
                     <p>No bookings match your current filters.</p>
                   </td>
@@ -380,6 +383,11 @@ export function BookingApprovalQueue({
                       <p className="text-xs text-gray-500">{booking.submittedAt}</p>
                     </td>
 
+                    {/* Updated At */}
+                    <td className="px-4 py-3">
+                      <p className="text-xs text-gray-500">{booking.updatedAt || '—'}</p>
+                    </td>
+
                     {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1" onClick={e => e.stopPropagation()}>
@@ -421,7 +429,7 @@ export function BookingApprovalQueue({
                   {/* Expanded quick-detail row */}
                   {expandedId === booking.id && (
                     <tr key={`exp-${booking.id}`} className="bg-blue-50/40">
-                      <td colSpan={8} className="px-6 py-3">
+                      <td colSpan={9} className="px-6 py-3">
                         <div className="grid grid-cols-4 gap-4 text-xs text-gray-600">
                           <div>
                             <label className="block text-gray-400 mb-[10px]">Account Type</label>

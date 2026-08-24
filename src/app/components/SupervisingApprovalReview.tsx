@@ -49,6 +49,8 @@ export interface SupervisingBooking {
   bookingType: 'Online' | 'Email/Call to HKIAL';
   submittedAt: string;
   submittedBy: string;
+  /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
+  updatedAt?: string;
   specialRequests?: string;
   lineItems: InvoiceLineItem[];
   subtotal: number;
