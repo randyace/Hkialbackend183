@@ -7,6 +7,7 @@ import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { useAuthContextOptional } from '../../../../../providers/AuthProvider';
 import { hasPermission } from '../../../../../lib/permissions';
 import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
+import { InvoiceActionDialog } from './booking/InvoiceActionDialog';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
 // The detail page is the sole production edit surface. The
 // compatibility route (`/bookings/:id/edit`) redirects back here;
@@ -574,6 +575,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
   const [showDocumentDialog, setShowDocumentDialog] = useState(false);
+  const [showInvoiceActionDialog, setShowInvoiceActionDialog] = useState(false);
   const [documentType, setDocumentType] = useState<'invoice' | 'receipt'>('invoice');
 
   const openDocumentDialog = (type: 'invoice' | 'receipt') => {
@@ -641,6 +643,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
 
   const booking = bookingProp || generateMockBooking(bookingId);
+  const bookingInvoices = booking.invoiceHistory ?? [];
 
   // Editable guest fields — Premiere Suite
   // 2026-06-28 (round 6.2.73) — local `useState` retained for
@@ -1075,9 +1078,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   }, [formData?.itemOverrides, formData?.priceOverrides, formData?.lineDiscounts]);
 
   const writeItemOverride = (key: string, patch: ItemOverride) => {
+    const rounded: ItemOverride = { ...patch };
+    if (typeof rounded.discountAmount === 'number' && Number.isFinite(rounded.discountAmount)) {
+      rounded.discountAmount = Math.round(rounded.discountAmount * 100) / 100;
+    }
+    if (typeof rounded.discountPercent === 'number' && Number.isFinite(rounded.discountPercent)) {
+      rounded.discountPercent = Math.round(rounded.discountPercent * 100) / 100;
+    }
     const next: Record<string, ItemOverride> = {
       ...itemOverrides,
-      [key]: { ...itemOverrides[key], ...patch },
+      [key]: { ...itemOverrides[key], ...rounded },
     };
     setItemOverrides(next);
     onFormChange?.({
@@ -1138,9 +1148,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             onChange={(e) => {
               const n = Number(e.target.value);
               if (!Number.isFinite(n) || n < 0) return;
-              const pct = Math.min(100, n);
+              const pct = Math.round(Math.min(100, n) * 100) / 100;
               writeItemOverride(overrideKey, {
-                discountPercent: Math.round(pct * 100) / 100,
+                discountPercent: pct,
                 discountAmount: discountAmountFromPercent(baseTotal, pct),
               });
             }}
@@ -1172,17 +1182,57 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       </div>
     );
   };
-  const lineSubtotalLabel = (overrideKey: string, catalogUnit: number, qty: number): string => {
-    const sub = lineRowSubtotal(
+  const lineSubtotalValue = (overrideKey: string, catalogUnit: number, qty: number): number => {
+    return lineRowSubtotal(
       catalogUnit,
       qty,
       resolvedDiscountAmount(overrideKey),
     );
-    return `HK$${sub.toLocaleString()}`;
+  };
+  const lineSubtotalLabel = (overrideKey: string, catalogUnit: number, qty: number): string => {
+    return `HK$${lineSubtotalValue(overrideKey, catalogUnit, qty).toLocaleString()}`;
   };
   const serviceItemProductRows = (livePreviewBreakdown ?? []).filter(
     (line) => SERVICE_ITEM_PRODUCT_KEYS.has(line.key),
   );
+  const orderItemsSubtotal = (() => {
+    let sum = 0;
+    for (const line of serviceItemProductRows) {
+      const overrideKey = catalogOverrideKey(line);
+      const original = resolveCatalogOriginalUnitPrice(line, Number(line.unit_price ?? 0));
+      const qty = Math.max(1, Number(line.qty ?? 1));
+      sum += lineSubtotalValue(overrideKey, original, qty);
+    }
+    if (invoiceShowLimo) {
+      const limoAddon = booking.addons?.find((a) => a.name === 'Limousine Transfer');
+      const limoQty = Number(limoAddon?.quantity ?? 1);
+      const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
+      sum += lineSubtotalValue('addon:Limousine Transfer', limoCatalog, limoQty);
+    }
+    if (invoiceShowShopping) {
+      sum += lineSubtotalValue('addon:In-Lounge Shopping', 500, 1);
+    }
+    if (invoiceShowSecurity) {
+      const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
+      const qty = Number(securityAddon?.quantity ?? 1);
+      const catalog = Number(securityAddon?.unitPrice ?? 1200);
+      sum += lineSubtotalValue('addon:Security Escort Service', catalog, qty);
+    }
+    if (invoiceShowWheelchair) {
+      const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
+      const qty = Number(wcAddon?.quantity ?? 1);
+      const catalog = Number(wcAddon?.unitPrice ?? 0);
+      sum += lineSubtotalValue('addon:Wheelchair Assistance', catalog, qty);
+    }
+    for (const row of invoiceCatalogRows) {
+      sum += lineSubtotalValue(
+        `addon:${row.name}`,
+        Number(row.unitPrice ?? 0),
+        Number(row.quantity ?? 1),
+      );
+    }
+    return Math.round(sum * 100) / 100;
+  })();
 
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
   // 2026-06-28 (round 6.2.71, Phase 4A) — `isEditBookingOpen`
@@ -1334,6 +1384,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           testId: 'actions-generate-invoice',
         }]
       : []),
+    {
+      key: 'manage-invoices',
+      label: `Manage Invoices (${bookingInvoices.length})`,
+      icon: <FileText className="w-4 h-4 mr-2" />,
+      onClick: () => setShowInvoiceActionDialog(true),
+      testId: 'actions-manage-invoices',
+    },
     ...((booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid')
       ? [{
           key: 'generate-receipt',
@@ -1861,13 +1918,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       ? livePreviewBreakdown
       : (booking.priceBreakdown ?? []);
   const serviceItemsDiscountLines = sourcePriceBreakdown.filter(isBookingDiscountBreakdownLine);
-  const serviceItemsPayable = livePreviewTotal != null ? livePreviewTotal : amountDueAfterVouchers;
   const showLegacyAgencyDiscountRow = Boolean(
     booking.agencyDiscountRate
     && booking.originalAmountValue != null
     && booking.finalAmountValue != null
     && serviceItemsDiscountLines.length === 0,
   );
+  const breakdownDiscountTotal = serviceItemsDiscountLines.reduce(
+    (sum, line) => sum + Number(line.subtotal || 0),
+    0,
+  );
+  const legacyAgencyOff = showLegacyAgencyDiscountRow
+    ? -Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0))
+    : 0;
+  const hasChargedServiceLines = serviceItemProductRows.length > 0
+    || invoiceShowLimo
+    || invoiceShowShopping
+    || invoiceShowSecurity
+    || invoiceShowWheelchair
+    || invoiceCatalogRows.length > 0;
+  const serviceItemsPayable = hasChargedServiceLines
+    ? Math.max(0, Math.round((orderItemsSubtotal + breakdownDiscountTotal + legacyAgencyOff) * 100) / 100)
+    : (livePreviewTotal != null ? livePreviewTotal : amountDueAfterVouchers);
   const breakdownHasPromoDiscount = serviceItemsDiscountLines.some(
     (line) => classifyBookingDiscountKind(String(line.key)) === 'promo',
   );
@@ -2184,6 +2256,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               Generate Receipt
             </Button>
           )}
+          <Button
+            variant="outline"
+            onClick={() => setShowInvoiceActionDialog(true)}
+            data-testid="header-manage-invoices"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Manage Invoices ({bookingInvoices.length})
+          </Button>
           {formData && onSaveAllChanges && (
             <Button
               type="button"
@@ -4323,41 +4403,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </tr>
             </tbody>
             <tfoot className="border-t-2">
-              {/* Round 6.2.13 (2026-06-08) — REMOVED the
-                * dead-code block that was here. Pre-6.2.13 it
-                * was `{false && (<tr>...${headCountTotal}...)}`
-                * — the outer `{false && ...}` was intended to
-                * skip rendering, BUT the JSX compiler still
-                * eagerly evaluates the children (to build the
-                * `React.createElement` args), which throws
-                * `headCountTotal is not defined` at runtime.
-                * Per the user directive ("we are not using
-                * headCountRate now"), the entire head-count
-                * row is removed. The Subtotal + Total Amount
-                * in the invoice dialog use `livePreviewTotal`
-                * (from `POST /api/bookings/price-preview`). */}
-              {/* Food note — always free */}
               <tr className="bg-green-50">
-                <td colSpan={3} className="px-4 py-2 text-right text-sm text-green-700">
+                <td colSpan={4} className="px-4 py-2 text-right text-sm text-green-700">
                   <span className="inline-flex items-center gap-1.5">
                     <Utensils className="w-3.5 h-3.5" />
                     Food & Beverage (incl. pre-order):
                   </span>
                 </td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-green-600" colSpan={2}>
+                <td className="px-4 py-2 text-right text-sm font-medium text-green-600">
                   Complimentary
                 </td>
               </tr>
-              {/* Service subtotal row */}
-              {serviceSubtotal > 0 && (
-                <tr className="bg-gray-50">
-                  <td colSpan={3} className="px-4 py-2 text-right text-sm text-gray-600">Additional Services Subtotal:</td>
-                  <td className="px-4 py-2 text-right text-sm font-medium text-gray-800" colSpan={2}>
-                    HK${Math.round(serviceSubtotal).toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              {/* Voucher rows — per-guest toggles */}
               {totalVouchersApplied > 0 && (
                 <>
                   <tr className="bg-amber-50">
@@ -4371,13 +4427,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <tr className="bg-amber-50">
                     <td colSpan={5} className="px-4 pb-2">
                       <div className="flex gap-2 justify-end flex-wrap">
-                        {/* Passenger vouchers — label is the
-                            role from the round 6.2.8 helper, so a
-                            guest who is not Account Owner / Spouse
-                            (e.g. account has no spouse on record
-                            and this passenger is a regular guest)
-                            renders as "Guest" instead of being
-                            mis-labelled "Spouse". */}
                         {passengerVoucherUsed.map((used, i) =>
                           used ? (
                             <span key={`pv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
@@ -4386,11 +4435,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             </span>
                           ) : null
                         )}
-                        {/* Non-flying guest vouchers — label is the
-                            role from the round 6.2.8 helper. The
-                            pre-6.2.8 code hard-coded "Spouse" for
-                            every NFG voucher, which was wrong when
-                            the account had no spouse on record. */}
                         {nonFlyingVoucherUsed.map((used, i) =>
                           used ? (
                             <span key={`nv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
@@ -4404,7 +4448,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </tr>
                 </>
               )}
-              {/* Remaining vouchers note */}
               <tr className="bg-amber-50/40">
                 <td colSpan={5} className="px-4 py-1.5 text-right">
                   <span className="text-xs text-amber-600">
@@ -4412,19 +4455,32 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </span>
                 </td>
               </tr>
+              <tr>
+                <td colSpan={5} className="px-4 py-0">
+                  <hr className="my-2 border-gray-200" />
+                </td>
+              </tr>
+              <tr data-testid="service-items-order-subtotal">
+                <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-700">
+                  Subtotal (After Item Discounts)
+                </td>
+                <td className="px-4 py-2 text-right text-sm font-medium text-gray-900">
+                  HK${orderItemsSubtotal.toLocaleString()}
+                </td>
+              </tr>
               {serviceItemsDiscountLines.map((line, idx) => {
                 const kind = classifyBookingDiscountKind(String(line.key));
                 const meta = BOOKING_DISCOUNT_KIND_META[kind];
                 return (
                 <tr key={`service-items-discount-${line.key}-${idx}`} className="bg-green-50" data-testid={`service-items-discount-${line.key}`}>
-                  <td colSpan={3} className="px-4 py-2 text-right">
-                    <span className={`inline-flex items-center gap-1.5 text-sm ${meta.textClass}`}>
+                  <td colSpan={4} className="px-4 py-2 text-right">
+                    <span className={`inline-flex items-center justify-end gap-1.5 text-sm ${meta.textClass}`}>
                       <BadgePercent className="w-3.5 h-3.5" />
                       {line.label || line.key}
                       <span className={`text-xs px-2 py-0.5 rounded-full ${meta.badgeClass}`}>{meta.badge}</span>
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700" colSpan={2}>
+                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700">
                     − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
                   </td>
                 </tr>
@@ -4432,8 +4488,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               })}
               {showLegacyAgencyDiscountRow && (
                 <tr className="bg-green-50" data-testid="service-items-discount-agency_discount">
-                  <td colSpan={3} className="px-4 py-2 text-right">
-                    <span className={`inline-flex items-center gap-1.5 text-sm ${BOOKING_DISCOUNT_KIND_META.agency.textClass}`}>
+                  <td colSpan={4} className="px-4 py-2 text-right">
+                    <span className={`inline-flex items-center justify-end gap-1.5 text-sm ${BOOKING_DISCOUNT_KIND_META.agency.textClass}`}>
                       <BadgePercent className="w-3.5 h-3.5" />
                       Agency Discount ({booking.agencyDiscountRate}%)
                       <span className={`text-xs px-2 py-0.5 rounded-full ${BOOKING_DISCOUNT_KIND_META.agency.badgeClass}`}>
@@ -4441,17 +4497,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </span>
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700" colSpan={2}>
+                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700">
                     − HK${Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)).toLocaleString()}
                   </td>
                 </tr>
               )}
-              {/* Total */}
-              <tr className="bg-gray-100">
-                <td colSpan={4} className="px-4 py-3 text-right font-semibold text-gray-900">
-                  {totalVouchersApplied > 0 ? 'Amount Payable (after entry vouchers):' : 'Total Amount:'}
+              <tr className="bg-gray-100" data-testid="service-items-order-total">
+                <td
+                  colSpan={4}
+                  className="px-4 py-3 text-right text-lg font-bold text-gray-900 border-t-2 border-gray-800 pt-2 mt-2"
+                >
+                  Total Amount:
                 </td>
-                <td className="px-4 py-3 text-right font-bold text-green-600 text-base">
+                <td className="px-4 py-3 text-right text-lg font-bold text-green-700 border-t-2 border-gray-800 pt-2">
                   HK${serviceItemsPayable.toLocaleString()}
                 </td>
               </tr>
@@ -4694,6 +4752,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         apiBaseUrl={apiBaseUrl}
         authToken={authToken}
         invoiceHistory={booking.invoiceHistory ?? []}
+      />
+
+      <InvoiceActionDialog
+        isOpen={showInvoiceActionDialog}
+        onClose={() => setShowInvoiceActionDialog(false)}
+        bookingId={bookingId}
+        bookingNo={booking.bookingNo}
+        invoices={bookingInvoices}
+        apiBaseUrl={apiBaseUrl}
+        authToken={authToken}
+        onInvoiceSent={onInvoiceSent}
       />
 
       {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}
