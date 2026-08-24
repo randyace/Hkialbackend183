@@ -73,6 +73,8 @@ export interface PendingBooking {
   agencyDiscountRate?: number;
   bookingType: 'Online' | 'Email/Call to HKIAL';
   submittedAt: string;
+  /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
+  updatedAt?: string;
   specialRequests?: string;
   originalData?: {
     suite?: string;
@@ -205,6 +207,7 @@ const generatePendingBookings = (): PendingBooking[] => {
       agencyDiscountRate,
       bookingType: i % 2 === 0 ? 'Online' : 'Email/Call to HKIAL',
       submittedAt: submittedDates[idx],
+      updatedAt: submittedDates[idx],
       specialRequests: SPECIAL_REQUESTS[idx % SPECIAL_REQUESTS.length] || undefined,
       originalData: i % 3 === 0 ? {
         suite: suites[(idx + 1) % suites.length],
@@ -830,6 +833,7 @@ export function BookingApproval({
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
                     {activeTab === 'processed' ? 'Status' : 'Submitted'}
                   </th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Updated At</th>
                   <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -1012,6 +1016,18 @@ export function BookingApproval({
                           )}
                         </td>
 
+                        {/* Updated At */}
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                          {booking.updatedAt ? (
+                            <>
+                              <div>{booking.updatedAt.split(' ')[0]}</div>
+                              <div className="ml-4">{booking.updatedAt.split(' ')[1]}</div>
+                            </>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
                         {/* Actions */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
@@ -1059,7 +1075,7 @@ export function BookingApproval({
                       {/* Expanded detail row */}
                       {expandedId === booking.id && (
                         <tr key={`expand-${booking.id}`} className={`border-b ${activeTab === 'supervisor' ? 'bg-amber-50' : 'bg-blue-50'}`}>
-                          <td colSpan={showCheckboxes ? 11 : 10} className="px-6 py-4">
+                          <td colSpan={showCheckboxes ? 12 : 11} className="px-6 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                               {/* Booking Info */}
                               <div className="space-y-2">

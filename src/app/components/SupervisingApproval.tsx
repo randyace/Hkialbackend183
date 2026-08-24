@@ -218,6 +218,7 @@ const generateBookings = (): SupervisingBooking[] => {
       paymentMode,
       bookingType: i % 2 === 0 ? 'Online' : 'Email/Call to HKIAL',
       submittedAt: submittedDates[idx],
+      updatedAt: submittedDates[idx],
       submittedBy: STAFF_NAMES[idx % STAFF_NAMES.length],
       specialRequests: SPECIAL_REQUESTS[idx % SPECIAL_REQUESTS.length] || undefined,
       staffNotes: STAFF_NOTES_POOL[idx % STAFF_NOTES_POOL.length] || undefined,
@@ -727,6 +728,7 @@ export function SupervisingApproval({
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">
                     {activeTab === 'processed' ? 'Supervisor Result' : 'Submitted By'}
                   </th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Updated At</th>
                   <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -929,6 +931,18 @@ export function SupervisingApproval({
                           )}
                         </td>
 
+                        {/* Updated At */}
+                        <td className="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                          {booking.updatedAt ? (
+                            <>
+                              <div>{booking.updatedAt.split(' ')[0]}</div>
+                              <div className="text-gray-400 ml-4">{booking.updatedAt.split(' ')[1]}</div>
+                            </>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+
                         {/* Actions */}
                         <td className="px-4 py-3 whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1">
@@ -978,7 +992,7 @@ export function SupervisingApproval({
                       {/* Expanded Row */}
                       {expandedId === booking.id && (
                         <tr key={`exp-${booking.id}`} className={`border-b ${activeTab === 'revision' ? 'bg-amber-50' : 'bg-blue-50'}`}>
-                          <td colSpan={10} className="px-6 py-4">
+                          <td colSpan={11} className="px-6 py-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                               {/* Invoice Summary */}
                               <div className="space-y-2">

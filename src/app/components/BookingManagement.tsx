@@ -100,6 +100,8 @@ interface Booking {
   pendingFlightChangesCount?: number;
   /** Birthday reminder — account or spouse birthday this month or within 3 days. */
   hasUpcomingBirthday?: boolean;
+  /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
+  updatedAt?: string;
 }
 
 // Travel Agency master data with default discount rates
@@ -779,6 +781,7 @@ export function BookingManagement({
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Payment</th>
                 <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Amount</th>
+                <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Updated At</th>
                 <th className="px-6 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -987,6 +990,16 @@ export function BookingManagement({
                       </div>
                     ) : (
                       <span>{booking.amount}</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                    {booking.updatedAt ? (
+                      <>
+                        <div>{booking.updatedAt.split(' ')[0]}</div>
+                        <div>{booking.updatedAt.split(' ')[1]}</div>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
