@@ -418,6 +418,8 @@ export interface BookingFormData {
    */
   useMembershipLdFree?: boolean;
   useMembershipPsFree?: boolean;
+  /** Contact Person → Booking Memo. Wrapper persists to notes + contact.memo. */
+  bookingMemo?: string;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -2088,6 +2090,7 @@ export function CreateBooking({
       // `regionCode + ' ' + contactNo` for `guest_phone` on submit.
       regionCode,
       contactNo,
+      bookingMemo,
       promoCode: promoApplied?.code ?? '',
       specialRequests,
       paymentMode,
