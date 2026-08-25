@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, BadgePercent, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
 import { REGION_CODES } from '../../../../../utils/regionCodes';
 import { splitContactPhone } from '../../../../../utils/splitContactPhone';
@@ -47,17 +47,30 @@ import type {
   EditNonFlyingGuest,
 } from './BookingEditView';
 import {
+  addonOverrideKey,
   discountAmountFromPercent,
-  discountPercentFromAmount,
   lineBaseTotal,
   lineDiscountsFromItemOverrides,
-  lineRowSubtotal,
   mergePriceOverridesFromItemOverrides,
-  resolveCatalogOriginalUnitPrice,
   sanitizeItemOverrides,
   itemOverridesFromPersisted,
   type ItemOverride,
 } from '../../../../../lib/pricing/priceOverrides';
+import {
+  buildLineItemRowsFromPreview,
+  buildSubtotalLinesFromProductPreview,
+  computeBreakdownDiscountTotal,
+  computeOrderItemsSubtotal,
+  computeServiceItemsPayable,
+  filterDiscountBreakdownLines,
+  type InferLineProductContext,
+} from '../../../../../lib/pricing/lineItems';
+import {
+  CatalogPriceLabel,
+  LineItemDiscountInput,
+  LineItemSubtotalLabel,
+  SharedLineItemsTable,
+} from '../../../../../components/booking/billing';
 // 2026-07-09 (round 6.2.129, M11 residual) — single source of truth
 // for persistable add-on keys. Pre-6.2.129 this page kept a 22-item
 // drifted list (names that did not match bookable_items.name_en)
@@ -219,36 +232,6 @@ interface BookingDetailProps {
   // (admin BookingDetail.tsx) passes false per Sky's directive.
   showTransit?: boolean;
 }
-
-type BookingDiscountKind = 'contract' | 'account' | 'membership' | 'promo' | 'agency' | 'other';
-
-function classifyBookingDiscountKind(key: string): BookingDiscountKind {
-  if (key === 'contract_discount') return 'contract';
-  if (key === 'account_discount') return 'account';
-  if (key === 'promo_discount') return 'promo';
-  if (key === 'agency_discount') return 'agency';
-  if (key.startsWith('membership_')) return 'membership';
-  return 'other';
-}
-
-function isBookingDiscountBreakdownLine(line: { key?: string; subtotal?: number }): boolean {
-  const key = String(line.key ?? '');
-  if (Number(line.subtotal) === 0) return false;
-  return key === 'contract_discount'
-    || key === 'account_discount'
-    || key === 'promo_discount'
-    || key.startsWith('membership_')
-    || Number(line.subtotal) < 0;
-}
-
-const BOOKING_DISCOUNT_KIND_META: Record<BookingDiscountKind, { badge: string; rowClass: string; textClass: string; amountClass: string; badgeClass: string; iconClass: string }> = {
-  contract: { badge: 'Contract', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
-  account: { badge: 'Account', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
-  agency: { badge: 'Agency', rowClass: 'bg-green-50/60', textClass: 'text-green-800', amountClass: 'text-green-700', badgeClass: 'bg-green-100 text-green-700', iconClass: 'text-green-600' },
-  membership: { badge: 'Membership', rowClass: 'bg-indigo-50/60', textClass: 'text-indigo-800', amountClass: 'text-indigo-700', badgeClass: 'bg-indigo-100 text-indigo-700', iconClass: 'text-indigo-600' },
-  promo: { badge: 'Promo', rowClass: 'bg-violet-50/60', textClass: 'text-violet-800', amountClass: 'text-violet-700', badgeClass: 'bg-violet-100 text-violet-700', iconClass: 'text-violet-600' },
-  other: { badge: 'Discount', rowClass: 'bg-emerald-50/60', textClass: 'text-emerald-800', amountClass: 'text-emerald-700', badgeClass: 'bg-emerald-100 text-emerald-700', iconClass: 'text-emerald-600' },
-};
 
 // ── Passenger detail types ────────────────────────��─────────────────────────
 // ── MOCK constant (isolated) — container passes real booking via prop ─────────
@@ -921,83 +904,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setShowAddonDropdown(false);
   };
 
-  const addonPriceOverridePatch = (name: string): Partial<BookingFormData> => {
-    const n = Number(addonUnitPrice);
-    if (!Number.isFinite(n) || n < 0) return {};
-    return {
-      priceOverrides: {
-        ...(formData?.priceOverrides ?? {}),
-        [`addon:${name}`]: Math.round(n * 100) / 100,
-      },
-    };
-  };
-
-  const handleAddItem = () => {
-    if (!selectedAddon) { toast.error('Please select an add-on service first.'); return; }
-    if (selectedAddon === 'Limousine Transfer' && limoStops.every(s => !s.location.trim())) {
-      toast.error('Please enter at least one destination or pick-up point.');
-      return;
-    }
-    if (selectedAddon === 'Wheelchair Assistance' && !wheelchairPassenger.trim()) {
-      toast.error('Please enter the passenger name.');
-      return;
-    }
-
-    // Persist into lifted edit formData so multiple add-ons can be
-    // stacked (pre-fix only toasted and reset — the 2nd pick
-    // replaced the 1st and nothing reached Save All Changes).
-    if (formData && onFormChange) {
-      if (selectedAddon === 'Limousine Transfer') {
-        onFormChange({
-          hasLimousine: true,
-          limoStops: limoStops.map((s) => ({
-            id: s.id,
-            type: s.type,
-            location: s.location,
-          })),
-          ...addonPriceOverridePatch(selectedAddon),
-        });
-      } else if (selectedAddon === 'Wheelchair Assistance') {
-        onFormChange({
-          hasWheelchair: true,
-          wheelchairPassenger: wheelchairPassenger.trim(),
-          ...addonPriceOverridePatch(selectedAddon),
-        });
-      } else if (selectedAddon === 'Security Escort Service') {
-        onFormChange({ hasSecurity: true, ...addonPriceOverridePatch(selectedAddon) });
-      } else if (selectedAddon === 'Lounge Extension') {
-        onFormChange({
-          hasLoungeExtension: true,
-          loungeExtensionQty: Math.max(1, Math.min(6, addonQty || 1)),
-        });
-      } else {
-        // Lane B / unexpected catalog name — qty-only selection.
-        const prev = formData.catalogAddonSelections ?? [];
-        const without = prev.filter((s) => s.name !== selectedAddon);
-        onFormChange({
-          catalogAddonSelections: [
-            ...without,
-            { name: selectedAddon, quantity: Math.max(1, addonQty || 1) },
-          ],
-          ...addonPriceOverridePatch(selectedAddon),
-        });
-      }
-      toast.success(`"${selectedAddon}" added. Click Save All Changes below to persist.`);
-    } else {
-      toast.success(`"${selectedAddon}" added to booking!`);
-    }
-
-    setSelectedAddon(null);
-    setAddonQty(1);
-    setAddonUnitPrice('');
-    setAddonDiscount('0');
-    setAddonRemarks('');
-    setAddonSearch('');
-    setShowAddonDropdown(false);
-    setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
-    setWheelchairPassenger('');
-  };
-
   // Chip-remove from the retired lower EditSectionAddons lives on each
   // Service Items row so staff can still drop a service without a second card.
   const renderAddonRemove = (label: string, onRemove: () => void) => (
@@ -1053,26 +959,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       }),
   ];
 
-  const SERVICE_ITEM_PRODUCT_KEYS = new Set([
-    'base',
-    'add_on_flying_guest',
-    'add_on_non_flying_guest',
-    'add_on_child_2_11_1_2',
-    'add_on_child_2_11_3_plus',
-    'add_on_additional_hour',
-  ]);
-  const inferLineProduct = (line: { product?: string }): string | undefined => {
-    if (line.product) return line.product;
-    const hasPs = (formData?.numPremiereSuites ?? 0) > 0;
-    const hasLd = ((formData?.vipPassengersInLoungeDeluxe ?? 0)
-      + (formData?.nonFlyingGuestsInLoungeDeluxe ?? 0)) > 0;
-    if (hasPs && !hasLd) return 'premiere_suite';
-    if (hasLd && !hasPs) return 'lounge_deluxe';
-    return undefined;
-  };
-  const catalogOverrideKey = (line: { key: string; product?: string }): string => {
-    const product = inferLineProduct(line);
-    return product ? `${product}:${line.key}` : line.key;
+  const lineProductContext: InferLineProductContext = {
+    numPremiereSuites: formData?.numPremiereSuites,
+    vipPassengersInLoungeDeluxe: formData?.vipPassengersInLoungeDeluxe,
+    nonFlyingGuestsInLoungeDeluxe: formData?.nonFlyingGuestsInLoungeDeluxe,
   };
   const [itemOverrides, setItemOverrides] = useState<Record<string, ItemOverride>>({});
   useEffect(() => {
@@ -1102,143 +992,157 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       lineDiscounts: lineDiscountsFromItemOverrides(next),
     });
   };
+
+  const addonStagedOverridePatch = (name: string): Partial<BookingFormData> => {
+    const overrideKey = addonOverrideKey(name);
+    const unitN = Number(addonUnitPrice);
+    const unitPrice = Number.isFinite(unitN) && unitN >= 0
+      ? Math.round(unitN * 100) / 100
+      : undefined;
+    const pctN = Number(addonDiscount);
+    const discountPercent = Number.isFinite(pctN) && pctN > 0
+      ? Math.round(Math.min(100, pctN) * 100) / 100
+      : 0;
+    const qty = Math.max(1, addonQty || 1);
+    const discountAmount = discountPercent > 0
+      ? discountAmountFromPercent(lineBaseTotal(unitPrice ?? 0, qty), discountPercent)
+      : 0;
+    const next: Record<string, ItemOverride> = {
+      ...itemOverrides,
+      [overrideKey]: {
+        ...(itemOverrides[overrideKey] ?? {}),
+        ...(unitPrice !== undefined ? { unitPrice } : {}),
+        discountPercent,
+        discountAmount,
+      },
+    };
+    return {
+      itemOverrides: next,
+      priceOverrides: mergePriceOverridesFromItemOverrides(formData?.priceOverrides, next),
+      lineDiscounts: lineDiscountsFromItemOverrides(next),
+    };
+  };
+
+  const handleAddItem = () => {
+    if (!selectedAddon) { toast.error('Please select an add-on service first.'); return; }
+    if (selectedAddon === 'Limousine Transfer' && limoStops.every(s => !s.location.trim())) {
+      toast.error('Please enter at least one destination or pick-up point.');
+      return;
+    }
+    if (selectedAddon === 'Wheelchair Assistance' && !wheelchairPassenger.trim()) {
+      toast.error('Please enter the passenger name.');
+      return;
+    }
+
+    // Persist into lifted edit formData so multiple add-ons can be
+    // stacked (pre-fix only toasted and reset — the 2nd pick
+    // replaced the 1st and nothing reached Save All Changes).
+    if (formData && onFormChange) {
+      const staged = addonStagedOverridePatch(selectedAddon);
+      if (staged.itemOverrides) setItemOverrides(staged.itemOverrides);
+      if (selectedAddon === 'Limousine Transfer') {
+        onFormChange({
+          hasLimousine: true,
+          limoStops: limoStops.map((s) => ({
+            id: s.id,
+            type: s.type,
+            location: s.location,
+          })),
+          ...staged,
+        });
+      } else if (selectedAddon === 'Wheelchair Assistance') {
+        onFormChange({
+          hasWheelchair: true,
+          wheelchairPassenger: wheelchairPassenger.trim(),
+          ...staged,
+        });
+      } else if (selectedAddon === 'Security Escort Service') {
+        onFormChange({ hasSecurity: true, ...staged });
+      } else if (selectedAddon === 'Lounge Extension') {
+        onFormChange({
+          hasLoungeExtension: true,
+          loungeExtensionQty: Math.max(1, Math.min(6, addonQty || 1)),
+          ...staged,
+        });
+      } else {
+        // Lane B / unexpected catalog name — qty-only selection.
+        const prev = formData.catalogAddonSelections ?? [];
+        const without = prev.filter((s) => s.name !== selectedAddon);
+        onFormChange({
+          catalogAddonSelections: [
+            ...without,
+            { name: selectedAddon, quantity: Math.max(1, addonQty || 1) },
+          ],
+          ...staged,
+        });
+      }
+      toast.success(`"${selectedAddon}" added. Click Save All Changes below to persist.`);
+    } else {
+      toast.success(`"${selectedAddon}" added to booking!`);
+    }
+
+    setSelectedAddon(null);
+    setAddonQty(1);
+    setAddonUnitPrice('');
+    setAddonDiscount('0');
+    setAddonRemarks('');
+    setAddonSearch('');
+    setShowAddonDropdown(false);
+    setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
+    setWheelchairPassenger('');
+  };
+
   const resolvedPriceOverrideReason = priceOverrideReasonProp !== undefined
     ? priceOverrideReasonProp
     : (formData?.priceOverrideReason ?? '');
-  const spinlessInputClass =
-    'px-2 py-1 bg-white border border-gray-200 rounded text-right text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none';
-  const catalogPriceLabel = (catalogUnit: number, testId: string) => {
-    const n = Number.isFinite(catalogUnit) && catalogUnit >= 0 ? catalogUnit : 0;
-    return (
-      <span className="text-sm text-gray-800" data-testid={testId}>
-        {`HK$${n.toLocaleString()}`}
-      </span>
-    );
-  };
-  const resolvedDiscountAmount = (overrideKey: string): number => {
-    const n = Number(itemOverrides[overrideKey]?.discountAmount ?? 0);
-    return Number.isFinite(n) && n >= 0 ? n : 0;
-  };
-  const discountAmountInput = (
-    overrideKey: string,
-    catalogUnit: number,
-    qty: number,
-    amountTestId: string,
-  ) => {
-    const baseTotal = lineBaseTotal(catalogUnit, qty);
-    const amount = resolvedDiscountAmount(overrideKey);
-    const storedPct = itemOverrides[overrideKey]?.discountPercent;
-    const percent = typeof storedPct === 'number' && Number.isFinite(storedPct)
-      ? storedPct
-      : discountPercentFromAmount(baseTotal, amount);
-    const percentTestId = amountTestId.replace('discount-amount', 'discount-percent');
-    if (baseTotal <= 0) {
-      return <span className="text-sm text-gray-500">—</span>;
-    }
-    if (!onFormChange) {
-      return (
-        <span className="text-sm text-gray-700">
-          {amount > 0 ? `− HK$${amount.toLocaleString()}` : '—'}
-        </span>
-      );
-    }
-    return (
-      <div className="inline-flex items-center justify-end gap-2">
-        <div className="inline-flex items-center gap-1">
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={Number.isFinite(percent) ? percent : 0}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (!Number.isFinite(n) || n < 0) return;
-              const pct = Math.round(Math.min(100, n) * 100) / 100;
-              writeItemOverride(overrideKey, {
-                discountPercent: pct,
-                discountAmount: discountAmountFromPercent(baseTotal, pct),
-              });
-            }}
-            className={`w-16 ${spinlessInputClass}`}
-            data-testid={percentTestId}
-          />
-          <span className="text-xs text-gray-500">%</span>
-        </div>
-        <div className="inline-flex items-center gap-1">
-          <span className="text-xs text-gray-500 whitespace-nowrap">− HK$</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={Number.isFinite(amount) ? amount : 0}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (!Number.isFinite(n) || n < 0) return;
-              const amt = Math.min(baseTotal, Math.round(n * 100) / 100);
-              writeItemOverride(overrideKey, {
-                discountAmount: amt,
-                discountPercent: discountPercentFromAmount(baseTotal, amt),
-              });
-            }}
-            className={`w-24 ${spinlessInputClass}`}
-            data-testid={amountTestId}
-          />
-        </div>
-      </div>
-    );
-  };
-  const lineSubtotalValue = (overrideKey: string, catalogUnit: number, qty: number): number => {
-    return lineRowSubtotal(
-      catalogUnit,
-      qty,
-      resolvedDiscountAmount(overrideKey),
-    );
-  };
-  const lineSubtotalLabel = (overrideKey: string, catalogUnit: number, qty: number): string => {
-    return `HK$${lineSubtotalValue(overrideKey, catalogUnit, qty).toLocaleString()}`;
-  };
-  const serviceItemProductRows = (livePreviewBreakdown ?? []).filter(
-    (line) => SERVICE_ITEM_PRODUCT_KEYS.has(line.key),
-  );
-  const orderItemsSubtotal = (() => {
-    let sum = 0;
-    for (const line of serviceItemProductRows) {
-      const overrideKey = catalogOverrideKey(line);
-      const original = resolveCatalogOriginalUnitPrice(line, Number(line.unit_price ?? 0));
-      const qty = Math.max(1, Number(line.qty ?? 1));
-      sum += lineSubtotalValue(overrideKey, original, qty);
-    }
-    if (invoiceShowLimo) {
-      const limoAddon = booking.addons?.find((a) => a.name === 'Limousine Transfer');
-      const limoQty = Number(limoAddon?.quantity ?? 1);
-      const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
-      sum += lineSubtotalValue('addon:Limousine Transfer', limoCatalog, limoQty);
-    }
-    if (invoiceShowShopping) {
-      sum += lineSubtotalValue('addon:In-Lounge Shopping', 500, 1);
-    }
-    if (invoiceShowSecurity) {
-      const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
-      const qty = Number(securityAddon?.quantity ?? 1);
-      const catalog = Number(securityAddon?.unitPrice ?? 1200);
-      sum += lineSubtotalValue('addon:Security Escort Service', catalog, qty);
-    }
-    if (invoiceShowWheelchair) {
-      const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
-      const qty = Number(wcAddon?.quantity ?? 1);
-      const catalog = Number(wcAddon?.unitPrice ?? 0);
-      sum += lineSubtotalValue('addon:Wheelchair Assistance', catalog, qty);
-    }
-    for (const row of invoiceCatalogRows) {
-      sum += lineSubtotalValue(
-        `addon:${row.name}`,
-        Number(row.unitPrice ?? 0),
-        Number(row.quantity ?? 1),
-      );
-    }
-    return Math.round(sum * 100) / 100;
-  })();
+
+  const productLineRows = buildLineItemRowsFromPreview(livePreviewBreakdown, lineProductContext);
+
+  const orderItemsSubtotalLines = [
+    ...buildSubtotalLinesFromProductPreview(livePreviewBreakdown, lineProductContext),
+    ...(invoiceShowLimo
+      ? [{
+          overrideKey: 'addon:Limousine Transfer',
+          catalogUnitPrice: Number(
+            booking.addons?.find((a) => a.name === 'Limousine Transfer')?.unitPrice ?? 800,
+          ),
+          quantity: Number(
+            booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity ?? 1,
+          ),
+        }]
+      : []),
+    ...(invoiceShowShopping
+      ? [{ overrideKey: 'addon:In-Lounge Shopping', catalogUnitPrice: 500, quantity: 1 }]
+      : []),
+    ...(invoiceShowSecurity
+      ? [{
+          overrideKey: 'addon:Security Escort Service',
+          catalogUnitPrice: Number(
+            booking.addons?.find((a) => a.name === 'Security Escort Service')?.unitPrice ?? 1200,
+          ),
+          quantity: Number(
+            booking.addons?.find((a) => a.name === 'Security Escort Service')?.quantity ?? 1,
+          ),
+        }]
+      : []),
+    ...(invoiceShowWheelchair
+      ? [{
+          overrideKey: 'addon:Wheelchair Assistance',
+          catalogUnitPrice: Number(
+            booking.addons?.find((a) => a.name === 'Wheelchair Assistance')?.unitPrice ?? 0,
+          ),
+          quantity: Number(
+            booking.addons?.find((a) => a.name === 'Wheelchair Assistance')?.quantity ?? 1,
+          ),
+        }]
+      : []),
+    ...invoiceCatalogRows.map((row) => ({
+      overrideKey: `addon:${row.name}`,
+      catalogUnitPrice: Number(row.unitPrice ?? 0),
+      quantity: Number(row.quantity ?? 1),
+    })),
+  ];
+  const orderItemsSubtotal = computeOrderItemsSubtotal(orderItemsSubtotalLines, itemOverrides);
 
   // ── Edit Booking Dialog ──────────────────────────────────────────────────
   // 2026-06-28 (round 6.2.71, Phase 4A) — `isEditBookingOpen`
@@ -1923,32 +1827,58 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     (livePreviewBreakdown && livePreviewBreakdown.length > 0)
       ? livePreviewBreakdown
       : (booking.priceBreakdown ?? []);
-  const serviceItemsDiscountLines = sourcePriceBreakdown.filter(isBookingDiscountBreakdownLine);
+  const serviceItemsDiscountLines = filterDiscountBreakdownLines(sourcePriceBreakdown);
   const showLegacyAgencyDiscountRow = Boolean(
     booking.agencyDiscountRate
     && booking.originalAmountValue != null
     && booking.finalAmountValue != null
     && serviceItemsDiscountLines.length === 0,
   );
-  const breakdownDiscountTotal = serviceItemsDiscountLines.reduce(
-    (sum, line) => sum + Number(line.subtotal || 0),
-    0,
-  );
+  const breakdownDiscountTotal = computeBreakdownDiscountTotal(serviceItemsDiscountLines);
   const legacyAgencyOff = showLegacyAgencyDiscountRow
     ? -Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0))
     : 0;
-  const hasChargedServiceLines = serviceItemProductRows.length > 0
+  const hasChargedServiceLines = productLineRows.length > 0
     || invoiceShowLimo
     || invoiceShowShopping
     || invoiceShowSecurity
     || invoiceShowWheelchair
     || invoiceCatalogRows.length > 0;
-  const serviceItemsPayable = hasChargedServiceLines
-    ? Math.max(0, Math.round((orderItemsSubtotal + breakdownDiscountTotal + legacyAgencyOff) * 100) / 100)
-    : (livePreviewTotal != null ? livePreviewTotal : amountDueAfterVouchers);
-  const breakdownHasPromoDiscount = serviceItemsDiscountLines.some(
-    (line) => classifyBookingDiscountKind(String(line.key)) === 'promo',
-  );
+  const serviceItemsPayable = computeServiceItemsPayable({
+    orderItemsSubtotal,
+    breakdownDiscountTotal,
+    legacyAgencyOff,
+    hasChargedServiceLines,
+    livePreviewTotal,
+    amountDueAfterVouchers,
+  });
+  const billingSummaryProps = {
+    orderItemsSubtotal,
+    discountLines: serviceItemsDiscountLines,
+    legacyAgencyDiscount: showLegacyAgencyDiscountRow && booking.agencyDiscountRate != null
+      ? {
+          rate: booking.agencyDiscountRate,
+          amount: Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)),
+        }
+      : null,
+    totalAmount: serviceItemsPayable,
+    showComplimentaryFb: true,
+    voucherSummary: {
+      applied: totalVouchersApplied,
+      remaining: remainingVouchers,
+      accountTotal: customerTotalVouchers,
+      passengerBadges: passengerVoucherUsed
+        .map((used, i) => (used
+          ? { key: `pv-${i}`, label: `${getPassengerRole(i)} — VIP Pax ${i + 1}` }
+          : null))
+        .filter(Boolean) as Array<{ key: string; label: string }>,
+      nonFlyingBadges: nonFlyingVoucherUsed
+        .map((used, i) => (used
+          ? { key: `nv-${i}`, label: `${getNFGRole(i)} — Non-Flying Guest ${i + 1}` }
+          : null))
+        .filter(Boolean) as Array<{ key: string; label: string }>,
+    },
+  };
 
   // Toggle a single passenger's voucher
   const togglePassengerVoucher = (idx: number) => {
@@ -3516,96 +3446,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             />
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item</th>
-                <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Discount</th>
-                <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {/* SECTION 1: Suite & Lounge */}
-              <tr className="bg-blue-50">
-                <td colSpan={5} className="px-4 py-2">
-                  <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Suite & Lounge</p>
-                </td>
-              </tr>
-              {serviceItemProductRows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-2 text-sm text-gray-500" data-testid="service-items-product-empty">
-                    Premiere Suite, Lounge Deluxe, guest, and extra-hour line prices appear here once the live preview loads.
-                  </td>
-                </tr>
-              )}
-              {serviceItemProductRows.map((line) => {
-                const overrideKey = catalogOverrideKey(line);
-                const original = resolveCatalogOriginalUnitPrice(line, Number(line.unit_price ?? 0));
-                const qty = Math.max(1, Number(line.qty ?? 1));
-                return (
-                  <tr key={overrideKey} data-testid={`service-items-product-${line.key}`}>
-                    <td className="px-4 py-3">
-                      <p className="font-medium">{line.label}</p>
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
-                    <td className="px-4 py-3 text-right">
-                      {catalogPriceLabel(original, `service-items-unit-price-${overrideKey}`)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      {discountAmountInput(overrideKey, original, qty, `service-items-discount-amount-${overrideKey}`)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-medium">
-                      {lineSubtotalLabel(overrideKey, original, qty)}
-                    </td>
-                  </tr>
-                );
-              })}
-              
-              {/* Head Count Entry Fee — removed round 6.1.5 (2026-06-07).
-                  Backend PricingService no longer emits an `entry_fee`
-                  line in `price_breakdown` (the only items now are
-                  `base` + `add_on_non_flying_guest` + `addons`), and
-                  the previous UI formula (`max(4 pax counts,
-                  numberOfGuests) * HK$1200`) was a ghost charge that
-                  did not match the backend total. Confirmed with
-                  user: the Entry Fee (Head Count) line should not
-                  render at all. The line below is the empty stub
-                  kept for traceability; the wrapping fragment
-                  renders nothing.
-              */}
-              {/* Round 6.2.13 (2026-06-08) — REMOVED the dead-code
-                * block that was here. Pre-6.2.13 it was
-                * `{false && (<tr>...${headCountTotal}...)}` —
-                * the outer `{false && ...}` was intended to
-                * skip rendering, BUT the JSX compiler still
-                * eagerly evaluates the children (to build the
-                * `React.createElement` args), which throws
-                * `headCountTotal is not defined` at runtime.
-                * Per the user directive ("we are not using
-                * headCountRate now"), the entire head-count
-                * line is removed. The new "Pricing
-                * Information" card (line 3306+) shows the
-                * `livePreviewTotal` (from
-                * `POST /api/bookings/price-preview`) as the
-                * Total Amount. */}
-              <tr>
-                <td colSpan={5} className="px-4 py-2 bg-gray-50">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                    <textarea
-                      className="w-full px-3 py-2 border rounded text-sm resize-none"
-                      rows={2}
-                      defaultValue={''}
-                    />
-                  </div>
-                </td>
-              </tr>
-
-              {/* SECTION 2: Additional Services */}
-              <>
+        <SharedLineItemsTable
+          productRows={productLineRows}
+          itemOverrides={itemOverrides}
+          onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+          readOnly={!onFormChange}
+          billingSummary={billingSummaryProps}
+          afterProductRowsSlot={(
+            <tr>
+              <td colSpan={5} className="px-4 py-2 bg-gray-50">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                  <textarea
+                    className="w-full px-3 py-2 border rounded text-sm resize-none"
+                    rows={2}
+                    defaultValue=""
+                  />
+                </div>
+              </td>
+            </tr>
+          )}
+          additionalServicesContent={(
+            <>
                   <tr className="bg-purple-50">
                     <td colSpan={5} className="px-4 py-2">
                       <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Additional Services</p>
@@ -3703,13 +3565,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {catalogPriceLabel(limoCatalog, 'service-items-unit-price-addon:Limousine Transfer')}
+                        <CatalogPriceLabel
+                          catalogUnit={limoCatalog}
+                          testId="service-items-unit-price-addon:Limousine Transfer"
+                        />
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {discountAmountInput('addon:Limousine Transfer', limoCatalog, Number(limoQty ?? 1), 'service-items-discount-amount-addon:Limousine Transfer')}
+                        <LineItemDiscountInput
+                          overrideKey="addon:Limousine Transfer"
+                          catalogUnit={limoCatalog}
+                          qty={Number(limoQty ?? 1)}
+                          itemOverrides={itemOverrides}
+                          onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                          amountTestId="service-items-discount-amount-addon:Limousine Transfer"
+                        />
                       </td>
                       <td className="px-4 py-3 text-right font-medium">
-                        {lineSubtotalLabel('addon:Limousine Transfer', limoCatalog, Number(limoQty ?? 1))}
+                        <LineItemSubtotalLabel
+                          itemOverrides={itemOverrides}
+                          overrideKey="addon:Limousine Transfer"
+                          catalogUnit={limoCatalog}
+                          qty={Number(limoQty ?? 1)}
+                        />
                       </td>
                     </tr>
                     <tr>
@@ -3819,13 +3696,25 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {catalogPriceLabel(500, 'service-items-unit-price-addon:In-Lounge Shopping')}
+                      <CatalogPriceLabel catalogUnit={500} testId="service-items-unit-price-addon:In-Lounge Shopping" />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:In-Lounge Shopping', 500, 1, 'service-items-discount-amount-addon:In-Lounge Shopping')}
+                      <LineItemDiscountInput
+                        overrideKey="addon:In-Lounge Shopping"
+                        catalogUnit={500}
+                        qty={1}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        amountTestId="service-items-discount-amount-addon:In-Lounge Shopping"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
-                      {lineSubtotalLabel('addon:In-Lounge Shopping', 500, 1)}
+                      <LineItemSubtotalLabel
+                        itemOverrides={itemOverrides}
+                        overrideKey="addon:In-Lounge Shopping"
+                        catalogUnit={500}
+                        qty={1}
+                      />
                     </td>
                   </tr>
                   <tr>
@@ -3973,13 +3862,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {catalogPriceLabel(catalog, 'service-items-unit-price-addon:Security Escort Service')}
+                      <CatalogPriceLabel
+                        catalogUnit={catalog}
+                        testId="service-items-unit-price-addon:Security Escort Service"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:Security Escort Service', catalog, qty, 'service-items-discount-amount-addon:Security Escort Service')}
+                      <LineItemDiscountInput
+                        overrideKey="addon:Security Escort Service"
+                        catalogUnit={catalog}
+                        qty={qty}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        amountTestId="service-items-discount-amount-addon:Security Escort Service"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
-                      {lineSubtotalLabel('addon:Security Escort Service', catalog, qty)}
+                      <LineItemSubtotalLabel
+                        itemOverrides={itemOverrides}
+                        overrideKey="addon:Security Escort Service"
+                        catalogUnit={catalog}
+                        qty={qty}
+                      />
                     </td>
                   </tr>
                 );
@@ -4006,13 +3910,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      {catalogPriceLabel(catalog, 'service-items-unit-price-addon:Wheelchair Assistance')}
+                      <CatalogPriceLabel
+                        catalogUnit={catalog}
+                        testId="service-items-unit-price-addon:Wheelchair Assistance"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {discountAmountInput('addon:Wheelchair Assistance', catalog, qty, 'service-items-discount-amount-addon:Wheelchair Assistance')}
+                      <LineItemDiscountInput
+                        overrideKey="addon:Wheelchair Assistance"
+                        catalogUnit={catalog}
+                        qty={qty}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        amountTestId="service-items-discount-amount-addon:Wheelchair Assistance"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right font-medium">
-                      {lineSubtotalLabel('addon:Wheelchair Assistance', catalog, qty)}
+                      <LineItemSubtotalLabel
+                        itemOverrides={itemOverrides}
+                        overrideKey="addon:Wheelchair Assistance"
+                        catalogUnit={catalog}
+                        qty={qty}
+                      />
                     </td>
                   </tr>
                   {onFormChange && (
@@ -4065,13 +3984,28 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {catalogPriceLabel(row.unitPrice, `service-items-unit-price-addon:${row.name}`)}
+                    <CatalogPriceLabel
+                      catalogUnit={row.unitPrice}
+                      testId={`service-items-unit-price-addon:${row.name}`}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {discountAmountInput(`addon:${row.name}`, row.unitPrice, Number(row.quantity ?? 1), `service-items-discount-amount-addon:${row.name}`)}
+                    <LineItemDiscountInput
+                      overrideKey={`addon:${row.name}`}
+                      catalogUnit={row.unitPrice}
+                      qty={Number(row.quantity ?? 1)}
+                      itemOverrides={itemOverrides}
+                      onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                      amountTestId={`service-items-discount-amount-addon:${row.name}`}
+                    />
                   </td>
                   <td className="px-4 py-3 text-right font-medium">
-                    {lineSubtotalLabel(`addon:${row.name}`, row.unitPrice, Number(row.quantity ?? 1))}
+                    <LineItemSubtotalLabel
+                      itemOverrides={itemOverrides}
+                      overrideKey={`addon:${row.name}`}
+                      catalogUnit={row.unitPrice}
+                      qty={Number(row.quantity ?? 1)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -4161,7 +4095,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </>
               )}
               </>
-
+          )}
+          addNewItemSlot={(
+            <>
               {/* ADD NEW ITEM SECTION */}
               <tr className="bg-green-50">
                 <td colSpan={5} className="px-4 py-2">
@@ -4299,10 +4235,23 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <input
-                        type="text"
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
                         value={addonDiscount}
-                        readOnly
-                        className="w-16 px-2 py-1 border rounded text-right bg-gray-50"
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === '') {
+                            setAddonDiscount('');
+                            return;
+                          }
+                          const n = Number(raw);
+                          if (!Number.isFinite(n) || n < 0) return;
+                          setAddonDiscount(String(Math.min(100, n)));
+                        }}
+                        className="w-16 px-2 py-1 border rounded text-right bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-auto [&::-webkit-inner-spin-button]:appearance-auto"
+                        data-testid="service-items-add-discount-percent"
                       />
                       <span className="text-xs text-gray-400">%</span>
                     </div>
@@ -4407,121 +4356,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   </div>
                 </td>
               </tr>
-            </tbody>
-            <tfoot className="border-t-2">
-              <tr className="bg-green-50">
-                <td colSpan={4} className="px-4 py-2 text-right text-sm text-green-700">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Utensils className="w-3.5 h-3.5" />
-                    Food & Beverage (incl. pre-order):
-                  </span>
-                </td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-green-600">
-                  Complimentary
-                </td>
-              </tr>
-              {totalVouchersApplied > 0 && (
-                <>
-                  <tr className="bg-amber-50">
-                    <td colSpan={5} className="px-4 py-2 text-right">
-                      <span className="inline-flex items-center gap-1.5 text-sm text-amber-700">
-                        <Ticket className="w-3.5 h-3.5" />
-                        Entry Vouchers Applied ({totalVouchersApplied} — Account Owner &amp; Spouse)
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="bg-amber-50">
-                    <td colSpan={5} className="px-4 pb-2">
-                      <div className="flex gap-2 justify-end flex-wrap">
-                        {passengerVoucherUsed.map((used, i) =>
-                          used ? (
-                            <span key={`pv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
-                              <Ticket className="w-3 h-3" />
-                              {getPassengerRole(i)} — VIP Pax {i + 1}
-                            </span>
-                          ) : null
-                        )}
-                        {nonFlyingVoucherUsed.map((used, i) =>
-                          used ? (
-                            <span key={`nv-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 border border-amber-300 text-amber-800 text-xs">
-                              <Ticket className="w-3 h-3" />
-                              {getNFGRole(i)} — Non-Flying Guest {i + 1}
-                            </span>
-                          ) : null
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                </>
-              )}
-              <tr className="bg-amber-50/40">
-                <td colSpan={5} className="px-4 py-1.5 text-right">
-                  <span className="text-xs text-amber-600">
-                    Customer has {customerTotalVouchers} voucher{customerTotalVouchers !== 1 ? 's' : ''} in account · {totalVouchersApplied} used this booking · {remainingVouchers} remaining
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td colSpan={5} className="px-4 py-0">
-                  <hr className="my-2 border-gray-200" />
-                </td>
-              </tr>
-              <tr data-testid="service-items-order-subtotal">
-                <td colSpan={4} className="px-4 py-2 text-right text-sm text-gray-700">
-                  Subtotal (After Item Discounts)
-                </td>
-                <td className="px-4 py-2 text-right text-sm font-medium text-gray-900">
-                  HK${orderItemsSubtotal.toLocaleString()}
-                </td>
-              </tr>
-              {serviceItemsDiscountLines.map((line, idx) => {
-                const kind = classifyBookingDiscountKind(String(line.key));
-                const meta = BOOKING_DISCOUNT_KIND_META[kind];
-                return (
-                <tr key={`service-items-discount-${line.key}-${idx}`} className="bg-green-50" data-testid={`service-items-discount-${line.key}`}>
-                  <td colSpan={4} className="px-4 py-2 text-right">
-                    <span className={`inline-flex items-center justify-end gap-1.5 text-sm ${meta.textClass}`}>
-                      <BadgePercent className="w-3.5 h-3.5" />
-                      {line.label || line.key}
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${meta.badgeClass}`}>{meta.badge}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700">
-                    − HK${Math.abs(Number(line.subtotal) || 0).toLocaleString()}
-                  </td>
-                </tr>
-                );
-              })}
-              {showLegacyAgencyDiscountRow && (
-                <tr className="bg-green-50" data-testid="service-items-discount-agency_discount">
-                  <td colSpan={4} className="px-4 py-2 text-right">
-                    <span className={`inline-flex items-center justify-end gap-1.5 text-sm ${BOOKING_DISCOUNT_KIND_META.agency.textClass}`}>
-                      <BadgePercent className="w-3.5 h-3.5" />
-                      Agency Discount ({booking.agencyDiscountRate}%)
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${BOOKING_DISCOUNT_KIND_META.agency.badgeClass}`}>
-                        {BOOKING_DISCOUNT_KIND_META.agency.badge}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-right text-sm font-medium text-green-700">
-                    − HK${Math.abs((booking.originalAmountValue ?? 0) - (booking.finalAmountValue ?? 0)).toLocaleString()}
-                  </td>
-                </tr>
-              )}
-              <tr className="bg-gray-100" data-testid="service-items-order-total">
-                <td
-                  colSpan={4}
-                  className="px-4 py-3 text-right text-lg font-bold text-gray-900 border-t-2 border-gray-800 pt-2 mt-2"
-                >
-                  Total Amount:
-                </td>
-                <td className="px-4 py-3 text-right text-lg font-bold text-green-700 border-t-2 border-gray-800 pt-2">
-                  HK${serviceItemsPayable.toLocaleString()}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+            </>
+          )}
+        />
 
         {formData && onFormChange && (
           <div className="mt-6 space-y-4" data-testid="booking-detail-service-items-extras">
@@ -4557,105 +4394,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           to `promoCodeService.getPromoCodes` + `formData.promoCodeId`
           in round 6.2.80). See L848-880 for the full rationale. */}
 
-      {/* 15. Pricing Information */}
-      <Card className="p-6">
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Pricing Information</h3>
-        <div className="grid grid-cols-3 gap-6">
-          <div>
-            <label className="text-sm text-gray-600">Total</label>
-            {/*
-             * If staff has set a final amount, show that.
-             * Otherwise show the live preview from
-             * `POST /api/bookings/price-preview` (sourced via
-             * the wrapper's `livePreviewTotal` prop). Per the
-             * round 6.2.13 user directive ("we are not using
-             * headCountRate now, we make them call the same
-             * endpoint first"): NO MORE local fallback. If the
-             * live preview is null (loading or fetch error),
-             * show "Pending pricing" instead of a fabricated
-             * number.
-             */}
-            <p className="text-lg font-semibold text-gray-900">
-              {booking.amount
-                ? booking.amount
-                : livePreviewTotal !== null
-                  ? `HK$${livePreviewTotal.toLocaleString()}`
-                  : 'Pending pricing'}
-            </p>
-            {!booking.amount && (
-              <p className="text-xs text-amber-600 mt-1">
-                {livePreviewTotal !== null
-                  ? 'Live preview (not yet priced)'
-                  : 'Awaiting backend pricing'}
-              </p>
-            )}
-          </div>
-          <div>
-            <label className="text-sm text-gray-600">Payment</label>
-            <p className="text-lg font-semibold text-blue-600">
-              {/* Round 6.2.12 + 6.2.13: prefer `livePreviewTotal`
-               * (from `POST /api/bookings/price-preview`) when
-               * `booking.amount` is not yet committed (i.e.
-               * the booking is `payment_status: Pending`). Per
-               * the round 6.2.13 user directive, NO MORE local
-               * `headCountRate × pax` estimate fallback. */}
-              {booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Refunded'
-                ? booking.amount
-                : booking.amount
-                || (livePreviewTotal !== null
-                    ? `HK$${livePreviewTotal.toLocaleString()}`
-                    : 'Pending pricing')}
-            </p>
-          </div>
-          <div>
-            <label className="text-sm text-gray-600">Balance</label>
-            <p className="text-lg font-semibold text-red-600">
-              {/* Round 6.2.13: removed `headCountTotal +
-               * serviceSubtotal` local estimate. Show "Pending
-               * pricing" instead per the user directive. */}
-              {booking.paymentStatus === 'Paid' || booking.paymentStatus === 'Refunded'
-                ? 'HK$0'
-                : booking.amount
-                  || (livePreviewTotal !== null
-                      ? `HK$${livePreviewTotal.toLocaleString()}`
-                      : 'Pending pricing')}
-            </p>
-          </div>
-        </div>
-        {/* ── 2026-07-05 round 6.2.106 (recovery of 6.2.83 lost-edit) ──
-             Pricing-card deduction row when booking.promoCode?.code is
-             set AND originalAmountValue ≠ finalAmountValue. Renders the
-             persisted delta as `− HK$X`. Hides for pre-6.2.83
-             un-deducted bookings (the chip is the "needs pricing:reprice"
-             signal). ── */}
-        {booking.promoCode?.code
-          && booking.originalAmountValue != null
-          && booking.finalAmountValue != null
-          && booking.originalAmountValue !== booking.finalAmountValue
-          && !breakdownHasPromoDiscount && (
-          <div
-            data-testid="pricing-promo-deduction-row"
-            className="mt-3 flex items-center justify-between px-4 py-2 bg-indigo-50 border border-indigo-100 rounded"
-          >
-            <div className="flex items-center gap-2">
-              <Tag className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="text-sm text-indigo-800 font-medium">
-                {booking.promoCode.discountType === 'percentage'
-                  ? `Promo Discount (${booking.promoCode.code})`
-                  : `Promo free lounge (${booking.promoCode.code})`}
-              </span>
-              <span className="text-xs text-indigo-600">
-                {booking.promoCode.discountType === 'percentage'
-                  ? `${booking.promoCode.discountValue}% off`
-                  : `Deduction of ${booking.promoCode.freeSessions ?? 1} LD fee${(booking.promoCode.freeSessions ?? 1) !== 1 ? 's' : ''}`}
-              </span>
-            </div>
-            <span className="text-sm font-medium text-indigo-700">
-              − HK${(booking.originalAmountValue - booking.finalAmountValue).toLocaleString()}
-            </span>
-          </div>
-        )}
-      </Card>
+      {/* 15. Pricing Information — removed 2026-08-25. Order total lives in
+          Service Items footer (`SharedBillingSummary` via `SharedLineItemsTable`). */}
 
       {/* 16. Status Management */}
       <Card className="p-6">
