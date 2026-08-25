@@ -82,6 +82,75 @@ function formatMembershipQuota(value: number | null | undefined): string {
   return String(value);
 }
 
+function lettersOnlyMembershipName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function membershipHolderNameKeys(member: {
+  firstName?: string | null;
+  lastName?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  name?: string | null;
+}): string[] {
+  const first = String(member.firstName ?? member.first_name ?? '').trim();
+  const last = String(member.lastName ?? member.last_name ?? '').trim();
+  const full = String(member.name ?? '').trim();
+  const keys = new Set<string>();
+  const addPair = (f: string, l: string) => {
+    const fl = lettersOnlyMembershipName(f);
+    const ll = lettersOnlyMembershipName(l);
+    if (!fl || !ll) return;
+    keys.add(fl + ll);
+    keys.add(ll + fl);
+    const firstToken = lettersOnlyMembershipName(f.split(/\s+/)[0] ?? '');
+    if (firstToken && firstToken !== fl) {
+      keys.add(firstToken + ll);
+      keys.add(ll + firstToken);
+    }
+  };
+  addPair(first, last);
+  if (full) {
+    const letters = lettersOnlyMembershipName(full);
+    if (letters) keys.add(letters);
+    const parts = full.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      addPair(parts.slice(0, -1).join(' '), parts[parts.length - 1]);
+    }
+  }
+  return [...keys];
+}
+
+/** Free LD / PS credits apply only when the membership holder is a named flying VIP. */
+function memberIsFlyingVipGuest(
+  member: {
+    firstName?: string | null;
+    lastName?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    name?: string | null;
+  } | null | undefined,
+  vipRows: Array<{ firstName?: string; lastName?: string }>,
+): boolean {
+  if (!member || vipRows.length === 0) return false;
+  const memberKeys = membershipHolderNameKeys(member);
+  if (memberKeys.length === 0) return false;
+  const memberSet = new Set(memberKeys);
+  for (const row of vipRows) {
+    const guestKeys = membershipHolderNameKeys({
+      firstName: row.firstName,
+      lastName: row.lastName,
+    });
+    if (guestKeys.some((key) => memberSet.has(key))) return true;
+  }
+  return false;
+}
+
+function hasMembershipLdQuota(value: number | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  return value === -1 || value > 0;
+}
+
 // Auto-generate a booking number preview
 const now = new Date();
 const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -1126,17 +1195,10 @@ export function CreateBooking({
   });
   const visitTimeRangeError = visitTimeRange.error;
 
-// ── Premiere Suite ──────────────────────────────────────────────────────────
+  // ── Premiere Suite ──────────────────────────────────────────────────────────
   const [numPremiereSuites, setNumPremiereSuites] = useState(0);
   const [vipPS, setVipPS] = useState(0);
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
-
-  useEffect(() => {
-    const includesPs = numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0;
-    if (useMembershipPsFree && (!includesPs || !useMembershipLdFree)) {
-      setUseMembershipPsFree(false);
-    }
-  }, [numPremiereSuites, vipPS, nonFlyingPS, useMembershipLdFree, useMembershipPsFree]);
 
   // ── Lounge Deluxe ───────────────────────────────────────────────────────────
   const [vipLD, setVipLD] = useState(0);
@@ -1168,6 +1230,28 @@ export function CreateBooking({
   // `total = 0` case so no card is shown initially.
   const [passengers, setPassengers] = useState<PassengerDetail[]>([]);
   const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>([]);
+
+  const bookingIncludesPremiereSuite = numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0;
+  const activeFlyingVipRows = passengers.slice(0, vipPS + vipLD);
+  const memberIsVipGuest = memberIsFlyingVipGuest(selectedAccount, activeFlyingVipRows);
+  const hasLdQuota = hasMembershipLdQuota(selectedAccount?.ld_entries_remaining);
+  const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && memberIsVipGuest);
+  const canUseFreePs = canUseFreeLd && bookingIncludesPremiereSuite && useMembershipLdFree;
+
+  useEffect(() => {
+    if (!canUseFreeLd && useMembershipLdFree) {
+      setUseMembershipLdFree(false);
+    }
+    if ((!canUseFreePs || !useMembershipLdFree) && useMembershipPsFree) {
+      setUseMembershipPsFree(false);
+    }
+  }, [canUseFreeLd, canUseFreePs, useMembershipLdFree, useMembershipPsFree]);
+
+  useEffect(() => {
+    if (useMembershipPsFree && (!bookingIncludesPremiereSuite || !useMembershipLdFree)) {
+      setUseMembershipPsFree(false);
+    }
+  }, [bookingIncludesPremiereSuite, useMembershipLdFree, useMembershipPsFree]);
 
   // ── Contact Person ──────────────────────────────────────────────────────────
   const [contactName, setContactName] = useState('');
@@ -1369,8 +1453,8 @@ export function CreateBooking({
       // verbatim (the wrapper passes it through).
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
       // Round 6.2.139 — membership free-credit opt-in for live preview.
-      useMembershipLdFree,
-      useMembershipPsFree,
+      useMembershipLdFree: useMembershipLdFree && canUseFreeLd,
+      useMembershipPsFree: useMembershipPsFree && canUseFreePs,
       passengers: passengers.slice(0, vipPS + vipLD).map((p) => ({
         firstName: p?.firstName ?? '',
         lastName: p?.lastName ?? '',
@@ -1403,6 +1487,8 @@ export function CreateBooking({
     accountDiscountPct,
     useMembershipLdFree,
     useMembershipPsFree,
+    canUseFreeLd,
+    canUseFreePs,
   ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
@@ -2012,9 +2098,10 @@ export function CreateBooking({
       // 2026-06-09 — staff override of the auto-derived account discount.
       // `''` (untouched) = no override → wrapper falls back to tier/agency default.
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
-      // Round 6.2.139 — free membership credit opt-in (default true).
-      useMembershipLdFree,
-      useMembershipPsFree,
+      // Round 6.2.139 — free membership credit opt-in (default false).
+      // Force off when the member is not a named flying VIP.
+      useMembershipLdFree: useMembershipLdFree && canUseFreeLd,
+      useMembershipPsFree: useMembershipPsFree && canUseFreePs,
     };
     onSubmit?.(formData);
   };
@@ -2402,12 +2489,13 @@ export function CreateBooking({
                   </div>
                 </div>
                 <div className="mt-3 space-y-2">
-                  <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <label className={`flex items-start gap-2 text-sm ${canUseFreeLd ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
                     <input
                       type="checkbox"
                       className="mt-0.5"
                       data-testid="use-membership-ld-free"
                       checked={useMembershipLdFree}
+                      disabled={!canUseFreeLd}
                       onChange={(e) => {
                         const on = e.target.checked;
                         setUseMembershipLdFree(on);
@@ -2416,26 +2504,28 @@ export function CreateBooking({
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD). Mixed + free PS: this is the dual-quota ticket, not a second LD waive.</span>
+                      <span className="block text-xs text-gray-500">
+                        Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD). Mixed + free PS: this is the dual-quota ticket, not a second LD waive. Guest/limo 40% also requires this credit.
+                        {!hasLdQuota ? ' No free LD entries left.' : !memberIsVipGuest ? ' Only when the member is listed as a flying VIP passenger.' : ''}
+                      </span>
                     </span>
                   </label>
-                  <label className={`flex items-start gap-2 text-sm ${(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && useMembershipLdFree ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
+                  <label className={`flex items-start gap-2 text-sm ${canUseFreePs ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
                     <input
                       type="checkbox"
                       className="mt-0.5"
                       data-testid="use-membership-ps-free"
                       checked={useMembershipPsFree}
-                      disabled={
-                        !((numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && useMembershipLdFree)
-                      }
+                      disabled={!canUseFreePs}
                       onChange={(e) => setUseMembershipPsFree(e.target.checked)}
                     />
                     <span>
                       <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
                       <span className="block text-xs text-gray-500">
                         Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
-                        {!(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) ? ' Add a Premiere Suite first.' : ''}
-                        {(numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0) && !useMembershipLdFree ? ' Check LD credit first.' : ''}
+                        {!bookingIncludesPremiereSuite ? ' Add a Premiere Suite first.' : ''}
+                        {bookingIncludesPremiereSuite && canUseFreeLd && !useMembershipLdFree ? ' Check LD credit first.' : ''}
+                        {!canUseFreeLd && memberIsVipGuest === false ? ' Member must be a flying VIP first.' : ''}
                       </span>
                     </span>
                   </label>
