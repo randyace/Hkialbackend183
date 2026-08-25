@@ -32,6 +32,24 @@ import type {
   BookingFormData, EditFlightType, EditFlightClass, EditPaymentMode,
 } from '../../BookingEditView';
 import { computeVisitTimeRange } from '../../BookingEditView';
+import { getLaravelFieldError } from '../../../../../../../lib/api/errors';
+
+const INPUT_ERROR_CLS = 'border-red-400 bg-red-50 focus:ring-red-500 focus:border-red-500';
+const INPUT_OK_CLS = 'border-gray-300';
+
+function FieldErrorHint({ message, testId }: { message?: string; testId?: string }) {
+  if (!message) return null;
+  return (
+    <p
+      className="text-xs text-red-600 mt-1 flex items-start gap-1"
+      data-testid={testId}
+      role="alert"
+    >
+      <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
+      <span>{message}</span>
+    </p>
+  );
+}
 
 // ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
 
@@ -121,6 +139,8 @@ export interface EditSectionFlightProps {
   headerActions?: ReactNode;
   /** Freshness text shown after the Flight Information title. */
   lastCheckedLabel?: ReactNode;
+  /** Laravel 422 errors bag (snake_case keys) from Save All Changes. */
+  fieldErrors?: Record<string, string[]>;
 }
 
 // 2026-06-28 (round 6.2.76) — "Suite / Venue (legacy)" dropdown
@@ -136,6 +156,7 @@ export function EditSectionFlight({
   showTransit = true,
   headerActions,
   lastCheckedLabel,
+  fieldErrors,
 }: EditSectionFlightProps) {
   const flightType = formData.flightType;
   // Round 6.2.74 — Sky's 3h booking-time rule. The range is empty when
@@ -145,6 +166,37 @@ export function EditSectionFlight({
   const visitTimeHint = visitTimeRange.min && visitTimeRange.max
     ? `Must be between ${visitTimeRange.min} and ${visitTimeRange.max}`
     : null;
+
+  const dateTimeError = getLaravelFieldError(fieldErrors, 'date_time');
+  const flightNoError = getLaravelFieldError(fieldErrors, 'flight_no');
+  const flightTimeError = getLaravelFieldError(fieldErrors, 'flight_time');
+  const flightOriginError = getLaravelFieldError(fieldErrors, 'flight_origin');
+  const flightDestError = getLaravelFieldError(fieldErrors, 'flight_destination');
+  const flightTypeError = getLaravelFieldError(fieldErrors, 'flight_type');
+  const paymentModeError = getLaravelFieldError(fieldErrors, 'payment_mode');
+  const leg2FlightNoError = getLaravelFieldError(
+    fieldErrors,
+    'advanced_details.flight.legs.1.flightNo',
+    'advanced_details.flight.legs',
+  );
+  const leg2FlightTimeError = getLaravelFieldError(
+    fieldErrors,
+    'advanced_details.flight.legs.1.flightTime',
+  );
+  const leg2ArrivalDateError = getLaravelFieldError(
+    fieldErrors,
+    'advanced_details.flight.legs.1.arrivalDate',
+    'advanced_details.flight.legs',
+  );
+  const leg2ClassError = getLaravelFieldError(
+    fieldErrors,
+    'advanced_details.flight.legs.1.flightClass',
+  );
+  const leg2DestError = getLaravelFieldError(
+    fieldErrors,
+    'advanced_details.flight.legs.1.destination',
+  );
+
   return (
     <Card className="p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -168,7 +220,7 @@ export function EditSectionFlight({
             value={flightType}
             onValueChange={v => onFormChange({ flightType: v as EditFlightType })}
           >
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className={flightTypeError ? INPUT_ERROR_CLS : undefined}><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Departure">Departure</SelectItem>
               <SelectItem value="Arrival">Arrival</SelectItem>
@@ -180,6 +232,7 @@ export function EditSectionFlight({
               {showTransit && <SelectItem value="Transit">Transit</SelectItem>}
             </SelectContent>
           </Select>
+          <FieldErrorHint message={flightTypeError} />
         </div>
 
         <div>
@@ -189,9 +242,10 @@ export function EditSectionFlight({
             type="text"
             value={formData.flightNo}
             onChange={e => onFormChange({ flightNo: e.target.value.toUpperCase() })}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
+            className={`w-full border rounded-md px-3 py-2 text-sm uppercase ${flightNoError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
             placeholder="e.g. CX234"
           />
+          <FieldErrorHint message={flightNoError} />
         </div>
 
         <div>
@@ -202,9 +256,12 @@ export function EditSectionFlight({
           <Time5MinSelect
             value={formData.flightTime}
             onChange={(v) => onFormChange({ flightTime: v })}
-            wrapperClassName="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300"
+            wrapperClassName={`w-full border rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
+              flightTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS
+            }`}
             testId="edit-section-flightTime"
           />
+          <FieldErrorHint message={flightTimeError} />
         </div>
 
         <div>
@@ -218,9 +275,14 @@ export function EditSectionFlight({
               ? onFormChange({ flightOrigin: e.target.value.toUpperCase() })
               : undefined}
             readOnly={flightType === 'Arrival'}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
+            className={`w-full border rounded-md px-3 py-2 text-sm uppercase ${
+              flightOriginError && (flightType === 'Departure' || flightType === 'Transit')
+                ? INPUT_ERROR_CLS
+                : INPUT_OK_CLS
+            }`}
             placeholder="e.g. LHR"
           />
+          <FieldErrorHint message={flightType === 'Arrival' ? undefined : flightOriginError} />
         </div>
 
         <div>
@@ -233,8 +295,15 @@ export function EditSectionFlight({
             onChange={e => flightType === 'Departure'
               ? onFormChange({ flightDestination: e.target.value.toUpperCase() })
               : onFormChange({ flightOrigin: e.target.value.toUpperCase() })}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
+            className={`w-full border rounded-md px-3 py-2 text-sm uppercase ${
+              (flightType === 'Departure' ? flightDestError : flightOriginError)
+                ? INPUT_ERROR_CLS
+                : INPUT_OK_CLS
+            }`}
             placeholder="e.g. NRT"
+          />
+          <FieldErrorHint
+            message={flightType === 'Departure' ? flightDestError : flightOriginError}
           />
         </div>
 
@@ -286,9 +355,10 @@ export function EditSectionFlight({
                 type="text"
                 value={formData.leg2FlightNo ?? ''}
                 onChange={e => onFormChange({ leg2FlightNo: e.target.value.toUpperCase() })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
+                className={`w-full border rounded-md px-3 py-2 text-sm uppercase ${leg2FlightNoError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
                 placeholder="e.g. CX888"
               />
+              <FieldErrorHint message={leg2FlightNoError} />
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Flight Time</label>
@@ -299,9 +369,12 @@ export function EditSectionFlight({
               <Time5MinSelect
                 value={formData.leg2FlightTime ?? ''}
                 onChange={(v) => onFormChange({ leg2FlightTime: v })}
-                wrapperClassName="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300"
+                wrapperClassName={`w-full border rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
+                  leg2FlightTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS
+                }`}
                 testId="edit-section-leg2FlightTime"
               />
+              <FieldErrorHint message={leg2FlightTimeError} />
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Arrival Date</label>
@@ -309,8 +382,9 @@ export function EditSectionFlight({
                 type="date"
                 value={formData.leg2ArrivalDate ?? ''}
                 onChange={e => onFormChange({ leg2ArrivalDate: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className={`w-full border rounded-md px-3 py-2 text-sm ${leg2ArrivalDateError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
               />
+              <FieldErrorHint message={leg2ArrivalDateError} />
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Flight Class</label>
@@ -318,13 +392,14 @@ export function EditSectionFlight({
                 value={formData.leg2FlightClass ?? ''}
                 onValueChange={v => onFormChange({ leg2FlightClass: v as EditFlightClass })}
               >
-                <SelectTrigger><SelectValue placeholder="Select class…" /></SelectTrigger>
+                <SelectTrigger className={leg2ClassError ? INPUT_ERROR_CLS : undefined}><SelectValue placeholder="Select class…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Economy Class">Economy Class</SelectItem>
                   <SelectItem value="Business Class">Business Class</SelectItem>
                   <SelectItem value="First Class">First Class</SelectItem>
                 </SelectContent>
               </Select>
+              <FieldErrorHint message={leg2ClassError} />
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Destination</label>
@@ -332,9 +407,10 @@ export function EditSectionFlight({
                 type="text"
                 value={formData.leg2Destination ?? ''}
                 onChange={e => onFormChange({ leg2Destination: e.target.value.toUpperCase() })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase"
+                className={`w-full border rounded-md px-3 py-2 text-sm uppercase ${leg2DestError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
                 placeholder="e.g. LHR"
               />
+              <FieldErrorHint message={leg2DestError} />
             </div>
           </div>
           <p className="text-xs text-amber-700 mt-3 flex items-start gap-1.5">
@@ -360,8 +436,9 @@ export function EditSectionFlight({
               type="date"
               value={formData.visitDate}
               onChange={e => onFormChange({ visitDate: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className={`w-full border rounded-md px-3 py-2 text-sm ${dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
             />
+            <FieldErrorHint message={dateTimeError} testId="edit-visit-date-error" />
           </div>
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Visit Time</label>
@@ -384,18 +461,18 @@ export function EditSectionFlight({
               value={formData.visitTime}
               onChange={(v) => onFormChange({ visitTime: v })}
               wrapperClassName={`w-full border rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
-                visitTimeRangeError ? 'border-red-400 bg-red-50' : 'border-gray-300'
+                visitTimeRangeError || dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS
               }`}
               testId="edit-visit-time"
             />
-            {visitTimeRangeError ? (
+            {(visitTimeRangeError || dateTimeError) ? (
               <p
                 className="text-xs text-red-600 mt-1 flex items-start gap-1"
                 data-testid="edit-visit-time-error"
                 role="alert"
               >
                 <AlertCircle className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                <span>{visitTimeRangeError}</span>
+                <span>{visitTimeRangeError || dateTimeError}</span>
               </p>
             ) : visitTimeHint ? (
               <p
@@ -412,7 +489,7 @@ export function EditSectionFlight({
               value={formData.paymentMode}
               onValueChange={v => onFormChange({ paymentMode: v as EditPaymentMode })}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={paymentModeError ? INPUT_ERROR_CLS : undefined}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Upfront">Upfront</SelectItem>
                 <SelectItem value="Net Upfront">Net Upfront</SelectItem>
@@ -420,6 +497,7 @@ export function EditSectionFlight({
                 <SelectItem value="Bulk Purchase/Monthly Invoice">Bulk Purchase / Monthly Invoice</SelectItem>
               </SelectContent>
             </Select>
+            <FieldErrorHint message={paymentModeError} />
           </div>
         </div>
       </div>

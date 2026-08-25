@@ -10,6 +10,13 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
+import {
+  CustomDatePicker,
+  formatDateValue,
+  formatTimeValue,
+  parseDateValue,
+  parseTimeValue,
+} from '../../../../ui/CustomDatePicker';
 
 /** Carbon dayOfWeek: 0=Sun … 6=Sat */
 export const MENU_DAY_OPTIONS = [
@@ -197,11 +204,12 @@ export function PosMenuEdit({
             {/* Row 2 */}
             <div>
               <Label htmlFor="menu-start-date" className="mb-2 block">Start Date *</Label>
-              <Input
+              <CustomDatePicker
                 id="menu-start-date"
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => patch('startDate', e.target.value)}
+                mode="date"
+                value={parseDateValue(formData.startDate)}
+                onChange={(date) => patch('startDate', formatDateValue(date))}
+                placeholderText="Select start date"
               />
               {errors.startDate ? (
                 <p className="mt-1 text-xs text-red-600">{errors.startDate}</p>
@@ -209,11 +217,13 @@ export function PosMenuEdit({
             </div>
             <div>
               <Label htmlFor="menu-end-date" className="mb-2 block">End Date</Label>
-              <Input
+              <CustomDatePicker
                 id="menu-end-date"
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => patch('endDate', e.target.value)}
+                mode="date"
+                value={parseDateValue(formData.endDate)}
+                onChange={(date) => patch('endDate', formatDateValue(date))}
+                minDate={parseDateValue(formData.startDate)}
+                placeholderText="Select end date"
               />
               {errors.endDate ? (
                 <p className="mt-1 text-xs text-red-600">{errors.endDate}</p>
@@ -258,20 +268,26 @@ export function PosMenuEdit({
             {/* Row 4 */}
             <div>
               <Label htmlFor="menu-start-time" className="mb-2 block">Start Time</Label>
-              <Input
+              <CustomDatePicker
                 id="menu-start-time"
-                type="time"
-                value={formData.startTime}
-                onChange={(e) => patch('startTime', e.target.value)}
+                mode="time"
+                value={parseTimeValue(formData.startTime)}
+                onChange={(date) => patch('startTime', formatTimeValue(date))}
+                timeIntervals={1}
+                timeFormat="HH:mm"
+                placeholderText="Select start time"
               />
             </div>
             <div>
               <Label htmlFor="menu-end-time" className="mb-2 block">End Time</Label>
-              <Input
+              <CustomDatePicker
                 id="menu-end-time"
-                type="time"
-                value={formData.endTime}
-                onChange={(e) => patch('endTime', e.target.value)}
+                mode="time"
+                value={parseTimeValue(formData.endTime)}
+                onChange={(date) => patch('endTime', formatTimeValue(date))}
+                timeIntervals={1}
+                timeFormat="HH:mm"
+                placeholderText="Select end time"
               />
             </div>
 
