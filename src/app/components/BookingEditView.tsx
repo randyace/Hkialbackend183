@@ -46,7 +46,7 @@
  *  - 2026-06-24 round 6.2.66 — back-compat age group strings.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   ArrowLeft, Save, X, User, Building2, MessageSquare,
 } from 'lucide-react';
@@ -441,6 +441,43 @@ export interface BookingFormData {
   rejectionReason?: string;
 }
 
+function createEmptyPassenger(): EditPassenger {
+  return {
+    title: '',
+    firstName: '',
+    lastName: '',
+    ageGroup: '',
+    travelDocNo: '',
+  };
+}
+
+function createEmptyNfg(): EditNonFlyingGuest {
+  return {
+    title: '',
+    firstName: '',
+    lastName: '',
+    ageGroup: '',
+  };
+}
+
+function spliceArray<T>(
+  array: T[],
+  startIndex: number,
+  oldQuantity: number,
+  newQuantity: number,
+  createEmptyFn: () => T,
+): T[] {
+  const next = [...array];
+  const diff = newQuantity - oldQuantity;
+  if (diff > 0) {
+    const blanks = Array.from({ length: diff }, createEmptyFn);
+    next.splice(startIndex + oldQuantity, 0, ...blanks);
+  } else if (diff < 0) {
+    next.splice(startIndex + newQuantity, Math.abs(diff));
+  }
+  return next;
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 export interface BookingEditProps {
@@ -571,61 +608,56 @@ export function BookingEdit({
   // patches via shallow Object.assign.
   const [formData, setFormData] = useState<BookingFormData>(seed);
   const onFormChange = (patch: Partial<BookingFormData>) => {
-    setFormData(prev => ({ ...prev, ...patch }));
+    setFormData(prev => {
+      let next = { ...prev, ...patch };
+
+      if (patch.vipPassengersInPremiereSuite !== undefined) {
+        const newCount = patch.vipPassengersInPremiereSuite;
+        next.passengers = spliceArray(
+          next.passengers,
+          0,
+          prev.vipPassengersInPremiereSuite,
+          newCount,
+          createEmptyPassenger,
+        );
+      }
+
+      if (patch.vipPassengersInLoungeDeluxe !== undefined) {
+        const newCount = patch.vipPassengersInLoungeDeluxe;
+        next.passengers = spliceArray(
+          next.passengers,
+          next.vipPassengersInPremiereSuite,
+          prev.vipPassengersInLoungeDeluxe,
+          newCount,
+          createEmptyPassenger,
+        );
+      }
+
+      if (patch.nonFlyingGuestsInPremiereSuite !== undefined) {
+        const newCount = patch.nonFlyingGuestsInPremiereSuite;
+        next.nonFlyingGuestsList = spliceArray(
+          next.nonFlyingGuestsList,
+          0,
+          prev.nonFlyingGuestsInPremiereSuite,
+          newCount,
+          createEmptyNfg,
+        );
+      }
+
+      if (patch.nonFlyingGuestsInLoungeDeluxe !== undefined) {
+        const newCount = patch.nonFlyingGuestsInLoungeDeluxe;
+        next.nonFlyingGuestsList = spliceArray(
+          next.nonFlyingGuestsList,
+          next.nonFlyingGuestsInPremiereSuite,
+          prev.nonFlyingGuestsInLoungeDeluxe,
+          newCount,
+          createEmptyNfg,
+        );
+      }
+
+      return next;
+    });
   };
-
-  // 2026-06-23 round 6.2.7 — re-count useEffect for VIP passengers.
-  // When the admin changes a per-kind VIP count, the passenger
-  // array is sliced / padded to match. Order is [PS VIPs..., LD VIPs...]
-  // (create form's invariant). The parent wrapper's `handleSave`
-  // splits the array back into `suite_passengers[]` +
-  // `lounge_suite_passengers[]` using the round 6.2.68 order-based
-  // partition.
-  useEffect(() => {
-    const targetVipCount = formData.vipPassengersInPremiereSuite + formData.vipPassengersInLoungeDeluxe;
-    setFormData(prev => {
-      if (prev.passengers.length === targetVipCount) return prev;
-      if (prev.passengers.length > targetVipCount) {
-        return { ...prev, passengers: prev.passengers.slice(0, targetVipCount) };
-      }
-      return {
-        ...prev,
-        passengers: [
-          ...prev.passengers,
-          ...Array.from({ length: targetVipCount - prev.passengers.length }, () => ({
-            title: '',
-            firstName: '',
-            lastName: '',
-            ageGroup: '' as const,
-            travelDocNo: '',
-          })),
-        ],
-      };
-    });
-  }, [formData.vipPassengersInPremiereSuite, formData.vipPassengersInLoungeDeluxe]);
-
-  // 2026-06-23 round 6.2.7 — re-count useEffect for NFGs.
-  useEffect(() => {
-    const targetNfgCount = formData.nonFlyingGuestsInPremiereSuite + formData.nonFlyingGuestsInLoungeDeluxe;
-    setFormData(prev => {
-      if (prev.nonFlyingGuestsList.length === targetNfgCount) return prev;
-      if (prev.nonFlyingGuestsList.length > targetNfgCount) {
-        return { ...prev, nonFlyingGuestsList: prev.nonFlyingGuestsList.slice(0, targetNfgCount) };
-      }
-      return {
-        ...prev,
-        nonFlyingGuestsList: [
-          ...prev.nonFlyingGuestsList,
-          ...Array.from({ length: targetNfgCount - prev.nonFlyingGuestsList.length }, () => ({
-            title: '',
-            firstName: '',
-            lastName: '',
-            ageGroup: '' as const,
-          })),
-        ],
-      };
-    });
-  }, [formData.nonFlyingGuestsInPremiereSuite, formData.nonFlyingGuestsInLoungeDeluxe]);
 
   // 2026-06-23 round 6.2.65 — VIP/NFG completeness gate.
   // Validate before saving. Returns the first 3 incomplete
