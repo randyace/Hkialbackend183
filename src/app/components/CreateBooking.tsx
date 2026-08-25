@@ -1235,8 +1235,16 @@ export function CreateBooking({
   const activeFlyingVipRows = passengers.slice(0, vipPS + vipLD);
   const memberIsVipGuest = memberIsFlyingVipGuest(selectedAccount, activeFlyingVipRows);
   const hasLdQuota = hasMembershipLdQuota(selectedAccount?.ld_entries_remaining);
+  const hasPsQuota = selectedAccount?.ps_free_upgrades_remaining === -1
+    || (selectedAccount?.ps_free_upgrades_remaining !== null
+      && selectedAccount?.ps_free_upgrades_remaining !== undefined
+      && Number.isFinite(selectedAccount.ps_free_upgrades_remaining)
+      && selectedAccount.ps_free_upgrades_remaining > 0);
   const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && memberIsVipGuest);
-  const canUseFreePs = canUseFreeLd && bookingIncludesPremiereSuite && useMembershipLdFree;
+  const canUseFreePs = canUseFreeLd
+    && hasPsQuota
+    && bookingIncludesPremiereSuite
+    && useMembershipLdFree;
 
   useEffect(() => {
     if (!canUseFreeLd && useMembershipLdFree) {

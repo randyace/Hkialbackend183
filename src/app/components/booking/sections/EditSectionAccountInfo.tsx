@@ -44,13 +44,27 @@ export interface EditSectionAccountInfoProps {
     discountType: 'percentage' | 'fixed';
     discountValue: number | string;
   }>;
+  /**
+   * Wrapper-owned membership eligibility. When omitted, standalone Figma
+   * previews retain the legacy checkbox behavior.
+   */
+  membershipControls?: {
+    canUseLdFree: boolean;
+    canUsePsFree: boolean;
+  };
 }
 
 export function EditSectionAccountInfo({
   formData,
   onFormChange,
   promoCodeOptions = [],
+  membershipControls,
 }: EditSectionAccountInfoProps) {
+  const membershipLdDisabled =
+    membershipControls !== undefined && !membershipControls.canUseLdFree;
+  const membershipPsDisabled =
+    membershipControls !== undefined && !membershipControls.canUsePsFree;
+
   return (
     <Card className="p-5">
       <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4 flex items-center gap-2">
@@ -258,12 +272,15 @@ export function EditSectionAccountInfo({
             </div>
           </div>
           <div className="space-y-2">
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
+            <label className={`flex items-start gap-2 text-sm ${
+              membershipLdDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+            }`}>
               <input
                 type="checkbox"
                 className="mt-0.5"
                 data-testid="edit-use-membership-ld-free"
                 checked={formData.useMembershipLdFree !== false}
+                disabled={membershipLdDisabled}
                 onChange={(e) => onFormChange({
                   useMembershipLdFree: e.target.checked,
                   ...(e.target.checked ? {} : { useMembershipPsFree: false }),
@@ -275,7 +292,8 @@ export function EditSectionAccountInfo({
               </span>
             </label>
             <label className={`flex items-start gap-2 text-sm ${
-              ((formData.numPremiereSuites ?? 0) > 0 || (formData.vipPassengersInPremiereSuite ?? 0) > 0 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
+              !membershipPsDisabled
+              && ((formData.numPremiereSuites ?? 0) > 0 || (formData.vipPassengersInPremiereSuite ?? 0) > 0 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
               && formData.useMembershipLdFree !== false
                 ? 'cursor-pointer'
                 : 'opacity-60 cursor-not-allowed'
@@ -286,6 +304,8 @@ export function EditSectionAccountInfo({
                 data-testid="edit-use-membership-ps-free"
                 checked={formData.useMembershipPsFree !== false}
                 disabled={
+                  membershipPsDisabled
+                  ||
                   !((formData.numPremiereSuites ?? 0) > 0
                     || (formData.vipPassengersInPremiereSuite ?? 0) > 0
                     || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
