@@ -612,6 +612,12 @@ export interface CreateBookingProps {
     // Round 6.2.139 — staff opt-in for free LD / free PS credits.
     useMembershipLdFree: boolean;
     useMembershipPsFree: boolean;
+    /**
+     * Mixed LD+PS sitting. Named VIP rows (PS then LD, same order as
+     * the form passengers[] slice) so live preview can tell who sits
+     * in which room.
+     */
+    passengers: Array<{ firstName: string; lastName: string }>;
   }) => void;
   /**
    * 2026-06-08 round 6.2.8 — bookable items price map sourced from
@@ -1365,6 +1371,10 @@ export function CreateBooking({
       // Round 6.2.139 — membership free-credit opt-in for live preview.
       useMembershipLdFree,
       useMembershipPsFree,
+      passengers: passengers.slice(0, vipPS + vipLD).map((p) => ({
+        firstName: p?.firstName ?? '',
+        lastName: p?.lastName ?? '',
+      })),
     });
   }, [
     hasLimousine,
