@@ -1413,9 +1413,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setRefundReason('');
   };
 
-  // ── Voucher System ────────────────────────────────────────────────────────
-  // Customer's total entry vouchers available in their account (mock)
-  const customerTotalVouchers = bookingId % 5 === 0 ? 4 : bookingId % 3 === 0 ? 3 : bookingId % 2 === 0 ? 2 : 1;
   // Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
   // `headCountTotal` per the user directive ("we are not using
   // headCountRate now, the calculation need to improve, we
@@ -1571,11 +1568,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     else setLocalRejectionReasonText(v);
   };
 
-  // ── Per-guest voucher toggles (true = this guest's entry is covered by a voucher) ──
-  // Only Account Owner and Spouse are eligible; toggling consumes one voucher from account.
-  const [passengerVoucherUsed, setPassengerVoucherUsed] = useState<boolean[]>([]);
-  const [nonFlyingVoucherUsed, setNonFlyingVoucherUsed] = useState<boolean[]>([]);
-
   // Non-Flying Guest detail forms
   // 2026-06-08 round 6.2.7 — read the initial non-flying guests from
   // `booking.nonFlyingGuestsList` (the mapper populates this from
@@ -1707,25 +1699,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setNonFlyingGuests(prev => prev.map((g, i) => i === idx ? { ...g, [field]: nextValue } : g));
   };
 
-  // Sync voucher toggle arrays when guest counts change
-  useEffect(() => {
-    const total = vipPS + vipLD;
-    setPassengerVoucherUsed(prev => {
-      if (prev.length === total) return prev;
-      if (prev.length < total) return [...prev, ...Array.from({ length: total - prev.length }, () => false)];
-      return prev.slice(0, total);
-    });
-  }, [vipPS, vipLD]);
-
-  useEffect(() => {
-    const total = nonFlyingPS + nonFlyingLD;
-    setNonFlyingVoucherUsed(prev => {
-      if (prev.length === total) return prev;
-      if (prev.length < total) return [...prev, ...Array.from({ length: total - prev.length }, () => false)];
-      return prev.slice(0, total);
-    });
-  }, [nonFlyingPS, nonFlyingLD]);
-
   // ── Role helpers — determine if a guest is Account Owner / Spouse ──────────
   // 2026-06-08 round 6.2.8 — bookings/684 spouse fix.
   // Pre-6.2.8 the helpers hard-coded `idx === 1 → 'Spouse'`, which
@@ -1793,23 +1766,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const profileSpouseMatched = accountHasSpouse && (
     passengers.some(matchesAccountSpouse) || nonFlyingGuests.some(matchesAccountSpouse)
   );
-  const isVoucherEligibleRole = (role: string): boolean =>
-    role === 'Account Owner' || role === 'Spouse';
-
-  // Computed voucher totals
-  const totalPassengerVouchersUsed = passengerVoucherUsed.filter(Boolean).length;
-  const totalNFGVouchersUsed = nonFlyingVoucherUsed.filter(Boolean).length;
-  const totalVouchersApplied = totalPassengerVouchersUsed + totalNFGVouchersUsed;
-  const remainingVouchers = Math.max(0, customerTotalVouchers - totalVouchersApplied);
-
-  // Pricing with new voucher model
-  // Round 6.2.13: removed `headCountTotal`. The Total Amount
-  // now comes from `livePreviewTotal` (sourced from the
-  // backend's `POST /api/bookings/price-preview`). Voucher
-  // discount will be modelled in a future round per the
-  // user directive.
-  const voucherCount = totalVouchersApplied; // alias for invoice dialog compat
-  const voucherTotal = 0;                          // placeholder (was `totalVouchersApplied * headCountRate`)
+  // Pricing: Total Amount comes from `livePreviewTotal`
+  // (`POST /api/bookings/price-preview`). Entry-voucher apply is
+  // not wired to account inventory — do not render mock counts.
+  const voucherCount = 0;
+  const voucherTotal = 0;
   // 2026-06-28 (round 6.2.76) — max refundable amount was hardcoded
   // to 0 ("placeholder (was `headCountTotal + serviceSubtotal -
   // voucherTotal`)"), which broke the refund dialog for every
@@ -1871,47 +1832,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       : null,
     totalAmount: serviceItemsPayable,
     showComplimentaryFb: true,
-    voucherSummary: {
-      applied: totalVouchersApplied,
-      remaining: remainingVouchers,
-      accountTotal: customerTotalVouchers,
-      passengerBadges: passengerVoucherUsed
-        .map((used, i) => (used
-          ? { key: `pv-${i}`, label: `${getPassengerRole(i)} — VIP Pax ${i + 1}` }
-          : null))
-        .filter(Boolean) as Array<{ key: string; label: string }>,
-      nonFlyingBadges: nonFlyingVoucherUsed
-        .map((used, i) => (used
-          ? { key: `nv-${i}`, label: `${getNFGRole(i)} — Non-Flying Guest ${i + 1}` }
-          : null))
-        .filter(Boolean) as Array<{ key: string; label: string }>,
-    },
-  };
-
-  // Toggle a single passenger's voucher
-  const togglePassengerVoucher = (idx: number) => {
-    const role = getPassengerRole(idx);
-    if (!isVoucherEligibleRole(role)) return;
-    setPassengerVoucherUsed(prev => {
-      const next = [...prev];
-      const turning_on = !next[idx];
-      if (turning_on && remainingVouchers === 0) return prev; // no vouchers left
-      next[idx] = !next[idx];
-      return next;
-    });
-  };
-
-  // Toggle a non-flying guest's voucher
-  const toggleNFGVoucher = (idx: number) => {
-    const role = getNFGRole(idx);
-    if (!isVoucherEligibleRole(role)) return;
-    setNonFlyingVoucherUsed(prev => {
-      const next = [...prev];
-      const turning_on = !next[idx];
-      if (turning_on && remainingVouchers === 0) return prev;
-      next[idx] = !next[idx];
-      return next;
-    });
   };
 
   // ── Validation ──────────────────────────────────────────────────
@@ -2942,14 +2862,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </div>
             )}
           </div>
-          {passengers.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
-              <Ticket className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-xs font-medium text-amber-800">
-                {remainingVouchers} / {customerTotalVouchers} voucher{customerTotalVouchers !== 1 ? 's' : ''} remaining
-              </span>
-            </div>
-          )}
           {passengers.length === 0 && (
             <span className="text-xs text-gray-400 italic">No VIP passengers assigned yet.</span>
           )}
@@ -2964,8 +2876,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {passengers.map((p, idx) => {
               const isPS = idx < vipPS;
               const role = getPassengerRole(idx);
-              const voucherOn = passengerVoucherUsed[idx] ?? false;
-              const eligible = isVoucherEligibleRole(role);
               const isOwner = role === 'Account Owner';
               const isSpouse = role === 'Spouse';
 
@@ -3002,32 +2912,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       VIP Passenger {idx + 1}
                       {p.firstName && p.lastName ? ` — ${p.firstName} ${p.lastName}` : ''}
                     </span>
-                    {/* Voucher toggle — only for owner/spouse */}
-                    {eligible && (
-                      <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Use Voucher</span>
-                        <button
-                          type="button"
-                          onClick={() => togglePassengerVoucher(idx)}
-                          disabled={!voucherOn && remainingVouchers === 0}
-                          title={!voucherOn && remainingVouchers === 0 ? 'No vouchers remaining' : voucherOn ? 'Remove voucher' : 'Apply voucher (covers HK$1,200 entry)'}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                            voucherOn
-                              ? 'bg-amber-500'
-                              : remainingVouchers === 0
-                              ? 'bg-gray-200 cursor-not-allowed'
-                              : 'bg-gray-300 hover:bg-gray-400'
-                          }`}
-                        >
-                          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition-transform ${voucherOn ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                        {voucherOn && (
-                          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                            <Ticket className="w-3 h-3 inline mr-0.5" />Entry Free
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   <div className="p-4 space-y-4">
@@ -3235,14 +3119,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </div>
             )}
           </div>
-          {nonFlyingGuests.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200">
-              <Ticket className="w-3.5 h-3.5 text-amber-600" />
-              <span className="text-xs font-medium text-amber-800">
-                {remainingVouchers} / {customerTotalVouchers} voucher{customerTotalVouchers !== 1 ? 's' : ''} remaining
-              </span>
-            </div>
-          )}
         </div>
 
         {nonFlyingGuests.length === 0 ? (
@@ -3254,8 +3130,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             {nonFlyingGuests.map((g, idx) => {
               const isPS = idx < nonFlyingPS;
               const role = getNFGRole(idx);
-              const voucherOn = nonFlyingVoucherUsed[idx] ?? false;
-              const eligible = isVoucherEligibleRole(role);
               const isSpouseNFG = role === 'Spouse';
 
               const cardBorder = isSpouseNFG
@@ -3281,32 +3155,6 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       Non-Flying Guest {idx + 1}
                       {g.firstName && g.lastName ? ` — ${g.firstName} ${g.lastName}` : ''}
                     </span>
-                    {/* Voucher toggle for spouse */}
-                    {eligible && (
-                      <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-gray-500">Use Voucher</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleNFGVoucher(idx)}
-                          disabled={!voucherOn && remainingVouchers === 0}
-                          title={!voucherOn && remainingVouchers === 0 ? 'No vouchers remaining' : voucherOn ? 'Remove voucher' : 'Apply voucher (covers HK$1,200 entry)'}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                            voucherOn
-                              ? 'bg-amber-500'
-                              : remainingVouchers === 0
-                              ? 'bg-gray-200 cursor-not-allowed'
-                              : 'bg-gray-300 hover:bg-gray-400'
-                          }`}
-                        >
-                          <span className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transform transition-transform ${voucherOn ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                        {voucherOn && (
-                          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200">
-                            <Ticket className="w-3 h-3 inline mr-0.5" />Entry Free
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   <div className="p-4 space-y-4">
