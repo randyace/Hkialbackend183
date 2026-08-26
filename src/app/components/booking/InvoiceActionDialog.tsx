@@ -1,17 +1,56 @@
-import { useState } from 'react';
-import { Download, FileSpreadsheet, Loader2, Mail, FileText } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  Download,
+  Eye,
+  FileSpreadsheet,
+  Loader2,
+  Mail,
+  FileText,
+} from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner@2.0.3';
 import type { InvoiceHistoryEntry } from './BookingInvoiceDialog';
+import { InvoiceDocumentPreview } from './InvoiceDocumentPreview';
+import { buildVipPassengerSummary } from './invoiceDocumentModel';
+import { invoiceRowKey } from './manageInvoicesList';
+
+export type InvoiceActionModalMode = 'invoice' | 'receipt';
+
+export interface InvoiceActionBookingContext {
+  bookingNo: string;
+  guestName?: string;
+  accountNo: string;
+  dateTime: string;
+  flightNo: string;
+  flightOrigin?: string | null;
+  flightDestination?: string | null;
+  serviceRemarks?: string | null;
+  paymentStatus?: string | null;
+  passengers?: Array<{
+    title?: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+  }>;
+}
 
 export interface InvoiceActionDialogProps {
   isOpen: boolean;
   onClose: () => void;
   bookingId: number;
   bookingNo?: string;
+  /** Booking fields needed for the Service Summary document preview. */
+  booking?: InvoiceActionBookingContext;
+  /**
+   * Pre-built document list from the parent:
+   * - invoice mode → full billing history (paid + unpaid, incl. virtual master when unpaid)
+   * - receipt mode → Paid invoices only
+   */
   invoices: InvoiceHistoryEntry[];
+  /** Controls list title / empty copy / back label. */
+  mode?: InvoiceActionModalMode;
   apiBaseUrl?: string;
   authToken?: string;
   /** Fired after a successful resend so the parent can refresh booking state. */
@@ -19,6 +58,10 @@ export interface InvoiceActionDialogProps {
 }
 
 type BusyAction = 'pdf' | 'excel' | 'send';
+type ViewMode = 'list' | 'preview';
+
+const VIRTUAL_SEND_TOOLTIP =
+  'This draft is not yet a persisted invoice. Save and issue the booking fee before sending.';
 
 function formatInvoiceTypeLabel(invoiceType: string): string {
   if (invoiceType === 'pos_fnb') {
@@ -53,7 +96,9 @@ export function InvoiceActionDialog({
   onClose,
   bookingId,
   bookingNo,
+  booking,
   invoices,
+  mode = 'invoice',
   apiBaseUrl,
   authToken,
   onInvoiceSent,
@@ -67,8 +112,49 @@ export function InvoiceActionDialog({
     ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceHistoryEntry | null>(null);
 
-  const busyId = (invoiceId: number, action: BusyAction) => `${invoiceId}:${action}`;
+  // Parent owns virtual-master injection + Paid/pending partition.
+  const displayInvoices = useMemo(
+    () => (Array.isArray(invoices) ? invoices : []),
+    [invoices],
+  );
+  const isReceiptMode = mode === 'receipt';
+  const listTitle = isReceiptMode ? 'Select Receipt' : 'Select Invoice';
+  const listTitleZh = isReceiptMode ? '（選擇收據）' : '（選擇發票）';
+  const listNoun = isReceiptMode ? 'receipt' : 'invoice';
+  const backLabel = isReceiptMode ? 'Back to Receipts' : 'Back to Invoices';
+  const emptyCopy = isReceiptMode
+    ? 'No paid receipts for this booking yet.'
+    : 'No invoices for this booking yet.';
+
+  useEffect(() => {
+    if (!isOpen) {
+      setViewMode('list');
+      setSelectedInvoice(null);
+      setBusyKey(null);
+    }
+  }, [isOpen]);
+
+  const busyId = (entry: InvoiceHistoryEntry, action: BusyAction) =>
+    `${invoiceRowKey(entry)}:${action}`;
+
+  const openPreview = (entry: InvoiceHistoryEntry) => {
+    setSelectedInvoice(entry);
+    setViewMode('preview');
+  };
+
+  const backToList = () => {
+    setViewMode('list');
+    setSelectedInvoice(null);
+  };
+
+  const handleClose = () => {
+    setViewMode('list');
+    setSelectedInvoice(null);
+    onClose();
+  };
 
   const downloadPdf = async (entry: InvoiceHistoryEntry) => {
     if (!token) {
@@ -76,14 +162,15 @@ export function InvoiceActionDialog({
       return;
     }
     if (busyKey) return;
-    const key = busyId(entry.id, 'pdf');
+    const key = busyId(entry, 'pdf');
     setBusyKey(key);
     try {
       const docType = documentTypeForInvoice(entry.status);
-      const query = new URLSearchParams({
-        type: docType,
-        invoice_id: String(entry.id),
-      });
+      const query = new URLSearchParams({ type: docType });
+      // Virtual master: on-the-fly generator from booking (no invoice_id).
+      if (!entry.isVirtual) {
+        query.set('invoice_id', String(entry.id));
+      }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document.pdf?${query.toString()}`,
         {
@@ -106,7 +193,10 @@ export function InvoiceActionDialog({
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `${docType === 'receipt' ? 'Receipt' : 'Invoice'}-${entry.invoiceNo}.pdf`;
+      const fileBase = entry.isVirtual
+        ? (bookingNo || booking?.bookingNo || String(bookingId))
+        : entry.invoiceNo;
+      a.download = `${docType === 'receipt' ? 'Receipt' : 'Invoice'}-${fileBase}.pdf`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -128,14 +218,14 @@ export function InvoiceActionDialog({
       return;
     }
     if (busyKey) return;
-    const key = busyId(entry.id, 'excel');
+    const key = busyId(entry, 'excel');
     setBusyKey(key);
     try {
       const docType = documentTypeForInvoice(entry.status);
-      const query = new URLSearchParams({
-        type: docType,
-        invoice_id: String(entry.id),
-      });
+      const query = new URLSearchParams({ type: docType });
+      if (!entry.isVirtual) {
+        query.set('invoice_id', String(entry.id));
+      }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document/excel?${query.toString()}`,
         {
@@ -160,7 +250,10 @@ export function InvoiceActionDialog({
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `${docType === 'receipt' ? 'Receipt' : 'Invoice'}-${entry.invoiceNo}.xlsx`;
+      const fileBase = entry.isVirtual
+        ? (bookingNo || booking?.bookingNo || String(bookingId))
+        : entry.invoiceNo;
+      a.download = `${docType === 'receipt' ? 'Receipt' : 'Invoice'}-${fileBase}.xlsx`;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -177,6 +270,10 @@ export function InvoiceActionDialog({
   };
 
   const sendToCustomer = async (entry: InvoiceHistoryEntry) => {
+    if (entry.isVirtual) {
+      toast.error(VIRTUAL_SEND_TOOLTIP);
+      return;
+    }
     if (!token) {
       toast.error('Not signed in. Please log in to send.');
       return;
@@ -186,7 +283,7 @@ export function InvoiceActionDialog({
       return;
     }
     if (busyKey) return;
-    const key = busyId(entry.id, 'send');
+    const key = busyId(entry, 'send');
     setBusyKey(key);
     try {
       const response = await fetch(
@@ -221,125 +318,279 @@ export function InvoiceActionDialog({
     }
   };
 
+  const previewBooking = booking ?? {
+    bookingNo: bookingNo ?? '',
+    accountNo: '',
+    dateTime: '',
+    flightNo: '',
+  };
+  const documentLabel = selectedInvoice
+    ? (documentTypeForInvoice(selectedInvoice.status) === 'receipt' ? 'Receipt' : 'Invoice')
+    : 'Invoice';
+  const vipSummary = buildVipPassengerSummary(previewBooking.passengers);
+  const previewBusy = selectedInvoice
+    ? (
+      busyKey === busyId(selectedInvoice, 'pdf')
+      || busyKey === busyId(selectedInvoice, 'excel')
+      || busyKey === busyId(selectedInvoice, 'send')
+    )
+    : false;
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent
-        className="!max-w-[calc(100%-2rem)] sm:!max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto"
+        className="!max-w-[calc(100%-2rem)] sm:!max-w-5xl w-[95vw] max-h-[85vh] overflow-y-auto"
         data-testid="invoice-action-dialog"
       >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-gray-700" />
-            Select Invoice / Receipt
-            <span className="text-sm font-normal text-gray-500">（選擇發票/收據）</span>
-          </DialogTitle>
-          <DialogDescription>
-            {bookingNo
-              ? `Choose a document for booking ${bookingNo}. Download PDF, Excel, or email it to the customer.`
-              : 'Choose a document to download or email to the customer.'}
-          </DialogDescription>
-        </DialogHeader>
+        {viewMode === 'list' || !selectedInvoice ? (
+          <>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-gray-700" />
+                {listTitle}
+                <span className="text-sm font-normal text-gray-500">{listTitleZh}</span>
+              </DialogTitle>
+              <DialogDescription>
+                {bookingNo
+                  ? `Choose a ${listNoun} for booking ${bookingNo}. Preview, download PDF/Excel, or email it to the customer.`
+                  : `Choose a ${listNoun} to preview, download, or email to the customer.`}
+              </DialogDescription>
+            </DialogHeader>
 
-        {invoices.length === 0 ? (
-          <div
-            className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500"
-            data-testid="invoice-action-empty"
-          >
-            No invoices have been issued for this booking yet.
-            Use Generate Invoice to create the first booking-fee invoice.
-          </div>
-        ) : (
-          <ul className="space-y-3" data-testid="invoice-action-list">
-            {invoices.map((entry) => {
-              const pay = paidLabel(entry.status);
-              const pdfBusy = busyKey === busyId(entry.id, 'pdf');
-              const excelBusy = busyKey === busyId(entry.id, 'excel');
-              const sendBusy = busyKey === busyId(entry.id, 'send');
-              const rowBusy = pdfBusy || excelBusy || sendBusy;
-              return (
-                <li
-                  key={entry.id}
-                  className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
-                  data-testid={`invoice-action-row-${entry.id}`}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-gray-900 font-mono text-sm">
-                          {entry.invoiceNo}
-                        </p>
-                        <Badge variant="outline" className={getInvoiceTypeBadgeClass(entry.invoiceType)}>
-                          {formatInvoiceTypeLabel(entry.invoiceType)}
-                        </Badge>
-                        <Badge variant="outline" className={pay.className}>
-                          {pay.label}
-                        </Badge>
+            {displayInvoices.length === 0 ? (
+              <div
+                className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500"
+                data-testid="invoice-action-empty"
+              >
+                {emptyCopy}
+              </div>
+            ) : (
+              <ul className="space-y-3" data-testid="invoice-action-list">
+                {displayInvoices.map((entry) => {
+                  const rowKey = invoiceRowKey(entry);
+                  const pay = paidLabel(entry.status);
+                  const pdfBusy = busyKey === busyId(entry, 'pdf');
+                  const excelBusy = busyKey === busyId(entry, 'excel');
+                  const sendBusy = busyKey === busyId(entry, 'send');
+                  const rowBusy = pdfBusy || excelBusy || sendBusy;
+                  const sendDisabled = rowBusy || entry.status === 'Voided' || Boolean(entry.isVirtual);
+                  return (
+                    <li
+                      key={rowKey}
+                      className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
+                      data-testid={`invoice-action-row-${rowKey}`}
+                    >
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className={`font-semibold text-gray-900 text-sm ${entry.isVirtual ? '' : 'font-mono'}`}>
+                              {entry.invoiceNo}
+                            </p>
+                            <Badge variant="outline" className={getInvoiceTypeBadgeClass(entry.invoiceType)}>
+                              {formatInvoiceTypeLabel(entry.invoiceType)}
+                            </Badge>
+                            <Badge variant="outline" className={pay.className}>
+                              {pay.label}
+                            </Badge>
+                            {entry.isVirtual ? (
+                              <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+                                Draft
+                              </Badge>
+                            ) : null}
+                          </div>
+                          <p className="text-sm font-medium text-gray-800">
+                            {entry.totalAmount > 0
+                              ? `HK$${entry.totalAmount.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                  maximumFractionDigits: 2,
+                                })}`
+                              : 'Complimentary'}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={rowBusy}
+                            onClick={() => openPreview(entry)}
+                            data-testid={`invoice-action-preview-${rowKey}`}
+                            title="Preview"
+                          >
+                            <Eye className="w-4 h-4 mr-1.5" />
+                            Preview
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={rowBusy}
+                            onClick={() => void downloadPdf(entry)}
+                            data-testid={`invoice-action-pdf-${rowKey}`}
+                            title={entry.isVirtual
+                              ? 'Download PDF from current booking (on-the-fly)'
+                              : 'Download PDF'}
+                          >
+                            {pdfBusy ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-1.5" />
+                            )}
+                            PDF
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={rowBusy}
+                            onClick={() => void downloadExcel(entry)}
+                            data-testid={`invoice-action-excel-${rowKey}`}
+                            title={entry.isVirtual
+                              ? 'Download Excel from current booking (on-the-fly)'
+                              : 'Download Excel'}
+                          >
+                            {excelBusy ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+                            )}
+                            Excel
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={sendDisabled}
+                            onClick={() => void sendToCustomer(entry)}
+                            data-testid={`invoice-action-send-${rowKey}`}
+                            title={entry.isVirtual ? VIRTUAL_SEND_TOOLTIP : 'Send to Customer'}
+                            className="border-blue-200 text-blue-800 hover:bg-blue-50"
+                          >
+                            {sendBusy ? (
+                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                            ) : (
+                              <Mail className="w-4 h-4 mr-1.5" />
+                            )}
+                            Send
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm font-medium text-gray-800">
-                        {entry.totalAmount > 0
-                          ? `HK$${entry.totalAmount.toLocaleString(undefined, {
-                              minimumFractionDigits: 0,
-                              maximumFractionDigits: 2,
-                            })}`
-                          : 'Complimentary'}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={rowBusy}
-                        onClick={() => void downloadPdf(entry)}
-                        data-testid={`invoice-action-pdf-${entry.id}`}
-                        title="Download PDF"
-                      >
-                        {pdfBusy ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4 mr-1.5" />
-                        )}
-                        PDF
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={rowBusy}
-                        onClick={() => void downloadExcel(entry)}
-                        data-testid={`invoice-action-excel-${entry.id}`}
-                        title="Download Excel"
-                      >
-                        {excelBusy ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-                        )}
-                        Excel
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={rowBusy || entry.status === 'Voided'}
-                        onClick={() => void sendToCustomer(entry)}
-                        data-testid={`invoice-action-send-${entry.id}`}
-                        title="Send to Customer"
-                        className="border-blue-200 text-blue-800 hover:bg-blue-50"
-                      >
-                        {sendBusy ? (
-                          <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                        ) : (
-                          <Mail className="w-4 h-4 mr-1.5" />
-                        )}
-                        Send
-                      </Button>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
+        ) : (
+          <>
+            <div
+              className="sticky top-0 z-10 -mx-6 -mt-6 mb-4 border-b border-gray-200 bg-white px-6 py-3"
+              data-testid="invoice-action-preview-header"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={backToList}
+                  data-testid="invoice-action-back-to-list"
+                  className="text-gray-700"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-1.5" />
+                  {backLabel}
+                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className={`text-sm font-semibold text-gray-900 ${selectedInvoice.isVirtual ? '' : 'font-mono'}`}>
+                    {selectedInvoice.invoiceNo}
+                  </p>
+                  <Badge variant="outline" className={getInvoiceTypeBadgeClass(selectedInvoice.invoiceType)}>
+                    {formatInvoiceTypeLabel(selectedInvoice.invoiceType)}
+                  </Badge>
+                  <Badge variant="outline" className={paidLabel(selectedInvoice.status).className}>
+                    {paidLabel(selectedInvoice.status).label}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <DialogHeader className="sr-only">
+              <DialogTitle>{documentLabel} preview — {selectedInvoice.invoiceNo}</DialogTitle>
+              <DialogDescription>
+                {selectedInvoice.isVirtual
+                  ? `Preview of current booking fee for ${previewBooking.bookingNo || bookingNo}`
+                  : `Preview of persisted invoice ${selectedInvoice.invoiceNo}`}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="w-full overflow-x-auto" data-testid="invoice-action-preview">
+              <InvoiceDocumentPreview
+                bookingNo={previewBooking.bookingNo || bookingNo || ''}
+                accountNo={previewBooking.accountNo}
+                dateTime={previewBooking.dateTime}
+                flightNo={previewBooking.flightNo}
+                flightOrigin={previewBooking.flightOrigin}
+                flightDestination={previewBooking.flightDestination}
+                issueDate={selectedInvoice.sentAt ?? selectedInvoice.createdAt}
+                invoiceType={selectedInvoice.invoiceType}
+                invoiceNo={selectedInvoice.invoiceNo}
+                totalAmount={selectedInvoice.totalAmount}
+                priceBreakdown={selectedInvoice.priceBreakdown}
+                vipPassengerSummary={vipSummary}
+                serviceRemarks={
+                  selectedInvoice.invoiceType === 'pos_fnb'
+                    ? 'Food & Beverage'
+                    : (previewBooking.serviceRemarks ?? null)
+                }
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-4 border-t sticky bottom-0 bg-white">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={previewBusy}
+                onClick={() => void downloadPdf(selectedInvoice)}
+                data-testid={`invoice-action-preview-pdf-${invoiceRowKey(selectedInvoice)}`}
+              >
+                {busyKey === busyId(selectedInvoice, 'pdf') ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Download PDF
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={previewBusy}
+                onClick={() => void downloadExcel(selectedInvoice)}
+                data-testid={`invoice-action-preview-excel-${invoiceRowKey(selectedInvoice)}`}
+              >
+                {busyKey === busyId(selectedInvoice, 'excel') ? (
+                  <Loader2 className="w-4 h-4 mr-2" />
+                ) : (
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                )}
+                Download Excel
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={previewBusy || selectedInvoice.status === 'Voided' || Boolean(selectedInvoice.isVirtual)}
+                onClick={() => void sendToCustomer(selectedInvoice)}
+                data-testid={`invoice-action-preview-send-${invoiceRowKey(selectedInvoice)}`}
+                title={selectedInvoice.isVirtual ? VIRTUAL_SEND_TOOLTIP : 'Send to Customer'}
+                className="border-blue-200 text-blue-800 hover:bg-blue-50"
+              >
+                {busyKey === busyId(selectedInvoice, 'send') ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="w-4 h-4 mr-2" />
+                )}
+                {isReceiptMode ? 'Send Receipt' : 'Send Invoice'}
+              </Button>
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

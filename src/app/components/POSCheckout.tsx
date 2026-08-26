@@ -64,6 +64,7 @@ export interface POSCheckoutProps {
   isRefreshingPaymentStatus?: boolean;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
+  onGeneratePaymentLink?: () => void | Promise<void>;
   onSendPaymentEmail?: (email: string) => void | Promise<void>;
   onRefreshPaymentStatus?: () => void | Promise<void>;
   onDownloadInvoice?: (entry: POSCheckoutPaymentHistoryItem) => void | Promise<void>;
@@ -177,6 +178,7 @@ export function POSCheckout({
   isRefreshingPaymentStatus = false,
   onBack = () => {},
   onComplete,
+  onGeneratePaymentLink,
   onSendPaymentEmail,
   onRefreshPaymentStatus,
   onDownloadInvoice,
@@ -184,6 +186,7 @@ export function POSCheckout({
   const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSendingPaymentEmail, setIsSendingPaymentEmail] = useState(false);
+  const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [isQrOpen, setIsQrOpen] = useState(false);
@@ -287,6 +290,19 @@ export function POSCheckout({
       await Promise.resolve(onSendPaymentEmail(email));
     } finally {
       setIsSendingPaymentEmail(false);
+    }
+  };
+
+  const handleGeneratePaymentLink = async () => {
+    if (!onGeneratePaymentLink || isGeneratingPaymentLink) {
+      return;
+    }
+
+    setIsGeneratingPaymentLink(true);
+    try {
+      await Promise.resolve(onGeneratePaymentLink());
+    } finally {
+      setIsGeneratingPaymentLink(false);
     }
   };
 
@@ -492,7 +508,7 @@ export function POSCheckout({
               <div>
                 <h3 className="text-lg">Payment Link</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Email the customer an F&amp;B invoice and Adyen payment link before checkout.
+                  Generate an Adyen payment link now, then optionally send it by email.
                 </p>
               </div>
               {requiresPayment ? (
@@ -550,6 +566,29 @@ export function POSCheckout({
                 </div>
                 <Button
                   type="button"
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => void handleGeneratePaymentLink()}
+                  disabled={isGeneratingPaymentLink}
+                  data-testid="pos-generate-payment-link-button"
+                >
+                  {isGeneratingPaymentLink ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating payment link…
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="w-4 h-4 mr-2" />
+                      Generate Payment Link
+                      {outstandingFnbAmount > 0
+                        ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
+                        : ''}
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => void handleSendPaymentEmail()}
                   disabled={isSendingPaymentEmail || !paymentEmail.trim()}
@@ -574,7 +613,7 @@ export function POSCheckout({
                 {hasPaymentLink && paymentLinkUrl ? (
                   <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <Label htmlFor="payment-link-url" className="text-sm">
-                      Payment link
+                      Payment URL &amp; QR Code
                     </Label>
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <Input
@@ -611,12 +650,12 @@ export function POSCheckout({
                       </div>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Share this link or QR if the guest has not received the email yet.
+                      Share this URL or QR code with the guest for immediate payment.
                     </p>
                   </div>
                 ) : (
                   <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    Outstanding balance HKD {outstandingFnbAmount.toFixed(2)}. Send a payment email to generate a new Adyen link for the unpaid amount.
+                    Outstanding balance HKD {outstandingFnbAmount.toFixed(2)}. Generate a payment link or send a payment email.
                   </p>
                 )}
               </div>
