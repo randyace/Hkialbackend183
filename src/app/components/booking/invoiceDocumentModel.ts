@@ -111,7 +111,7 @@ export function resolveBilledQuantity(line: InvoiceBreakdownLine): number {
 
 export function mapReceiptDescription(line: InvoiceBreakdownLine): string {
   const key = String(line.key ?? '');
-  const label = String(line.label ?? key);
+  const label = String(line.label ?? key).trim();
   const product = String(line.product ?? '');
 
   if (key === 'base' && product === 'premiere_suite') {
@@ -123,7 +123,9 @@ export function mapReceiptDescription(line: InvoiceBreakdownLine): string {
   if (/child/i.test(key) || /child/i.test(label)) {
     return 'VIP Passenger ( Children )';
   }
-  if (key === 'addons' || key === 'add_on_limousine' || /limousine/i.test(label)) {
+  // Only rename limousine rows — other add-ons keep their own label
+  // (Wheelchair, Champagne, etc. must not become "Airport Limousine Service").
+  if (key === 'add_on_limousine' || /limousine/i.test(key) || /limousine/i.test(label)) {
     return 'Airport Limousine Service';
   }
   return label || 'Item';
