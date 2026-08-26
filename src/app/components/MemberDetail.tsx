@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -257,6 +257,15 @@ export interface MemberDetailProps {
    */
   paymentMethodOptions?: string[];
 
+  /**
+   * Staff book-on-behalf flag (Group Admin). Container owns the PUT;
+   * when onToggleBookOnBehalf is provided, render the control inside the
+   * member summary card (not a strip below the page).
+   */
+  canBookOnBehalf?: boolean;
+  savingBookOnBehalf?: boolean;
+  onToggleBookOnBehalf?: (next: boolean) => void;
+
   // ── Delete callbacks ─────────────────────────────────────────────────────
   onDeleteAllergy?: (id: number) => void;
   onDeleteDietary?: (id: number) => void;
@@ -467,6 +476,9 @@ export function MemberDetail({
   showMembershipBenefits: showMembershipBenefitsProp,
   showCreditExtras: showCreditExtrasProp,
   paymentMethodOptions: paymentMethodOptionsProp,
+  canBookOnBehalf: canBookOnBehalfProp,
+  savingBookOnBehalf = false,
+  onToggleBookOnBehalf,
 
   // ── Delete callbacks ──────────────────────────────────────────────────────
   onDeletePreference,
@@ -587,6 +599,50 @@ export function MemberDetail({
   const [observationsForm, setObservationsForm] = useState({ ...memberData.observations });
 
   const [isEditing, setIsEditing] = useState(false);
+
+  // Keep edit forms aligned with container-owned member after load/save so
+  // Save Changes always starts from persisted values (not a stale first mount).
+  useEffect(() => {
+    if (isEditing) return;
+    setBasicForm({
+      title: memberData.title,
+      firstName: memberData.firstName,
+      lastName: memberData.lastName,
+      email: memberData.email,
+      phone: memberData.phone,
+      nationality: memberData.nationality,
+      passportNumber: memberData.passportNumber,
+      dateOfBirth: memberData.dateOfBirth ?? '',
+    });
+    setAccountForm({
+      internalGrouping: memberData.internalGrouping,
+      paymentMethod: memberData.paymentMethod,
+      companyCode: memberData.companyCode,
+      accountType: viewAccountType(memberData.accountType),
+    });
+    setAppearanceForm({ ...memberData.appearance });
+    setWorkForm({ ...memberData.workInfo });
+    setObservationsForm({ ...memberData.observations });
+  }, [
+    isEditing,
+    memberData.accountNumber,
+    memberData.title,
+    memberData.firstName,
+    memberData.lastName,
+    memberData.email,
+    memberData.phone,
+    memberData.nationality,
+    memberData.passportNumber,
+    memberData.dateOfBirth,
+    memberData.internalGrouping,
+    memberData.paymentMethod,
+    memberData.companyCode,
+    memberData.accountType,
+    memberData.appearance,
+    memberData.workInfo,
+    memberData.observations,
+  ]);
+
   const [isAddPreferenceOpen, setIsAddPreferenceOpen] = useState(false);
   const [isAddAllergyOpen, setIsAddAllergyOpen] = useState(false);
   const [isAddDietaryOpen, setIsAddDietaryOpen] = useState(false);
@@ -1041,6 +1097,30 @@ export function MemberDetail({
                   )}
                 </div>
               </div>
+              {onToggleBookOnBehalf ? (
+                <div
+                  className="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm"
+                  data-testid="member-book-on-behalf"
+                >
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={Boolean(canBookOnBehalfProp)}
+                      disabled={savingBookOnBehalf}
+                      onChange={(e) => { onToggleBookOnBehalf(e.target.checked); }}
+                    />
+                    <span>
+                      <span className="text-sm font-semibold text-[#0f2942]">
+                        Book on behalf (Group Admin)
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Staff flag. Independent of reporting label. Not granted by a contract.
+                      </p>
+                    </span>
+                  </label>
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="text-right space-y-2">
