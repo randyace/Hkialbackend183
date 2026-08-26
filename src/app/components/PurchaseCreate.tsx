@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -10,15 +10,18 @@ import {
   CheckCircle, TrendingUp, Package, CreditCard, Info, FileText, X,
 } from 'lucide-react';
 import {
-  DISCOUNT_CONTRACT_COMPONENTS,
   DISCOUNT_CONTRACT_ENGINE_COPY,
   allDiscountLineDrafts,
+  buildDiscountComponents,
   formatDiscountLineSummary,
   parseDiscountLineDrafts,
+  sanitizeDiscountPercentInput,
   staffPercentLineDrafts,
+  type DiscountComponentOption,
   type DiscountLineDraft,
   type DiscountType,
 } from '../../../../../lib/pricing/discountContractCatalog';
+import { bookableItemService } from '../../../../../services/bookableItemService';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -318,9 +321,29 @@ export function PurchaseCreate({
   const [creditBalance, setCreditBalance]       = useState('');
   const [totalPrice, setTotalPrice]             = useState('');
   const [discountName, setDiscountName]         = useState('');
-  const [discountLines, setDiscountLines]       = useState<DiscountLineDraft[]>(allDiscountLineDrafts());
+  const [discountComponents, setDiscountComponents] = useState<DiscountComponentOption[]>(
+    () => buildDiscountComponents(),
+  );
+  const [discountLines, setDiscountLines]       = useState<DiscountLineDraft[]>(() => allDiscountLineDrafts());
   const [discountStart, setDiscountStart]       = useState('');
   const [discountEnd, setDiscountEnd]           = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    void bookableItemService.getItems({ for_booking_addon: 1, per_page: 100 })
+      .then((res) => {
+        if (cancelled) return;
+        const items = Array.isArray(res.data) ? res.data : [];
+        const next = buildDiscountComponents(items);
+        setDiscountComponents(next);
+        setDiscountLines((prev) => staffPercentLineDrafts(prev, next));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDiscountComponents(buildDiscountComponents());
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const showMembershipForm = selectedProduct === 'membership';
   const showPromoForm = selectedProduct === 'promo_batch';
@@ -903,13 +926,15 @@ export function PurchaseCreate({
                     />
                   </div>
                   <div className="space-y-2" data-testid="discount-contract-lines">
-                    <p className="text-xs text-gray-500">Percent only. Leave unused parts blank.</p>
+                    <p className="text-xs text-gray-500">
+                      Percent only. Spinner steps by 1; decimals can be typed. Leave unused parts blank.
+                    </p>
                     <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs text-gray-500">
                       <span className="col-span-8">Part</span>
                       <span className="col-span-4">Percent</span>
                     </div>
-                    {staffPercentLineDrafts(discountLines).map((line) => {
-                      const label = DISCOUNT_CONTRACT_COMPONENTS.find((c) => c.key === line.component_key)?.label
+                    {staffPercentLineDrafts(discountLines, discountComponents).map((line) => {
+                      const label = discountComponents.find((c) => c.key === line.component_key)?.label
                         ?? line.component_key;
                       return (
                         <div
@@ -926,17 +951,17 @@ export function PurchaseCreate({
                               type="number"
                               min={0.01}
                               max={100}
-                              step="0.01"
+                              step="1"
                               inputMode="decimal"
                               value={line.discount_value}
                               onChange={(e) => {
-                                const display = staffPercentLineDrafts(discountLines);
+                                const display = staffPercentLineDrafts(discountLines, discountComponents);
                                 setDiscountLines(display.map((l) =>
                                   l.component_key === line.component_key
                                     ? {
                                       ...l,
                                       discount_type: 'percentage',
-                                      discount_value: e.target.value,
+                                      discount_value: sanitizeDiscountPercentInput(e.target.value),
                                       max_qty: '',
                                     }
                                     : l,
