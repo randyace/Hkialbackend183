@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronRight,
   Download,
   Eye,
   FileSpreadsheet,
   Loader2,
   Mail,
   FileText,
+  Save,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -19,6 +22,14 @@ import { invoiceRowKey } from './manageInvoicesList';
 
 export type InvoiceActionModalMode = 'invoice' | 'receipt';
 
+export interface InvoiceBillingDetails {
+  billingName: string;
+  billingCompany: string;
+  billingEmail: string;
+  billingPhone: string;
+  billingAddress: string;
+}
+
 export interface InvoiceActionBookingContext {
   bookingNo: string;
   guestName?: string;
@@ -29,6 +40,11 @@ export interface InvoiceActionBookingContext {
   flightDestination?: string | null;
   serviceRemarks?: string | null;
   paymentStatus?: string | null;
+  billingName?: string | null;
+  billingCompany?: string | null;
+  billingEmail?: string | null;
+  billingPhone?: string | null;
+  billingAddress?: string | null;
   passengers?: Array<{
     title?: string | null;
     firstName?: string | null;
@@ -55,6 +71,11 @@ export interface InvoiceActionDialogProps {
   authToken?: string;
   /** Fired after a successful resend so the parent can refresh booking state. */
   onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
+  /**
+   * Persist invoice Bill-To fields (`advanced_details.billing`) via a
+   * targeted booking update. Shared by Manage Invoices and Manage Receipts.
+   */
+  onSaveBillingDetails?: (details: InvoiceBillingDetails) => Promise<void>;
 }
 
 type BusyAction = 'pdf' | 'excel' | 'send';
@@ -102,6 +123,7 @@ export function InvoiceActionDialog({
   apiBaseUrl,
   authToken,
   onInvoiceSent,
+  onSaveBillingDetails,
 }: InvoiceActionDialogProps) {
   const baseUrl = String(
     apiBaseUrl
@@ -114,6 +136,13 @@ export function InvoiceActionDialog({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceHistoryEntry | null>(null);
+  const [billingExpanded, setBillingExpanded] = useState(true);
+  const [billingSaving, setBillingSaving] = useState(false);
+  const [billingName, setBillingName] = useState('');
+  const [billingCompany, setBillingCompany] = useState('');
+  const [billingEmail, setBillingEmail] = useState('');
+  const [billingPhone, setBillingPhone] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
 
   // Parent owns virtual-master injection + Paid/pending partition.
   const displayInvoices = useMemo(
@@ -134,7 +163,17 @@ export function InvoiceActionDialog({
       setViewMode('list');
       setSelectedInvoice(null);
       setBusyKey(null);
+      setBillingSaving(false);
+      return;
     }
+    // Hydrate Bill To once per open so typing is not clobbered by parent re-renders.
+    setBillingExpanded(true);
+    setBillingName(booking?.billingName ?? '');
+    setBillingCompany(booking?.billingCompany ?? '');
+    setBillingEmail(booking?.billingEmail ?? '');
+    setBillingPhone(booking?.billingPhone ?? '');
+    setBillingAddress(booking?.billingAddress ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot billing when modal opens
   }, [isOpen]);
 
   const busyId = (entry: InvoiceHistoryEntry, action: BusyAction) =>
@@ -154,6 +193,35 @@ export function InvoiceActionDialog({
     setViewMode('list');
     setSelectedInvoice(null);
     onClose();
+  };
+
+  const handleSaveBillingDetails = async () => {
+    if (!onSaveBillingDetails) {
+      toast.error('Unable to save billing details', {
+        description: 'Save handler is not wired for this page.',
+      });
+      return;
+    }
+    if (billingSaving) return;
+    setBillingSaving(true);
+    try {
+      await onSaveBillingDetails({
+        billingName: billingName.trim(),
+        billingCompany: billingCompany.trim(),
+        billingEmail: billingEmail.trim(),
+        billingPhone: billingPhone.trim(),
+        billingAddress: billingAddress.trim(),
+      });
+      toast.success('Billing details saved', {
+        description: 'Invoice Bill To will use these values on the next PDF / send.',
+      });
+    } catch (err) {
+      toast.error('Failed to save billing details', {
+        description: err instanceof Error ? err.message : 'Unknown error',
+      });
+    } finally {
+      setBillingSaving(false);
+    }
   };
 
   const downloadPdf = async (entry: InvoiceHistoryEntry) => {
@@ -356,6 +424,111 @@ export function InvoiceActionDialog({
                   : `Choose a ${listNoun} to preview, download, or email to the customer.`}
               </DialogDescription>
             </DialogHeader>
+
+            <div
+              className="rounded-lg border border-gray-200 bg-slate-50/80 mb-4"
+              data-testid="invoice-billing-details"
+            >
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+                onClick={() => setBillingExpanded((open) => !open)}
+                aria-expanded={billingExpanded}
+                data-testid="invoice-billing-details-toggle"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Invoice Billing Details (發票抬頭)
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Shown on the invoice PDF Bill To. Leave blank to keep guest / account defaults.
+                  </p>
+                </div>
+                {billingExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
+                )}
+              </button>
+              {billingExpanded ? (
+                <div className="border-t border-gray-200 px-4 pb-4 pt-3 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1.5">Bill-to name</label>
+                      <input
+                        type="text"
+                        data-testid="input-billing-name"
+                        value={billingName}
+                        onChange={(e) => setBillingName(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="Name on invoice"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1.5">Company</label>
+                      <input
+                        type="text"
+                        data-testid="input-billing-company"
+                        value={billingCompany}
+                        onChange={(e) => setBillingCompany(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="Company / organisation"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1.5">Email</label>
+                      <input
+                        type="email"
+                        data-testid="input-billing-email"
+                        value={billingEmail}
+                        onChange={(e) => setBillingEmail(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="billing@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1.5">Phone</label>
+                      <input
+                        type="text"
+                        data-testid="input-billing-phone"
+                        value={billingPhone}
+                        onChange={(e) => setBillingPhone(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="+852 0000 0000"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-600 mb-1.5">Address</label>
+                      <textarea
+                        data-testid="input-billing-address"
+                        value={billingAddress}
+                        onChange={(e) => setBillingAddress(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white min-h-[72px]"
+                        placeholder="Billing address"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={billingSaving || !onSaveBillingDetails}
+                      onClick={() => void handleSaveBillingDetails()}
+                      data-testid="save-billing-details"
+                    >
+                      {billingSaving ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save Billing Details
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
 
             {displayInvoices.length === 0 ? (
               <div
