@@ -427,6 +427,8 @@ export interface BookingFormData {
   billingAddress?: string;
   billingEmail?: string;
   billingPhone?: string;
+  /** When true, invoice/receipt preview shows the Bill To block. */
+  showBillingInfo?: boolean;
   // 2026-06-29 (round 6.2.78, Bug #4) — Status Management card
   // wires through the master Save. The 3 controls (Booking
   // Status dropdown / Payment Status dropdown / Status Update
