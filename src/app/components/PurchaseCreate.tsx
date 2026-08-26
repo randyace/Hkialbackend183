@@ -927,7 +927,7 @@ export function PurchaseCreate({
                   </div>
                   <div className="space-y-2" data-testid="discount-contract-lines">
                     <p className="text-xs text-gray-500">
-                      Percent only. Spinner steps by 1; decimals can be typed. Leave unused parts blank.
+                      Percent only. Decimals can be typed. Leave unused parts blank.
                     </p>
                     <div className="hidden sm:grid grid-cols-12 gap-2 px-1 text-xs text-gray-500">
                       <span className="col-span-8">Part</span>
@@ -951,8 +951,9 @@ export function PurchaseCreate({
                               type="number"
                               min={0.01}
                               max={100}
-                              step="1"
+                              step="any"
                               inputMode="decimal"
+                              className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                               value={line.discount_value}
                               onChange={(e) => {
                                 const display = staffPercentLineDrafts(discountLines, discountComponents);
