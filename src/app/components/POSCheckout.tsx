@@ -564,51 +564,53 @@ export function POSCheckout({
                     onChange={(event) => setPaymentEmail(event.target.value)}
                   />
                 </div>
-                <Button
-                  type="button"
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => void handleGeneratePaymentLink()}
-                  disabled={isGeneratingPaymentLink}
-                  data-testid="pos-generate-payment-link-button"
-                >
-                  {isGeneratingPaymentLink ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Generating payment link…
-                    </>
-                  ) : (
-                    <>
-                      <Receipt className="w-4 h-4 mr-2" />
-                      Generate Payment Link
-                      {outstandingFnbAmount > 0
-                        ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
-                        : ''}
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => void handleSendPaymentEmail()}
-                  disabled={isSendingPaymentEmail || !paymentEmail.trim()}
-                  data-testid="pos-send-payment-email-button"
-                >
-                  {isSendingPaymentEmail ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Sending payment email…
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Send Payment Email
-                      {outstandingFnbAmount > 0
-                        ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
-                        : ''}
-                    </>
-                  )}
-                </Button>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full sm:flex-1 bg-white border border-blue-600 text-blue-600 hover:bg-blue-50"
+                    onClick={() => void handleGeneratePaymentLink()}
+                    disabled={isGeneratingPaymentLink}
+                    data-testid="pos-generate-payment-link-button"
+                  >
+                    {isGeneratingPaymentLink ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating payment link…
+                      </>
+                    ) : (
+                      <>
+                        <Receipt className="w-4 h-4 mr-2" />
+                        Generate Payment Link
+                        {outstandingFnbAmount > 0
+                          ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
+                          : ''}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="w-full sm:flex-1 bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => void handleSendPaymentEmail()}
+                    disabled={isSendingPaymentEmail || !paymentEmail.trim()}
+                    data-testid="pos-send-payment-email-button"
+                  >
+                    {isSendingPaymentEmail ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Sending payment email…
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Send Payment Email
+                        {outstandingFnbAmount > 0
+                          ? ` (HKD ${outstandingFnbAmount.toFixed(2)})`
+                          : ''}
+                      </>
+                    )}
+                  </Button>
+                </div>
 
                 {hasPaymentLink && paymentLinkUrl ? (
                   <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
