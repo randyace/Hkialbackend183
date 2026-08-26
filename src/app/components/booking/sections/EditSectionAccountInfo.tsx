@@ -191,67 +191,7 @@ export function EditSectionAccountInfo({
         </div>
       </div>
 
-      <div className="mt-6 pt-5 border-t border-gray-100">
-        <h4 className="text-sm font-medium text-[#0f2942] mb-1">Invoice billing</h4>
-        <p className="text-xs text-gray-500 mb-4">Shown on the invoice PDF Bill To. Leave a field blank to keep the guest / account default.</p>
-        <div className="grid grid-cols-3 gap-6">
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Bill-to name</label>
-            <input
-              type="text"
-              data-testid="input-billing-name"
-              value={formData.billingName ?? ''}
-              onChange={e => onFormChange({ billingName: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              placeholder="Name on invoice"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Company</label>
-            <input
-              type="text"
-              data-testid="input-billing-company"
-              value={formData.billingCompany ?? ''}
-              onChange={e => onFormChange({ billingCompany: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              placeholder="Company / organisation"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Email</label>
-            <input
-              type="email"
-              data-testid="input-billing-email"
-              value={formData.billingEmail ?? ''}
-              onChange={e => onFormChange({ billingEmail: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              placeholder="billing@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-[10px]">Phone</label>
-            <input
-              type="text"
-              data-testid="input-billing-phone"
-              value={formData.billingPhone ?? ''}
-              onChange={e => onFormChange({ billingPhone: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-              placeholder="+852 0000 0000"
-            />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-sm text-gray-600 mb-[10px]">Address</label>
-            <textarea
-              data-testid="input-billing-address"
-              value={formData.billingAddress ?? ''}
-              onChange={e => onFormChange({ billingAddress: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm min-h-[72px]"
-              placeholder="Billing address"
-              rows={3}
-            />
-          </div>
-        </div>
-      </div>
+      {/* Bill To fields live in Manage Invoices / Receipts modal. */}
 
       {/* Round 6.2.139 — free LD / free PS credit opt-in on edit reprice */}
       {(formData.membershipTier || formData.ldEntriesRemaining != null || formData.psFreeUpgradesRemaining != null) && (

@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ArrowLeft, CheckCircle, XCircle, AlertCircle, Plane,
   Car, ShoppingBag, Clock, Building2, CreditCard, BadgePercent,
   MailCheck, Info, FileEdit, User, ChevronRight, ShieldCheck,
   ClipboardCheck, Luggage, Tag, Phone, Mail, MessageSquare,
-  Accessibility, MapPin, Star, Undo2
+  Accessibility, MapPin, Star, Undo2, FileText,
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -12,6 +12,12 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner@2.0.3';
+import { InvoiceDocumentPreview } from './booking/InvoiceDocumentPreview';
+import {
+  buildVipPassengerSummary,
+  type InvoiceBreakdownLine,
+} from './booking/invoiceDocumentModel';
+import { buildManageInvoicesList } from './booking/manageInvoicesList';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +50,13 @@ interface PendingBooking {
   amount: string;
   originalAmountValue?: number;
   finalAmountValue?: number;
+  /** Backend payable total (same source as Amount). Used for virtual master invoice. */
+  totalPrice?: number;
+  /**
+   * Line items from PricingService (`price_breakdown`). Powers the A4
+   * invoice preview when no persisted invoice exists yet.
+   */
+  priceBreakdown?: InvoiceBreakdownLine[];
   agencyName?: string;
   agencyDiscountRate?: number;
   bookingType: 'Online' | 'Email/Call to HKIAL';
@@ -338,6 +351,7 @@ export function BookingReviewPage({
   // PendingForReview transition; we collect it via a dialog.
   const [showPushBackDialog, setShowPushBackDialog] = useState(false);
   const [pushBackReason, setPushBackReason] = useState('');
+  const [isInvoicePreviewOpen, setIsInvoicePreviewOpen] = useState(false);
 
   // ── Supplementary derived data (deterministic from booking.id) ────────────
   const id = booking.id;
@@ -447,6 +461,41 @@ export function BookingReviewPage({
         memo: booking.contactPerson?.memo ?? '',
       }
     : CONTACT_SEEDS[id % CONTACT_SEEDS.length];
+
+  // Virtual master invoice for pending bookings (no persisted Invoice ID yet).
+  // Same injection path as Manage Invoices on Booking Detail.
+  const invoicePreviewMaster = useMemo(() => {
+    const totalFromFields =
+      (typeof booking.finalAmountValue === 'number' && Number.isFinite(booking.finalAmountValue)
+        ? booking.finalAmountValue
+        : undefined)
+      ?? (typeof booking.totalPrice === 'number' && Number.isFinite(booking.totalPrice)
+        ? booking.totalPrice
+        : undefined);
+    const parsedAmount = Number(String(booking.amount ?? '').replace(/[^0-9.-]/g, ''));
+    const totalAmount = totalFromFields
+      ?? (Number.isFinite(parsedAmount) ? parsedAmount : 0);
+
+    return buildManageInvoicesList([], {
+      bookingNo: booking.bookingNo,
+      totalAmount,
+      priceBreakdown: booking.priceBreakdown,
+      paymentStatus: booking.paymentStatus,
+    })[0];
+  }, [
+    booking.amount,
+    booking.bookingNo,
+    booking.finalAmountValue,
+    booking.paymentStatus,
+    booking.priceBreakdown,
+    booking.totalPrice,
+  ]);
+
+  const invoiceVipSummary = useMemo(
+    () => buildVipPassengerSummary(booking.passengers),
+    [booking.passengers],
+  );
+
   // 2026-06-30 (round 6.2.81, Bug #6 follow-up — Sky: "booking
   // 1321 review page shows 'VIP20' even though no promo was
   // applied at create"). Pre-6.2.81 the mock-fallback check was
@@ -1263,6 +1312,16 @@ export function BookingReviewPage({
                   <p className="text-2xl font-bold text-gray-900">{booking.amount}</p>
                 )}
               </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full mt-4"
+                onClick={() => setIsInvoicePreviewOpen(true)}
+                data-testid="supervisor-review-preview-invoice"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Preview Invoice
+              </Button>
             </div>
           </Card>
 
@@ -1534,6 +1593,49 @@ export function BookingReviewPage({
             >
               <Undo2 className="w-4 h-4" />
               Push Back to Staff
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invoice preview — same A4 Service Summary as Manage Invoices (virtual master). */}
+      <Dialog open={isInvoicePreviewOpen} onOpenChange={setIsInvoicePreviewOpen}>
+        <DialogContent
+          className="!max-w-[calc(100%-2rem)] sm:!max-w-5xl w-[95vw] max-h-[85vh] overflow-y-auto"
+          data-testid="supervisor-review-invoice-preview-dialog"
+        >
+          <DialogHeader>
+            <DialogTitle>Invoice Preview</DialogTitle>
+            <DialogDescription>
+              Preview of current booking fee for {booking.bookingNo}
+            </DialogDescription>
+          </DialogHeader>
+          {invoicePreviewMaster && (
+            <div className="w-full overflow-x-auto">
+              <InvoiceDocumentPreview
+                bookingNo={booking.bookingNo}
+                accountNo={booking.accountNo}
+                dateTime={booking.dateTime}
+                flightNo={booking.flightNo}
+                flightOrigin={booking.flightOrigin}
+                flightDestination={booking.flightDestination}
+                issueDate={null}
+                invoiceType={invoicePreviewMaster.invoiceType}
+                invoiceNo={invoicePreviewMaster.invoiceNo}
+                totalAmount={invoicePreviewMaster.totalAmount}
+                priceBreakdown={invoicePreviewMaster.priceBreakdown}
+                vipPassengerSummary={invoiceVipSummary}
+                serviceRemarks={contact.memo || booking.specialRequests || null}
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsInvoicePreviewOpen(false)}
+            >
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
