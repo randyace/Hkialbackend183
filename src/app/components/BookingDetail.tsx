@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
-import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, Receipt, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
 import { REGION_CODES } from '../../../../../utils/regionCodes';
 import { splitContactPhone } from '../../../../../utils/splitContactPhone';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { useAuthContextOptional } from '../../../../../providers/AuthProvider';
 import { hasPermission } from '../../../../../lib/permissions';
-import { BookingInvoiceDialog } from './booking/BookingInvoiceDialog';
-import { InvoiceActionDialog } from './booking/InvoiceActionDialog';
+import { InvoiceActionDialog, type InvoiceActionModalMode } from './booking/InvoiceActionDialog';
+import {
+  buildManageInvoicesList,
+  filterPaidReceipts,
+} from './booking/manageInvoicesList';
 // 2026-06-28 (round 6.2.71, Phase 4A) — BookingEditDialog deleted.
 // The detail page is the sole production edit surface. The
 // compatibility route (`/bookings/:id/edit`) redirects back here;
@@ -285,9 +288,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    */
   livePreviewTotal?: number | null;
   // 2026-06-17 (round 6.2.47) — the price-preview's
-  // `breakdown[]` array. Forwarded to `BookingInvoiceDialog`
-  // so the dialog renders one row per line item instead of
-  // the round 6.2.13 single-line "Lounge Access" black box.
+  // `breakdown[]` array. Used by Service Items billing UI
+  // and Manage Invoices document preview hydration.
   // Wrapper populates this from the same
   // `POST /api/bookings/price-preview` response that supplies
   // `livePreviewTotal`.
@@ -354,18 +356,15 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   isUpdatingStatus?: boolean;
   // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
   // Adyen payment link callback. Forwarded from the parent
-  // wrapper (which owns the `paymentApi` import) to the
-  // `BookingInvoiceDialog` (figma-ui) so the "Generate Payment
-  // Link" button in the invoice dialog hits the real
-  // `POST /api/bookings/{id}/send-payment-link` endpoint
-  // instead of being a toast-stub.
+  // wrapper (which owns the `paymentApi` import) for payment
+  // actions that hit `POST /api/bookings/{id}/send-payment-link`.
   onSendPaymentLink?: () => Promise<void>;
   // 2026-06-17 (round 6.2.47) — fired after a successful
-  // `send-invoice` POST. The parent wrapper uses this to
+  // invoice send / resend. The parent wrapper uses this to
   // refresh the booking's payment_status on the page.
   onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
   // 2026-06-17 (round 6.2.47 follow-up) — pass-through for
-  // the invoice dialog's API base URL. The dialog defaults
+  // Manage Invoices document downloads / send. Defaults
   // to `window.location.origin` (the Vite dev server, NOT the
   // Laravel API), which causes the fetch / blob download to
   // hit `http://localhost:5173/api/bookings/{id}/invoice.pdf`
@@ -571,14 +570,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
-  const [showDocumentDialog, setShowDocumentDialog] = useState(false);
-  const [showInvoiceActionDialog, setShowInvoiceActionDialog] = useState(false);
-  const [documentType, setDocumentType] = useState<'invoice' | 'receipt'>('invoice');
-
-  const openDocumentDialog = (type: 'invoice' | 'receipt') => {
-    setDocumentType(type);
-    setShowDocumentDialog(true);
-  };
+  const [modalMode, setModalMode] = useState<InvoiceActionModalMode | null>(null);
 
   // ── Movement Log ─────────────────────────────────────────────────────────
   const [isMovementLogOpen, setIsMovementLogOpen] = useState(false);
@@ -640,7 +632,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerProfile | null>(null);
 
   const booking = bookingProp || generateMockBooking(bookingId);
-  const bookingInvoices = booking.invoiceHistory ?? [];
+  const bookingInvoicesPersisted = booking.invoiceHistory ?? [];
+  const bookingMasterTotal = booking.totalPrice != null
+    ? Number(booking.totalPrice)
+    : (livePreviewTotal != null ? Number(livePreviewTotal) : 0);
+  const bookingMasterBreakdown =
+    (booking.priceBreakdown && booking.priceBreakdown.length > 0)
+      ? booking.priceBreakdown
+      : livePreviewBreakdown;
+  const allInvoices = buildManageInvoicesList(bookingInvoicesPersisted, {
+    bookingNo: booking.bookingNo,
+    totalAmount: bookingMasterTotal,
+    priceBreakdown: bookingMasterBreakdown,
+    paymentStatus: booking.paymentStatus,
+  });
+  const paidReceipts = filterPaidReceipts(allInvoices);
 
   // Editable guest fields — Premiere Suite
   // 2026-06-28 (round 6.2.73) — local `useState` retained for
@@ -900,6 +906,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
   // Wheelchair — passenger name
   const [wheelchairPassenger, setWheelchairPassenger] = useState('');
+  const availablePassengerNames = useMemo(() => {
+    const source = formData?.passengers ?? booking.passengers ?? [];
+    return source
+      .map((p) => `${p.title ?? ''} ${p.firstName ?? ''} ${p.lastName ?? ''}`.trim())
+      .filter((name): name is string => name.length > 0);
+  }, [formData?.passengers, booking.passengers]);
 
   const handleSelectAddon = (key: AddonService, defaultPrice: string) => {
     setSelectedAddon(key);
@@ -1290,32 +1302,20 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   };
 
   const actionItems: BookingActionItem[] = [
-    ...((booking.status === 'Approved' || booking.status === 'Confirmed') &&
-    booking.paymentStatus !== 'Paid' &&
-    booking.paymentStatus !== 'PaymentLinkPaid' &&
-    booking.paymentStatus !== 'Refunded'
-      ? [{
-          key: 'generate-invoice',
-          label: 'Generate Invoice',
-          icon: <FileText className="w-4 h-4 mr-2" />,
-          onClick: () => openDocumentDialog('invoice'),
-          testId: 'actions-generate-invoice',
-        }]
-      : []),
     {
       key: 'manage-invoices',
-      label: `Manage Invoices (${bookingInvoices.length})`,
+      label: `Manage Invoices (${allInvoices.length})`,
       icon: <FileText className="w-4 h-4 mr-2" />,
-      onClick: () => setShowInvoiceActionDialog(true),
+      onClick: () => setModalMode('invoice'),
       testId: 'actions-manage-invoices',
     },
-    ...((booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid')
+    ...(paidReceipts.length > 0
       ? [{
-          key: 'generate-receipt',
-          label: 'Generate Receipt',
-          icon: <FileText className="w-4 h-4 mr-2" />,
-          onClick: () => openDocumentDialog('receipt'),
-          testId: 'actions-generate-receipt',
+          key: 'manage-receipts',
+          label: `Manage Receipts (${paidReceipts.length})`,
+          icon: <Receipt className="w-4 h-4 mr-2" />,
+          onClick: () => setModalMode('receipt'),
+          testId: 'actions-manage-receipts',
         }]
       : []),
     ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
@@ -2105,29 +2105,24 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           <p className="text-gray-600">View and manage booking information</p>
         </div>
         <div className="flex gap-2">
-          {(booking.status === 'Approved' || booking.status === 'Confirmed') &&
-           booking.paymentStatus !== 'Paid' &&
-           booking.paymentStatus !== 'PaymentLinkPaid' &&
-           booking.paymentStatus !== 'Refunded' && (
-            <Button variant="outline" onClick={() => openDocumentDialog('invoice')}>
-            <FileText className="w-4 h-4 mr-2" />
-            Generate Invoice
-          </Button>
-          )}
-          {(booking.paymentStatus === 'Paid' || booking.paymentStatus === 'PaymentLinkPaid') && (
-            <Button variant="outline" onClick={() => openDocumentDialog('receipt')}>
-              <FileText className="w-4 h-4 mr-2" />
-              Generate Receipt
-            </Button>
-          )}
           <Button
             variant="outline"
-            onClick={() => setShowInvoiceActionDialog(true)}
+            onClick={() => setModalMode('invoice')}
             data-testid="header-manage-invoices"
           >
             <FileText className="w-4 h-4 mr-2" />
-            Manage Invoices ({bookingInvoices.length})
+            Manage Invoices ({allInvoices.length})
           </Button>
+          {paidReceipts.length > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setModalMode('receipt')}
+              data-testid="header-manage-receipts"
+            >
+              <Receipt className="w-4 h-4 mr-2" />
+              Manage Receipts ({paidReceipts.length})
+            </Button>
+          )}
           {formData && onSaveAllChanges && (
             <Button
               type="button"
@@ -3794,13 +3789,33 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <tr>
                       <td colSpan={5} className="px-4 py-2 bg-pink-50/40" data-testid="service-items-wheelchair-recipient">
                         <label className="text-xs text-gray-600 mb-1 block">Wheelchair recipient</label>
-                        <input
-                          type="text"
-                          value={formData?.wheelchairPassenger ?? ''}
-                          onChange={(e) => onFormChange({ wheelchairPassenger: e.target.value })}
-                          placeholder="e.g. Mr James Hoffmann"
-                          className="w-full max-w-md px-3 py-1.5 border rounded text-sm"
-                        />
+                        {availablePassengerNames.length > 0 ? (
+                          <select
+                            value={formData?.wheelchairPassenger ?? ''}
+                            onChange={(e) => onFormChange({ wheelchairPassenger: e.target.value })}
+                            className="w-full max-w-md px-3 py-1.5 border rounded text-sm bg-white"
+                            data-testid="service-items-wheelchair-recipient-select"
+                          >
+                            <option value="" disabled>Select a passenger...</option>
+                            {availablePassengerNames.map((name) => (
+                              <option key={name} value={name}>{name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={formData?.wheelchairPassenger ?? ''}
+                              onChange={(e) => onFormChange({ wheelchairPassenger: e.target.value })}
+                              placeholder="e.g. Mr James Hoffmann"
+                              className="w-full max-w-md px-3 py-1.5 border rounded text-sm"
+                              data-testid="service-items-wheelchair-recipient-input"
+                            />
+                            <p className="mt-1 text-xs text-gray-500">
+                              Please fill in passenger details above first, or type name manually.
+                            </p>
+                          </>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -4184,13 +4199,33 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <p className="text-xs text-orange-800">Passenger Requiring Assistance</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <input
-                        type="text"
-                        value={wheelchairPassenger}
-                        onChange={e => setWheelchairPassenger(e.target.value)}
-                        placeholder="Enter full name of passenger..."
-                        className="w-80 px-3 py-1.5 border rounded text-sm"
-                      />
+                      {availablePassengerNames.length > 0 ? (
+                        <select
+                          value={wheelchairPassenger}
+                          onChange={e => setWheelchairPassenger(e.target.value)}
+                          className="w-80 px-3 py-1.5 border rounded text-sm bg-white"
+                          data-testid="service-items-add-wheelchair-passenger-select"
+                        >
+                          <option value="" disabled>Select a passenger...</option>
+                          {availablePassengerNames.map((name) => (
+                            <option key={name} value={name}>{name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="text"
+                            value={wheelchairPassenger}
+                            onChange={e => setWheelchairPassenger(e.target.value)}
+                            placeholder="Enter full name of passenger..."
+                            className="w-80 px-3 py-1.5 border rounded text-sm"
+                            data-testid="service-items-add-wheelchair-passenger-input"
+                          />
+                          <p className="text-xs text-gray-500">
+                            Please fill in passenger details above first, or type name manually.
+                          </p>
+                        </div>
+                      )}
                       <p className="text-xs text-gray-400">As shown on travel document</p>
                     </div>
                   </td>
@@ -4313,61 +4348,36 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         </div>
       </Card>
 
-      {/* Invoice Dialog */}
-      {/* Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
-        * `headCountTotal` props per the user directive. The
-        * invoice now uses the same `livePreviewTotal` prop as
-        * the detail page (sourced from
-        * `POST /api/bookings/price-preview`). Both the page
-        * AND the invoice call the same endpoint, per the
-        * "make them call the same endpoint first" directive.
-        *
-        * Round 6.2.137 — prefer committed total_price +
-        * price_breakdown (membership waiver included) over a
-        * live preview that may still be loading / missing
-        * account_id. */}
-      <BookingInvoiceDialog
-        open={showDocumentDialog}
-        onClose={() => setShowDocumentDialog(false)}
-        documentType={documentType}
-        booking={booking}
-        bookingId={bookingId}
-        voucherCount={voucherCount}
-        voucherTotal={voucherTotal}
-        voucherUnitValue={voucherUnitValue}
-        livePreviewTotal={
-          booking.totalPrice != null
-            ? Number(booking.totalPrice)
-            : livePreviewTotal
-        }
-        breakdown={
-          (booking.priceBreakdown && booking.priceBreakdown.length > 0)
-            ? booking.priceBreakdown
-            : livePreviewBreakdown
-        }
-        serviceSubtotal={serviceSubtotal}
-        amountDueAfterVouchers={amountDueAfterVouchers}
-        getStatusColor={getStatusColor}
-        getPaymentStatusColor={getPaymentStatusColor}
-        onSendPaymentLink={onSendPaymentLink}
-        onInvoiceSent={onInvoiceSent}
-        apiBaseUrl={apiBaseUrl}
-        authToken={authToken}
-        invoiceHistory={booking.invoiceHistory ?? []}
-      />
-
+      {/* Manage Invoices / Receipts (list + Service Summary preview) */}
       <InvoiceActionDialog
-        isOpen={showInvoiceActionDialog}
-        onClose={() => setShowInvoiceActionDialog(false)}
+        isOpen={modalMode != null}
+        onClose={() => setModalMode(null)}
+        mode={modalMode ?? 'invoice'}
         bookingId={bookingId}
         bookingNo={booking.bookingNo}
-        invoices={bookingInvoices}
+        booking={{
+          bookingNo: booking.bookingNo,
+          guestName: booking.guestName,
+          accountNo: booking.accountNo,
+          dateTime: booking.dateTime,
+          flightNo: booking.flightNo,
+          flightOrigin: booking.flightOrigin,
+          flightDestination: booking.flightDestination,
+          serviceRemarks: booking.contactPerson?.memo
+            ?? formData?.specialRequests
+            ?? null,
+          paymentStatus: booking.paymentStatus,
+          passengers: (passengersOverride ?? booking.passengers ?? []).map((p) => ({
+            title: p.title,
+            firstName: p.firstName,
+            lastName: p.lastName,
+          })),
+        }}
+        invoices={modalMode === 'receipt' ? paidReceipts : allInvoices}
         apiBaseUrl={apiBaseUrl}
         authToken={authToken}
         onInvoiceSent={onInvoiceSent}
       />
-
-      {/* [Legacy invoice content removed — now handled by BookingInvoiceDialog above] */}
 
       {/* ── Delete VIP Passenger Dialog ─────────────────────────────────── */}
       {deleteDialog && (() => {

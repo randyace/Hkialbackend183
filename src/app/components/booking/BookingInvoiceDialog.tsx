@@ -52,8 +52,22 @@ export interface InvoiceHistoryEntry {
   invoiceType: string;
   status: string;
   totalAmount: number;
+  subtotal?: number;
+  discountAmount?: number;
+  priceBreakdown?: Array<{
+    key: string;
+    label: string;
+    qty: number;
+    unit_price: number;
+    subtotal: number;
+    product?: string;
+    note?: string;
+  }>;
   sentAt: string | null;
   createdAt: string | null;
+  posOrderId?: number | null;
+  /** True when synthesized client-side (not yet persisted in `invoices`). */
+  isVirtual?: boolean;
 }
 
 interface BookingInvoiceDialogProps {
