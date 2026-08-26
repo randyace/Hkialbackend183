@@ -333,10 +333,11 @@ export function PurchaseCreate({
     && parsedDiscountLines.ok
     && !(discountStart && discountEnd && discountEnd < discountStart);
 
+  // Billing Amount is optional for promo_batch + credit_topup (staff may leave empty → 0).
   const canConfirm = !!selectedAccount && (
     selectedProduct === 'membership' ? !!selectedPackage
-      : selectedProduct === 'promo_batch' ? (!!promoCodeQuantity && !!totalPrice)
-      : selectedProduct === 'credit_topup' ? (!!creditBalance && !!totalPrice)
+      : selectedProduct === 'promo_batch' ? !!promoCodeQuantity
+      : selectedProduct === 'credit_topup' ? !!creditBalance
       : selectedProduct === 'discount_contract' ? discountReady
       : false
   );
@@ -452,7 +453,8 @@ export function PurchaseCreate({
       expiry.setFullYear(expiry.getFullYear() + 1);
       const expiryDate = localDateStr(expiry);
       const balance = parseFloat(creditBalance);
-      const price = parseFloat(totalPrice);
+      // Optional Billing Amount — empty → 0 (wallet top-up uses creditBalance / sessionsAdded).
+      const price = totalPrice.trim() === '' ? 0 : parseFloat(totalPrice);
       
       record = {
         id: newId,
@@ -466,7 +468,7 @@ export function PurchaseCreate({
         bundleLabel: 'Credit Balance Contract',
         sessionsAdded: balance,
         totalSessionsAfter: (selectedAccount.currentSessions ?? 0) + balance,
-        packagePrice: price,
+        packagePrice: Number.isFinite(price) ? price : 0,
         paymentMethod,
         transactionRef: transactionRef || `TXN-AUTO-${newId}`,
         processedBy: 'HKIAL Staff',
@@ -501,7 +503,8 @@ export function PurchaseCreate({
       expiry.setFullYear(expiry.getFullYear() + 1);
       const expiryDate = localDateStr(expiry);
       const qty = parseInt(promoCodeQuantity);
-      const price = parseFloat(totalPrice);
+      // Optional Billing Amount — empty → 0 on corporate_orders.amount.
+      const price = totalPrice.trim() === '' ? 0 : parseFloat(totalPrice);
       
       record = {
         id: newId,
@@ -515,7 +518,7 @@ export function PurchaseCreate({
         bundleLabel: promoCodeName || 'Custom Contract',
         sessionsAdded: qty,
         totalSessionsAfter: (selectedAccount.currentSessions ?? 0) + qty,
-        packagePrice: price,
+        packagePrice: Number.isFinite(price) ? price : 0,
         paymentMethod,
         transactionRef: transactionRef || `TXN-AUTO-${newId}`,
         processedBy: 'HKIAL Staff',
@@ -792,7 +795,7 @@ export function PurchaseCreate({
                   )}
                   <div>
                     <Label htmlFor="totalPrice" className="mb-[10px] block">
-                      Billing Amount (HKD) <span className="text-red-500">*</span>
+                      Billing Amount (HKD) <span className="text-gray-400 font-normal">(optional)</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening:
                         (a) hide native number-input spinner (Tailwind arbitrary
@@ -804,7 +807,8 @@ export function PurchaseCreate({
                             leaves ""),
                         (c) onWheel=blur() so mouse-wheel scroll over the input
                             does NOT increment/decrement the value (per Sky:
-                            "disable scrolling on it"). */}
+                            "disable scrolling on it").
+                        Optional for promo_batch — empty submits as amount 0. */}
                     <Input
                       id="totalPrice"
                       type="number"
@@ -853,13 +857,15 @@ export function PurchaseCreate({
                   </div>
                   <div>
                     <Label htmlFor="totalPriceTA" className="mb-[10px] block">
-                      Billing Amount (HKD) <span className="text-red-500">*</span>
+                      Billing Amount (HKD) <span className="text-gray-400 font-normal">(optional)</span>
                     </Label>
                     {/* 2026-07-05 round 6.2.110 — Total Price hardening (Travel
                         Agency branch; mirrors the Corporate branch above). See
                         the inline comment on the Corporate Total Price input
                         for the three-change rationale (spinner hide / integer
-                        strip / onWheel blur). */}
+                        strip / onWheel blur).
+                        Optional for credit_topup — wallet amount is Credit
+                        Balance Charging; empty billing submits packagePrice 0. */}
                     <Input
                       id="totalPriceTA"
                       type="number"
