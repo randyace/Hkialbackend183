@@ -3,9 +3,8 @@
  * Mirrors `ReceiptPdfService` grouping + `DocumentInvoiceLineMapper` columns
  * so the in-modal preview matches the PDF/Excel export layout.
  *
- * Discount / net totals come only from structured numeric fields
- * (`discount_pct`, `discount_percent`, `pct`, `line_discount`) — never from
- * label parsing or membership string guesses.
+ * Discount column = monetary amount saved: (unit × qty) − net subtotal,
+ * formatted as −HK$… — never percentage strings or label parsing.
  */
 
 export interface InvoiceBreakdownLine {
@@ -21,10 +20,8 @@ export interface InvoiceBreakdownLine {
   original_unit_price?: number | null;
   /** Staff line discount as HK$ (from advanced_details.line_discounts). */
   line_discount?: number | null;
-  /** Explicit percent stamped by LineDiscountFolder / UI itemOverrides. */
   discount_pct?: number | null;
   discount_percent?: number | null;
-  /** Account / contract percent when present on that discount row. */
   pct?: number | null;
 }
 
@@ -50,6 +47,17 @@ export function formatDocumentMoney(amount: number | null | undefined): string {
   const rounded = Math.round(amount);
   const absLabel = Math.abs(rounded).toLocaleString('en-US');
   return rounded < 0 ? `-$${absLabel}` : `$${absLabel}`;
+}
+
+/**
+ * Discount column: −HK$9,000 when amount saved &gt; 0, else —.
+ */
+export function formatInvoiceDiscountAmount(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount) || amount <= 0) {
+    return '—';
+  }
+  const rounded = Math.round(amount);
+  return `-HK$${Math.abs(rounded).toLocaleString('en-US')}`;
 }
 
 export function formatDocumentDate(value?: string | null): string {
@@ -137,63 +145,32 @@ export function resolveInvoiceUnitPrice(line: InvoiceBreakdownLine): number | nu
   return null;
 }
 
-/**
- * Strict discount % from structured fields only.
- * Order: discount_pct → discount_percent → pct → derive from line_discount HK$.
- */
-export function resolveInvoiceDiscountPct(
-  line: InvoiceBreakdownLine,
-  unit: number | null = resolveInvoiceUnitPrice(line),
-  qty: number = resolveBilledQuantity(line),
-): number | null {
-  for (const raw of [line.discount_pct, line.discount_percent]) {
-    const n = typeof raw === 'number' ? raw : Number(raw);
-    if (!Number.isFinite(n)) continue;
-    return n > 0 ? Math.round(Math.min(100, n) * 100) / 100 : null;
-  }
-
-  const pctField = typeof line.pct === 'number' ? line.pct : Number(line.pct);
-  if (Number.isFinite(pctField) && pctField > 0) {
-    return Math.round(Math.min(100, pctField) * 100) / 100;
-  }
-
-  const off = typeof line.line_discount === 'number'
-    ? line.line_discount
-    : Number(line.line_discount ?? 0);
-  const gross = unit != null && unit > 0 ? unit * qty : 0;
-  if (Number.isFinite(off) && off > 0 && gross > 0) {
-    return Math.round(Math.min(100, (off / gross) * 100) * 100) / 100;
-  }
-
-  return null;
-}
-
-export function formatInvoiceDiscountText(pct: number | null | undefined): string {
-  if (pct == null || !Number.isFinite(pct) || pct <= 0) {
-    return '—';
-  }
-  if (Math.abs(pct - Math.round(pct)) < 0.00001) {
-    return `${Math.round(pct)}%`;
-  }
-  return `${String(pct).replace(/\.?0+$/, '')}%`;
-}
-
-/**
- * Net Total = (Unit Price × Qty) × (1 − Discount_Pct / 100) when unit > 0;
- * otherwise the line subtotal (e.g. standalone signed discount rows).
- */
+/** Net Total = final line subtotal after discounts. */
 export function resolveInvoiceNetTotal(
   line: InvoiceBreakdownLine,
   unit: number | null = resolveInvoiceUnitPrice(line),
   qty: number = resolveBilledQuantity(line),
-  pct: number | null = resolveInvoiceDiscountPct(line, unit, qty),
 ): number {
-  if (unit != null && unit > 0) {
-    const rate = pct != null && pct > 0 ? (1 - pct / 100) : 1;
-    return Math.round(unit * qty * rate * 100) / 100;
+  const sub = Number(line.subtotal);
+  if (Number.isFinite(sub)) {
+    return Math.round(sub * 100) / 100;
   }
-  const sub = Number(line.subtotal ?? 0);
-  return Number.isFinite(sub) ? Math.round(sub * 100) / 100 : 0;
+  if (unit != null && unit > 0) {
+    return Math.round(unit * qty * 100) / 100;
+  }
+  return 0;
+}
+
+/** Discount Amount = (Unit Price × Qty) − Net Total. */
+export function resolveInvoiceDiscountAmount(
+  unit: number | null,
+  qty: number,
+  netTotal: number,
+): number {
+  if (unit == null || unit <= 0) return 0;
+  const gross = Math.round(unit * qty * 100) / 100;
+  const saved = Math.round((gross - netTotal) * 100) / 100;
+  return saved > 0 ? saved : 0;
 }
 
 /** Map one breakdown line to invoice preview columns (no merge / no label parsing). */
@@ -205,12 +182,13 @@ export function mapInvoiceLineColumns(line: InvoiceBreakdownLine): {
 } {
   const qty = resolveBilledQuantity(line);
   const unitPrice = resolveInvoiceUnitPrice(line);
-  const pct = resolveInvoiceDiscountPct(line, unitPrice, qty);
+  const total = resolveInvoiceNetTotal(line, unitPrice, qty);
+  const discountAmount = resolveInvoiceDiscountAmount(unitPrice, qty, total);
   return {
     qty,
     unitPrice,
-    discountText: formatInvoiceDiscountText(pct),
-    total: resolveInvoiceNetTotal(line, unitPrice, qty, pct),
+    discountText: formatInvoiceDiscountAmount(discountAmount),
+    total,
   };
 }
 

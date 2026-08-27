@@ -154,7 +154,7 @@ export function InvoiceDocumentPreview({
               Unit Price
             </th>
             <th className="w-[18%] pb-1.5 text-center font-bold border-b border-black">
-              Discount
+              Discount (HKD)
             </th>
             <th className="w-[20%] pb-1.5 text-right font-bold border-b border-black pr-3">
               Net Total (HKD)
