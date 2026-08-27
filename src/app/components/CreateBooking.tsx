@@ -14,8 +14,18 @@ import { Badge } from './ui/badge';
 // CREATE_ADDON_SERVICES (4 items) is replaced by this import.
 // CATALOG_ADDON_MAP was never exported from addons.tsx (dead import
 // residual from 6.2.39). Only CATALOG_ADDONS is the shared catalog.
-import { CATALOG_ADDONS } from './addons';
 import { Button } from './ui/button';
+import {
+  AddNewItemSection,
+  type AddNewItemCatalogOption,
+  type AddNewItemResult,
+} from './booking/AddNewItemSection';
+import {
+  discountAmountFromPercent,
+  lineBaseTotal,
+  lineRowSubtotal,
+} from '../../../../../lib/pricing/priceOverrides';
+import { upsertCatalogSelection } from '../../../../../lib/addons/bookingAddonCatalog';
 import { Input } from './ui/input';
 import { Checkbox } from './ui/checkbox';
 import {
@@ -537,6 +547,12 @@ export interface BookingFormData {
   useMembershipPsFree?: boolean;
   /** Contact Person → Booking Memo. Wrapper persists to notes + contact.memo. */
   bookingMemo?: string;
+  /**
+   * Phase 2 — staff unit price / discount% / remarks staged when adding
+   * an item via ADD NEW ITEM. Keyed by catalog name (e.g. 'Limousine Transfer').
+   * Wrapper maps to advanced_details.price_overrides + line_discounts.
+   */
+  itemOverrides?: Record<string, { unitPrice: string; discount: string; remarks: string }>;
 }
 
 // ── Account searcher ───────────────────────────────────────────────────────────
@@ -750,10 +766,13 @@ export interface CreateBookingProps {
   onAddonStateChange?: (state: {
     hasLimousine: boolean;
     limoStops: LimoStop[];
+    limousineQty: number;
     hasShopping: boolean;
     hasWheelchair: boolean;
     wheelchairPassenger: string;
+    wheelchairQty: number;
     hasSecurity: boolean;
+    securityQty: number;
     hasPrivateSales: boolean;
     // Round 6.2.20 (2026-06-09) — Lounge Extension (with qty).
     // The wrapper maps these into the `addons.items[]` shape
@@ -808,22 +827,17 @@ export interface CreateBookingProps {
      * in which room.
      */
     passengers: Array<{ firstName: string; lastName: string }>;
+    /**
+     * Phase 2 — custom unit/discount/remarks from Add New Item, keyed by
+     * service name. Wrapper applies these to live preview + POST overrides.
+     */
+    itemOverrides: Record<string, { unitPrice: string; discount: string; remarks: string }>;
   }) => void;
   /**
-   * 2026-06-08 round 6.2.8 — bookable items price map sourced from
-   * `GET /api/bookable-items` (populated by the wrapper via
-   * `fetchBookableItemPriceMap` in the parent repo). Used to render
-   * the form's addons chips + dropdown with the CORRECT prices
-   * from the DB, not the hard-coded "fictional" prices in the
-   * `CREATE_ADDON_SERVICES` array. Pre-6.2.8 the Limo chip showed
-   * "+HK$1,500" (hard-coded) while the actual charge was HK$800
-   * (DB). See `bookableItemsCache.ts` for the full rationale.
+   * 2026-06-08 round 6.2.8 — bookable items price map from
+   * `GET /api/bookable-items`. Used by Add New Item search to show DB prices.
    *
-   * Format: `{ 'Limousine Transfer': 800, 'Airport Limousine Service': 1000, ... }`
-   * Addons whose `name_en` is NOT in this map fall through to the
-   * hard-coded `price` + `badge` in `CREATE_ADDON_SERVICES` (these
-   * are the 25 fabricated "display-only" addons marked with
-   * "(coming soon)" in the key).
+   * Format: `{ 'Limousine Transfer': 800, ... }`
    */
   bookableItemPrices?: Record<string, number>;
   /**
@@ -843,11 +857,14 @@ export interface CreateBookingProps {
     destination?: string | null;
   } | null>;
   /**
-   * 2026-07-16 — Lane B "Other add-on services" slot owned by the
-   * wrapper (CatalogAddonPicker). Rendered after Lane A specials
-   * inside the Add-on Services card.
+   * 2026-08-27 — Lane A + Lane B share Detail's "Add New Item" search.
+   * Wrapper owns catalog options / selections; view calls onChange on Add Item.
    */
-  catalogAddonSlot?: React.ReactNode;
+  catalogAddonOptions?: AddNewItemCatalogOption[];
+  catalogAddonSelections?: Array<{ name: string; quantity: number }>;
+  onCatalogAddonSelectionsChange?: (
+    next: Array<{ name: string; quantity: number }>,
+  ) => void;
   /**
    * Wrapper-owned payment modes (settlement / credit facility).
    * When provided, do not type-gate the dropdown. Absent = standalone
@@ -1179,7 +1196,9 @@ export function CreateBooking({
   // hardcoded list of common region codes so the form is still
   // usable in offline mocks (see `displayRegionCodes`).
   regionCodes = [],
-  catalogAddonSlot,
+  catalogAddonOptions = [],
+  catalogAddonSelections = [],
+  onCatalogAddonSelectionsChange,
   onFlightLookup,
   paymentModeOptions: paymentModeOptionsProp,
   defaultPaymentMode = '',
@@ -1464,10 +1483,13 @@ export function CreateBooking({
   // ── Add-on Services ─────────────────────────────────────────────────────────
   const [hasLimousine, setHasLimousine] = useState(false);
   const [limoStops, setLimoStops] = useState<LimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
+  const [limousineQty, setLimousineQty] = useState(1);
   const [hasShopping, setHasShopping] = useState(false);
   const [hasWheelchair, setHasWheelchair] = useState(false);
   const [wheelchairPassenger, setWheelchairPassenger] = useState('');
+  const [wheelchairQty, setWheelchairQty] = useState(1);
   const [hasSecurity, setHasSecurity] = useState(false);
+  const [securityQty, setSecurityQty] = useState(1);
   const [hasPrivateSales, setHasPrivateSales] = useState(false);
   // (bookableItemPrices comes from the wrapper as a prop
   // — see `bookableItemPrices?: Record<string, number>`
@@ -1479,8 +1501,102 @@ export function CreateBooking({
   // and the qty (1-6 hours). Default qty=1, max=6.
   const [hasLoungeExtension, setHasLoungeExtension] = useState(false);
   const [loungeExtensionQty, setLoungeExtensionQty] = useState(1);
-  const [addonSearch, setAddonSearch]             = useState('');
-  const [showAddonDropdown, setShowAddonDropdown] = useState(false);
+  // Phase 2 — staff overrides from Add New Item (unit / discount% / remarks).
+  const [itemOverrides, setItemOverrides] = useState<
+    Record<string, { unitPrice: string; discount: string; remarks: string }>
+  >({});
+
+  const clearItemOverride = (name: string) => {
+    setItemOverrides((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const patchItemOverride = (
+    name: string,
+    patch: Partial<{ unitPrice: string; discount: string; remarks: string }>,
+    seedUnit?: number,
+  ) => {
+    setItemOverrides((prev) => {
+      const existing = prev[name];
+      return {
+        ...prev,
+        [name]: {
+          unitPrice:
+            existing?.unitPrice
+            ?? (seedUnit !== undefined && Number.isFinite(seedUnit) ? String(seedUnit) : ''),
+          discount: existing?.discount ?? '0',
+          remarks: existing?.remarks ?? '',
+          ...patch,
+        },
+      };
+    });
+  };
+
+  const unitPriceInputValue = (name: string, resolvedUnit: number): string => {
+    const raw = itemOverrides[name]?.unitPrice;
+    if (raw !== undefined) return raw;
+    return Number.isFinite(resolvedUnit) && resolvedUnit >= 0 ? String(resolvedUnit) : '0';
+  };
+
+  const resolveAddonUnitPrice = (name: string, catalogFallback = 0): number => {
+    const raw = itemOverrides[name]?.unitPrice;
+    if (raw !== undefined && raw !== '') {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n >= 0) return n;
+    }
+    const catalog = Number(
+      bookableItemPrices?.[name]
+      ?? catalogAddonOptions.find((o) => o.name_en === name)?.price
+      ?? catalogFallback,
+    );
+    return Number.isFinite(catalog) && catalog >= 0 ? catalog : 0;
+  };
+
+  const resolveAddonDiscountPct = (name: string): number => {
+    const n = Number(itemOverrides[name]?.discount ?? 0);
+    return Number.isFinite(n) && n > 0 ? Math.min(100, n) : 0;
+  };
+
+  const resolveAddonSubtotal = (name: string, qty: number, catalogFallback = 0): number => {
+    const unit = resolveAddonUnitPrice(name, catalogFallback);
+    const pct = resolveAddonDiscountPct(name);
+    const disc = discountAmountFromPercent(lineBaseTotal(unit, qty), pct);
+    return lineRowSubtotal(unit, qty, disc);
+  };
+
+  const renderAddonUnitPriceInput = (itemName: string, unit: number, testId: string) => (
+    <div className="flex items-center justify-end gap-1">
+      <span className="text-xs text-gray-400">HK$</span>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={unitPriceInputValue(itemName, unit)}
+        onChange={(e) => patchItemOverride(itemName, { unitPrice: e.target.value }, unit)}
+        className="w-24 px-2 py-1 border border-gray-300 rounded text-right text-sm bg-white"
+        data-testid={testId}
+      />
+    </div>
+  );
+
+  const renderAddonDiscountInput = (itemName: string, unit: number) => (
+    <div className="flex items-center justify-end gap-1">
+      <input
+        type="number"
+        min={0}
+        max={100}
+        step="0.01"
+        value={itemOverrides[itemName]?.discount ?? '0'}
+        onChange={(e) => patchItemOverride(itemName, { discount: e.target.value }, unit)}
+        className="w-16 px-2 py-1 border border-gray-300 rounded text-right text-sm bg-white"
+        data-testid={`service-items-discount-percent-addon:${itemName}`}
+      />
+      <span className="text-xs text-gray-400">%</span>
+    </div>
+  );
 
   // HKIAL addons pricing fix round 5.3 (2026-06-05): sync the addons
   // state variables out to the wrapper parent whenever any of them
@@ -1548,10 +1664,13 @@ export function CreateBooking({
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
+      limousineQty,
       hasShopping,
       hasWheelchair,
       wheelchairPassenger,
+      wheelchairQty,
       hasSecurity,
+      securityQty,
       hasPrivateSales,
       // Round 6.2.20 (2026-06-09) — Lounge Extension
       // (with qty) per user directive.
@@ -1609,14 +1728,18 @@ export function CreateBooking({
         firstName: p?.firstName ?? '',
         lastName: p?.lastName ?? '',
       })),
+      itemOverrides,
     });
   }, [
     hasLimousine,
     limoStops,
+    limousineQty,
     hasShopping,
     hasWheelchair,
     wheelchairPassenger,
+    wheelchairQty,
     hasSecurity,
+    securityQty,
     hasPrivateSales,
     // Round 6.2.20 (2026-06-09) — Lounge Extension deps.
     hasLoungeExtension,
@@ -1640,6 +1763,7 @@ export function CreateBooking({
     useMembershipPsFree,
     canUseFreeLd,
     canUseFreePs,
+    itemOverrides,
   ]);
 
   // ── Guest Search Focus ──────────────────────────────────────────────────────
@@ -1896,6 +2020,77 @@ export function CreateBooking({
   const removeLimoStop = (id: number) => setLimoStops(prev => prev.length > 1 ? prev.filter(s => s.id !== id) : prev);
   const updateLimoStop = (id: number, field: keyof LimoStop, value: string) =>
     setLimoStops(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+
+  const availablePassengerNames = useMemo(
+    () =>
+      passengers
+        .map((p) => `${p.title ?? ''} ${p.firstName ?? ''} ${p.lastName ?? ''}`.trim())
+        .filter((name): name is string => name.length > 0),
+    [passengers],
+  );
+
+  const handleAddNewItem = (result: AddNewItemResult) => {
+    const overrideName =
+      result.kind === 'limousine'
+        ? 'Limousine Transfer'
+        : result.kind === 'wheelchair'
+          ? 'Wheelchair Assistance'
+          : result.kind === 'security'
+            ? 'Security Escort Service'
+            : result.kind === 'lounge'
+              ? 'Lounge Extension'
+              : result.name;
+
+    const incomingQty = Math.max(
+      1,
+      Number(
+        result.kind === 'lounge'
+          ? (result.quantity ?? result.qty)
+          : result.quantity,
+      ) || 1,
+    );
+
+    setItemOverrides((prev) => ({
+      ...prev,
+      [overrideName]: {
+        unitPrice: result.unitPrice ?? '',
+        discount: result.discount ?? '0',
+        remarks: result.remarks ?? '',
+      },
+    }));
+
+    if (result.kind === 'limousine') {
+      setHasLimousine(true);
+      setLimousineQty(incomingQty);
+      setLimoStops(
+        result.limoStops.map((s) => ({
+          id: s.id,
+          type: s.type,
+          location: s.location,
+        })),
+      );
+      return;
+    }
+    if (result.kind === 'wheelchair') {
+      setHasWheelchair(true);
+      setWheelchairQty(incomingQty);
+      setWheelchairPassenger(result.passenger);
+      return;
+    }
+    if (result.kind === 'security') {
+      setHasSecurity(true);
+      setSecurityQty(incomingQty);
+      return;
+    }
+    if (result.kind === 'lounge') {
+      setHasLoungeExtension(true);
+      setLoungeExtensionQty(Math.max(1, Math.min(6, incomingQty)));
+      return;
+    }
+    onCatalogAddonSelectionsChange?.(
+      upsertCatalogSelection(catalogAddonSelections, result.name, incomingQty),
+    );
+  };
 
   // ─── Promo handlers ───────────────────────────────────────────────────────────
   // Controlled path: forward code to wrapper (API validate + set promoApplied).
@@ -2255,6 +2450,7 @@ export function CreateBooking({
       useMembershipLdFree: useMembershipLdFree && canUseFreeLd,
       useMembershipLdUnits: canUseFreeLd ? useMembershipLdUnits : 0,
       useMembershipPsFree: useMembershipPsFree && canUseFreePs,
+      itemOverrides,
     };
     onSubmit?.(formData);
   };
@@ -2700,6 +2896,9 @@ export function CreateBooking({
                 </p>
               )}
             </div>
+            <div className="col-span-2 pt-2 border-t border-gray-100" data-testid="create-account-settings">
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">Account Settings</h3>
+              <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Booking Channel</label>
               <div className="flex gap-3">
@@ -2736,11 +2935,14 @@ export function CreateBooking({
                     : <>Optional staff override{accountDiscountPct !== '' && <> · {accountDiscountPct}%</>}</>}
               </p>
             </div>
+
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Account Remark</label>
               <input type="text" value={accountRemark} onChange={e => setAccountRemark(e.target.value)}
                 placeholder="e.g. VIP Member – Priority Service"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
+            </div>
+              </div>
             </div>
             <div className="flex items-center gap-3 col-span-2 pt-1">
               <Checkbox id="adhoc" checked={isAdHoc} onCheckedChange={v => setIsAdHoc(v as boolean)} />
@@ -3137,6 +3339,7 @@ export function CreateBooking({
             </div>
           </div>
 
+          {/* Part 1 — Premiere Suite / Part 2 — Lounge Deluxe */}
           {/* Premiere Suite — physical suite checkboxes (CIP 1-6, Function Room) */}
           <div id="create-premiere-suite-section" className={`border rounded-lg p-4 mb-4 ${psErrors.length > 0 || noFlyingGuest ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
             <div className="flex items-center justify-between mb-4">
@@ -3354,10 +3557,11 @@ export function CreateBooking({
               </div>
             )}
           </div>
+
         </Card>
 
         {/* ════════════════════════════════════════
-            4. CONTACT PERSON
+            4. CONTACT PERSON (after Booking Details)
             ════════════════════════════════════════ */}
         <Card className="p-6">
           <h2 className="mb-6">Contact Person</h2>
@@ -3744,412 +3948,516 @@ export function CreateBooking({
         )}
 
         {/* ════════════════════════════════════════
-            7. ADD-ON SERVICES
+            7. ADD-ON SERVICES / SERVICE ITEMS
             ════════════════════════════════════════ */}
-        <Card className="p-6">
+        <Card className="p-6 overflow-visible" data-testid="create-booking-service-items">
           <h2 className="mb-1">Add-on Services</h2>
-          <p className="text-sm text-gray-500 mb-5">Search and select services to include with this booking.</p>
+          <p className="text-sm text-gray-500 mb-6">
+            Search and add catalog services. Adjust quantity, price, and discount inline.
+          </p>
+          {/* Additional Services table + Add New Item (Detail / SharedLineItemsTable parity) */}
+          <div className="overflow-visible">
+            <div className="overflow-visible border border-gray-200 rounded-lg">
+              <table className="w-full" data-testid="create-booking-addons-table">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item</th>
+                    <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
+                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Price</th>
+                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Discount</th>
+                    <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Subtotal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="bg-purple-50">
+                    <td colSpan={5} className="px-4 py-2">
+                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Additional Services</p>
+                    </td>
+                  </tr>
 
-          {(() => {
-            // Full service catalogue for Create Booking
-            // ──────────────────────────────────────────────────────
-            // 2026-06-08 round 6.2.8 — INV-12 (next) refactor.
-            //   Pre-6.2.8 this array had 26 entries with HARD-CODED
-            //   `price` + `badge` values. Only 1 of those 26
-            //   (Limousine Transfer) actually mapped to a real
-            //   `bookable_items` row, and the form's hard-coded
-            //   price (HK$1,500) didn't match the DB price
-            //   (HK$800). The user clicked Limo Transfer, saw
-            //   "+HK$1,500" in the chip, but was actually
-            //   charged HK$800 on submit. The form was the
-            //   source of the misinformation.
-            //
-            //   The fix: for each entry, look up the `bookableItemPrices`
-            //   prop (sourced from `GET /api/bookable-items`). If
-            //   found, use the DB price + format the badge as
-            //   "+HK${price}". If NOT found, the addon is a
-            //   "display-only" placeholder (no real DB row);
-            //   flag it with "(coming soon)" in the key and
-            //   change the badge to "Contact us" so the user
-            //   knows it's not a real bookable item.
-            //
-            //   This preserves the 26-entry "rich service
-            //   catalog" UX (don't drop the placeholders) while
-            //   fixing the misleading pricing.
-            // ──────────────────────────────────────────────────────
-            // 4-addon catalog (round 6.2.20, 2026-06-09).
-            // Per the user directive ("we just start with
-            // this four, clean others first"), the create
-            // form now shows ONLY the 4 real bookable addons:
-            //   1. Limousine Transfer       — id 12 (HK$800)
-            //   2. Wheelchair Assistance    — id 98 (HK$0)
-            //   3. Lounge Extension         — id 99 (HK$1500)
-            //   4. Security Escort Service  — id 100 (HK$1200)
-            //
-            // The 22 "(coming soon)" placeholder entries
-            // from round 6.2.8 are REMOVED. They were
-            // fabricated (didn't exist in the DB) and
-            // masked the real 31+ bookable_items. Future
-            // tickets can re-add them as `display_only: true`
-            // rows in the DB if needed.
-            //
-            // The icon is HARDCODED per addon (Car /
-            // Accessibility / Clock / ShieldCheck). Future
-            // ticket: add an `icon` field to the
-            // `bookable_items` table so this can be
-            // DB-sourced too.
-            // ──────────────────────────────────────────────────────
-            // 2026-06-12 (round 6.2.39, M11 fix) — replace the
-            // hardcoded CREATE_ADDON_SERVICES (4 items) with
-            // the shared CATALOG_ADDONS import. See
-            // `components/addons.ts` for the source of truth.
-            // The 4 names match the backend's `bookable_items`
-            // catalog exactly (verified against
-            // `BookableItemSeeder` + the migration
-            // `2026_06_09_120100_seed_3_bookable_items.php`).
-            const CREATE_ADDON_SERVICES = CATALOG_ADDONS.map((a) => ({
-              key: a.key,
-              icon: a.icon,
-              desc: a.desc,
-              price: String(a.defaultPrice),
-              badge: a.badge ?? (a.defaultPrice > 0 ? `+HK$${a.defaultPrice.toLocaleString()}` : '+HK$—'),
-              badgeClass: a.badgeClass,
-            }));
+                  {!(hasLimousine || hasWheelchair || hasSecurity || hasLoungeExtension || catalogAddonSelections.length > 0) && (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 text-sm text-gray-500">
+                        No services selected. Search below to add a special or catalog service.
+                      </td>
+                    </tr>
+                  )}
 
-            // 2026-06-08 round 6.2.8 — apply the DB price override for
-            // any addon whose key matches a `bookableItemPrices` entry.
-            // For "Limousine Transfer", the key is the exact match
-            // (the prop is keyed by `name_en`). For the 25 "(coming
-            // soon)" placeholders, the key has the suffix, so the
-            // match fails (intentional — we don't want to override
-            // a fabricated price with a real one for a different
-            // service).
-            const resolveServiceDisplay = (svc: typeof CREATE_ADDON_SERVICES[number]) => {
-              const dbPrice = bookableItemPrices?.[svc.key];
-              if (typeof dbPrice === 'number' && Number.isFinite(dbPrice) && dbPrice > 0) {
-                return {
-                  ...svc,
-                  price: String(dbPrice),
-                  badge: `+HK$${dbPrice.toLocaleString()}`,
-                };
-              }
-              return svc;
-            };
+                  {hasLimousine && (() => {
+                    const itemName = 'Limousine Transfer';
+                    const unit = resolveAddonUnitPrice(itemName);
+                    const qty = Math.max(1, limousineQty);
+                    const subtotal = resolveAddonSubtotal(itemName, qty);
+                    return (
+                      <>
+                        <tr data-testid="create-addons-row-limousine">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Car className="w-4 h-4 text-purple-600" />
+                              <div>
+                                <p className="font-medium">Limousine Transfer Service</p>
+                                <p className="text-xs text-gray-500">Airport Transfer</p>
+                              </div>
+                              <button
+                                type="button"
+                                aria-label="Remove Limousine Transfer"
+                                data-testid="service-items-remove-Limousine Transfer"
+                                onClick={() => {
+                                  setHasLimousine(false);
+                                  setLimousineQty(1);
+                                  setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
+                                  clearItemOverride(itemName);
+                                }}
+                                className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="number"
+                              min={1}
+                              value={limousineQty}
+                              onChange={(e) => {
+                                const n = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                setLimousineQty(n);
+                              }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
+                              data-testid="service-items-qty-Limousine Transfer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {renderAddonUnitPriceInput(
+                              itemName,
+                              unit,
+                              'service-items-unit-price-addon:Limousine Transfer',
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {renderAddonDiscountInput(itemName, unit)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">
+                            {`HK$${subtotal.toLocaleString()}`}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={5} className="px-4 py-2 bg-purple-50/50" data-testid="service-items-limo-stops">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-purple-600" />
+                                <p className="text-xs text-purple-800">Pick-up / Destinations</p>
+                              </div>
+                              {limoStops.map((stop, idx) => (
+                                <div key={stop.id} className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <select
+                                    value={stop.type}
+                                    onChange={(e) => updateLimoStop(stop.id, 'type', e.target.value)}
+                                    className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0"
+                                  >
+                                    <option value="Pick-up">Pick-up</option>
+                                    <option value="Destination">Destination</option>
+                                  </select>
+                                  <input
+                                    type="text"
+                                    value={stop.location}
+                                    onChange={(e) => updateLimoStop(stop.id, 'location', e.target.value)}
+                                    placeholder="Location (e.g. HKG Terminal 1)"
+                                    className="flex-1 px-2 py-1.5 border rounded text-sm"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeLimoStop(stop.id)}
+                                    disabled={limoStops.length === 1}
+                                    className="text-gray-400 hover:text-red-600 shrink-0 disabled:opacity-30"
+                                    aria-label={`Remove stop ${idx + 1}`}
+                                  >
+                                    <Minus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={addLimoStop}
+                                className="mt-1 flex items-center gap-1.5 text-xs text-purple-700 hover:text-purple-900"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add another stop
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      </>
+                    );
+                  })()}
 
-            // Map service keys to existing boolean states so price calculation stays intact
-            const KEYED_BOOLEANS: Record<string, boolean> = {
-              'Limousine Transfer': hasLimousine,
-              'In-lounge Personal Shopping Assistance': hasShopping,
-              'Wheelchair Assistance': hasWheelchair,
-              'Security Escort Service': hasSecurity,
-              'Private Sales': hasPrivateSales,
-              // Round 6.2.20 (2026-06-09) — Lounge Extension toggle.
-              'Lounge Extension': hasLoungeExtension,
-            };
-            const toggleByKey = (key: string, val: boolean) => {
-              if (key === 'Limousine Transfer')                     setHasLimousine(val);
-              else if (key === 'In-lounge Personal Shopping Assistance') setHasShopping(val);
-              else if (key === 'Wheelchair Assistance')             setHasWheelchair(val);
-              else if (key === 'Security Escort Service')           setHasSecurity(val);
-              else if (key === 'Lounge Extension')                  setHasLoungeExtension(val);
-              else if (key === 'Private Sales')                     setHasPrivateSales(val);
-            };
+                  {hasWheelchair && (() => {
+                    const itemName = 'Wheelchair Assistance';
+                    const unit = resolveAddonUnitPrice(itemName);
+                    const qty = Math.max(1, wheelchairQty);
+                    const subtotal = resolveAddonSubtotal(itemName, qty);
+                    return (
+                      <>
+                        <tr data-testid="create-addons-row-wheelchair">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <Accessibility className="w-4 h-4 text-pink-600" />
+                              <div>
+                                <p className="font-medium">Wheelchair Assistance</p>
+                                <p className="text-xs text-gray-500">{wheelchairPassenger || 'Passenger assistance'}</p>
+                              </div>
+                              <button
+                                type="button"
+                                aria-label="Remove Wheelchair Assistance"
+                                data-testid="service-items-remove-Wheelchair Assistance"
+                                onClick={() => {
+                                  setHasWheelchair(false);
+                                  setWheelchairPassenger('');
+                                  setWheelchairQty(1);
+                                  clearItemOverride(itemName);
+                                }}
+                                className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="number"
+                              min={1}
+                              value={wheelchairQty}
+                              onChange={(e) => {
+                                const n = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                setWheelchairQty(n);
+                              }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
+                              data-testid="service-items-qty-Wheelchair Assistance"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {renderAddonUnitPriceInput(
+                              itemName,
+                              unit,
+                              'service-items-unit-price-addon:Wheelchair Assistance',
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {renderAddonDiscountInput(itemName, unit)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium">
+                            {subtotal > 0 ? `HK$${subtotal.toLocaleString()}` : 'Complimentary'}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={5} className="px-4 py-2 bg-pink-50/40" data-testid="service-items-wheelchair-recipient">
+                            <label className="text-xs text-gray-600 mb-1 block">Wheelchair recipient</label>
+                            {availablePassengerNames.length > 0 ? (
+                              <select
+                                value={wheelchairPassenger}
+                                onChange={(e) => setWheelchairPassenger(e.target.value)}
+                                className="w-full max-w-2xl px-3 py-1.5 border rounded text-sm bg-white"
+                                data-testid="service-items-wheelchair-recipient-select"
+                              >
+                                <option value="" disabled>Select a passenger...</option>
+                                {availablePassengerNames.map((name) => (
+                                  <option key={name} value={name}>{name}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <>
+                                <input
+                                  type="text"
+                                  value={wheelchairPassenger}
+                                  onChange={(e) => setWheelchairPassenger(e.target.value)}
+                                  placeholder="e.g. Mr James Hoffmann"
+                                  className="w-full max-w-2xl px-3 py-1.5 border rounded text-sm"
+                                  data-testid="service-items-wheelchair-recipient-input"
+                                />
+                                <p className="mt-1 text-xs text-gray-500">
+                                  Please fill in passenger details above first, or type name manually.
+                                </p>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      </>
+                    );
+                  })()}
 
-            const selectedKeys = CREATE_ADDON_SERVICES
-              .filter(s => KEYED_BOOLEANS[s.key])
-              .map(s => s.key);
+                  {hasSecurity && (() => {
+                    const itemName = 'Security Escort Service';
+                    const unit = resolveAddonUnitPrice(itemName);
+                    const qty = Math.max(1, securityQty);
+                    const subtotal = resolveAddonSubtotal(itemName, qty);
+                    return (
+                      <tr data-testid="create-addons-row-security">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-blue-600" />
+                            <div>
+                              <p className="font-medium">Security Escort Service</p>
+                              <p className="text-xs text-gray-500">Dedicated escort</p>
+                            </div>
+                            <button
+                              type="button"
+                              aria-label="Remove Security Escort Service"
+                              data-testid="service-items-remove-Security Escort Service"
+                              onClick={() => {
+                                setHasSecurity(false);
+                                setSecurityQty(1);
+                                clearItemOverride(itemName);
+                              }}
+                              className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="number"
+                            min={1}
+                            value={securityQty}
+                            onChange={(e) => {
+                              const n = Math.max(1, parseInt(e.target.value, 10) || 1);
+                              setSecurityQty(n);
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
+                            data-testid="service-items-qty-Security Escort Service"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonUnitPriceInput(
+                            itemName,
+                            unit,
+                            'service-items-unit-price-addon:Security Escort Service',
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonDiscountInput(itemName, unit)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {`HK$${subtotal.toLocaleString()}`}
+                        </td>
+                      </tr>
+                    );
+                  })()}
 
-            const q = addonSearch.trim().toLowerCase();
-            const dropdownResults = q
-              ? CREATE_ADDON_SERVICES.filter(s =>
-                  s.key.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q))
-              : CREATE_ADDON_SERVICES;
+                  {hasLoungeExtension && (() => {
+                    const itemName = 'Lounge Extension';
+                    const unit = resolveAddonUnitPrice(itemName);
+                    const qty = Math.max(1, loungeExtensionQty);
+                    const subtotal = resolveAddonSubtotal(itemName, qty);
+                    return (
+                      <tr data-testid="create-addons-row-lounge-extension">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-amber-600" />
+                            <div>
+                              <p className="font-medium">Lounge Extension</p>
+                              <p className="text-xs text-gray-500">Additional hours</p>
+                            </div>
+                            <button
+                              type="button"
+                              aria-label="Remove Lounge Extension"
+                              data-testid="service-items-remove-Lounge Extension"
+                              onClick={() => {
+                                setHasLoungeExtension(false);
+                                setLoungeExtensionQty(1);
+                                clearItemOverride(itemName);
+                              }}
+                              className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="number"
+                            min={1}
+                            max={6}
+                            value={loungeExtensionQty}
+                            onChange={(e) => {
+                              const n = parseInt(e.target.value, 10);
+                              if (Number.isFinite(n)) setLoungeExtensionQty(Math.max(1, Math.min(6, n)));
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
+                            data-testid="service-items-qty-Lounge Extension"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonUnitPriceInput(
+                            itemName,
+                            unit,
+                            'service-items-unit-price-addon:Lounge Extension',
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonDiscountInput(itemName, unit)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {`HK$${subtotal.toLocaleString()}`}
+                        </td>
+                      </tr>
+                    );
+                  })()}
 
-            return (
-              <div className="space-y-4">
+                  {catalogAddonSelections.map((sel) => {
+                    const unit = resolveAddonUnitPrice(sel.name);
+                    const qty = Math.max(1, sel.quantity);
+                    const subtotal = resolveAddonSubtotal(sel.name, qty);
+                    return (
+                      <tr key={sel.name} data-testid="invoice-additional-catalog-row">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Tag className="w-4 h-4 text-gray-500" />
+                            <p className="font-medium">{sel.name}</p>
+                            <button
+                              type="button"
+                              aria-label={`Remove ${sel.name}`}
+                              data-testid={`service-items-remove-${sel.name}`}
+                              onClick={() => {
+                                onCatalogAddonSelectionsChange?.(
+                                  catalogAddonSelections.filter((s) => s.name !== sel.name),
+                                );
+                                clearItemOverride(sel.name);
+                              }}
+                              className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="number"
+                            min={1}
+                            value={sel.quantity}
+                            onChange={(e) => {
+                              const n = Math.max(1, parseInt(e.target.value, 10) || 1);
+                              const without = catalogAddonSelections.filter((s) => s.name !== sel.name);
+                              onCatalogAddonSelectionsChange?.([...without, { name: sel.name, quantity: n }]);
+                            }}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
+                            data-testid={`service-items-qty-${sel.name}`}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonUnitPriceInput(
+                            sel.name,
+                            unit,
+                            `service-items-unit-price-addon:${sel.name}`,
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {renderAddonDiscountInput(sel.name, unit)}
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium">
+                          {`HK$${subtotal.toLocaleString()}`}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
-                {/* Selected service chips */}
-                {selectedKeys.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedKeys.map(key => {
-                      // 2026-06-08 round 6.2.8 — apply DB price override
-                      // for addons with matching `bookableItemPrices` entry
-                      // (e.g. Limousine Transfer → DB HK$800 instead of
-                      // hard-coded HK$1,500). For 25 "(coming soon)"
-                      // placeholders, the key has a suffix so the match
-                      // fails and we fall through to the hard-coded
-                      // badge ("Contact us" / "On request").
-                      const svc = resolveServiceDisplay(CREATE_ADDON_SERVICES.find(s => s.key === key)!);
-                      return (
-                        <div key={key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-800">
-                          <span className="text-blue-500 shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5">{svc.icon}</span>
-                          <span>{key}</span>
-                          <Badge className={`ml-1 text-xs ${svc.badgeClass}`}>{svc.badge}</Badge>
-                          <button
-                            type="button"
-                            onClick={() => toggleByKey(key, false)}
-                            className="ml-0.5 text-blue-400 hover:text-blue-700 transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <AddNewItemSection
+                    catalogAddonOptions={catalogAddonOptions}
+                    bookableItemPrices={bookableItemPrices}
+                    passengerNames={availablePassengerNames}
+                    persistHint="create"
+                    onAdd={handleAddNewItem}
+                    layout="table"
+                  />
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </Card>
+
+        {/* ════════════════════════════════════════
+            8. PROMOTION / REDEMPTION CODE
+            ════════════════════════════════════════ */}
+        <Card className="p-6" data-testid="create-account-promo-code-card">
+          <h2 className="mb-1">Promotion / Redemption Code</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Apply a promo or redemption code to this booking.
+          </p>
+            <div data-testid="create-account-promo-code">
+              <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Promo / Redemption Code</label>
+              {promoApplied ? (
+                <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Tag className="w-5 h-5 text-green-600 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-green-800 truncate">{promoApplied.code}</p>
+                      <p className="text-xs text-green-600">
+                        {promoApplied.benefit
+                          ?? (promoApplied.promoType === 'Free bookings'
+                            ? `Free lounge · deduction of ${promoApplied.freeSessions ?? 1} LD fee${(promoApplied.freeSessions ?? 1) !== 1 ? 's' : ''}`
+                            : `${promoApplied.discountPct}% off`)}
+                      </p>
+                    </div>
                   </div>
-                )}
-
-                {/* Search input */}
-                <div className="relative">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-green-700 hover:text-red-600 shrink-0"
+                    onClick={() => {
+                      if (isPromoControlled) {
+                        onClearPromo?.();
+                      } else {
+                        setLocalPromoApplied(null);
+                      }
+                      toast.info('Promotion code removed.');
+                    }}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-3">
                     <input
                       type="text"
-                      placeholder="Search services to add, e.g. Limousine, Fast Track, Shower…"
-                      value={addonSearch}
-                      onChange={e => { setAddonSearch(e.target.value); setShowAddonDropdown(true); }}
-                      onFocus={() => setShowAddonDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowAddonDropdown(false), 150)}
-                      className="w-full pl-9 pr-10 py-2.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      value={promoInput}
+                      onChange={e => {
+                        setPromoInput(e.target.value.toUpperCase());
+                        if (!isPromoControlled) setLocalPromoError('');
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleApplyPromo();
+                        }
+                      }}
+                      placeholder="e.g. SUMMER2024"
+                      disabled={promoValidating}
+                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
                     />
-                    {addonSearch && (
-                      <button
-                        type="button"
-                        onMouseDown={e => e.preventDefault()}
-                        onClick={() => { setAddonSearch(''); setShowAddonDropdown(false); }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Dropdown */}
-                  {showAddonDropdown && (
-                    <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-20 max-h-64 overflow-y-auto">
-                      {dropdownResults.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-gray-500">
-                          No services found for "<span className="font-medium">{addonSearch}</span>"
-                        </div>
-                      ) : dropdownResults.map((rawSvc) => {
-                        // 2026-06-08 round 6.2.8 — apply DB price override
-                        // (same pattern as the chip; resolved before
-                        // destructuring so the dropdown row shows the
-                        // real DB price for Limousine Transfer and the
-                        // "Contact us" badge for the 25 placeholders).
-                        const svc = resolveServiceDisplay(rawSvc);
-                        const { key, icon, desc, badge, badgeClass } = svc;
-                        const isSelected = !!KEYED_BOOLEANS[key] || (selectedKeys.includes(key));
-                        const isTracked  = key in KEYED_BOOLEANS;
-                        return (
-                          <button
-                            key={key}
-                            type="button"
-                            onMouseDown={e => e.preventDefault()}
-                            onClick={() => {
-                              if (isTracked) {
-                                toggleByKey(key, !isSelected);
-                              }
-                              setAddonSearch('');
-                              setShowAddonDropdown(false);
-                            }}
-                            className={`w-full flex items-center gap-3 px-4 py-2.5 text-left border-b border-gray-100 last:border-0 transition-colors hover:bg-blue-50 ${isSelected ? 'bg-blue-50/60' : ''}`}
-                          >
-                            <span className={`p-1.5 rounded-md shrink-0 [&>svg]:w-4 [&>svg]:h-4 ${isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                              {icon}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900">{key}</p>
-                              <p className="text-xs text-gray-500">{desc}</p>
-                            </div>
-                            <Badge className={`text-xs shrink-0 ${badgeClass}`}>{badge}</Badge>
-                            {isSelected
-                              ? <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
-                              : <Plus className="w-4 h-4 text-gray-300 shrink-0" />
-                            }
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-xs text-gray-400">
-                  {selectedKeys.length === 0
-                    ? 'No services selected. Click the search bar above to browse all available services.'
-                    : `${selectedKeys.length} service${selectedKeys.length !== 1 ? 's' : ''} selected. Click a tag above to remove.`
-                  }
-                </p>
-
-                {/* Limousine stops (shown when Limousine Transfer is selected) */}
-                {hasLimousine && (
-                  <div className="p-4 rounded-lg border border-purple-200 bg-purple-50/40">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Car className="w-4 h-4 text-purple-600" />
-                      <p className="text-sm text-purple-800 font-medium">Limousine Transfer — Pick-up &amp; Drop-off Stops</p>
-                    </div>
-                    <div className="space-y-2">
-                      {limoStops.map((stop, i) => (
-                        <div key={stop.id} className="flex gap-2 items-center">
-                          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">{i + 1}</span>
-                          <select value={stop.type} onChange={e => updateLimoStop(stop.id, 'type', e.target.value)}
-                            className="px-2 py-1.5 border border-gray-300 rounded text-sm w-32 bg-white shrink-0">
-                            <option>Pick-up</option><option>Destination</option>
-                          </select>
-                          <div className="relative flex-1">
-                            <MapPin className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                            <input type="text" value={stop.location} onChange={e => updateLimoStop(stop.id, 'location', e.target.value)}
-                              placeholder={stop.type === 'Pick-up' ? 'e.g. Terminal 1, Arrival Hall' : 'e.g. Four Seasons Hotel, HK'}
-                              className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-300" />
-                          </div>
-                          <button type="button" onClick={() => removeLimoStop(stop.id)} disabled={limoStops.length === 1}
-                            className="p-1.5 rounded border text-gray-400 hover:text-red-500 hover:border-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <Button type="button" variant="outline" size="sm" onClick={addLimoStop} className="mt-3 gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
-                      <Plus className="w-3.5 h-3.5" />Add Stop
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleApplyPromo}
+                      disabled={promoValidating}
+                    >
+                      {promoValidating ? 'Checking…' : 'Apply'}
                     </Button>
                   </div>
-                )}
-
-                {/* Wheelchair passenger name (shown when Wheelchair Assistance is selected) */}
-                {hasWheelchair && (
-                  <div className="p-4 rounded-lg border border-blue-200 bg-blue-50/40">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Accessibility className="w-4 h-4 text-blue-600" />
-                      <p className="text-sm text-blue-800 font-medium">Wheelchair Assistance — Passenger Details</p>
-                    </div>
-                    <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Passenger Name</label>
-                    <input type="text" value={wheelchairPassenger} onChange={e => setWheelchairPassenger(e.target.value)}
-                      placeholder="Name of passenger requiring assistance"
-                      className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-                  </div>
-                )}
-
-                {/* Round 6.2.20 (2026-06-09) — Lounge Extension qty
-                    stepper (per user directive "for Lounge Extension,
-                    it should have qty"). Shown when Lounge Extension
-                    is selected. */}
-                {hasLoungeExtension && (
-                  <div className="p-4 rounded-lg border border-amber-200 bg-amber-50/40">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-4 h-4 text-amber-600" />
-                      <p className="text-sm text-amber-800 font-medium">Lounge Extension — Additional Hours</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm text-gray-600">Hours</label>
-                      <button type="button" onClick={() => setLoungeExtensionQty(q => Math.max(1, q - 1))}
-                        disabled={loungeExtensionQty <= 1}
-                        className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <input type="number" min={1} max={6} value={loungeExtensionQty}
-                        onChange={e => {
-                          const n = parseInt(e.target.value, 10);
-                          if (Number.isFinite(n)) setLoungeExtensionQty(Math.max(1, Math.min(6, n)));
-                        }}
-                        className="w-16 px-2 py-1.5 border border-gray-300 rounded text-sm text-center focus:outline-none focus:ring-2 focus:ring-amber-300" />
-                      <button type="button" onClick={() => setLoungeExtensionQty(q => Math.min(6, q + 1))}
-                        disabled={loungeExtensionQty >= 6}
-                        className="p-1.5 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed">
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="text-xs text-gray-500">(max 6 hours per booking)</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      HK${(bookableItemPrices?.['Lounge Extension'] ?? 0).toLocaleString()} per hour
-                      {' × '}{loungeExtensionQty} hour{loungeExtensionQty !== 1 ? 's' : ''}
-                      {' = '}
-                      <span className="font-medium text-amber-700">
-                        HK${((bookableItemPrices?.['Lounge Extension'] ?? 0) * loungeExtensionQty).toLocaleString()}
-                      </span>
-                    </p>
-                  </div>
-                )}
-
-                {/* 2026-07-16 — Lane B catalog slot (wrapper-owned picker) */}
-                {catalogAddonSlot}
-
-              </div>
-            );
-          })()}
-        </Card>
-
-        {/* ════════════════════════════════════════
-            8. PROMO / REDEMPTION CODE
-            ════════════════════════════════════════ */}
-        <Card className="p-6">
-          <h2 className="mb-1">Promotion / Redemption Code</h2>
-          <p className="text-sm text-gray-500 mb-4">Enter a promo or redemption code to apply a discount to this booking.</p>
-          {promoApplied ? (
-            <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50">
-              <div className="flex items-center gap-3">
-                <Tag className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-sm font-semibold text-green-800">{promoApplied.code}</p>
-                  <p className="text-xs text-green-600">
-                    {promoApplied.benefit
-                      ?? (promoApplied.promoType === 'Free bookings'
-                        ? `Free lounge · deduction of ${promoApplied.freeSessions ?? 1} LD fee${(promoApplied.freeSessions ?? 1) !== 1 ? 's' : ''}`
-                        : `${promoApplied.discountPct}% off`)}
-                  </p>
+                  {promoError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{promoError}</p>}
                 </div>
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-green-700 hover:text-red-600"
-                onClick={() => {
-                  if (isPromoControlled) {
-                    onClearPromo?.();
-                  } else {
-                    setLocalPromoApplied(null);
-                  }
-                  toast.info('Promotion code removed.');
-                }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
+              )}
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={promoInput}
-                  onChange={e => {
-                    setPromoInput(e.target.value.toUpperCase());
-                    if (!isPromoControlled) setLocalPromoError('');
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleApplyPromo();
-                    }
-                  }}
-                  placeholder="e.g. SUMMER2024"
-                  disabled={promoValidating}
-                  className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleApplyPromo}
-                  disabled={promoValidating}
-                >
-                  {promoValidating ? 'Checking…' : 'Apply'}
-                </Button>
-              </div>
-              {promoError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{promoError}</p>}
-            </div>
-          )}
+
         </Card>
 
         {/* ════════════════════════════════════════
-            9. SPECIAL REQUESTS
+            9. SPECIAL REQUESTS & NOTES
             ════════════════════════════════════════ */}
         <Card className="p-6">
           <h2 className="mb-1">Special Requests &amp; Notes</h2>
@@ -4167,12 +4475,13 @@ export function CreateBooking({
         </Card>
 
         {/* ════════════════════════════════════════
-            10. PRICE BREAKDOWN (backend-live)
+            10. PRICE BREAKDOWN
             ════════════════════════════════════════ */}
-        {liveBreakdown.length > 0 && liveTotal !== null && (
-          <Card className="p-6">
-            <h2 className="mb-5">Price Breakdown</h2>
-            <div className="space-y-2 text-sm max-w-md ml-auto">
+          {/* Live price breakdown (backend) */}
+          {liveBreakdown.length > 0 && liveTotal !== null && (
+            <Card className="p-6" data-testid="create-booking-price-breakdown">
+              <h2 className="mb-4">Price Breakdown</h2>
+              <div className="space-y-2 text-sm max-w-md ml-auto">
               {liveBreakdown.map((item, i) => {
                 const isDiscount = item.subtotal < 0
                   || item.key === 'account_discount'
@@ -4206,12 +4515,15 @@ export function CreateBooking({
                   {liveWarnings.map((w, i) => <li key={i}>• {w}</li>)}
                 </ul>
               )}
-            </div>
-          </Card>
-        )}
+              </div>
+        </Card>
+          )}
+
+        {/* TODO: Add In-Charge Staff selection — POST /api/bookings accepts assigned_staff_ids;
+            Create form does not yet load staffOptions / assignedStaffIds state (Edit uses EditSectionStaff). */}
 
         {/* ════════════════════════════════════════
-            11. ACTIONS
+            ACTIONS
             ════════════════════════════════════════ */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -4249,6 +4561,7 @@ export function CreateBooking({
             </Button>
           </div>
         </div>
+
 
       </form>
 

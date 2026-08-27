@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, Filter, Download, Eye, Edit2, Trash2, X, Calendar, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem, Cake } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -810,15 +811,14 @@ export function BookingManagement({
                             />
                           )}
                         {(onEditBooking || onViewDetail) ? (
-                          <button
-                            type="button"
+                          <Link
+                            to={`/bookings/${booking.id}`}
                             data-testid={`booking-no-link-${booking.id}`}
                             className="font-mono text-base font-semibold text-blue-600 hover:text-blue-800 hover:underline text-left"
-                            title="Edit Booking"
-                            onClick={() => (onEditBooking ?? onViewDetail)?.(booking.id)}
+                            title="View Booking"
                           >
                             {booking.bookingNo}
-                          </button>
+                          </Link>
                         ) : (
                           <div className="font-mono text-base font-semibold text-gray-900">{booking.bookingNo}</div>
                         )}
@@ -852,12 +852,13 @@ export function BookingManagement({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="inline-flex items-center gap-1.5">
-                      <button 
+                      <Link
+                        to={`/bookings/${booking.id}`}
+                        data-testid={`guest-name-link-${booking.id}`}
                         className="text-blue-600 hover:text-blue-800 hover:underline"
-                        onClick={() => onViewDetail?.(booking.id)}
                       >
                         {booking.guestName}
-                      </button>
+                      </Link>
                       {booking.hasUpcomingBirthday && (
                         <Tooltip>
                           <TooltipTrigger asChild>
