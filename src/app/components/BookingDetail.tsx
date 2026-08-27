@@ -355,6 +355,9 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Save booking status + payment status + rejection reason. */
   onUpdateStatus?: (payload: UpdateStatusPayload) => Promise<void>;
   isUpdatingStatus?: boolean;
+  /** Staff uncancel — restore a Cancelled booking (parent owns the API). */
+  onReactivateCancelled?: () => Promise<void>;
+  isReactivatingCancelled?: boolean;
   // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
   // Adyen payment link callback. Forwarded from the parent
   // wrapper (which owns the `paymentApi` import) for payment
@@ -577,7 +580,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   fieldErrors?: Record<string, string[]>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onSendPaymentLink, onInvoiceSent, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onSendPaymentLink, onInvoiceSent, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -1346,7 +1349,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           icon: <Mail className="w-4 h-4 mr-2" />,
         }]
       : []),
-    ...(booking.paymentStatus === 'Overdue'
+    ...(booking.paymentStatus === 'Overdue' && booking.status !== 'Cancelled'
       ? [{
           key: 'reactivate',
           label: 'Re-activate Booking',
@@ -1408,6 +1411,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               paymentStatus: booking.paymentStatus,
             });
           },
+        }]
+      : []),
+    ...(booking.status === 'Cancelled'
+      ? [{
+          key: 'reactivate-cancelled',
+          label: isReactivatingCancelled ? 'Re-activating…' : 'Re-activate Booking',
+          icon: <RotateCcw className="w-4 h-4 mr-2" />,
+          disabled: isReactivatingCancelled || !onReactivateCancelled,
+          onClick: () => {
+            void onReactivateCancelled?.();
+          },
+          testId: 'actions-reactivate-cancelled',
         }]
       : []),
   ];
