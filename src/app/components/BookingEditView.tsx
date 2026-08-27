@@ -381,6 +381,13 @@ export interface BookingFormData {
    * Round 6.2.139 — opt-in for free LD entry / free PS upgrade on edit reprice.
    */
   useMembershipLdFree?: boolean;
+  /**
+   * True quantity LD credits (0–10). `null` = follow max eligible
+   * (legacy used-flag hydrate). `0` = unused this visit.
+   */
+  useMembershipLdUnits?: number | null;
+  /** Original stored units from the booking (quota restore on edit). */
+  storedMembershipLdUnits?: number | null;
   useMembershipPsFree?: boolean;
   /** Display-only remaining quotas from the account (edit membership card). */
   ldEntriesRemaining?: number | null;
