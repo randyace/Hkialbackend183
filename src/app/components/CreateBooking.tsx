@@ -151,6 +151,122 @@ function hasMembershipLdQuota(value: number | null | undefined): boolean {
   return value === -1 || value > 0;
 }
 
+function spouseNameFromAccount(account: {
+  profile_spouse?: unknown;
+} | null | undefined): {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+} | null {
+  const spouse = account?.profile_spouse;
+  if (!spouse || typeof spouse !== 'object') return null;
+  const rec = spouse as Record<string, unknown>;
+  const first = String(rec.firstName ?? rec.first_name ?? '').trim();
+  const last = String(rec.lastName ?? rec.last_name ?? '').trim();
+  if (!first && !last) return null;
+  return { firstName: first, lastName: last, name: [first, last].filter(Boolean).join(' ') };
+}
+
+function membershipSittingFromVipSegments(
+  member: {
+    firstName?: string | null;
+    lastName?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    name?: string | null;
+  } | null | undefined,
+  spouse: { firstName?: string; lastName?: string; name?: string } | null,
+  suiteRows: Array<{ firstName?: string; lastName?: string }>,
+  loungeRows: Array<{ firstName?: string; lastName?: string }>,
+) {
+  const hasSpouse = Boolean(
+    (spouse?.firstName && spouse.firstName.trim())
+    || (spouse?.lastName && spouse.lastName.trim())
+    || (spouse?.name && spouse.name.trim()),
+  );
+  return {
+    memberAtLd: memberIsFlyingVipGuest(member, loungeRows),
+    memberAtPs: memberIsFlyingVipGuest(member, suiteRows),
+    spouseAtLd: hasSpouse && spouse ? memberIsFlyingVipGuest(spouse, loungeRows) : false,
+    spouseAtPs: hasSpouse && spouse ? memberIsFlyingVipGuest(spouse, suiteRows) : false,
+  };
+}
+
+function eligibleLdCreditSlots(
+  sitting: {
+    memberAtLd: boolean;
+    memberAtPs: boolean;
+    spouseAtLd: boolean;
+    spouseAtPs: boolean;
+  },
+  remaining: number | null | undefined,
+  includesPs: boolean,
+): number {
+  const sitters = (sitting.memberAtLd ? 1 : 0) + (sitting.spouseAtLd ? 1 : 0);
+  const psSlot = includesPs && (sitting.memberAtPs || sitting.spouseAtPs) ? 1 : 0;
+  const eligible = sitters + psSlot;
+  if (remaining === -1) return eligible;
+  if (remaining == null || remaining <= 0) return 0;
+  return Math.min(eligible, remaining);
+}
+
+function CreditQuantityBar({
+  value,
+  max,
+  onChange,
+  accent,
+  disabled,
+  testId,
+}: {
+  value: number;
+  max: number;
+  onChange: (next: number) => void;
+  accent: string;
+  disabled?: boolean;
+  testId?: string;
+}) {
+  const cap = Math.max(0, max);
+  const current = Math.min(Math.max(0, value), cap);
+  const minusDisabled = disabled || current <= 0;
+  const plusDisabled = disabled || current >= cap;
+  return (
+    <div
+      className="flex items-center rounded-md overflow-hidden border border-gray-300 bg-white"
+      data-testid={testId}
+      data-selected={current > 0 ? 'true' : 'false'}
+    >
+      <button
+        type="button"
+        disabled={minusDisabled}
+        data-testid={testId ? `${testId}-minus` : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          if (!minusDisabled) onChange(current - 1);
+        }}
+        className="w-10 h-10 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <div className="flex-1 text-center text-sm tabular-nums">
+        <span style={{ color: accent }}>{current}</span>
+        <span className="text-gray-500">{` / ${cap}`}</span>
+      </div>
+      <button
+        type="button"
+        disabled={plusDisabled}
+        data-testid={testId ? `${testId}-plus` : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          if (!plusDisabled) onChange(current + 1);
+        }}
+        className="w-10 h-10 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 // Auto-generate a booking number preview
 const now = new Date();
 const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -417,6 +533,7 @@ export interface BookingFormData {
    * Default true when eligible. false = charge without burning that credit.
    */
   useMembershipLdFree?: boolean;
+  useMembershipLdUnits?: number;
   useMembershipPsFree?: boolean;
   /** Contact Person → Booking Memo. Wrapper persists to notes + contact.memo. */
   bookingMemo?: string;
@@ -528,6 +645,7 @@ export interface CreateBookingProps {
     // null = not initialised / not a member; -1 LD = unlimited.
     ld_entries_remaining?: number | null;
     ps_free_upgrades_remaining?: number | null;
+    profile_spouse?: unknown;
     // Round 6.2.143 / 2026-07-28 — TravelAgency / Corporate money credit.
     // available ≈ credit_balance − credit_on_hold (+ credit_limit when set).
     // Agency OnCredit: hold at create, capture at Approved (not spend-at-create).
@@ -682,6 +800,7 @@ export interface CreateBookingProps {
     accountDiscountPct: number | undefined;
     // Round 6.2.139 — staff opt-in for free LD / free PS credits.
     useMembershipLdFree: boolean;
+    useMembershipLdUnits: number;
     useMembershipPsFree: boolean;
     /**
      * Mixed LD+PS sitting. Named VIP rows (PS then LD, same order as
@@ -1101,8 +1220,8 @@ export function CreateBooking({
   // `''` = no override; a number = percent (0-100).
   const [accountDiscountPct, setAccountDiscountPct] = useState<number | ''>('');
   // Round 6.2.139 — default OFF (staff must opt in to free credits).
-  const [useMembershipLdFree, setUseMembershipLdFree] = useState(false);
   const [useMembershipPsFree, setUseMembershipPsFree] = useState(false);
+  const [ldUnitsRequested, setLdUnitsRequested] = useState(0);
   // Submit validation: field key → message for red borders + helper text.
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const showMembershipBenefits = showMembershipBenefitsProp !== undefined
@@ -1130,8 +1249,8 @@ export function CreateBooking({
     } else {
       setMembershipTier('');
     }
-    setUseMembershipLdFree(false);
     setUseMembershipPsFree(false);
+    setLdUnitsRequested(0);
 
     const agencyRate = Number(
       selectedAccount?.travel_agency?.[0]?.discount_rate ?? NaN,
@@ -1145,8 +1264,8 @@ export function CreateBooking({
 
   useEffect(() => {
     if (!showMembershipBenefits) {
-      setUseMembershipLdFree(false);
       setUseMembershipPsFree(false);
+      setLdUnitsRequested(0);
     }
   }, [showMembershipBenefits]);
 
@@ -1234,28 +1353,48 @@ export function CreateBooking({
   const [nonFlyingGuests, setNonFlyingGuests] = useState<NonFlyingGuest[]>([]);
 
   const bookingIncludesPremiereSuite = numPremiereSuites > 0 || vipPS > 0 || nonFlyingPS > 0;
-  const activeFlyingVipRows = passengers.slice(0, vipPS + vipLD);
-  const memberIsVipGuest = memberIsFlyingVipGuest(selectedAccount, activeFlyingVipRows);
+  const suiteRows = passengers.slice(0, vipPS);
+  const loungeRows = passengers.slice(vipPS, vipPS + vipLD);
+  const spouseHolder = spouseNameFromAccount(selectedAccount);
+  const membershipSitting = membershipSittingFromVipSegments(
+    selectedAccount,
+    spouseHolder,
+    suiteRows,
+    loungeRows,
+  );
+  const memberIsVipGuest = membershipSitting.memberAtLd || membershipSitting.memberAtPs;
+  const spouseIsVipGuest = membershipSitting.spouseAtLd || membershipSitting.spouseAtPs;
+  const namedVipForCredit = memberIsVipGuest || spouseIsVipGuest;
   const hasLdQuota = hasMembershipLdQuota(selectedAccount?.ld_entries_remaining);
   const hasPsQuota = selectedAccount?.ps_free_upgrades_remaining === -1
     || (selectedAccount?.ps_free_upgrades_remaining !== null
       && selectedAccount?.ps_free_upgrades_remaining !== undefined
       && Number.isFinite(selectedAccount.ps_free_upgrades_remaining)
       && selectedAccount.ps_free_upgrades_remaining > 0);
-  const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && memberIsVipGuest);
+  const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit);
+  const maxLdUnits = canUseFreeLd
+    ? eligibleLdCreditSlots(
+        membershipSitting,
+        selectedAccount?.ld_entries_remaining,
+        bookingIncludesPremiereSuite,
+      )
+    : 0;
+  const useMembershipLdUnits = Math.min(Math.max(0, ldUnitsRequested), maxLdUnits);
+  const useMembershipLdFree = useMembershipLdUnits > 0;
   const canUseFreePs = canUseFreeLd
     && hasPsQuota
     && bookingIncludesPremiereSuite
-    && useMembershipLdFree;
+    && useMembershipLdFree
+    && (membershipSitting.memberAtPs || membershipSitting.spouseAtPs);
 
   useEffect(() => {
-    if (!canUseFreeLd && useMembershipLdFree) {
-      setUseMembershipLdFree(false);
+    if (ldUnitsRequested > maxLdUnits) {
+      setLdUnitsRequested(maxLdUnits);
     }
     if ((!canUseFreePs || !useMembershipLdFree) && useMembershipPsFree) {
       setUseMembershipPsFree(false);
     }
-  }, [canUseFreeLd, canUseFreePs, useMembershipLdFree, useMembershipPsFree]);
+  }, [canUseFreePs, ldUnitsRequested, maxLdUnits, useMembershipLdFree, useMembershipPsFree]);
 
   useEffect(() => {
     if (useMembershipPsFree && (!bookingIncludesPremiereSuite || !useMembershipLdFree)) {
@@ -1464,6 +1603,7 @@ export function CreateBooking({
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
       // Round 6.2.139 — membership free-credit opt-in for live preview.
       useMembershipLdFree: useMembershipLdFree && canUseFreeLd,
+      useMembershipLdUnits: canUseFreeLd ? useMembershipLdUnits : 0,
       useMembershipPsFree: useMembershipPsFree && canUseFreePs,
       passengers: passengers.slice(0, vipPS + vipLD).map((p) => ({
         firstName: p?.firstName ?? '',
@@ -1496,6 +1636,7 @@ export function CreateBooking({
     // `input.accountDiscountPct`).
     accountDiscountPct,
     useMembershipLdFree,
+    useMembershipLdUnits,
     useMembershipPsFree,
     canUseFreeLd,
     canUseFreePs,
@@ -2109,9 +2250,10 @@ export function CreateBooking({
       // 2026-06-09 — staff override of the auto-derived account discount.
       // `''` (untouched) = no override → wrapper falls back to tier/agency default.
       accountDiscountPct: accountDiscountPct === '' ? undefined : accountDiscountPct,
-      // Round 6.2.139 — free membership credit opt-in (default false).
-      // Force off when the member is not a named flying VIP.
+      // Round 6.2.139 — free membership credit opt-in (default 0; staff must opt in).
+      // Force off when the member/spouse is not a named flying VIP.
       useMembershipLdFree: useMembershipLdFree && canUseFreeLd,
+      useMembershipLdUnits: canUseFreeLd ? useMembershipLdUnits : 0,
       useMembershipPsFree: useMembershipPsFree && canUseFreePs,
     };
     onSubmit?.(formData);
@@ -2499,50 +2641,46 @@ export function CreateBooking({
                     </p>
                   </div>
                 </div>
-                <div className="mt-3 space-y-2">
-                  <label className={`flex items-start gap-2 text-sm ${canUseFreeLd ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      data-testid="use-membership-ld-free"
-                      checked={useMembershipLdFree}
+                <div className="mt-3 space-y-4">
+                  <div className={canUseFreeLd ? '' : 'opacity-60'}>
+                    <p className="text-sm font-medium text-[#0f2942] mb-2">Use free LD entry credit</p>
+                    <CreditQuantityBar
+                      value={useMembershipLdUnits}
+                      max={maxLdUnits}
                       disabled={!canUseFreeLd}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        setUseMembershipLdFree(on);
-                        if (!on) setUseMembershipPsFree(false);
+                      accent="rgb(220,181,21)"
+                      testId="use-membership-ld-free"
+                      onChange={(next) => {
+                        setLdUnitsRequested(next);
+                        if (next <= 0) setUseMembershipPsFree(false);
                       }}
                     />
-                    <span>
-                      <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                      <span className="block text-xs text-gray-500">
-                        Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD). Mixed + free PS: this is the dual-quota ticket, not a second LD waive. Guest/limo 40% also requires this credit.
-                        {!hasLdQuota ? ' No free LD entries left.' : !memberIsVipGuest ? ' Only when the member is listed as a flying VIP passenger.' : ''}
-                      </span>
-                    </span>
-                  </label>
-                  <label className={`flex items-start gap-2 text-sm ${canUseFreePs ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      data-testid="use-membership-ps-free"
-                      checked={useMembershipPsFree}
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Pure LD: waive 1 LD base. Pure PS paid 40% off also requires this credit (burns 1 LD). Mixed + free PS: this is the dual-quota ticket, not a second LD waive. Guest/limo 40% also requires this credit.
+                      {maxLdUnits > 1 ? ' Member and registered spouse can each use a credit when they sit in Lounge Deluxe or Premiere Suite. Choosing 1 of 2 uses the Lounge Deluxe seat first.' : ''}
+                      {!hasLdQuota ? ' No free LD entries left.' : !namedVipForCredit ? ' Only when the member or registered spouse is listed as a flying VIP passenger.' : ''}
+                    </p>
+                  </div>
+                  <div className={canUseFreePs ? '' : 'opacity-60'}>
+                    <p className="text-sm font-medium text-[#0f2942] mb-2">Use free PS upgrade credit</p>
+                    <CreditQuantityBar
+                      value={useMembershipPsFree && canUseFreePs ? 1 : 0}
+                      max={canUseFreePs ? 1 : 0}
                       disabled={!canUseFreePs}
-                      onChange={(e) => setUseMembershipPsFree(e.target.checked)}
+                      accent="rgb(22,163,74)"
+                      testId="use-membership-ps-free"
+                      onChange={(next) => setUseMembershipPsFree(next > 0)}
                     />
-                    <span>
-                      <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                      <span className="block text-xs text-gray-500">
-                        Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
-                        {!bookingIncludesPremiereSuite ? ' Add a Premiere Suite first.' : ''}
-                        {bookingIncludesPremiereSuite && canUseFreeLd && !useMembershipLdFree ? ' Check LD credit first.' : ''}
-                        {!canUseFreeLd && memberIsVipGuest === false ? ' Member must be a flying VIP first.' : ''}
-                      </span>
-                    </span>
-                  </label>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
+                      {!bookingIncludesPremiereSuite ? ' Add a Premiere Suite first.' : ''}
+                      {bookingIncludesPremiereSuite && canUseFreeLd && !useMembershipLdFree ? ' Add an LD credit above first.' : ''}
+                      {!canUseFreeLd && !namedVipForCredit ? ' Member or spouse must be a flying VIP first.' : ''}
+                    </p>
+                  </div>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Uncheck to keep the credit unused for this booking. No tier % discount.
+                  Leave at 0/max to keep the credit unused for this booking (staff must opt in). No tier % discount.
                 </p>
               </div>
             )}

@@ -269,6 +269,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   membershipControls?: {
     canUseLdFree: boolean;
     canUsePsFree: boolean;
+    maxLdUnits?: number;
   };
   /** Scroll the header CTA to the sole inline editor. */
   onOpenFullEditor?: (bookingId: number) => void;

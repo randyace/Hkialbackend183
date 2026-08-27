@@ -17,7 +17,7 @@
  * around line 687-749 (Card "Account Settings"). Now extracted.
  */
 
-import { Award } from 'lucide-react';
+import { Award, Minus, Plus } from 'lucide-react';
 import { Card } from '../../ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -51,7 +51,65 @@ export interface EditSectionAccountInfoProps {
   membershipControls?: {
     canUseLdFree: boolean;
     canUsePsFree: boolean;
+    maxLdUnits?: number;
   };
+}
+
+function CreditQuantityBar({
+  value,
+  max,
+  onChange,
+  accent,
+  disabled,
+  testId,
+}: {
+  value: number;
+  max: number;
+  onChange: (next: number) => void;
+  accent: string;
+  disabled?: boolean;
+  testId?: string;
+}) {
+  const cap = Math.max(0, max);
+  const current = Math.min(Math.max(0, value), cap);
+  const minusDisabled = disabled || current <= 0;
+  const plusDisabled = disabled || current >= cap;
+  return (
+    <div
+      className="flex items-center rounded-md overflow-hidden border border-gray-300 bg-white"
+      data-testid={testId}
+      data-selected={current > 0 ? 'true' : 'false'}
+    >
+      <button
+        type="button"
+        disabled={minusDisabled}
+        data-testid={testId ? `${testId}-minus` : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          if (!minusDisabled) onChange(current - 1);
+        }}
+        className="w-10 h-10 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <div className="flex-1 text-center text-sm tabular-nums">
+        <span style={{ color: accent }}>{current}</span>
+        <span className="text-gray-500">{` / ${cap}`}</span>
+      </div>
+      <button
+        type="button"
+        disabled={plusDisabled}
+        data-testid={testId ? `${testId}-plus` : undefined}
+        onClick={(e) => {
+          e.preventDefault();
+          if (!plusDisabled) onChange(current + 1);
+        }}
+        className="w-10 h-10 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }
 
 export function EditSectionAccountInfo({
@@ -211,53 +269,61 @@ export function EditSectionAccountInfo({
               </p>
             </div>
           </div>
-          <div className="space-y-2">
-            <label className={`flex items-start gap-2 text-sm ${
-              membershipLdDisabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-            }`}>
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                data-testid="edit-use-membership-ld-free"
-                checked={formData.useMembershipLdFree !== false}
-                disabled={membershipLdDisabled}
-                onChange={(e) => onFormChange({
-                  useMembershipLdFree: e.target.checked,
-                  ...(e.target.checked ? {} : { useMembershipPsFree: false }),
-                })}
-              />
-              <span>
-                <span className="font-medium text-[#0f2942]">Use free LD entry credit</span>
-                <span className="block text-xs text-gray-500">Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Uncheck → full PS base. Mixed + free PS: dual-quota ticket only, LD room stays charged.</span>
-              </span>
-            </label>
-            <label className={`flex items-start gap-2 text-sm ${
-              !membershipPsDisabled
-              && ((formData.numPremiereSuites ?? 0) > 0 || (formData.vipPassengersInPremiereSuite ?? 0) > 0 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
-              && formData.useMembershipLdFree !== false
-                ? 'cursor-pointer'
-                : 'opacity-60 cursor-not-allowed'
-            }`}>
-              <input
-                type="checkbox"
-                className="mt-0.5"
-                data-testid="edit-use-membership-ps-free"
-                checked={formData.useMembershipPsFree !== false}
-                disabled={
-                  membershipPsDisabled
-                  ||
-                  !((formData.numPremiereSuites ?? 0) > 0
-                    || (formData.vipPassengersInPremiereSuite ?? 0) > 0
-                    || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0)
-                  || formData.useMembershipLdFree === false
-                }
-                onChange={(e) => onFormChange({ useMembershipPsFree: e.target.checked })}
-              />
-              <span>
-                <span className="font-medium text-[#0f2942]">Use free PS upgrade credit</span>
-                <span className="block text-xs text-gray-500">Only when this booking includes Premiere Suite, and only together with the LD credit (cannot use free PS alone).</span>
-              </span>
-            </label>
+          <div className="space-y-4">
+            {(() => {
+              const maxLdUnits = membershipLdDisabled
+                ? 0
+                : (membershipControls?.maxLdUnits ?? 1);
+              const ldValue = membershipLdDisabled
+                ? 0
+                : Math.min(
+                    formData.useMembershipLdUnits
+                      ?? (formData.useMembershipLdFree === false ? 0 : maxLdUnits),
+                    maxLdUnits,
+                  );
+              const includesPs = (formData.numPremiereSuites ?? 0) > 0
+                || (formData.vipPassengersInPremiereSuite ?? 0) > 0
+                || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0;
+              const psEnabled = !membershipPsDisabled && includesPs && ldValue > 0;
+              const psValue = psEnabled && formData.useMembershipPsFree !== false ? 1 : 0;
+              return (
+                <>
+                  <div className={membershipLdDisabled ? 'opacity-60' : ''}>
+                    <p className="text-sm font-medium text-[#0f2942] mb-2">Use free LD entry credit</p>
+                    <CreditQuantityBar
+                      value={ldValue}
+                      max={maxLdUnits}
+                      disabled={membershipLdDisabled}
+                      accent="rgb(220,181,21)"
+                      testId="edit-use-membership-ld-free"
+                      onChange={(next) => onFormChange({
+                        useMembershipLdUnits: next,
+                        useMembershipLdFree: next > 0,
+                        ...(next <= 0 ? { useMembershipPsFree: false } : {}),
+                      })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Required for pure LD free entry and for paid PS 40% off (burns 1 LD). Qty 0 → full PS base. Mixed + free PS: dual-quota ticket only, LD room stays charged.
+                      {maxLdUnits > 1 ? ' Member and registered spouse can each use a credit when they sit in Lounge Deluxe or Premiere Suite. Choosing 1 of 2 uses the Lounge Deluxe seat first.' : ''}
+                    </p>
+                  </div>
+                  <div className={psEnabled ? '' : 'opacity-60'}>
+                    <p className="text-sm font-medium text-[#0f2942] mb-2">Use free PS upgrade credit</p>
+                    <CreditQuantityBar
+                      value={psValue}
+                      max={psEnabled ? 1 : 0}
+                      disabled={!psEnabled}
+                      accent="rgb(22,163,74)"
+                      testId="edit-use-membership-ps-free"
+                      onChange={(next) => onFormChange({ useMembershipPsFree: next > 0 })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Only when this booking includes Premiere Suite, and only together with the LD credit (cannot use free PS alone).
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
