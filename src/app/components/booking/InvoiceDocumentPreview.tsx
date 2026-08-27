@@ -6,6 +6,14 @@ import {
   type InvoiceBreakdownLine,
 } from './invoiceDocumentModel';
 
+export interface InvoiceDocumentBillingData {
+  name?: string;
+  company?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+}
+
 export interface InvoiceDocumentPreviewProps {
   bookingNo: string;
   accountNo?: string;
@@ -20,6 +28,9 @@ export interface InvoiceDocumentPreviewProps {
   priceBreakdown?: InvoiceBreakdownLine[];
   vipPassengerSummary?: string | null;
   serviceRemarks?: string | null;
+  /** When true, render the Bill To block from `billingData` (no placeholders). */
+  showBillingInfo?: boolean;
+  billingData?: InvoiceDocumentBillingData | null;
   'data-testid'?: string;
 }
 
@@ -40,6 +51,8 @@ export function InvoiceDocumentPreview({
   priceBreakdown,
   vipPassengerSummary,
   serviceRemarks,
+  showBillingInfo = false,
+  billingData = null,
   'data-testid': dataTestId = 'invoice-document-preview',
 }: InvoiceDocumentPreviewProps) {
   const groups = groupInvoiceBreakdownLines(priceBreakdown, {
@@ -93,6 +106,27 @@ export function InvoiceDocumentPreview({
           </tr>
         </tbody>
       </table>
+
+      {showBillingInfo ? (
+        <div className="mt-8 mb-6 text-sm" data-testid="invoice-document-bill-to">
+          <h3 className="font-bold text-gray-600 mb-2">Bill To:</h3>
+          {billingData?.company ? (
+            <div className="font-semibold">{billingData.company}</div>
+          ) : null}
+          {billingData?.name ? (
+            <div>Attn: {billingData.name}</div>
+          ) : null}
+          {billingData?.address ? (
+            <div className="whitespace-pre-wrap">{billingData.address}</div>
+          ) : null}
+          {billingData?.phone ? (
+            <div>Tel: {billingData.phone}</div>
+          ) : null}
+          {billingData?.email ? (
+            <div>Email: {billingData.email}</div>
+          ) : null}
+        </div>
+      ) : null}
 
       <table className="w-full mb-3 border-collapse">
         <tbody>

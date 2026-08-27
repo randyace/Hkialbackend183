@@ -14,6 +14,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
 import { toast } from 'sonner@2.0.3';
 import type { InvoiceHistoryEntry } from './BookingInvoiceDialog';
 import { InvoiceDocumentPreview } from './InvoiceDocumentPreview';
@@ -28,6 +29,8 @@ export interface InvoiceBillingDetails {
   billingEmail: string;
   billingPhone: string;
   billingAddress: string;
+  /** Persist with `advanced_details.billing.showBillingInfo`. */
+  showBillingInfo: boolean;
 }
 
 export interface InvoiceActionBookingContext {
@@ -45,6 +48,7 @@ export interface InvoiceActionBookingContext {
   billingEmail?: string | null;
   billingPhone?: string | null;
   billingAddress?: string | null;
+  showBillingInfo?: boolean | null;
   passengers?: Array<{
     title?: string | null;
     firstName?: string | null;
@@ -143,6 +147,7 @@ export function InvoiceActionDialog({
   const [billingEmail, setBillingEmail] = useState('');
   const [billingPhone, setBillingPhone] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
+  const [showBillingInfo, setShowBillingInfo] = useState(false);
 
   // Parent owns virtual-master injection + Paid/pending partition.
   const displayInvoices = useMemo(
@@ -173,6 +178,7 @@ export function InvoiceActionDialog({
     setBillingEmail(booking?.billingEmail ?? '');
     setBillingPhone(booking?.billingPhone ?? '');
     setBillingAddress(booking?.billingAddress ?? '');
+    setShowBillingInfo(Boolean(booking?.showBillingInfo));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot billing when modal opens
   }, [isOpen]);
 
@@ -211,6 +217,7 @@ export function InvoiceActionDialog({
         billingEmail: billingEmail.trim(),
         billingPhone: billingPhone.trim(),
         billingAddress: billingAddress.trim(),
+        showBillingInfo,
       });
       toast.success('Billing details saved', {
         description: 'Invoice Bill To will use these values on the next PDF / send.',
@@ -509,7 +516,21 @@ export function InvoiceActionDialog({
                       />
                     </div>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <label
+                      className="flex items-center gap-3 cursor-pointer select-none"
+                      data-testid="show-billing-info-toggle"
+                    >
+                      <Switch
+                        checked={showBillingInfo}
+                        onCheckedChange={setShowBillingInfo}
+                        aria-label="Show billing info on document"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Show billing info on document
+                        <span className="text-gray-500"> (顯示發票抬頭)</span>
+                      </span>
+                    </label>
                     <Button
                       type="button"
                       variant="outline"
@@ -714,6 +735,14 @@ export function InvoiceActionDialog({
                     ? 'Food & Beverage'
                     : (previewBooking.serviceRemarks ?? null)
                 }
+                showBillingInfo={showBillingInfo}
+                billingData={{
+                  name: billingName.trim() || undefined,
+                  company: billingCompany.trim() || undefined,
+                  address: billingAddress.trim() || undefined,
+                  phone: billingPhone.trim() || undefined,
+                  email: billingEmail.trim() || undefined,
+                }}
               />
             </div>
 
