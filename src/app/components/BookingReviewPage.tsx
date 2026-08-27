@@ -57,6 +57,8 @@ interface PendingBooking {
    * invoice preview when no persisted invoice exists yet.
    */
   priceBreakdown?: InvoiceBreakdownLine[];
+  /** Customer-facing invoice Service Remarks. */
+  invoiceRemarks?: string;
   agencyName?: string;
   agencyDiscountRate?: number;
   bookingType: 'Online' | 'Email/Call to HKIAL';
@@ -1625,7 +1627,7 @@ export function BookingReviewPage({
                 totalAmount={invoicePreviewMaster.totalAmount}
                 priceBreakdown={invoicePreviewMaster.priceBreakdown}
                 vipPassengerSummary={invoiceVipSummary}
-                serviceRemarks={contact.memo || booking.specialRequests || null}
+                serviceRemarks={booking.invoiceRemarks?.trim() || null}
               />
             </div>
           )}

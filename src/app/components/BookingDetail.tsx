@@ -374,6 +374,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
     billingPhone: string;
     billingAddress: string;
     showBillingInfo: boolean;
+    invoiceRemarks: string;
   }) => Promise<void>;
   // 2026-06-17 (round 6.2.47 follow-up) — pass-through for
   // Manage Invoices document downloads / send. Defaults
@@ -4375,9 +4376,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           flightNo: booking.flightNo,
           flightOrigin: booking.flightOrigin,
           flightDestination: booking.flightDestination,
-          serviceRemarks: booking.contactPerson?.memo
-            ?? formData?.specialRequests
-            ?? null,
+          serviceRemarks: formData?.invoiceRemarks ?? booking.invoiceRemarks ?? null,
           paymentStatus: booking.paymentStatus,
           billingName: formData?.billingName ?? booking.billingName,
           billingCompany: formData?.billingCompany ?? booking.billingCompany,
@@ -4385,6 +4384,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           billingPhone: formData?.billingPhone ?? booking.billingPhone,
           billingAddress: formData?.billingAddress ?? booking.billingAddress,
           showBillingInfo: formData?.showBillingInfo ?? booking.showBillingInfo,
+          invoiceRemarks: formData?.invoiceRemarks ?? booking.invoiceRemarks,
           passengers: (passengersOverride ?? booking.passengers ?? []).map((p) => ({
             title: p.title,
             firstName: p.firstName,
