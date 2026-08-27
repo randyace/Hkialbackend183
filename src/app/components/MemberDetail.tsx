@@ -239,6 +239,12 @@ export interface MemberDetailProps {
   /** Contracts tab body — supplied by parent container. */
   contractsTabContent?: ReactNode;
   /**
+   * Membership free-entry quota ledger (history + staff adjust).
+   * Parent owns the panel; when provided, render it inside the member
+   * summary card (not a strip below the page).
+   */
+  membershipQuotaContent?: ReactNode;
+  /**
    * Wrapper-owned membership species (D2). When provided (including false),
    * membership badge, Free LD/PS cells, and membership fields follow this
    * flag, not Individual type. Absent = standalone mock still Individual-gates.
@@ -473,6 +479,7 @@ export function MemberDetail({
   loginHistory: loginHistoryProp = [],
 
   contractsTabContent,
+  membershipQuotaContent,
   showMembershipBenefits: showMembershipBenefitsProp,
   showCreditExtras: showCreditExtrasProp,
   paymentMethodOptions: paymentMethodOptionsProp,
@@ -1097,6 +1104,7 @@ export function MemberDetail({
                   )}
                 </div>
               </div>
+              {membershipQuotaContent}
               {onToggleBookOnBehalf ? (
                 <div
                   className="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm"
