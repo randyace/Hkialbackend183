@@ -33,6 +33,7 @@ import type {
 } from '../../BookingEditView';
 import { computeVisitTimeRange } from '../../BookingEditView';
 import { getLaravelFieldError } from '../../../../../../../lib/api/errors';
+import { StringDatePicker } from '../../../../../../ui/CustomDatePicker';
 
 const INPUT_ERROR_CLS = 'border-red-400 bg-red-50 focus:ring-red-500 focus:border-red-500';
 const INPUT_OK_CLS = 'border-gray-300';
@@ -378,10 +379,9 @@ export function EditSectionFlight({
             </div>
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Leg 2 Arrival Date</label>
-              <input
-                type="date"
+              <StringDatePicker
                 value={formData.leg2ArrivalDate ?? ''}
-                onChange={e => onFormChange({ leg2ArrivalDate: e.target.value })}
+                onChange={(next) => onFormChange({ leg2ArrivalDate: next })}
                 className={`w-full border rounded-md px-3 py-2 text-sm ${leg2ArrivalDateError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
               />
               <FieldErrorHint message={leg2ArrivalDateError} />
@@ -431,11 +431,10 @@ export function EditSectionFlight({
         <div className="grid grid-cols-3 gap-6">
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Visit Date</label>
-            <input
+            <StringDatePicker
               id="edit-visit-date"
-              type="date"
               value={formData.visitDate}
-              onChange={e => onFormChange({ visitDate: e.target.value })}
+              onChange={(next) => onFormChange({ visitDate: next })}
               className={`w-full border rounded-md px-3 py-2 text-sm ${dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
             />
             <FieldErrorHint message={dateTimeError} testId="edit-visit-date-error" />

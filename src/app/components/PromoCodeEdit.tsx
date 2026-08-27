@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Save, Building2, Eye, Receipt } from 'lucide-react';
@@ -565,11 +566,11 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm" style={{ marginBottom: 10 }}>Start Date *</label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+              <StringDatePicker value={startDate} onChange={setStartDate} required />
             </div>
             <div>
               <label className="block text-sm" style={{ marginBottom: 10 }}>End Date *</label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+              <StringDatePicker value={endDate} onChange={setEndDate} required />
             </div>
             <div>
               <label className="block text-sm" style={{ marginBottom: 10 }}>Availability</label>

@@ -3,6 +3,7 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Search, ChevronDown, ChevronRight, Clock, Pencil } from 'lucide-react';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 export interface PosTransactionGuestRow {
   name: string;
@@ -408,11 +409,10 @@ export function PosTransactions({
               <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">
                 Start Date
               </label>
-              <input
+              <StringDatePicker
                 id="start-date"
-                type="date"
                 value={startDate}
-                onChange={(e) => onStartDateChange?.(e.target.value)}
+                onChange={(next) => onStartDateChange?.(next)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -420,11 +420,10 @@ export function PosTransactions({
               <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">
                 End Date
               </label>
-              <input
+              <StringDatePicker
                 id="end-date"
-                type="date"
                 value={endDate}
-                onChange={(e) => onEndDateChange?.(e.target.value)}
+                onChange={(next) => onEndDateChange?.(next)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>

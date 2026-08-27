@@ -26,7 +26,9 @@ import {
   lineRowSubtotal,
 } from '../../../../../lib/pricing/priceOverrides';
 import { upsertCatalogSelection } from '../../../../../lib/addons/bookingAddonCatalog';
+import { hktTodayYmd } from '../../../../../lib/hktDate';
 import { Input } from './ui/input';
+import { StringDatePicker, StringDateTimePicker } from '../../../../ui/CustomDatePicker';
 import { Checkbox } from './ui/checkbox';
 import {
   Select,
@@ -384,15 +386,6 @@ function Time5MinSelect({
       </select>
     </div>
   );
-}
-
-const DATE_INPUT_BASE_CLASS =
-  'w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300';
-
-function dateInputClassName(value: string): string {
-  return value
-    ? `${DATE_INPUT_BASE_CLASS} bg-white`
-    : `${DATE_INPUT_BASE_CLASS} bg-[#ececec]`;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -1207,6 +1200,8 @@ export function CreateBooking({
   showAccountCredit: showAccountCreditProp,
   showCompanyName: showCompanyNameProp,
 }: CreateBookingProps) {
+  /** Earliest selectable calendar day for new bookings (HKT today, inclusive). */
+  const minBookingDateYmd = hktTodayYmd();
 
   // ── Account & Guest ─────────────────────────────────────────────────────────
   const [accountType, setAccountType] = useState<'Individual' | 'Corporate' | 'Agency' | ''>('');
@@ -1312,6 +1307,38 @@ export function CreateBooking({
   // string and disables submit when the gap is < 6h. The backend's
   // TransitLegsRule is the source of truth; this is for UX.
   const [transitGapError, setTransitGapError] = useState<string | null>(null);
+
+  const handleLeg2ArrivalDateChange = (next: string) => {
+    setLeg2ArrivalDate(next);
+    setFieldErrors((prev) => {
+      if (!prev.leg2ArrivalDate && !prev.transitGap) return prev;
+      const n = { ...prev };
+      delete n.leg2ArrivalDate;
+      delete n.transitGap;
+      return n;
+    });
+    if (flightType !== 'Transit') {
+      setTransitGapError(null);
+      return;
+    }
+    const l0 = arrivalDate ? new Date(arrivalDate) : null;
+    const l1 = next ? new Date(next) : null;
+    if (!l0 || !l1 || isNaN(l0.getTime()) || isNaN(l1.getTime())) {
+      setTransitGapError(null);
+      return;
+    }
+    const diffMs = l1.getTime() - l0.getTime();
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    if (diffMs < SIX_HOURS_MS) {
+      const hours = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      setTransitGapError(
+        `Transit gap must be at least 6 hours (got ${hours}h ${mins}m). Please pick a later outbound leg.`,
+      );
+    } else {
+      setTransitGapError(null);
+    }
+  };
 
   // ── Booking ─────────────────────────────────────────────────────────────────
   const [visitDate, setVisitDate] = useState('');
@@ -2991,8 +3018,12 @@ export function CreateBooking({
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>
                 {flightType === 'Arrival' ? 'Arrival Date' : flightType === 'Departure' ? 'Departure Date' : 'Flight Date'}
               </label>
-              <input type="date" value={arrivalDate} onChange={e => setArrivalDate(e.target.value)}
-                className={dateInputClassName(arrivalDate)} />
+              <StringDatePicker
+                value={arrivalDate}
+                onChange={setArrivalDate}
+                minDate={minBookingDateYmd}
+                placeholderText="dd/mm/yyyy"
+              />
             </div>
           </div>
 
@@ -3174,40 +3205,14 @@ export function CreateBooking({
               <div className="grid grid-cols-2 gap-6 mb-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date &amp; Time <span className="text-red-500">*</span></label>
-                  <input
+                  <StringDateTimePicker
                     id="create-leg2-arrivalDate"
-                    type="datetime-local"
                     value={leg2ArrivalDate}
-                    onChange={e => {
-                      setLeg2ArrivalDate(e.target.value);
-                      setFieldErrors((prev) => {
-                        if (!prev.leg2ArrivalDate && !prev.transitGap) return prev;
-                        const n = { ...prev };
-                        delete n.leg2ArrivalDate;
-                        delete n.transitGap;
-                        return n;
-                      });
-                      // 2026-06-08 — recompute gap error on change
-                      // (live UX pre-check; backend is the source of truth).
-                      if (flightType !== 'Transit') { setTransitGapError(null); return; }
-                      const l0 = arrivalDate ? new Date(arrivalDate) : null;
-                      const l1 = e.target.value ? new Date(e.target.value) : null;
-                      if (!l0 || !l1 || isNaN(l0.getTime()) || isNaN(l1.getTime())) {
-                        setTransitGapError(null);
-                        return;
-                      }
-                      const diffMs = l1.getTime() - l0.getTime();
-                      const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-                      if (diffMs < SIX_HOURS_MS) {
-                        const hours = Math.floor(diffMs / 3600000);
-                        const mins = Math.floor((diffMs % 3600000) / 60000);
-                        setTransitGapError(`Transit gap must be at least 6 hours (got ${hours}h ${mins}m). Please pick a later outbound leg.`);
-                      } else {
-                        setTransitGapError(null);
-                      }
-                    }}
-                    className={`w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${fieldErrors.leg2ArrivalDate || fieldErrors.transitGap ? 'border-red-400 bg-red-50' : 'border-gray-300'}`}
+                    onChange={handleLeg2ArrivalDateChange}
+                    minDate={minBookingDateYmd}
+                    placeholderText="dd/mm/yyyy HH:mm"
                     data-testid="leg2-arrivalDate"
+                    className={fieldErrors.leg2ArrivalDate || fieldErrors.transitGap ? 'border-red-400 bg-red-50' : undefined}
                   />
                   {(fieldErrors.leg2ArrivalDate || fieldErrors.transitGap) && (
                     <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
@@ -3296,9 +3301,22 @@ export function CreateBooking({
           <div className="grid grid-cols-2 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-              <input type="date" id="create-visit-date" value={visitDate}
-                onChange={e => { setVisitDate(e.target.value); setFieldErrors((prev) => { if (!prev.visitDate) return prev; const n = { ...prev }; delete n.visitDate; return n; }); }}
-                className={`${dateInputClassName(visitDate)}${fieldErrors.visitDate ? ' border-red-400 bg-red-50' : ''}`} />
+              <StringDatePicker
+                id="create-visit-date"
+                value={visitDate}
+                minDate={minBookingDateYmd}
+                placeholderText="dd/mm/yyyy"
+                onChange={(next) => {
+                  setVisitDate(next);
+                  setFieldErrors((prev) => {
+                    if (!prev.visitDate) return prev;
+                    const n = { ...prev };
+                    delete n.visitDate;
+                    return n;
+                  });
+                }}
+                className={fieldErrors.visitDate ? 'border-red-400 bg-red-50' : undefined}
+              />
               {fieldErrors.visitDate && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1" role="alert">
                   <AlertCircle className="w-3 h-3" />{fieldErrors.visitDate}

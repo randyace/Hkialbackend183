@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -558,7 +559,7 @@ export function OpportunityTracking({
             </div>
             <div>
               <Label className="mb-[10px] block">Date *</Label>
-              <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+              <StringDatePicker value={logDate} onChange={setLogDate} />
             </div>
             <div>
               <Label className="mb-[10px] block">Summary *</Label>
@@ -566,7 +567,7 @@ export function OpportunityTracking({
             </div>
             <div>
               <Label className="mb-[10px] block">Follow-up Date</Label>
-              <Input type="date" value={logFollowUp} onChange={(e) => setLogFollowUp(e.target.value)} />
+              <StringDatePicker value={logFollowUp} onChange={setLogFollowUp} />
             </div>
             <div>
               <Label className="mb-[10px] block">Conducted By</Label>

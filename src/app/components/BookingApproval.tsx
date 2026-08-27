@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Search, Calendar, CheckCircle, XCircle, Eye, AlertCircle, Plane,
+  Search, CheckCircle, XCircle, Eye, AlertCircle, Plane,
   Car, ShoppingBag, Clock, Building2, User, CreditCard, BadgePercent,
   ChevronDown, ChevronUp, Filter, MailCheck, ThumbsUp, ThumbsDown,
   ClipboardCheck, Info, X, FileEdit, ShieldCheck, ShieldAlert
@@ -34,6 +34,7 @@ import {
 import { toast } from 'sonner@2.0.3';
 import React from 'react';
 import { BookingReviewPage } from './BookingReviewPage';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 
 function ymdLocal(d: Date): string {
@@ -761,14 +762,16 @@ export function BookingApproval({
               </SelectContent>
             </Select>
             <div className="flex gap-3 flex-1">
-              <div className="flex-1 relative">
-                <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="date" className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setCurrentPage(1); }} />
-              </div>
-              <div className="flex-1 relative">
-                <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="date" className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm" value={dateTo} onChange={e => { setDateTo(e.target.value); setCurrentPage(1); }} />
-              </div>
+              <StringDatePicker
+                value={dateFrom}
+                onChange={(next) => { setDateFrom(next); setCurrentPage(1); }}
+                className="flex-1"
+              />
+              <StringDatePicker
+                value={dateTo}
+                onChange={(next) => { setDateTo(next); setCurrentPage(1); }}
+                className="flex-1"
+              />
             </div>
           </div>
         </div>

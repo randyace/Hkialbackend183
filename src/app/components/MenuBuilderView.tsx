@@ -7,7 +7,7 @@
  * Mobile: stacks catalog above structure (grid-cols-1 md:grid-cols-2).
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, Plus, Trash2, X, Search, Save, Loader2, Pencil, Check, UtensilsCrossed,
 } from 'lucide-react';
@@ -15,6 +15,19 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
+
+export const MENU_BUILDER_LANGUAGES = [
+  { code: 'en', label: 'EN' },
+  { code: 'zh', label: 'ZH' },
+] as const;
+
+export type MenuBuilderLanguageCode = (typeof MENU_BUILDER_LANGUAGES)[number]['code'];
+
+export interface MenuBuilderSectionNames {
+  en: string;
+  zh: string;
+}
 
 export interface MenuBuilderCatalogItem {
   id: number;
@@ -49,7 +62,7 @@ export interface MenuBuilderSection {
   id: number | null;
   /** Stable client key for React lists / active section tracking. */
   clientKey: string;
-  name: string;
+  names: MenuBuilderSectionNames;
   sortOrder: number;
   items: MenuBuilderSectionItem[];
 }
@@ -73,11 +86,15 @@ export interface MenuBuilderViewProps {
   onBack?: () => void;
   onActiveSectionChange?: (clientKey: string) => void;
   onAddSection?: () => void;
-  onRenameSection?: (clientKey: string, name: string) => void;
+  onRenameSection?: (clientKey: string, names: MenuBuilderSectionNames) => void;
   onDeleteSection?: (clientKey: string) => void;
   onRemoveItem?: (sectionKey: string, itemId: number) => void;
   onAddItemsToActiveSection?: (itemIds: number[]) => void;
   onSave?: () => void;
+}
+
+function sectionDisplayName(section: MenuBuilderSection): string {
+  return section.names.en.trim() || section.names.zh.trim() || 'Section';
 }
 
 function ProductImage({
@@ -133,7 +150,7 @@ export function MenuBuilderView({
   const [activeCategoryTab, setActiveCategoryTab] = useState('All');
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
   const [renamingKey, setRenamingKey] = useState<string | null>(null);
-  const [renameDraft, setRenameDraft] = useState('');
+  const [renameDraft, setRenameDraft] = useState<MenuBuilderSectionNames>({ en: '', zh: '' });
 
   const activeSection = sections.find((s) => s.clientKey === activeSectionKey) ?? null;
   const assignedInActive = useMemo(
@@ -191,10 +208,41 @@ export function MenuBuilderView({
     });
   }, [masterItems, activeCategoryTab, catalogSearch]);
 
+  const selectableVisibleIds = useMemo(
+    () => filteredCatalogItems
+      .filter((item) => activeSection && !assignedInActive.has(item.id))
+      .map((item) => item.id),
+    [filteredCatalogItems, activeSection, assignedInActive],
+  );
+
+  const visibleCatalogIds = useMemo(
+    () => new Set(filteredCatalogItems.map((item) => item.id)),
+    [filteredCatalogItems],
+  );
+
+  useEffect(() => {
+    setCheckedIds((prev) => prev.filter((id) => visibleCatalogIds.has(id)));
+  }, [visibleCatalogIds]);
+
+  const allVisibleSelected = selectableVisibleIds.length > 0
+    && selectableVisibleIds.every((id) => checkedIds.includes(id));
+
   const toggleChecked = (id: number) => {
     setCheckedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setCheckedIds((prev) => prev.filter((id) => !selectableVisibleIds.includes(id)));
+      return;
+    }
+    setCheckedIds((prev) => {
+      const next = new Set(prev);
+      selectableVisibleIds.forEach((id) => next.add(id));
+      return [...next];
+    });
   };
 
   const handleAddChecked = () => {
@@ -205,15 +253,24 @@ export function MenuBuilderView({
 
   const startRename = (section: MenuBuilderSection) => {
     setRenamingKey(section.clientKey);
-    setRenameDraft(section.name);
+    setRenameDraft({ ...section.names });
   };
 
   const commitRename = () => {
     if (!renamingKey) return;
-    const next = renameDraft.trim();
-    if (next) onRenameSection?.(renamingKey, next);
+    const en = renameDraft.en.trim();
+    if (!en) return;
+    onRenameSection?.(renamingKey, {
+      en,
+      zh: renameDraft.zh.trim(),
+    });
     setRenamingKey(null);
-    setRenameDraft('');
+    setRenameDraft({ en: '', zh: '' });
+  };
+
+  const cancelRename = () => {
+    setRenamingKey(null);
+    setRenameDraft({ en: '', zh: '' });
   };
 
   if (isLoading) {
@@ -283,24 +340,34 @@ export function MenuBuilderView({
             />
           </div>
 
-          <div className="flex overflow-x-auto gap-2 pb-2">
-            {['All', ...catalogCategories.map((category) => category.name)].map((tabName) => {
-              const isActive = activeCategoryTab === tabName;
-              return (
-                <button
-                  key={tabName}
-                  type="button"
-                  onClick={() => setActiveCategoryTab(tabName)}
-                  className={`shrink-0 inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-[#0f2942] text-white border-[#0f2942]'
-                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  {tabName}
-                </button>
-              );
-            })}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex overflow-x-auto gap-2 pb-1 flex-1 min-w-0">
+              {['All', ...catalogCategories.map((category) => category.name)].map((tabName) => {
+                const isActive = activeCategoryTab === tabName;
+                return (
+                  <button
+                    key={tabName}
+                    type="button"
+                    onClick={() => setActiveCategoryTab(tabName)}
+                    className={`shrink-0 inline-flex items-center rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      isActive
+                        ? 'bg-[#0f2942] text-white border-[#0f2942]'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tabName}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700 shrink-0 cursor-pointer">
+              <Checkbox
+                checked={allVisibleSelected}
+                disabled={selectableVisibleIds.length === 0}
+                onCheckedChange={toggleSelectAllVisible}
+              />
+              Select All
+            </label>
           </div>
 
           {!activeSection ? (
@@ -408,7 +475,7 @@ export function MenuBuilderView({
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      {section.name}
+                      {sectionDisplayName(section)}
                       <Badge
                         className={
                           isActive
@@ -425,29 +492,59 @@ export function MenuBuilderView({
 
               {activeSection ? (
                 <div className="space-y-3 border border-gray-200 rounded-lg p-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {renamingKey === activeSection.clientKey ? (
-                      <>
-                        <Input
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
-                          className="h-8"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitRename();
-                            if (e.key === 'Escape') setRenamingKey(null);
-                          }}
-                        />
-                        <Button size="sm" onClick={commitRename} className="gap-1">
-                          <Check className="w-3.5 h-3.5" />
-                          OK
-                        </Button>
-                      </>
+                      <div className="flex-1 w-full rounded-md border border-gray-200 bg-gray-50/60 p-3">
+                        <div className="flex flex-col gap-3 w-full">
+                          {MENU_BUILDER_LANGUAGES.map((language) => (
+                            <div key={language.code} className="flex items-stretch w-full">
+                              <span className="flex items-center justify-center px-3 bg-gray-100 border border-gray-300 border-r-0 rounded-l-md text-xs font-semibold text-gray-500 uppercase w-12 shrink-0">
+                                {language.label}
+                              </span>
+                              <input
+                                type="text"
+                                value={renameDraft[language.code]}
+                                onChange={(e) => setRenameDraft((prev) => ({
+                                  ...prev,
+                                  [language.code]: e.target.value,
+                                }))}
+                                className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-300 rounded-r-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                autoFocus={language.code === 'en'}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') commitRename();
+                                  if (e.key === 'Escape') cancelRename();
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex justify-end gap-2 mt-3">
+                          <Button type="button" size="sm" variant="outline" onClick={cancelRename}>
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={commitRename}
+                            className="gap-1 bg-black text-white hover:bg-black/90"
+                          >
+                            <Check className="w-4 h-4" />
+                            OK
+                          </Button>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <h3 className="text-sm font-semibold text-gray-900 flex-1 truncate">
-                          {activeSection.name}
-                        </h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-gray-900 truncate">
+                            {sectionDisplayName(activeSection)}
+                          </h3>
+                          {activeSection.names.zh.trim() ? (
+                            <p className="text-xs text-gray-500 truncate mt-0.5">
+                              {activeSection.names.zh}
+                            </p>
+                          ) : null}
+                        </div>
                         <Button
                           size="sm"
                           variant="outline"

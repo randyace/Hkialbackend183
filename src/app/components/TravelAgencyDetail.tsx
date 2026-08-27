@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { ArrowLeft, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
@@ -684,10 +685,9 @@ export function TravelAgencyDetail({
           <div className="space-y-4 mt-4">
             <div>
               <Label className="mb-[10px] block">Expiry Date *</Label>
-              <Input
-                type="date"
+              <StringDatePicker
                 value={editForm.expiryDate}
-                onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                onChange={(value) => setEditForm({ ...editForm, expiryDate: value })}
               />
             </div>
 

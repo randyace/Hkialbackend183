@@ -8,6 +8,7 @@
  */
 
 import React from 'react';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,11 +191,10 @@ function FilterControl({
     return (
       <div style={{ minWidth: field.minWidth ?? '160px' }}>
         <label className="sr-only">{field.label}</label>
-        <input
-          type="date"
+        <StringDatePicker
           value={field.value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.placeholder}
+          onChange={onChange}
+          placeholderText={field.placeholder}
           className={`w-full px-3 ${base}`}
         />
       </div>

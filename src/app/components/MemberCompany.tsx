@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Building2, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Building2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -12,6 +12,7 @@ import {
 } from './ui/select';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import {
   Pagination,
   PaginationContent,
@@ -253,27 +254,17 @@ export function MemberCompany({ companies: companiesProp, onEditCompany, onCreat
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label>Start Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={startDate}
+                onChange={setStartDate}
+              />
             </div>
             <div className="flex-1">
               <label>End Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={endDate}
+                onChange={setEndDate}
+              />
             </div>
             <div className="flex items-end">
               <Button 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -979,21 +980,19 @@ export function PurchaseCreate({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="discountStart" className="mb-[10px] block">Start date</Label>
-                      <Input
+                      <StringDatePicker
                         id="discountStart"
-                        type="date"
                         value={discountStart}
-                        onChange={e => setDiscountStart(e.target.value)}
+                        onChange={setDiscountStart}
                         data-testid="discount-contract-start"
                       />
                     </div>
                     <div>
                       <Label htmlFor="discountEnd" className="mb-[10px] block">End date</Label>
-                      <Input
+                      <StringDatePicker
                         id="discountEnd"
-                        type="date"
                         value={discountEnd}
-                        onChange={e => setDiscountEnd(e.target.value)}
+                        onChange={setDiscountEnd}
                         data-testid="discount-contract-end"
                       />
                     </div>

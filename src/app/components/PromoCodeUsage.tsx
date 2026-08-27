@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import {
@@ -605,11 +606,11 @@ export function PromoCodeUsage({
                 <div className="flex flex-col sm:flex-row gap-3 flex-1">
                   <div className="flex items-center gap-2 flex-1">
                     <label className="text-xs text-gray-500 shrink-0">From</label>
-                    <Input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }} className="flex-1" />
+                    <StringDatePicker value={dateFrom} onChange={(next) => { setDateFrom(next); setCurrentPage(1); }} className="flex-1" />
                   </div>
                   <div className="flex items-center gap-2 flex-1">
                     <label className="text-xs text-gray-500 shrink-0">To</label>
-                    <Input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }} className="flex-1" min={dateFrom || undefined} />
+                    <StringDatePicker value={dateTo} onChange={(next) => { setDateTo(next); setCurrentPage(1); }} className="flex-1" minDate={dateFrom || undefined} />
                   </div>
                   {(dateFrom || dateTo) && (
                     <Button size="sm" variant="ghost" className="gap-1 text-gray-500 hover:text-red-600 shrink-0"
@@ -738,11 +739,11 @@ export function PromoCodeUsage({
                 <div className="flex flex-col sm:flex-row gap-3 flex-1">
                   <div className="flex items-center gap-2 flex-1">
                     <label className="text-xs text-gray-500 shrink-0">From</label>
-                    <Input type="date" value={txnDateFrom} onChange={(e) => { setTxnDateFrom(e.target.value); setTxnPage(1); }} className="flex-1" />
+                    <StringDatePicker value={txnDateFrom} onChange={(next) => { setTxnDateFrom(next); setTxnPage(1); }} className="flex-1" />
                   </div>
                   <div className="flex items-center gap-2 flex-1">
                     <label className="text-xs text-gray-500 shrink-0">To</label>
-                    <Input type="date" value={txnDateTo} onChange={(e) => { setTxnDateTo(e.target.value); setTxnPage(1); }} className="flex-1" min={txnDateFrom || undefined} />
+                    <StringDatePicker value={txnDateTo} onChange={(next) => { setTxnDateTo(next); setTxnPage(1); }} className="flex-1" minDate={txnDateFrom || undefined} />
                   </div>
                   {(txnDateFrom || txnDateTo) && (
                     <Button size="sm" variant="ghost" className="gap-1 text-gray-500 hover:text-red-600 shrink-0"

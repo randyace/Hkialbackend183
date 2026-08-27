@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
@@ -12,6 +12,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -382,27 +383,17 @@ export function BookableItems({
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label>Start Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={startDate}
+                onChange={setStartDate}
+              />
             </div>
             <div className="flex-1">
               <label>End Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={endDate}
+                onChange={setEndDate}
+              />
             </div>
             <div className="flex items-end">
               <Button 

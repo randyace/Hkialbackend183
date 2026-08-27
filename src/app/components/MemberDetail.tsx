@@ -21,6 +21,7 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { countryNameFor } from '../../../../../utils/countries';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
@@ -1247,14 +1248,13 @@ export function MemberDetail({
               </div>
               <div>
                 <label>Date of Birth</label>
-                <input
-                  type="date"
+                <StringDatePicker
                   value={basicForm.dateOfBirth}
-                  onChange={e => setBasicForm(f => ({ ...f, dateOfBirth: e.target.value }))}
+                  onChange={(next) => setBasicForm(f => ({ ...f, dateOfBirth: next }))}
                   disabled={!isEditing}
-                  min="1900-01-01"
-                  max={localDateStr()}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
+                  minDate="1900-01-01"
+                  maxDate={localDateStr()}
+                  className="disabled:bg-gray-50"
                 />
               </div>
             </div>
@@ -1355,14 +1355,10 @@ export function MemberDetail({
                   </div>
                   <div>
                     <label>Membership Expiry</label>
-                    <input
-                      type="date"
-                      // Container already normalizes ISO datetime → YYYY-MM-DD;
-                      // defensive slice here covers demo/mock paths.
+                    <StringDatePicker
                       value={(memberData.membershipExpiry || '').slice(0, 10)}
-                      readOnly
                       disabled
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
+                      className="bg-gray-50"
                     />
                   </div>
                 </>
@@ -1467,12 +1463,10 @@ export function MemberDetail({
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Date of Birth</label>
-                  <input
-                    type="date"
+                  <StringDatePicker
                     value={(displaySpouse.dateOfBirth || '').slice(0, 10)}
-                    readOnly
                     disabled
-                    className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+                    className="bg-gray-50"
                   />
                 </div>
               </div>
@@ -2767,11 +2761,9 @@ export function MemberDetail({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Movement Date</label>
-                <input
-                  type="date"
+                <StringDatePicker
                   value={movementFormProp.movementDate || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, movementDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  onChange={(next) => onMovementFormChange?.({ ...movementFormProp, movementDate: next })}
                 />
               </div>
               <div>
@@ -2865,21 +2857,17 @@ export function MemberDetail({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Dept Date</label>
-                  <input
-                  type="date"
-                  value={movementFormProp.deptDate || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, deptDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <StringDatePicker
+                    value={movementFormProp.deptDate || ''}
+                    onChange={(next) => onMovementFormChange?.({ ...movementFormProp, deptDate: next })}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arr Date</label>
-                  <input
-                  type="date"
-                  value={movementFormProp.arrDate || ''}
-                  onChange={e => onMovementFormChange?.({ ...movementFormProp, arrDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                />
+                  <StringDatePicker
+                    value={movementFormProp.arrDate || ''}
+                    onChange={(next) => onMovementFormChange?.({ ...movementFormProp, arrDate: next })}
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Flight Time</label>
@@ -3238,17 +3226,15 @@ export function MemberDetail({
 
             <div>
               <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Date of Birth <span className="text-red-500">*</span></label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={(activeSpouseForm.dateOfBirth || '').slice(0, 10)}
-                  onChange={e => { onSpouseFormChange?.({ ...activeSpouseForm, dateOfBirth: e.target.value }); setMockSpouseForm(f => ({ ...f, dateOfBirth: e.target.value })); }}
-                  min="1900-01-01"
-                  max={localDateStr()}
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm"
-                />
-                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              </div>
+              <StringDatePicker
+                value={(activeSpouseForm.dateOfBirth || '').slice(0, 10)}
+                onChange={(next) => {
+                  onSpouseFormChange?.({ ...activeSpouseForm, dateOfBirth: next });
+                  setMockSpouseForm(f => ({ ...f, dateOfBirth: next }));
+                }}
+                minDate="1900-01-01"
+                maxDate={localDateStr()}
+              />
             </div>
 
             {/* Linked Account (optional) */}
