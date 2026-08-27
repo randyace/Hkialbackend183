@@ -1,7 +1,11 @@
 /**
  * Helpers for the official Service Summary / Invoice document preview.
- * Mirrors `ReceiptPdfService` grouping + description mapping so the
- * in-modal preview matches the PDF/Excel export layout.
+ * Mirrors `ReceiptPdfService` grouping + `DocumentInvoiceLineMapper` columns
+ * so the in-modal preview matches the PDF/Excel export layout.
+ *
+ * Discount / net totals come only from structured numeric fields
+ * (`discount_pct`, `discount_percent`, `pct`, `line_discount`) — never from
+ * label parsing or membership string guesses.
  */
 
 export interface InvoiceBreakdownLine {
@@ -13,11 +17,22 @@ export interface InvoiceBreakdownLine {
   product?: string;
   note?: string;
   quantity?: number;
+  /** Catalog unit before staff override (preferred for Unit Price column). */
+  original_unit_price?: number | null;
+  /** Staff line discount as HK$ (from advanced_details.line_discounts). */
+  line_discount?: number | null;
+  /** Explicit percent stamped by LineDiscountFolder / UI itemOverrides. */
+  discount_pct?: number | null;
+  discount_percent?: number | null;
+  /** Account / contract percent when present on that discount row. */
+  pct?: number | null;
 }
 
 export interface InvoicePreviewLine {
   description: string;
   qty: number;
+  unitPrice: number | null;
+  discountText: string;
   total: number;
   detail?: string | null;
 }
@@ -32,7 +47,9 @@ export function formatDocumentMoney(amount: number | null | undefined): string {
   if (amount == null || !Number.isFinite(amount)) {
     return '—';
   }
-  return `$${Math.round(amount).toLocaleString('en-US')}`;
+  const rounded = Math.round(amount);
+  const absLabel = Math.abs(rounded).toLocaleString('en-US');
+  return rounded < 0 ? `-$${absLabel}` : `$${absLabel}`;
 }
 
 export function formatDocumentDate(value?: string | null): string {
@@ -109,6 +126,94 @@ export function resolveBilledQuantity(line: InvoiceBreakdownLine): number {
   return 1;
 }
 
+/** Catalog / charged unit for the Unit Price column (positive only). */
+export function resolveInvoiceUnitPrice(line: InvoiceBreakdownLine): number | null {
+  for (const raw of [line.original_unit_price, line.unit_price]) {
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    if (Number.isFinite(n) && n > 0) {
+      return Math.round(n * 100) / 100;
+    }
+  }
+  return null;
+}
+
+/**
+ * Strict discount % from structured fields only.
+ * Order: discount_pct → discount_percent → pct → derive from line_discount HK$.
+ */
+export function resolveInvoiceDiscountPct(
+  line: InvoiceBreakdownLine,
+  unit: number | null = resolveInvoiceUnitPrice(line),
+  qty: number = resolveBilledQuantity(line),
+): number | null {
+  for (const raw of [line.discount_pct, line.discount_percent]) {
+    const n = typeof raw === 'number' ? raw : Number(raw);
+    if (!Number.isFinite(n)) continue;
+    return n > 0 ? Math.round(Math.min(100, n) * 100) / 100 : null;
+  }
+
+  const pctField = typeof line.pct === 'number' ? line.pct : Number(line.pct);
+  if (Number.isFinite(pctField) && pctField > 0) {
+    return Math.round(Math.min(100, pctField) * 100) / 100;
+  }
+
+  const off = typeof line.line_discount === 'number'
+    ? line.line_discount
+    : Number(line.line_discount ?? 0);
+  const gross = unit != null && unit > 0 ? unit * qty : 0;
+  if (Number.isFinite(off) && off > 0 && gross > 0) {
+    return Math.round(Math.min(100, (off / gross) * 100) * 100) / 100;
+  }
+
+  return null;
+}
+
+export function formatInvoiceDiscountText(pct: number | null | undefined): string {
+  if (pct == null || !Number.isFinite(pct) || pct <= 0) {
+    return '—';
+  }
+  if (Math.abs(pct - Math.round(pct)) < 0.00001) {
+    return `${Math.round(pct)}%`;
+  }
+  return `${String(pct).replace(/\.?0+$/, '')}%`;
+}
+
+/**
+ * Net Total = (Unit Price × Qty) × (1 − Discount_Pct / 100) when unit > 0;
+ * otherwise the line subtotal (e.g. standalone signed discount rows).
+ */
+export function resolveInvoiceNetTotal(
+  line: InvoiceBreakdownLine,
+  unit: number | null = resolveInvoiceUnitPrice(line),
+  qty: number = resolveBilledQuantity(line),
+  pct: number | null = resolveInvoiceDiscountPct(line, unit, qty),
+): number {
+  if (unit != null && unit > 0) {
+    const rate = pct != null && pct > 0 ? (1 - pct / 100) : 1;
+    return Math.round(unit * qty * rate * 100) / 100;
+  }
+  const sub = Number(line.subtotal ?? 0);
+  return Number.isFinite(sub) ? Math.round(sub * 100) / 100 : 0;
+}
+
+/** Map one breakdown line to invoice preview columns (no merge / no label parsing). */
+export function mapInvoiceLineColumns(line: InvoiceBreakdownLine): {
+  qty: number;
+  unitPrice: number | null;
+  discountText: string;
+  total: number;
+} {
+  const qty = resolveBilledQuantity(line);
+  const unitPrice = resolveInvoiceUnitPrice(line);
+  const pct = resolveInvoiceDiscountPct(line, unitPrice, qty);
+  return {
+    qty,
+    unitPrice,
+    discountText: formatInvoiceDiscountText(pct),
+    total: resolveInvoiceNetTotal(line, unitPrice, qty, pct),
+  };
+}
+
 export function mapReceiptDescription(line: InvoiceBreakdownLine): string {
   const key = String(line.key ?? '');
   const label = String(line.label ?? key).trim();
@@ -175,16 +280,23 @@ export function groupInvoiceBreakdownLines(
     return [];
   }
 
+  const toPreview = (line: InvoiceBreakdownLine): InvoicePreviewLine => {
+    const columns = mapInvoiceLineColumns(line);
+    return {
+      description: mapReceiptDescription(line),
+      qty: columns.qty,
+      unitPrice: columns.unitPrice,
+      discountText: columns.discountText,
+      total: columns.total,
+      detail: null,
+    };
+  };
+
   if (options?.invoiceType === 'pos_fnb') {
     return [{
       title: 'Food & Beverage',
       product: 'pos_fnb',
-      lines: lines.map((line) => ({
-        description: mapReceiptDescription(line),
-        qty: resolveBilledQuantity(line),
-        total: Number(line.subtotal ?? 0),
-        detail: null,
-      })),
+      lines: lines.map(toPreview),
     }];
   }
 
@@ -196,13 +308,7 @@ export function groupInvoiceBreakdownLines(
 
   for (const line of lines) {
     const product = String(line.product ?? '');
-    const mapped: InvoicePreviewLine = {
-      description: mapReceiptDescription(line),
-      qty: resolveBilledQuantity(line),
-      total: Number(line.subtotal ?? 0),
-      detail: null,
-    };
-
+    const mapped = toPreview(line);
     if (product === 'premiere_suite') {
       groups[0].lines.push(mapped);
     } else if (product === 'lounge_deluxe') {
