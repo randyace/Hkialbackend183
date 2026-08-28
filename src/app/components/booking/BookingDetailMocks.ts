@@ -92,6 +92,8 @@ export interface Booking {
     subtotal: number;
     /** Limousine Transfer only — list of pickup/destination addresses. */
     destinations?: string[];
+    /** Limousine Transfer only — Kind W HH:mm pickup clock. */
+    pickupTime?: string;
     /** Wheelchair / specific-passenger addons. */
     passenger?: string;
     /** Security / addons with a recipient. */

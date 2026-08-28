@@ -915,6 +915,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   // Limousine — multiple stops
   interface LimoStop { id: number; type: 'Pick-up' | 'Destination'; location: string; }
   const [limoStops, setLimoStops] = useState<LimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
+  const [limoPickupTimeDraft, setLimoPickupTimeDraft] = useState('');
   const addLimoStop    = () => setLimoStops(prev => [...prev, { id: Date.now(), type: 'Destination', location: '' }]);
   const removeLimoStop = (id: number) => setLimoStops(prev => prev.length > 1 ? prev.filter(s => s.id !== id) : prev);
   const updateLimoStop = (id: number, field: keyof LimoStop, value: string) =>
@@ -935,6 +936,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setAddonQty(1);
     setAddonDiscount('0');
     setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
+    setLimoPickupTimeDraft('');
     setWheelchairPassenger('');
     setAddonSearch('');
     setShowAddonDropdown(false);
@@ -1084,6 +1086,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             type: s.type,
             location: s.location,
           })),
+          limousinePickupTime: limoPickupTimeDraft,
           ...staged,
         });
       } else if (selectedAddon === 'Wheelchair Assistance') {
@@ -1125,6 +1128,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     setAddonSearch('');
     setShowAddonDropdown(false);
     setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
+    setLimoPickupTimeDraft('');
     setWheelchairPassenger('');
   };
 
@@ -3413,9 +3417,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 const limoQty = limoAddon?.quantity ?? 1;
                 const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
                 const limoDestinations = limoAddon?.destinations ?? [];
-                const limoRemarks = limoDestinations.length > 0
-                  ? limoDestinations.join(' → ')
-                  : 'Pickup at Terminal 1';
+                const limoPickupTime = formData?.limousinePickupTime || limoAddon?.pickupTime || '';
+                const limoRemarks = [
+                  limoDestinations.length > 0 ? limoDestinations.join(' → ') : 'Pickup at Terminal 1',
+                  limoPickupTime ? `Pick-up ${limoPickupTime}` : '',
+                ].filter(Boolean).join(' · ');
                 return (
                   <>
                     <tr>
@@ -3430,6 +3436,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             onFormChange?.({
                               hasLimousine: false,
                               limoStops: [{ id: 1, type: 'Pick-up', location: '' }],
+                              limousinePickupTime: '',
                             });
                           })}
                         </div>
@@ -3525,6 +3532,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                 <Plus className="w-3.5 h-3.5" />
                                 Add another stop
                               </button>
+                              <div>
+                                <label className="text-xs text-purple-800 block mb-1">Pick-up Time</label>
+                                <div className="relative w-full md:w-56">
+                                  <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <input
+                                    type="time"
+                                    value={limoPickupTime}
+                                    onChange={(e) => onFormChange({ limousinePickupTime: e.target.value })}
+                                    className="w-full pl-8 pr-3 py-1.5 border rounded text-sm"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           );
                         })() : (
@@ -4215,6 +4234,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Plus className="w-3.5 h-3.5" />
                       Add another stop
                     </button>
+                    <div className="mt-3">
+                      <label className="text-xs text-blue-800 block mb-1">Pick-up Time</label>
+                      <div className="relative w-full md:w-56">
+                        <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="time"
+                          value={limoPickupTimeDraft}
+                          onChange={(e) => setLimoPickupTimeDraft(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 border rounded text-sm bg-white"
+                        />
+                      </div>
+                    </div>
                   </td>
                 </tr>
               )}

@@ -750,6 +750,7 @@ export interface CreateBookingProps {
   onAddonStateChange?: (state: {
     hasLimousine: boolean;
     limoStops: LimoStop[];
+    limousinePickupTime: string;
     hasShopping: boolean;
     hasWheelchair: boolean;
     wheelchairPassenger: string;
@@ -1464,6 +1465,7 @@ export function CreateBooking({
   // ── Add-on Services ─────────────────────────────────────────────────────────
   const [hasLimousine, setHasLimousine] = useState(false);
   const [limoStops, setLimoStops] = useState<LimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
+  const [limousinePickupTime, setLimousinePickupTime] = useState('');
   const [hasShopping, setHasShopping] = useState(false);
   const [hasWheelchair, setHasWheelchair] = useState(false);
   const [wheelchairPassenger, setWheelchairPassenger] = useState('');
@@ -1548,6 +1550,7 @@ export function CreateBooking({
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
+      limousinePickupTime,
       hasShopping,
       hasWheelchair,
       wheelchairPassenger,
@@ -1613,6 +1616,7 @@ export function CreateBooking({
   }, [
     hasLimousine,
     limoStops,
+    limousinePickupTime,
     hasShopping,
     hasWheelchair,
     wheelchairPassenger,
@@ -4011,6 +4015,19 @@ export function CreateBooking({
                     <Button type="button" variant="outline" size="sm" onClick={addLimoStop} className="mt-3 gap-1 text-purple-700 border-purple-300 hover:bg-purple-50">
                       <Plus className="w-3.5 h-3.5" />Add Stop
                     </Button>
+                    <div className="mt-3">
+                      <label className="text-sm text-gray-600 block mb-1.5">Pick-up Time *</label>
+                      <div className="relative w-full md:w-56">
+                        <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="time"
+                          value={limousinePickupTime}
+                          onChange={(e) => setLimousinePickupTime(e.target.value)}
+                          required
+                          className="w-full pl-8 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-300"
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
 

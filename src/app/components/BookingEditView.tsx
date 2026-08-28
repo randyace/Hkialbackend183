@@ -358,6 +358,8 @@ export interface BookingFormData {
   hasLoungeExtension: boolean;
   loungeExtensionQty: number;
   limoStops: EditLimoStop[];
+  /** Kind W HH:mm limo pickup clock. */
+  limousinePickupTime?: string;
   wheelchairPassenger: string;
   selectedAddonKeys: string[];
   /** 2026-07-16 — Lane B catalog picks (qty-only). */
@@ -539,6 +541,7 @@ const MOCK_BOOKING_FORM: BookingFormData = {
   hasLoungeExtension: false,
   loungeExtensionQty: 1,
   limoStops:        [{ id: 1, type: 'Pick-up', location: 'HKG Terminal 1' }],
+  limousinePickupTime: '14:30',
   wheelchairPassenger: '',
   selectedAddonKeys: [],
   catalogAddonSelections: [],
