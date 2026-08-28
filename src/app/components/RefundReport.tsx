@@ -31,6 +31,7 @@ import {
   SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 // 2026-07-07 (round 6.2.126 — HK timezone correction) — replace the
 // per-site `new Date().toISOString().split('T')[0]` pattern, which
@@ -888,22 +889,18 @@ export function RefundReport({
             {/* Date From */}
             <div>
               <label className="block text-xs text-gray-500 mb-[10px]">Adjustment Date From</label>
-              <input
-                type="date"
+              <StringDatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                onChange={setStartDate}
               />
             </div>
 
             {/* Date To */}
             <div>
               <label className="block text-xs text-gray-500 mb-[10px]">Adjustment Date To</label>
-              <input
-                type="date"
+              <StringDatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                onChange={setEndDate}
               />
             </div>
           </div>

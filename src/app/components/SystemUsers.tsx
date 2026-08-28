@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Shield, Key, Calendar, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Shield, Key, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import { mockSystemUsersData } from './__fixtures__/SystemUsers.mocks';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -272,27 +273,17 @@ export function SystemUsers({
           <div className="flex flex-col gap-4 md:flex-row">
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2"
-                />
-                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              </div>
+              <StringDatePicker
+                value={startDate}
+                onChange={(next) => { setStartDate(next); setCurrentPage(1); }}
+              />
             </div>
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">End Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }}
-                  className="w-full rounded-md border border-gray-300 px-4 py-2"
-                />
-                <Calendar className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              </div>
+              <StringDatePicker
+                value={endDate}
+                onChange={(next) => { setEndDate(next); setCurrentPage(1); }}
+              />
             </div>
             <div className="flex items-end">
               <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>

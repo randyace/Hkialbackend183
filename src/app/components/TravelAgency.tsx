@@ -19,6 +19,7 @@ import {
 } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Label } from './ui/label';
 import {
   Pagination,
@@ -243,18 +244,16 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
             <Label className="mb-2">Start Date</Label>
-            <Input
-              type="date"
+            <StringDatePicker
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={setStartDate}
             />
           </div>
           <div>
             <Label className="mb-2">End Date</Label>
-            <Input
-              type="date"
+            <StringDatePicker
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={setEndDate}
             />
           </div>
         </div>

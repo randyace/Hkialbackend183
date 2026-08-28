@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import {
   ChevronLeft,
   ChevronRight,
@@ -311,15 +312,11 @@ export function BookingSchedules({
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <div className="relative">
-              <Calendar className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
-              />
-            </div>
+            <StringDatePicker
+              value={selectedDate}
+              onChange={setSelectedDate}
+              className="w-44"
+            />
             <Button
               variant="outline"
               size="icon"

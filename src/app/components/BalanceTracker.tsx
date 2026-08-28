@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
@@ -587,19 +588,15 @@ export function BalanceTracker({
           <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
             <Label className="text-sm text-gray-600 lg:min-w-fit">Contract Expiry Date Range:</Label>
             <div className="flex flex-col sm:flex-row gap-2 items-center flex-1">
-              <Input
-                type="date"
+              <StringDatePicker
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="From"
+                onChange={setDateFrom}
                 className="w-full sm:w-44"
               />
               <span className="text-gray-400">to</span>
-              <Input
-                type="date"
+              <StringDatePicker
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                placeholder="To"
+                onChange={setDateTo}
                 className="w-full sm:w-44"
               />
             </div>
@@ -776,10 +773,9 @@ export function BalanceTracker({
           <div className="space-y-4 mt-4">
             <div>
               <Label className="mb-[10px] block">Expiry Date *</Label>
-              <Input
-                type="date"
+              <StringDatePicker
                 value={editForm.expiryDate}
-                onChange={(e) => setEditForm({ ...editForm, expiryDate: e.target.value })}
+                onChange={(value) => setEditForm({ ...editForm, expiryDate: value })}
               />
             </div>
 

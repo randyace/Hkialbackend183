@@ -31,6 +31,8 @@ export interface InvoiceBillingDetails {
   billingAddress: string;
   /** Persist with `advanced_details.billing.showBillingInfo`. */
   showBillingInfo: boolean;
+  /** Customer-facing invoice remarks → `advanced_details.invoice_remarks`. */
+  invoiceRemarks: string;
 }
 
 export interface InvoiceActionBookingContext {
@@ -41,6 +43,7 @@ export interface InvoiceActionBookingContext {
   flightNo: string;
   flightOrigin?: string | null;
   flightDestination?: string | null;
+  /** @deprecated Prefer invoiceRemarks — was wrongly mapped from notes/memo. */
   serviceRemarks?: string | null;
   paymentStatus?: string | null;
   billingName?: string | null;
@@ -49,6 +52,7 @@ export interface InvoiceActionBookingContext {
   billingPhone?: string | null;
   billingAddress?: string | null;
   showBillingInfo?: boolean | null;
+  invoiceRemarks?: string | null;
   passengers?: Array<{
     title?: string | null;
     firstName?: string | null;
@@ -148,6 +152,7 @@ export function InvoiceActionDialog({
   const [billingPhone, setBillingPhone] = useState('');
   const [billingAddress, setBillingAddress] = useState('');
   const [showBillingInfo, setShowBillingInfo] = useState(false);
+  const [invoiceRemarks, setInvoiceRemarks] = useState('');
 
   // Parent owns virtual-master injection + Paid/pending partition.
   const displayInvoices = useMemo(
@@ -179,6 +184,7 @@ export function InvoiceActionDialog({
     setBillingPhone(booking?.billingPhone ?? '');
     setBillingAddress(booking?.billingAddress ?? '');
     setShowBillingInfo(Boolean(booking?.showBillingInfo));
+    setInvoiceRemarks(booking?.invoiceRemarks ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot billing when modal opens
   }, [isOpen]);
 
@@ -218,6 +224,7 @@ export function InvoiceActionDialog({
         billingPhone: billingPhone.trim(),
         billingAddress: billingAddress.trim(),
         showBillingInfo,
+        invoiceRemarks: invoiceRemarks.trim(),
       });
       toast.success('Billing details saved', {
         description: 'Invoice Bill To will use these values on the next PDF / send.',
@@ -551,6 +558,30 @@ export function InvoiceActionDialog({
               ) : null}
             </div>
 
+            <div
+              className="rounded-lg border border-gray-200 bg-slate-50/80 mb-4"
+              data-testid="invoice-remarks-section"
+            >
+              <div className="px-4 py-3 space-y-2">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    Invoice Remarks (發票備註)
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    These remarks will be printed explicitly on the invoice under &apos;Service Remarks&apos;.
+                  </p>
+                </div>
+                <textarea
+                  data-testid="input-invoice-remarks"
+                  value={invoiceRemarks}
+                  onChange={(e) => setInvoiceRemarks(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white min-h-[80px]"
+                  placeholder="Customer-facing remarks for the invoice"
+                  rows={3}
+                />
+              </div>
+            </div>
+
             {displayInvoices.length === 0 ? (
               <div
                 className="rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500"
@@ -732,8 +763,8 @@ export function InvoiceActionDialog({
                 vipPassengerSummary={vipSummary}
                 serviceRemarks={
                   selectedInvoice.invoiceType === 'pos_fnb'
-                    ? 'Food & Beverage'
-                    : (previewBooking.serviceRemarks ?? null)
+                    ? (invoiceRemarks.trim() || 'Food & Beverage')
+                    : (invoiceRemarks.trim() || null)
                 }
                 showBillingInfo={showBillingInfo}
                 billingData={{

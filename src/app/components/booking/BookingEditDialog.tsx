@@ -11,6 +11,7 @@ import { suiteService, type Suite } from '@/services/suiteService';
 // is replaced by the 4 catalog add-ons only. Sky's directive
 // (2026-06-12): keep the 4 addons, remove the rest.
 import { CATALOG_ADDONS } from '../addons';
+import { StringDatePicker } from '../../../../../ui/CustomDatePicker';
 
 // ── Time5MinSelect (port from customer NewBooking.tsx, round 6.2.122) ───────
 
@@ -731,7 +732,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Date <span className="text-red-500">*</span></label>
-                <input type="date" value={editVisitDate} onChange={e => setEditVisitDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" />
+                <StringDatePicker value={editVisitDate} onChange={setEditVisitDate} />
               </div>
               <div>
                 <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Visit Time</label>

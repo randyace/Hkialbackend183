@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
-import { Search, Calendar, Loader2 } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 export interface AuditLog {
   id: string | number;
@@ -298,27 +299,17 @@ export function AuditLogs({
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">Start Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => { setStartDate(e.target.value); if (!serverMode) setCurrentPage(1); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={startDate}
+                onChange={(next) => { setStartDate(next); if (!serverMode) setCurrentPage(1); }}
+              />
             </div>
             <div className="flex-1">
               <label className="mb-[10px] block text-sm text-gray-700">End Date</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => { setEndDate(e.target.value); if (!serverMode) setCurrentPage(1); }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                />
-                <Calendar className="w-5 h-5 absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-              </div>
+              <StringDatePicker
+                value={endDate}
+                onChange={(next) => { setEndDate(next); if (!serverMode) setCurrentPage(1); }}
+              />
             </div>
             <div className="flex items-end">
               <button

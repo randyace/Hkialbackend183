@@ -12,6 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, AreaChart, Area, ComposedChart,
 } from 'recharts';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
 
@@ -802,20 +803,16 @@ function OperationalReports({
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="mb-[10px] block text-sm text-gray-600">Start Date</label>
-            <input
-              type="date"
+            <StringDatePicker
               value={data?.startDate ?? ''}
-              onChange={(e) => data?.onStartDateChange?.(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(value) => data?.onStartDateChange?.(value)}
             />
           </div>
           <div className="flex-1">
             <label className="mb-[10px] block text-sm text-gray-600">End Date</label>
-            <input
-              type="date"
+            <StringDatePicker
               value={data?.endDate ?? ''}
-              onChange={(e) => data?.onEndDateChange?.(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(value) => data?.onEndDateChange?.(value)}
             />
           </div>
           <Button variant="outline" disabled={isLoading}>{isLoading ? 'Loading…' : 'Apply Filter'}</Button>

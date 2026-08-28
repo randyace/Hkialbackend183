@@ -13,6 +13,7 @@ import {
   Copy,
   QrCode,
   Download,
+  XOctagon,
 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -60,13 +61,16 @@ export interface POSCheckoutProps {
   isWalkIn?: boolean;
   orderPaymentStatus?: string;
   paymentLinkUrl?: string | null;
+  paymentLinkInvoiceId?: number | null;
   paymentHistory?: POSCheckoutPaymentHistoryItem[];
   isRefreshingPaymentStatus?: boolean;
+  isRevokingPaymentLink?: boolean;
   onBack?: () => void;
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
   onGeneratePaymentLink?: () => void | Promise<void>;
   onSendPaymentEmail?: (email: string) => void | Promise<void>;
   onRefreshPaymentStatus?: () => void | Promise<void>;
+  onRevokePaymentLink?: () => void | Promise<void>;
   onDownloadInvoice?: (entry: POSCheckoutPaymentHistoryItem) => void | Promise<void>;
 }
 
@@ -174,13 +178,16 @@ export function POSCheckout({
   isWalkIn = false,
   orderPaymentStatus = 'Unpaid',
   paymentLinkUrl = null,
+  paymentLinkInvoiceId = null,
   paymentHistory = [],
   isRefreshingPaymentStatus = false,
+  isRevokingPaymentLink = false,
   onBack = () => {},
   onComplete,
   onGeneratePaymentLink,
   onSendPaymentEmail,
   onRefreshPaymentStatus,
+  onRevokePaymentLink,
   onDownloadInvoice,
 }: POSCheckoutProps = {}) {
   const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
@@ -207,6 +214,14 @@ export function POSCheckout({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!paymentLinkUrl) {
+      setIsQrOpen(false);
+      setQrDataUrl(null);
+      setCopyFeedback('idle');
+    }
+  }, [paymentLinkUrl]);
 
   useEffect(() => {
     if (!isQrOpen || !paymentLinkUrl) {
@@ -626,7 +641,7 @@ export function POSCheckout({
                         className="bg-white font-mono text-xs"
                         data-testid="pos-payment-link-url-input"
                       />
-                      <div className="flex gap-2 shrink-0">
+                      <div className="flex flex-wrap gap-2 shrink-0">
                         <Button
                           type="button"
                           variant="outline"
@@ -649,6 +664,22 @@ export function POSCheckout({
                           <QrCode className="w-4 h-4 mr-2" />
                           Show QR Code
                         </Button>
+                        {onRevokePaymentLink && paymentLinkInvoiceId ? (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => void onRevokePaymentLink()}
+                            disabled={isRevokingPaymentLink}
+                            data-testid="pos-revoke-payment-link-button"
+                          >
+                            {isRevokingPaymentLink ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <XOctagon className="w-4 h-4 mr-2" />
+                            )}
+                            Revoke Link
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                     <p className="text-xs text-gray-500">

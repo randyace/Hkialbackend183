@@ -144,21 +144,27 @@ export function InvoiceDocumentPreview({
       <table className="w-full border-collapse table-fixed text-[12px]">
         <thead>
           <tr>
-            <th className="w-[65%] pb-1.5 text-center font-bold border-b border-black">
+            <th className="w-[36%] pb-1.5 text-center font-bold border-b border-black">
               Description
             </th>
-            <th className="w-[15%] pb-1.5 text-center font-bold border-b border-black">
-              Quantity
+            <th className="w-[10%] pb-1.5 text-center font-bold border-b border-black">
+              Qty
+            </th>
+            <th className="w-[16%] pb-1.5 text-right font-bold border-b border-black">
+              Unit Price
+            </th>
+            <th className="w-[18%] pb-1.5 text-center font-bold border-b border-black">
+              Discount (HKD)
             </th>
             <th className="w-[20%] pb-1.5 text-right font-bold border-b border-black pr-3">
-              Total (HKD)
+              Net Total (HKD)
             </th>
           </tr>
         </thead>
         <tbody>
           {groups.length === 0 ? (
             <tr>
-              <td colSpan={3} className="py-4 text-center text-gray-500">
+              <td colSpan={5} className="py-4 text-center text-gray-500">
                 No line items
               </td>
             </tr>
@@ -170,7 +176,7 @@ export function InvoiceDocumentPreview({
 
           {vipPassengerSummary ? (
             <tr>
-              <td colSpan={3} className="pt-2 pb-1 pl-3 text-[12px]">
+              <td colSpan={5} className="pt-2 pb-1 pl-3 text-[12px]">
                 {vipPassengerSummary}
               </td>
             </tr>
@@ -182,8 +188,10 @@ export function InvoiceDocumentPreview({
         <table className="w-full border-collapse table-fixed text-[12px] mb-1">
           <tbody>
             <tr>
-              <td className="w-[65%]" />
-              <td className="w-[15%] text-center font-bold">Total</td>
+              <td className="w-[36%]" />
+              <td className="w-[10%]" />
+              <td className="w-[16%]" />
+              <td className="w-[18%] text-right font-bold pr-2">Total</td>
               <td className="w-[20%] text-right font-bold pr-3">
                 {formatDocumentMoney(totalAmount)}
               </td>
@@ -216,12 +224,22 @@ export function InvoiceDocumentPreview({
 function GroupRows({
   group,
 }: {
-  group: { title: string; lines: Array<{ description: string; qty: number; total: number; detail?: string | null }> };
+  group: {
+    title: string;
+    lines: Array<{
+      description: string;
+      qty: number;
+      unitPrice: number | null;
+      discountText: string;
+      total: number;
+      detail?: string | null;
+    }>;
+  };
 }) {
   return (
     <>
       <tr>
-        <td colSpan={3} className="pt-2.5 pb-1">
+        <td colSpan={5} className="pt-2.5 pb-1">
           <u className="font-bold">{group.title}</u>
         </td>
       </tr>
@@ -235,6 +253,14 @@ function GroupRows({
           </td>
           <td className="py-1.5 text-center align-top whitespace-nowrap">
             {line.qty}
+          </td>
+          <td className="py-1.5 text-right align-top whitespace-nowrap">
+            {line.unitPrice != null && line.unitPrice > 0
+              ? formatDocumentMoney(line.unitPrice)
+              : '—'}
+          </td>
+          <td className="py-1.5 text-center align-top whitespace-nowrap">
+            {line.discountText || '—'}
           </td>
           <td className="py-1.5 text-right align-top whitespace-nowrap pr-3">
             {formatDocumentMoney(line.total)}
