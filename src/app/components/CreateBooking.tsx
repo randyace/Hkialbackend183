@@ -4110,6 +4110,7 @@ export function CreateBooking({
                                 <Plus className="w-3.5 h-3.5" />
                                 Add another stop
                               </button>
+                              {flightType !== 'Arrival' && (
                               <div>
                                 <label className="text-xs text-purple-800 block mb-1">Pick-up Time *</label>
                                 <div className="relative w-full md:w-56">
@@ -4123,6 +4124,7 @@ export function CreateBooking({
                                   />
                                 </div>
                               </div>
+                              )}
                             </div>
                           </td>
                         </tr>

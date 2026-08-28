@@ -1087,7 +1087,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             type: s.type,
             location: s.location,
           })),
-          limousinePickupTime: limoPickupTimeDraft,
+          limousinePickupTime:
+            (formData?.flightType ?? booking.flightType) === 'Arrival'
+              ? ''
+              : limoPickupTimeDraft,
           ...staged,
         });
       } else if (selectedAddon === 'Wheelchair Assistance') {
@@ -3419,9 +3422,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
                 const limoDestinations = limoAddon?.destinations ?? [];
                 const limoPickupTime = formData?.limousinePickupTime || limoAddon?.pickupTime || '';
+                const isArrival = (formData?.flightType ?? booking.flightType) === 'Arrival';
                 const limoRemarks = [
                   limoDestinations.length > 0 ? limoDestinations.join(' → ') : 'Pickup at Terminal 1',
-                  limoPickupTime ? `Pick-up ${limoPickupTime}` : '',
+                  !isArrival && limoPickupTime ? `Pick-up ${limoPickupTime}` : '',
                 ].filter(Boolean).join(' · ');
                 return (
                   <>
@@ -3533,6 +3537,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                 <Plus className="w-3.5 h-3.5" />
                                 Add another stop
                               </button>
+                              {!isArrival && (
                               <div>
                                 <label className="text-xs text-purple-800 block mb-1">Pick-up Time</label>
                                 <div className="relative w-full md:w-56">
@@ -3545,6 +3550,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                   />
                                 </div>
                               </div>
+                              )}
                             </div>
                           );
                         })() : (
@@ -4235,6 +4241,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <Plus className="w-3.5 h-3.5" />
                       Add another stop
                     </button>
+                    {(formData?.flightType ?? booking.flightType) !== 'Arrival' && (
                     <div className="mt-3">
                       <label className="text-xs text-blue-800 block mb-1">Pick-up Time</label>
                       <div className="relative w-full md:w-56">
@@ -4247,6 +4254,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         />
                       </div>
                     </div>
+                    )}
                   </td>
                 </tr>
               )}
