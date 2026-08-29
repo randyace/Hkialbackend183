@@ -12,6 +12,7 @@ import {
   formatFloorPlanWalkInTime,
   formatWalkInGuestLabel,
 } from '@/lib/pos/walkInDisplay';
+import { CHECKOUT_REQUEST_SUITE_HIGHLIGHT_CLASSES } from '@/utils/floorPlanCheckoutHighlight';
 
 export interface PosFloorPlanBooking {
   id: number;
@@ -37,6 +38,7 @@ export interface PosFloorPlanSuite {
   order_flight_no?: string | null;
   order_no_of_pax?: number | null;
   has_upcoming_conflict?: boolean;
+  has_checkout_request?: boolean;
 }
 
 export interface PosFloorPlanLayoutItem {
@@ -180,6 +182,7 @@ function getSuiteCardClasses(
   isAssignmentModeActive: boolean,
   isSelectedForAssignment: boolean,
   hasUpcomingConflict: boolean,
+  hasCheckoutRequest: boolean,
 ): string {
   const base =
     'absolute flex flex-col items-center justify-center rounded-md border-2 p-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1';
@@ -195,8 +198,9 @@ function getSuiteCardClasses(
   }
 
   const conflictClasses = hasUpcomingConflict ? 'ring-2 ring-red-500 border-red-400' : '';
+  const checkoutRequestClasses = hasCheckoutRequest ? CHECKOUT_REQUEST_SUITE_HIGHLIGHT_CLASSES : '';
 
-  return `${base} text-gray-700 cursor-pointer transition-all hover:border-blue-400 hover:shadow-md ${getSuiteBgColor(displayStatus)} ${conflictClasses}`;
+  return `${base} text-gray-700 cursor-pointer transition-all hover:border-blue-400 hover:shadow-md ${getSuiteBgColor(displayStatus)} ${conflictClasses} ${checkoutRequestClasses}`;
 }
 
 function staticItemStyles(label: string): string {
@@ -432,6 +436,7 @@ export function PosFloorPlanCanvas({
                       : fallbackDisplayName;
                   const walkInTime = formatFloorPlanWalkInTime(fallbackDisplayTime);
                   const hasUpcomingConflict = Boolean(suite?.has_upcoming_conflict);
+                  const hasCheckoutRequest = Boolean(suite?.has_checkout_request);
                   const isAssignmentModeActive = isInteractiveModeActive || isMultiAssignMode;
                   const isSelectedForAssignment =
                     isMultiAssignMode &&
@@ -449,12 +454,14 @@ export function PosFloorPlanCanvas({
                     isAssignmentModeActive,
                     isSelectedForAssignment,
                     hasUpcomingConflict,
+                    hasCheckoutRequest,
                   );
 
                   return (
                     <button
                       key={item.id}
                       type="button"
+                      data-suite-id={suite?.id}
                       onClick={() => {
                         if (!suite) return;
 

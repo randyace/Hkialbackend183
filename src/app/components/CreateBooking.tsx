@@ -1362,7 +1362,7 @@ export function CreateBooking({
   });
   const visitTimeRangeError = visitTimeRange.error;
 
-  // ── Premiere Suite ──────────────────────────────────────────────────────────
+// ── Premiere Suite ──────────────────────────────────────────────────────────
   const [numPremiereSuites, setNumPremiereSuites] = useState(0);
   const [vipPS, setVipPS] = useState(0);
   const [nonFlyingPS, setNonFlyingPS] = useState(0);
@@ -2680,55 +2680,55 @@ export function CreateBooking({
           {/* Credit card — credit facility / numbers, not Agency type (D2 / D6). */}
           {showAccountCredit && selectedAccount && (
             <div className="mb-6">
-              <div
-                className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3"
-                data-testid="create-booking-agency-credit-card"
-              >
-                <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
-                  {(() => {
-                    const balance = Number(selectedAccount.credit_balance) || 0;
-                    const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
-                    const limit = Number(selectedAccount.credit_limit ?? 0) || 0;
-                    const available = balance - onHold + limit;
-                    const fmt = (n: number) =>
-                      n.toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 2,
-                      });
-                    return (
-                      <>
-                        <p className="text-sm text-purple-700 mt-0.5">
-                          Available:{' '}
-                          <strong data-testid="create-booking-credit-available">
-                            HKD {fmt(available)}
-                          </strong>
-                          <span className="text-purple-600/90" data-testid="create-booking-credit-balance">
-                            {' '}· Balance HKD {fmt(balance)}
-                          </span>
-                          {onHold > 0 ? (
-                            <span className="text-purple-600/90" data-testid="create-booking-credit-on-hold">
-                              {' '}· On hold HKD {fmt(onHold)}
+                <div
+                  className="rounded-lg border border-purple-200 bg-purple-50 p-4 flex items-start gap-3"
+                  data-testid="create-booking-agency-credit-card"
+                >
+                  <BadgePercent className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-purple-800">Account Credit Balance</p>
+                    {(() => {
+                      const balance = Number(selectedAccount.credit_balance) || 0;
+                      const onHold = Number(selectedAccount.credit_on_hold ?? 0) || 0;
+                      const limit = Number(selectedAccount.credit_limit ?? 0) || 0;
+                      const available = balance - onHold + limit;
+                      const fmt = (n: number) =>
+                        n.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2,
+                        });
+                      return (
+                        <>
+                          <p className="text-sm text-purple-700 mt-0.5">
+                            Available:{' '}
+                            <strong data-testid="create-booking-credit-available">
+                              HKD {fmt(available)}
+                            </strong>
+                            <span className="text-purple-600/90" data-testid="create-booking-credit-balance">
+                              {' '}· Balance HKD {fmt(balance)}
                             </span>
-                          ) : null}
-                          {limit > 0 ? (
-                            <span className="text-purple-600/90" data-testid="create-booking-credit-limit">
-                              {' '}· Limit HKD {fmt(limit)}
-                            </span>
-                          ) : null}
-                        </p>
-                        {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
-                          <p className="text-xs text-purple-600 mt-1">
-                            OnCredit places a <strong>hold at create</strong>; balance is captured when the
-                            booking is <strong>Approved</strong>. Available already subtracts open holds.
+                            {onHold > 0 ? (
+                              <span className="text-purple-600/90" data-testid="create-booking-credit-on-hold">
+                                {' '}· On hold HKD {fmt(onHold)}
+                              </span>
+                            ) : null}
+                            {limit > 0 ? (
+                              <span className="text-purple-600/90" data-testid="create-booking-credit-limit">
+                                {' '}· Limit HKD {fmt(limit)}
+                              </span>
+                            ) : null}
                           </p>
-                        )}
-                      </>
-                    );
-                  })()}
+                          {(paymentMode === 'On-Credit' || paymentMode === 'Bulk Purchase/Monthly Invoice') && (
+                            <p className="text-xs text-purple-600 mt-1">
+                              OnCredit places a <strong>hold at create</strong>; balance is captured when the
+                              booking is <strong>Approved</strong>. Available already subtracts open holds.
+                            </p>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
-              </div>
             </div>
           )}
 
@@ -2895,7 +2895,7 @@ export function CreateBooking({
                       onChange={(next) => setUseMembershipPsFree(next > 0)}
                     />
                     <p className="text-xs text-gray-500 mt-1.5">
-                      Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
+                        Only when this booking includes Premiere Suite, and only together with the LD credit above (cannot use free PS alone). Mixed: free PS only — LD room stays charged.
                       {!bookingIncludesPremiereSuite ? ' Add a Premiere Suite first.' : ''}
                       {bookingIncludesPremiereSuite && canUseFreeLd && !useMembershipLdFree ? ' Add an LD credit above first.' : ''}
                       {!canUseFreeLd && !namedVipForCredit ? ' Member or spouse must be a flying VIP first.' : ''}
@@ -4006,7 +4006,7 @@ export function CreateBooking({
                     const unit = resolveAddonUnitPrice(itemName);
                     const qty = Math.max(1, limousineQty);
                     const subtotal = resolveAddonSubtotal(itemName, qty);
-                    return (
+            return (
                       <>
                         <tr data-testid="create-addons-row-limousine">
                           <td className="px-4 py-3">
@@ -4016,8 +4016,8 @@ export function CreateBooking({
                                 <p className="font-medium">Limousine Transfer Service</p>
                                 <p className="text-xs text-gray-500">Airport Transfer</p>
                               </div>
-                              <button
-                                type="button"
+                          <button
+                            type="button"
                                 aria-label="Remove Limousine Transfer"
                                 data-testid="service-items-remove-Limousine Transfer"
                                 onClick={() => {
@@ -4029,8 +4029,8 @@ export function CreateBooking({
                                 className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                          </button>
+                        </div>
                           </td>
                           <td className="px-4 py-3 text-center">
                             <input
@@ -4079,23 +4079,23 @@ export function CreateBooking({
                                     <option value="Pick-up">Pick-up</option>
                                     <option value="Destination">Destination</option>
                                   </select>
-                                  <input
-                                    type="text"
+                    <input
+                      type="text"
                                     value={stop.location}
                                     onChange={(e) => updateLimoStop(stop.id, 'location', e.target.value)}
                                     placeholder="Location (e.g. HKG Terminal 1)"
                                     className="flex-1 px-2 py-1.5 border rounded text-sm"
                                   />
-                                  <button
-                                    type="button"
+                      <button
+                        type="button"
                                     onClick={() => removeLimoStop(stop.id)}
                                     disabled={limoStops.length === 1}
                                     className="text-gray-400 hover:text-red-600 shrink-0 disabled:opacity-30"
                                     aria-label={`Remove stop ${idx + 1}`}
                                   >
                                     <Minus className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
+                      </button>
+                  </div>
                               ))}
                               <button
                                 type="button"
@@ -4105,7 +4105,7 @@ export function CreateBooking({
                                 <Plus className="w-3.5 h-3.5" />
                                 Add another stop
                               </button>
-                            </div>
+                        </div>
                           </td>
                         </tr>
                       </>
@@ -4117,7 +4117,7 @@ export function CreateBooking({
                     const unit = resolveAddonUnitPrice(itemName);
                     const qty = Math.max(1, wheelchairQty);
                     const subtotal = resolveAddonSubtotal(itemName, qty);
-                    return (
+                        return (
                       <>
                         <tr data-testid="create-addons-row-wheelchair">
                           <td className="px-4 py-3">
@@ -4127,11 +4127,11 @@ export function CreateBooking({
                                 <p className="font-medium">Wheelchair Assistance</p>
                                 <p className="text-xs text-gray-500">{wheelchairPassenger || 'Passenger assistance'}</p>
                               </div>
-                              <button
-                                type="button"
+                          <button
+                            type="button"
                                 aria-label="Remove Wheelchair Assistance"
                                 data-testid="service-items-remove-Wheelchair Assistance"
-                                onClick={() => {
+                            onClick={() => {
                                   setHasWheelchair(false);
                                   setWheelchairPassenger('');
                                   setWheelchairQty(1);
@@ -4140,8 +4140,8 @@ export function CreateBooking({
                                 className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
                               >
                                 <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                          </button>
+                    </div>
                           </td>
                           <td className="px-4 py-3 text-center">
                             <input
@@ -4219,7 +4219,7 @@ export function CreateBooking({
                             <div>
                               <p className="font-medium">Security Escort Service</p>
                               <p className="text-xs text-gray-500">Dedicated escort</p>
-                            </div>
+                    </div>
                             <button
                               type="button"
                               aria-label="Remove Security Escort Service"
@@ -4232,8 +4232,8 @@ export function CreateBooking({
                               className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
                             >
                               <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          </button>
+                        </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <input
@@ -4274,11 +4274,11 @@ export function CreateBooking({
                       <tr data-testid="create-addons-row-lounge-extension">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-amber-600" />
+                      <Clock className="w-4 h-4 text-amber-600" />
                             <div>
                               <p className="font-medium">Lounge Extension</p>
                               <p className="text-xs text-gray-500">Additional hours</p>
-                            </div>
+                    </div>
                             <button
                               type="button"
                               aria-label="Remove Lounge Extension"
@@ -4291,7 +4291,7 @@ export function CreateBooking({
                               className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
                             >
                               <X className="w-3.5 h-3.5" />
-                            </button>
+                      </button>
                           </div>
                         </td>
                         <td className="px-4 py-3 text-center">
@@ -4301,9 +4301,9 @@ export function CreateBooking({
                             max={6}
                             value={loungeExtensionQty}
                             onChange={(e) => {
-                              const n = parseInt(e.target.value, 10);
-                              if (Number.isFinite(n)) setLoungeExtensionQty(Math.max(1, Math.min(6, n)));
-                            }}
+                          const n = parseInt(e.target.value, 10);
+                          if (Number.isFinite(n)) setLoungeExtensionQty(Math.max(1, Math.min(6, n)));
+                        }}
                             className="w-20 px-2 py-1 border border-gray-300 rounded text-center text-sm bg-white"
                             data-testid="service-items-qty-Lounge Extension"
                           />
@@ -4348,8 +4348,8 @@ export function CreateBooking({
                               className="ml-auto text-gray-400 hover:text-red-600 shrink-0"
                             >
                               <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                      </button>
+                    </div>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <input
@@ -4392,7 +4392,7 @@ export function CreateBooking({
                   />
                 </tbody>
               </table>
-            </div>
+              </div>
           </div>
 
         </Card>
@@ -4407,69 +4407,69 @@ export function CreateBooking({
           </p>
             <div data-testid="create-account-promo-code">
               <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Promo / Redemption Code</label>
-              {promoApplied ? (
-                <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50">
+          {promoApplied ? (
+            <div className="flex items-center justify-between p-3 rounded-lg border border-green-200 bg-green-50">
                   <div className="flex items-center gap-3 min-w-0">
                     <Tag className="w-5 h-5 text-green-600 shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-green-800 truncate">{promoApplied.code}</p>
-                      <p className="text-xs text-green-600">
-                        {promoApplied.benefit
-                          ?? (promoApplied.promoType === 'Free bookings'
-                            ? `Free lounge · deduction of ${promoApplied.freeSessions ?? 1} LD fee${(promoApplied.freeSessions ?? 1) !== 1 ? 's' : ''}`
-                            : `${promoApplied.discountPct}% off`)}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
+                  <p className="text-xs text-green-600">
+                    {promoApplied.benefit
+                      ?? (promoApplied.promoType === 'Free bookings'
+                        ? `Free lounge · deduction of ${promoApplied.freeSessions ?? 1} LD fee${(promoApplied.freeSessions ?? 1) !== 1 ? 's' : ''}`
+                        : `${promoApplied.discountPct}% off`)}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                     className="text-green-700 hover:text-red-600 shrink-0"
-                    onClick={() => {
-                      if (isPromoControlled) {
-                        onClearPromo?.();
-                      } else {
-                        setLocalPromoApplied(null);
-                      }
-                      toast.info('Promotion code removed.');
-                    }}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={promoInput}
-                      onChange={e => {
-                        setPromoInput(e.target.value.toUpperCase());
-                        if (!isPromoControlled) setLocalPromoError('');
-                      }}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleApplyPromo();
-                        }
-                      }}
-                      placeholder="e.g. SUMMER2024"
-                      disabled={promoValidating}
-                      className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleApplyPromo}
-                      disabled={promoValidating}
-                    >
-                      {promoValidating ? 'Checking…' : 'Apply'}
-                    </Button>
-                  </div>
-                  {promoError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{promoError}</p>}
-                </div>
-              )}
+                onClick={() => {
+                  if (isPromoControlled) {
+                    onClearPromo?.();
+                  } else {
+                    setLocalPromoApplied(null);
+                  }
+                  toast.info('Promotion code removed.');
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={e => {
+                    setPromoInput(e.target.value.toUpperCase());
+                    if (!isPromoControlled) setLocalPromoError('');
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyPromo();
+                    }
+                  }}
+                  placeholder="e.g. SUMMER2024"
+                  disabled={promoValidating}
+                  className={`flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 ${promoError ? 'border-red-400' : 'border-gray-300'}`}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleApplyPromo}
+                  disabled={promoValidating}
+                >
+                  {promoValidating ? 'Checking…' : 'Apply'}
+                </Button>
+              </div>
+              {promoError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertCircle className="w-3 h-3" />{promoError}</p>}
+            </div>
+          )}
             </div>
 
         </Card>
@@ -4496,10 +4496,10 @@ export function CreateBooking({
             10. PRICE BREAKDOWN
             ════════════════════════════════════════ */}
           {/* Live price breakdown (backend) */}
-          {liveBreakdown.length > 0 && liveTotal !== null && (
+        {liveBreakdown.length > 0 && liveTotal !== null && (
             <Card className="p-6" data-testid="create-booking-price-breakdown">
               <h2 className="mb-4">Price Breakdown</h2>
-              <div className="space-y-2 text-sm max-w-md ml-auto">
+            <div className="space-y-2 text-sm max-w-md ml-auto">
               {liveBreakdown.map((item, i) => {
                 const isDiscount = item.subtotal < 0
                   || item.key === 'account_discount'
@@ -4533,9 +4533,9 @@ export function CreateBooking({
                   {liveWarnings.map((w, i) => <li key={i}>• {w}</li>)}
                 </ul>
               )}
-              </div>
-        </Card>
-          )}
+            </div>
+          </Card>
+        )}
 
         {/* TODO: Add In-Charge Staff selection — POST /api/bookings accepts assigned_staff_ids;
             Create form does not yet load staffOptions / assignedStaffIds state (Edit uses EditSectionStaff). */}
