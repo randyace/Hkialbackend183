@@ -759,6 +759,7 @@ export interface CreateBookingProps {
   onAddonStateChange?: (state: {
     hasLimousine: boolean;
     limoStops: LimoStop[];
+    limousinePickupTime: string;
     limousineQty: number;
     hasShopping: boolean;
     hasWheelchair: boolean;
@@ -1510,6 +1511,7 @@ export function CreateBooking({
   // ── Add-on Services ─────────────────────────────────────────────────────────
   const [hasLimousine, setHasLimousine] = useState(false);
   const [limoStops, setLimoStops] = useState<LimoStop[]>([{ id: 1, type: 'Pick-up', location: '' }]);
+  const [limousinePickupTime, setLimousinePickupTime] = useState('');
   const [limousineQty, setLimousineQty] = useState(1);
   const [hasShopping, setHasShopping] = useState(false);
   const [hasWheelchair, setHasWheelchair] = useState(false);
@@ -1691,6 +1693,7 @@ export function CreateBooking({
     onAddonStateChange?.({
       hasLimousine,
       limoStops,
+      limousinePickupTime,
       limousineQty,
       hasShopping,
       hasWheelchair,
@@ -1760,6 +1763,7 @@ export function CreateBooking({
   }, [
     hasLimousine,
     limoStops,
+    limousinePickupTime,
     limousineQty,
     hasShopping,
     hasWheelchair,
@@ -4023,6 +4027,7 @@ export function CreateBooking({
                                 onClick={() => {
                                   setHasLimousine(false);
                                   setLimousineQty(1);
+                                  setLimousinePickupTime('');
                                   setLimoStops([{ id: 1, type: 'Pick-up', location: '' }]);
                                   clearItemOverride(itemName);
                                 }}
@@ -4105,7 +4110,22 @@ export function CreateBooking({
                                 <Plus className="w-3.5 h-3.5" />
                                 Add another stop
                               </button>
-                        </div>
+                              {flightType !== 'Arrival' && (
+                              <div>
+                                <label className="text-xs text-purple-800 block mb-1">Pick-up Time *</label>
+                                <div className="relative w-full md:w-56">
+                                  <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <input
+                                    type="time"
+                                    value={limousinePickupTime}
+                                    onChange={(e) => setLimousinePickupTime(e.target.value)}
+                                    required
+                                    className="w-full pl-8 pr-3 py-1.5 border rounded text-sm bg-white"
+                                  />
+                                </div>
+                              </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       </>
