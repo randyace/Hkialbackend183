@@ -21,6 +21,15 @@ export interface PosAllergenOption {
   type: 'Allergy' | 'Dietary';
 }
 
+export interface PosOptionGroupOption {
+  id: number;
+  name_en: string;
+  name_zh?: string | null;
+  selection_type: 'single' | 'multiple';
+  is_required: boolean;
+  sort_order: number;
+}
+
 export interface PosMenuItemFormData {
   nameEn: string;
   nameZh: string;
@@ -30,6 +39,7 @@ export interface PosMenuItemFormData {
   printerId: number | '';
   price: number;
   allergenIds: number[];
+  optionGroupIds: number[];
   availability: 'available' | 'unavailable';
   published: boolean;
   existingImageUrl: string | null;
@@ -43,6 +53,7 @@ export interface PosMenuItemEditProps {
   categories?: PosMenuCategoryOption[];
   printers?: PosPrinterOption[];
   allergens?: PosAllergenOption[];
+  optionGroups?: PosOptionGroupOption[];
   onBack?: () => void;
   onSave?: (formData: PosMenuItemFormData, imageFile: File | null) => void;
 }
@@ -56,6 +67,7 @@ const defaultFormData: PosMenuItemFormData = {
   printerId: '',
   price: 0,
   allergenIds: [],
+  optionGroupIds: [],
   availability: 'available',
   published: true,
   existingImageUrl: null,
@@ -69,6 +81,7 @@ export function PosMenuItemEdit({
   categories = [],
   printers = [],
   allergens = [],
+  optionGroups = [],
   onBack,
   onSave,
 }: PosMenuItemEditProps) {
@@ -97,6 +110,15 @@ export function PosMenuItemEdit({
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return { ...prev, allergenIds: Array.from(next) };
+    });
+  };
+
+  const toggleOptionGroup = (id: number) => {
+    setFormData((prev) => {
+      const next = new Set(prev.optionGroupIds);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { ...prev, optionGroupIds: Array.from(next) };
     });
   };
 
@@ -338,6 +360,35 @@ export function PosMenuItemEdit({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-6 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Option Groups (Modifiers)</h2>
+          {optionGroups.length === 0 ? (
+            <p className="text-sm text-gray-500">No option groups configured yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {optionGroups.map((group) => (
+                <label key={group.id} className="flex items-start gap-3 text-sm text-gray-700 rounded-lg border border-gray-100 p-3">
+                  <Checkbox
+                    checked={formData.optionGroupIds.includes(group.id)}
+                    onCheckedChange={() => toggleOptionGroup(group.id)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="font-medium text-gray-900">{group.name_en}</span>
+                    {group.name_zh ? (
+                      <span className="block text-xs text-gray-500">{group.name_zh}</span>
+                    ) : null}
+                    <span className="block text-xs text-gray-500 mt-1">
+                      {group.selection_type === 'single' ? 'Single' : 'Multiple'}
+                      {group.is_required ? ' · Required' : ''}
+                    </span>
+                  </span>
+                </label>
+              ))}
             </div>
           )}
         </Card>
