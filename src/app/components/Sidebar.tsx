@@ -202,7 +202,9 @@ function getInitialOpenGroups(pathname: string): string[] {
   if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/price-management')) groups.push('lounge');
   if (pathname.startsWith('/promo-codes'))  groups.push('promo');
   if (pathname.startsWith('/reports'))      groups.push('reports');
-  if (pathname.startsWith('/system-users') || pathname.startsWith('/audit-logs')) groups.push('system-users');
+  if (pathname.startsWith('/system-users') || pathname.startsWith('/audit-logs') || pathname.startsWith('/content/pages')) {
+    groups.push('system-users', 'system');
+  }
   return groups;
 }
 
