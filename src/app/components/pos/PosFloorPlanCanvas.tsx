@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, QrCode } from 'lucide-react';
+import { Loader2, LogOut, QrCode } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import {
@@ -72,6 +72,8 @@ export interface PosFloorPlanCanvasProps {
   onSuiteClick?: (suite: PosFloorPlanSuiteClick) => void;
   onToggleSuiteSelection?: (suiteId: number) => void;
   onOpenQrScanner?: () => void;
+  onForceLogoutAllIpads?: () => void;
+  isForceLogoutPending?: boolean;
 }
 
 type SuiteStatus =
@@ -239,6 +241,8 @@ export function PosFloorPlanCanvas({
   onSuiteClick,
   onToggleSuiteSelection,
   onOpenQrScanner,
+  onForceLogoutAllIpads,
+  isForceLogoutPending = false,
 }: PosFloorPlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
@@ -337,15 +341,32 @@ export function PosFloorPlanCanvas({
             Real-time suite status and guest management
           </p>
         </div>
-        {onOpenQrScanner ? (
-          <Button
-            className="shrink-0 gap-2 bg-[#0f2942] text-white hover:bg-[#1a3d5c]"
-            onClick={onOpenQrScanner}
-          >
-            <QrCode className="h-4 w-4" />
-            Scan QR for Entry
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {onForceLogoutAllIpads ? (
+            <Button
+              variant="outline"
+              className="gap-2 border-red-200 text-red-700 hover:bg-red-50"
+              onClick={onForceLogoutAllIpads}
+              disabled={isForceLogoutPending}
+            >
+              {isForceLogoutPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="h-4 w-4" />
+              )}
+              Logout All iPads
+            </Button>
+          ) : null}
+          {onOpenQrScanner ? (
+            <Button
+              className="gap-2 bg-[#0f2942] text-white hover:bg-[#1a3d5c]"
+              onClick={onOpenQrScanner}
+            >
+              <QrCode className="h-4 w-4" />
+              Scan QR for Entry
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
