@@ -14,7 +14,7 @@ import {
 import {
   Download, FileText, Calendar, TrendingUp, Users, DollarSign,
   Clock, Target, AlertTriangle, Ticket, UserPlus, Heart, Wallet,
-  ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2,
+  ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2, Check,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -795,7 +795,6 @@ function OperationalReports({
   isLoading = false,
   exportFormat = 'csv',
   onExportFormatChange,
-  onExportAsFormat,
   preview,
   onClosePreview,
   onApplyFilter,
@@ -809,7 +808,6 @@ function OperationalReports({
   isLoading?: boolean;
   exportFormat?: ExportFormat;
   onExportFormatChange?: (format: ExportFormat) => void;
-  onExportAsFormat?: (format: ExportFormat) => void;
   preview?: ReportPreviewState | null;
   onClosePreview?: () => void;
   onApplyFilter?: (startDate: string, endDate: string) => void;
@@ -965,30 +963,28 @@ function OperationalReports({
 
       <Card className="p-5">
         <h3 className="mb-4 text-gray-800">Export Format Options</h3>
-        <p className="text-xs text-gray-500 mb-4">Selected format is used by every Export button and by the preview dialog.</p>
+        <p className="text-xs text-gray-500 mb-4">Chooses the file type for the Export buttons on the report cards above. This card does not download a file.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {formatOptions.map((option) => {
             const selected = exportFormat === option.id;
             return (
-              <div
+              <button
+                type="button"
                 key={option.id}
-                className={`p-4 border rounded-lg ${selected ? 'border-[#0f2942] ring-2 ring-[#0f2942]/20 bg-slate-50' : 'border-gray-200'}`}
+                data-testid={`export-format-${option.id}`}
+                aria-pressed={selected}
+                onClick={() => onExportFormatChange?.(option.id)}
+                className={`p-4 border rounded-lg text-left ${selected ? 'border-[#0f2942] ring-2 ring-[#0f2942]/20 bg-slate-50' : 'border-gray-200 hover:border-gray-300'}`}
               >
                 <p className="text-sm font-semibold text-gray-800 mb-1">{option.label}</p>
                 <p className="text-xs text-gray-500 mb-3">{option.desc}</p>
-                <Button
-                  variant={selected ? 'default' : 'outline'}
-                  size="sm"
-                  className={`w-full ${selected ? 'bg-[#0f2942] hover:bg-[#1a3a5c] text-white' : ''}`}
-                  data-testid={`export-format-${option.id}`}
-                  onClick={() => {
-                    onExportFormatChange?.(option.id);
-                    onExportAsFormat?.(option.id);
-                  }}
+                <span
+                  className={`inline-flex items-center justify-center w-full rounded-md border px-3 py-1.5 text-sm ${selected ? 'bg-[#0f2942] text-white border-[#0f2942]' : 'bg-white text-gray-700 border-gray-200'}`}
                 >
-                  <Download className="w-4 h-4 mr-2" />Export as {option.button}
-                </Button>
-              </div>
+                  {selected ? <Check className="w-4 h-4 mr-2" /> : null}
+                  {selected ? `${option.button} selected` : `Use ${option.button}`}
+                </span>
+              </button>
             );
           })}
         </div>
@@ -1202,7 +1198,6 @@ export interface ReportsProps {
   customerSpendingContent?: ReactNode;
   exportFormat?: ExportFormat;
   onExportFormatChange?: (format: ExportFormat) => void;
-  onExportAsFormat?: (format: ExportFormat) => void;
   preview?: ReportPreviewState | null;
   onClosePreview?: () => void;
   onApplyFilter?: (startDate: string, endDate: string) => void;
@@ -1219,7 +1214,6 @@ export function Reports({
   customerSpendingContent,
   exportFormat,
   onExportFormatChange,
-  onExportAsFormat,
   preview,
   onClosePreview,
   onApplyFilter,
@@ -1307,7 +1301,6 @@ export function Reports({
               isLoading={isLoading}
               exportFormat={exportFormat}
               onExportFormatChange={onExportFormatChange}
-              onExportAsFormat={onExportAsFormat}
               preview={preview}
               onClosePreview={onClosePreview}
               onApplyFilter={onApplyFilter}
