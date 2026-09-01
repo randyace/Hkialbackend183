@@ -2,6 +2,15 @@ import { useState, type ReactNode } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from './ui/dialog';
 import {
   Download, FileText, Calendar, TrendingUp, Users, DollarSign,
   Clock, Target, AlertTriangle, Ticket, UserPlus, Heart, Wallet,
@@ -170,6 +179,26 @@ export interface OperationalReportData {
   endDate?: string;
   onStartDateChange?: (value: string) => void;
   onEndDateChange?: (value: string) => void;
+}
+
+export type ExportFormat = 'csv' | 'pdf' | 'xlsx';
+
+export interface OperationalScheduleView {
+  id: string;
+  name: string;
+  reportId: string;
+  frequency: 'daily' | 'weekly' | 'monthly';
+  time: string;
+  email: string;
+  active: boolean;
+  summary: string;
+}
+
+export interface ReportPreviewState {
+  reportId: string;
+  title: string;
+  periodLabel: string;
+  rows: Array<Record<string, string | number | boolean | null | undefined>>;
 }
 
 export interface CouponConversionData {
@@ -754,30 +783,93 @@ const OPERATIONAL_REPORTS = [
   { id: 'sales-report',    title: 'Add-on Services Sales',    description: 'Sales breakdown for additional services',              icon: DollarSign, color: 'text-teal-600 bg-teal-50',       fields: ['Service Name', 'Quantity', 'Income', 'Discount Applied', 'Popular Times'] },
 ];
 
-// ── Operational Reports ──────────────────────────────────────────────────────
-const MOCK_OPERATIONAL_KPIS: Required<OperationalKpis> = {
-  totalBookings: 284, totalIncome: 892000, activeMembers: 2177, avgOccupancy: '78%',
-};
+function formatCell(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
+}
 
 function OperationalReports({
   data,
   onExport,
+  onPreview,
   isLoading = false,
+  exportFormat = 'csv',
+  onExportFormatChange,
+  onExportAsFormat,
+  preview,
+  onClosePreview,
+  onApplyFilter,
+  schedules = [],
+  onSaveSchedule,
+  onDeleteSchedule,
 }: {
   data?: OperationalReportData;
   onExport?: (reportType: string) => void;
+  onPreview?: (reportType: string) => void;
   isLoading?: boolean;
+  exportFormat?: ExportFormat;
+  onExportFormatChange?: (format: ExportFormat) => void;
+  onExportAsFormat?: (format: ExportFormat) => void;
+  preview?: ReportPreviewState | null;
+  onClosePreview?: () => void;
+  onApplyFilter?: (startDate: string, endDate: string) => void;
+  schedules?: OperationalScheduleView[];
+  onSaveSchedule?: (schedule: Omit<OperationalScheduleView, 'summary'> & { id?: string }) => void;
+  onDeleteSchedule?: (id: string) => void;
 } = {}) {
-  const kpis = { ...MOCK_OPERATIONAL_KPIS, ...(data?.kpis ?? {}) };
+  const kpis = data?.kpis ?? { totalBookings: 0, totalIncome: 0, activeMembers: 0, avgOccupancy: '—' };
+  const [draftStart, setDraftStart] = useState(data?.startDate ?? '');
+  const [draftEnd, setDraftEnd] = useState(data?.endDate ?? '');
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<OperationalScheduleView | null>(null);
+  const [scheduleName, setScheduleName] = useState('');
+  const [scheduleReportId, setScheduleReportId] = useState(OPERATIONAL_REPORTS[0].id);
+  const [scheduleFrequency, setScheduleFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [scheduleTime, setScheduleTime] = useState('08:00');
+  const [scheduleEmail, setScheduleEmail] = useState('');
+  const [scheduleActive, setScheduleActive] = useState(true);
+
   const totalIncomeDisplay = typeof kpis.totalIncome === 'number' && kpis.totalIncome > 0
     ? (kpis.totalIncome >= 1_000_000
         ? `HK$${(kpis.totalIncome / 1_000_000).toFixed(2)}M`
         : `HK$${Math.round(kpis.totalIncome / 1000)}K`)
     : 'HK$0';
 
+  const openSchedule = (existing?: OperationalScheduleView) => {
+    setEditingSchedule(existing ?? null);
+    setScheduleName(existing?.name ?? '');
+    setScheduleReportId(existing?.reportId ?? OPERATIONAL_REPORTS[0].id);
+    setScheduleFrequency(existing?.frequency ?? 'daily');
+    setScheduleTime(existing?.time ?? '08:00');
+    setScheduleEmail(existing?.email ?? '');
+    setScheduleActive(existing?.active ?? true);
+    setScheduleOpen(true);
+  };
+
+  const handleSaveSchedule = () => {
+    if (!scheduleName.trim() || !scheduleEmail.trim()) return;
+    onSaveSchedule?.({
+      id: editingSchedule?.id,
+      name: scheduleName.trim(),
+      reportId: scheduleReportId,
+      frequency: scheduleFrequency,
+      time: scheduleTime || '08:00',
+      email: scheduleEmail.trim(),
+      active: scheduleActive,
+    });
+    setScheduleOpen(false);
+  };
+
+  const formatOptions: Array<{ id: ExportFormat; label: string; button: string; desc: string }> = [
+    { id: 'csv', label: 'CSV Format', button: 'CSV', desc: 'Spreadsheet-compatible format for data analysis in Excel / Google Sheets' },
+    { id: 'pdf', label: 'PDF Format', button: 'PDF', desc: 'Formatted document ready for printing and email distribution' },
+    { id: 'xlsx', label: 'Excel Format', button: 'Excel', desc: 'Advanced spreadsheet with calculated columns and pivot-ready layout' },
+  ];
+
+  const previewHeaders = preview && preview.rows.length > 0 ? Object.keys(preview.rows[0]) : [];
+
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Bookings',  value: (kpis.totalBookings ?? 0).toLocaleString(), icon: Calendar,   color: 'text-blue-600' },
@@ -797,30 +889,38 @@ function OperationalReports({
         ))}
       </div>
 
-      {/* Date Range */}
       <Card className="p-5">
         <h3 className="mb-4 text-gray-800">Report Period</h3>
         <div className="flex flex-col md:flex-row gap-4 items-end">
           <div className="flex-1">
             <label className="mb-[10px] block text-sm text-gray-600">Start Date</label>
             <StringDatePicker
-              value={data?.startDate ?? ''}
-              onChange={(value) => data?.onStartDateChange?.(value)}
+              data-testid="operational-start-date"
+              value={draftStart}
+              onChange={setDraftStart}
             />
           </div>
           <div className="flex-1">
             <label className="mb-[10px] block text-sm text-gray-600">End Date</label>
             <StringDatePicker
-              value={data?.endDate ?? ''}
-              onChange={(value) => data?.onEndDateChange?.(value)}
+              data-testid="operational-end-date"
+              value={draftEnd}
+              onChange={setDraftEnd}
             />
           </div>
-          <Button variant="outline" disabled={isLoading}>{isLoading ? 'Loading…' : 'Apply Filter'}</Button>
+          <Button
+            variant="outline"
+            disabled={isLoading}
+            data-testid="operational-apply-filter"
+            onClick={() => onApplyFilter?.(draftStart, draftEnd)}
+          >
+            {isLoading ? 'Loading…' : 'Apply Filter'}
+          </Button>
         </div>
         {isLoading && <p className="text-xs text-gray-500 mt-2">Refreshing data for selected period…</p>}
+        <p className="text-xs text-gray-500 mt-2">Preview and export use this period after you apply it. The 48-hour report always uses the next 48 hours in HKT.</p>
       </Card>
 
-      {/* Report Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
         {OPERATIONAL_REPORTS.map((report) => (
           <Card key={report.id} className="p-5 flex flex-col">
@@ -841,12 +941,19 @@ function OperationalReports({
               </div>
             </div>
             <div className="flex gap-2 mt-auto">
-              <Button variant="outline" size="sm" className="flex-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                data-testid={`preview-${report.id}`}
+                onClick={() => onPreview?.(report.id)}
+              >
                 <FileText className="w-3.5 h-3.5 mr-1.5" />Preview
               </Button>
               <Button
                 size="sm"
                 className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+                data-testid={`export-${report.id}`}
                 onClick={() => onExport?.(report.id)}
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" />Export
@@ -856,48 +963,186 @@ function OperationalReports({
         ))}
       </div>
 
-      {/* Export Options */}
       <Card className="p-5">
         <h3 className="mb-4 text-gray-800">Export Format Options</h3>
+        <p className="text-xs text-gray-500 mb-4">Selected format is used by every Export button and by the preview dialog.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { fmt: 'CSV Format',   desc: 'Spreadsheet-compatible format for data analysis in Excel / Google Sheets' },
-            { fmt: 'PDF Format',   desc: 'Formatted document ready for printing and email distribution' },
-            { fmt: 'Excel Format', desc: 'Advanced spreadsheet with calculated columns and pivot-ready layout' },
-          ].map(o => (
-            <div key={o.fmt} className="p-4 border border-gray-200 rounded-lg">
-              <p className="text-sm font-semibold text-gray-800 mb-1">{o.fmt}</p>
-              <p className="text-xs text-gray-500 mb-3">{o.desc}</p>
-              <Button variant="outline" size="sm" className="w-full">
-                <Download className="w-4 h-4 mr-2" />Export as {o.fmt.split(' ')[0]}
-              </Button>
+          {formatOptions.map((option) => {
+            const selected = exportFormat === option.id;
+            return (
+              <div
+                key={option.id}
+                className={`p-4 border rounded-lg ${selected ? 'border-[#0f2942] ring-2 ring-[#0f2942]/20 bg-slate-50' : 'border-gray-200'}`}
+              >
+                <p className="text-sm font-semibold text-gray-800 mb-1">{option.label}</p>
+                <p className="text-xs text-gray-500 mb-3">{option.desc}</p>
+                <Button
+                  variant={selected ? 'default' : 'outline'}
+                  size="sm"
+                  className={`w-full ${selected ? 'bg-[#0f2942] hover:bg-[#1a3a5c] text-white' : ''}`}
+                  data-testid={`export-format-${option.id}`}
+                  onClick={() => {
+                    onExportFormatChange?.(option.id);
+                    onExportAsFormat?.(option.id);
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />Export as {option.button}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-gray-800">Scheduled Reports</h3>
+          <Button variant="outline" size="sm" data-testid="configure-schedule" onClick={() => openSchedule()}>
+            Configure Schedule
+          </Button>
+        </div>
+        <div className="space-y-3">
+          {schedules.length === 0 ? (
+            <p className="text-sm text-gray-500">No scheduled reports yet. Configure a schedule to add one.</p>
+          ) : schedules.map((schedule) => (
+            <div key={schedule.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
+              <div>
+                <p className="text-sm font-medium text-gray-800">{schedule.name}</p>
+                <p className="text-xs text-gray-500">{schedule.summary}</p>
+                <p className="text-xs text-gray-400">{schedule.email}</p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Badge className={schedule.active ? 'bg-green-100 text-green-700 border-0' : 'bg-gray-200 text-gray-600 border-0'}>
+                  {schedule.active ? 'Active' : 'Paused'}
+                </Badge>
+                <Button variant="outline" size="sm" onClick={() => openSchedule(schedule)}>Edit</Button>
+                <Button variant="outline" size="sm" onClick={() => onDeleteSchedule?.(schedule.id)}>Delete</Button>
+              </div>
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Scheduled Reports */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-gray-800">Scheduled Reports</h3>
-          <Button variant="outline" size="sm">Configure Schedule</Button>
-        </div>
-        <div className="space-y-3">
-          {[
-            { name: 'Daily Booking Summary',   cron: 'Sent every day at 8:00 AM' },
-            { name: 'Weekly Income Report',    cron: 'Sent every Monday at 9:00 AM' },
-            { name: 'Monthly Member Activity', cron: 'Sent on 1st of each month' },
-          ].map(s => (
-            <div key={s.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-800">{s.name}</p>
-                <p className="text-xs text-gray-500">{s.cron}</p>
-              </div>
-              <Badge className="bg-green-100 text-green-700 border-0">Active</Badge>
+      <Dialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) onClosePreview?.(); }}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="operational-preview-dialog">
+          <DialogHeader>
+            <DialogTitle>Preview: {preview?.title}</DialogTitle>
+            <DialogDescription>
+              {preview?.periodLabel} · same rows as the selected export format
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+              {preview?.rows.length ?? 0} row(s)
+            </span>
+            <span className="text-xs text-gray-500 uppercase">{exportFormat}</span>
+          </div>
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            {preview && preview.rows.length === 0 ? (
+              <p className="p-6 text-sm text-gray-500 text-center">No data for the selected period.</p>
+            ) : (
+              <table className="min-w-full text-sm" data-testid="operational-preview-table">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {previewHeaders.map((header) => (
+                      <th key={header} className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(preview?.rows ?? []).map((row, rowIndex) => (
+                    <tr key={`preview-row-${rowIndex}`} className="border-t border-gray-100">
+                      {previewHeaders.map((header) => (
+                        <td key={header} className="px-3 py-2 whitespace-nowrap text-gray-700">
+                          {formatCell(row[header])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onClosePreview?.()}>Close</Button>
+            <Button
+              className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+              onClick={() => preview && onExport?.(preview.reportId)}
+            >
+              <Download className="w-4 h-4 mr-2" />Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+        <DialogContent className="sm:max-w-lg" data-testid="operational-schedule-dialog">
+          <DialogHeader>
+            <DialogTitle>{editingSchedule ? 'Edit schedule' : 'Configure Schedule'}</DialogTitle>
+            <DialogDescription>
+              Saved in this browser. Automatic email sending is not enabled yet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Name</label>
+              <Input value={scheduleName} onChange={(event) => setScheduleName(event.target.value)} data-testid="schedule-name" />
             </div>
-          ))}
-        </div>
-      </Card>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Report</label>
+              <select
+                className="w-full h-9 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                value={scheduleReportId}
+                onChange={(event) => setScheduleReportId(event.target.value)}
+                data-testid="schedule-report-id"
+              >
+                {OPERATIONAL_REPORTS.map((report) => (
+                  <option key={report.id} value={report.id}>{report.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm text-gray-600">Frequency</label>
+                <select
+                  className="w-full h-9 rounded-md border border-gray-200 bg-white px-3 text-sm"
+                  value={scheduleFrequency}
+                  onChange={(event) => setScheduleFrequency(event.target.value as 'daily' | 'weekly' | 'monthly')}
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-600">Time (HKT)</label>
+                <Input type="time" value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-gray-600">Email</label>
+              <Input type="email" value={scheduleEmail} onChange={(event) => setScheduleEmail(event.target.value)} data-testid="schedule-email" />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={scheduleActive} onChange={(event) => setScheduleActive(event.target.checked)} />
+              Active
+            </label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+              data-testid="schedule-save"
+              disabled={!scheduleName.trim() || !scheduleEmail.trim()}
+              onClick={handleSaveSchedule}
+            >
+              Save schedule
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -953,10 +1198,35 @@ export interface ReportsProps {
   reportData?: ReportsData;
   isLoading?: boolean;
   onExport?: (reportType: string) => void;
+  onPreview?: (reportType: string) => void;
   customerSpendingContent?: ReactNode;
+  exportFormat?: ExportFormat;
+  onExportFormatChange?: (format: ExportFormat) => void;
+  onExportAsFormat?: (format: ExportFormat) => void;
+  preview?: ReportPreviewState | null;
+  onClosePreview?: () => void;
+  onApplyFilter?: (startDate: string, endDate: string) => void;
+  schedules?: OperationalScheduleView[];
+  onSaveSchedule?: (schedule: Omit<OperationalScheduleView, 'summary'> & { id?: string }) => void;
+  onDeleteSchedule?: (id: string) => void;
 }
 
-export function Reports({ reportData, isLoading, onExport, customerSpendingContent }: ReportsProps = {}) {
+export function Reports({
+  reportData,
+  isLoading,
+  onExport,
+  onPreview,
+  customerSpendingContent,
+  exportFormat,
+  onExportFormatChange,
+  onExportAsFormat,
+  preview,
+  onClosePreview,
+  onApplyFilter,
+  schedules,
+  onSaveSchedule,
+  onDeleteSchedule,
+}: ReportsProps = {}) {
   const [activeTab, setActiveTab] = useState<string>('operational');
 
   const activeReport = ANALYTICS_TABS.find(t => t.id === activeTab)!;
@@ -1033,7 +1303,17 @@ export function Reports({ reportData, isLoading, onExport, customerSpendingConte
                 onEndDateChange: reportData?.operational?.onEndDateChange,
               }}
               onExport={onExport}
+              onPreview={onPreview}
               isLoading={isLoading}
+              exportFormat={exportFormat}
+              onExportFormatChange={onExportFormatChange}
+              onExportAsFormat={onExportAsFormat}
+              preview={preview}
+              onClosePreview={onClosePreview}
+              onApplyFilter={onApplyFilter}
+              schedules={schedules}
+              onSaveSchedule={onSaveSchedule}
+              onDeleteSchedule={onDeleteSchedule}
             />
           )}
           {activeTab === 'coupon'      && <CouponConversionReport data={reportData?.coupon} />}
