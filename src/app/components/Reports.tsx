@@ -783,6 +783,9 @@ const OPERATIONAL_REPORTS = [
   { id: 'sales-report',    title: 'Add-on Services Sales',    description: 'Sales breakdown for additional services',              icon: DollarSign, color: 'text-teal-600 bg-teal-50',       fields: ['Service Name', 'Quantity', 'Income', 'Discount Applied', 'Popular Times'] },
 ];
 
+const HIDDEN_OPERATIONAL_REPORT_IDS = new Set(['movement-list']);
+const SHOW_SCHEDULED_REPORTS = false;
+
 function formatCell(value: unknown): string {
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
@@ -920,7 +923,7 @@ function OperationalReports({
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-        {OPERATIONAL_REPORTS.map((report) => (
+        {OPERATIONAL_REPORTS.filter((report) => !HIDDEN_OPERATIONAL_REPORT_IDS.has(report.id)).map((report) => (
           <Card key={report.id} className="p-5 flex flex-col">
             <div className={`w-11 h-11 rounded-lg ${report.color} flex items-center justify-center mb-4`}>
               <report.icon className="w-5 h-5" />
@@ -990,6 +993,7 @@ function OperationalReports({
         </div>
       </Card>
 
+      {SHOW_SCHEDULED_REPORTS ? (
       <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-gray-800">Scheduled Reports</h3>
@@ -1018,6 +1022,7 @@ function OperationalReports({
           ))}
         </div>
       </Card>
+      ) : null}
 
       <Dialog open={Boolean(preview)} onOpenChange={(open) => { if (!open) onClosePreview?.(); }}>
         <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="operational-preview-dialog">
@@ -1073,6 +1078,7 @@ function OperationalReports({
         </DialogContent>
       </Dialog>
 
+      {SHOW_SCHEDULED_REPORTS ? (
       <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
         <DialogContent className="sm:max-w-lg" data-testid="operational-schedule-dialog">
           <DialogHeader>
@@ -1139,6 +1145,7 @@ function OperationalReports({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      ) : null}
     </div>
   );
 }
