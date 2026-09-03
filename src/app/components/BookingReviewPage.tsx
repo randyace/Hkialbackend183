@@ -41,6 +41,24 @@ interface PendingBooking {
   nonFlyingGuests: number;
   hasLimousine: boolean;
   hasShopping: boolean;
+  /** Lane A wheelchair (`bookings.has_wheelchair`). Wrapper-mode only. */
+  hasWheelchair?: boolean;
+  /** Lane A security escort (`bookings.has_security`). */
+  hasSecurity?: boolean;
+  /** Lane A private sales (`bookings.has_private_sales`). */
+  hasPrivateSales?: boolean;
+  /** Wheelchair recipient from addons meta / advanced_details. */
+  wheelchairPassenger?: string;
+  /** Stored luggage count (`advanced_details.flight.numberOfLuggage`). */
+  numberOfLuggage?: number;
+  /** Stored cabin class (`advanced_details.flight.flightClass`). */
+  flightClass?: string;
+  /** Account-level discount percent (`advanced_details.account.accountDiscountPct`). */
+  accountDiscountPct?: number;
+  /** Account remark (`advanced_details.account.accountRemark`). */
+  accountRemark?: string;
+  /** RFQ B8 celebrity / VIP-artist flag. */
+  isCelebrity?: boolean;
   isAdHoc: boolean;
   paymentMode: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
   // 2026-06-11 round 6.2.34: surfaced from the wrapper mapper so the
@@ -108,6 +126,7 @@ interface PendingBooking {
     firstName?: string;
     lastName?: string;
     ageGroup?: string;
+    foodAllergies?: string;
   }>;
   contactPerson?: {
     name?: string;
@@ -124,28 +143,30 @@ interface PendingBooking {
   // standalone-preview mode / figma Make import).
   promoCode?: string;
   /**
-   * 2026-06-08 round 6.2.x (future ticket): addon items list,
-   * populated by `mapBookingFromApi` from `api.booking_items`.
-   * Not yet rendered by this view (wheelchair / private-sales
-   * flags still use the `id % N` mock formulas); declared so the
-   * wrapper mapper's spread doesn't fail the type check.
+   * Addon items from `mapBookingFromApi` (`api.booking_items`).
+   * Lane B catalog rows render in Services Included. Lane A
+   * specials (Limo / Wheelchair / Security / Shopping / Lounge
+   * Extension / Private Sales) have dedicated cards and are
+   * skipped from the catalog tile list.
    */
   addons?: Array<{
     name: string;
     quantity: number;
     unitPrice: number;
     subtotal: number;
+    destinations?: string[];
+    pickupTime?: string;
+    passenger?: string;
   }>;
-  // 2026-06-08 round 6.2 — Transit 2-leg round-trip. Read-only
-  // here; the mapper exposes it on ViewBooking.legs[]. Not
-  // rendered in this view yet (the 2-leg detail page is
-  // BookingDetail, not BookingReviewPage); declared so the type
-  // accepts the wrapper's mapped payload.
+  // Transit 2-leg round-trip from `advanced_details.flight.legs`.
   legs?: Array<{
     flightNo: string;
     flightTime: string;
     arrivalDate: string;
-    flightClass: 'Economy Class' | 'Business Class' | 'First Class';
+    flightClass?: string;
+    flightOrigin?: string;
+    flightDestination?: string;
+    destination?: string;
   }>;
   originalData?: {
     suite?: string;
@@ -344,6 +365,9 @@ export function BookingReviewPage({
   onAutoSendInvoiceChange,
 }: BookingReviewPageProps = {}) {
   const booking: PendingBooking = bookingProp ?? MOCK_PENDING_BOOKING;
+  // Wrapper always passes a booking prop. Mock `id % N` formulas
+  // stay only for figma Make standalone preview (no prop).
+  const isStandalonePreview = bookingProp === undefined;
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -358,8 +382,12 @@ export function BookingReviewPage({
   // ── Supplementary derived data (deterministic from booking.id) ────────────
   const id = booking.id;
   const flyingGuests   = Math.max(0, booking.numberOfGuests - booking.nonFlyingGuests);
-  const flightClass    = FLIGHT_CLASSES[id % 3];
-  const numberOfLuggage = 1 + (id % 3);
+  const flightClass    = isStandalonePreview
+    ? FLIGHT_CLASSES[id % 3]
+    : (booking.flightClass || '');
+  const numberOfLuggage = isStandalonePreview
+    ? 1 + (id % 3)
+    : booking.numberOfLuggage;
   const arrivalDate    = booking.flightType === 'Arrival'
     ? booking.dateTime.split(' ')[0]
     : (() => {
@@ -438,6 +466,7 @@ export function BookingReviewPage({
         day: p.birthdayDay ?? '',
         month: p.birthdayMonth ?? '',
         year: p.birthdayYear ?? '',
+        foodAllergies: p.foodAllergies ?? '',
       }))
     : Array.from({ length: flyingGuests }, (_, idx) =>
         PASSENGER_SEEDS[(id + idx) % PASSENGER_SEEDS.length],
@@ -449,6 +478,7 @@ export function BookingReviewPage({
         firstName: g.firstName ?? '',
         lastName: g.lastName ?? '',
         ageGroup: g.ageGroup ?? '',
+        foodAllergies: g.foodAllergies ?? '',
       }))
     : Array.from({ length: booking.nonFlyingGuests }, (_, idx) =>
         NON_FLYING_SEEDS[(id + idx + 2) % NON_FLYING_SEEDS.length],
@@ -520,21 +550,79 @@ export function BookingReviewPage({
   // Data` above but the gating condition is 'preview mode?' rather
   // than 'real data present?' — the empty-real-data path must NOT
   // be treated as preview mode.
-  const isStandalonePreview = bookingProp === undefined;
   const promoCode = isStandalonePreview
     ? PROMO_CODES[id % PROMO_CODES.length]
     : (booking.promoCode || '');
-  const accountDiscount = booking.agencyDiscountRate
-    ? `${booking.agencyDiscountRate}% (Agency Default)`
-    : id % 4 === 0 ? '10%' : '—';
-  const accountRemark = id % 2 === 0 ? 'VIP Member - Priority Service' : '—';
+  const accountDiscount = isStandalonePreview
+    ? (booking.agencyDiscountRate
+      ? `${booking.agencyDiscountRate}% (Agency Default)`
+      : id % 4 === 0 ? '10%' : '—')
+    : (booking.agencyDiscountRate
+      ? `${booking.agencyDiscountRate}% (Agency Default)`
+      : (typeof booking.accountDiscountPct === 'number' && booking.accountDiscountPct > 0
+        ? `${booking.accountDiscountPct}%`
+        : '—'));
+  const accountRemark = isStandalonePreview
+    ? (id % 2 === 0 ? 'VIP Member - Priority Service' : '—')
+    : (booking.accountRemark?.trim() || '—');
 
-  // Extra services (wheelchair, private sales) — TODO round 6.2.x:
-  // read from `booking.addons[]` (populated by `mapBookingFromApi`
-  // from `api.booking_items` via AddonsSyncService). For now the
-  // mock `id % N` formulas stay.
-  const hasWheelchair = id % 7 === 0;
-  const hasPrivateSales = id % 9 === 0;
+  const addonNameEq = (a: { name?: string }, expected: string) =>
+    (a.name ?? '').trim().toLowerCase() === expected.toLowerCase();
+  const isPrivateSalesName = (name: string) => /private\s+sales/i.test(name.trim());
+  const hasWheelchairAddon = (booking.addons ?? []).some((a) => addonNameEq(a, 'Wheelchair Assistance'));
+  const hasSecurityAddon = (booking.addons ?? []).some((a) => addonNameEq(a, 'Security Escort Service'));
+  const hasPrivateSalesAddon = (booking.addons ?? []).some((a) => isPrivateSalesName(a.name ?? ''));
+  const hasWheelchair = isStandalonePreview
+    ? id % 7 === 0
+    : Boolean(booking.hasWheelchair) || hasWheelchairAddon;
+  const hasSecurity = isStandalonePreview
+    ? false
+    : Boolean(booking.hasSecurity) || hasSecurityAddon;
+  const hasPrivateSales = isStandalonePreview
+    ? id % 9 === 0
+    : Boolean(booking.hasPrivateSales) || hasPrivateSalesAddon;
+  const wheelchairRecipient = (
+    booking.wheelchairPassenger
+    || (booking.addons ?? []).find((a) => addonNameEq(a, 'Wheelchair Assistance'))?.passenger
+    || ''
+  ).trim();
+  const limoAddon = (booking.addons ?? []).find((a) => addonNameEq(a, 'Limousine Transfer'));
+  const limoDestinations = (limoAddon?.destinations ?? []).filter((d) => String(d).trim());
+  const limoPickupTime = (limoAddon?.pickupTime ?? '').trim();
+  const transitLegs = isStandalonePreview ? [] : (booking.legs ?? []).filter((leg) => leg.flightNo || leg.flightTime);
+  const routeOrigin = (booking.flightOrigin ?? '').trim();
+  const routeDestination = (booking.flightDestination ?? '').trim();
+  const routeLabel = routeOrigin || routeDestination
+    ? `${routeOrigin || '—'} → ${routeDestination || '—'}`
+    : '—';
+  const amountLabel = (booking.amount ?? '').trim() || '—';
+  const hasRealDiscount = accountDiscount !== '—';
+
+  // Lane B catalog extras. Wrapper forwards `booking.addons[]` from
+  // `booking_items`. Skip Lane A names that already have cards above,
+  // and skip standalone-preview so figma Make does not grow extra tiles.
+  const LANE_A_OR_DEDICATED_CARD_NAMES = new Set([
+    'Limousine Transfer',
+    'Wheelchair Assistance',
+    'Security Escort Service',
+    'Private Transport',
+    'Private Sales',
+    'Private Sales Consultation',
+    'Lounge Extension',
+    'Extension of stay in VIP Lounge',
+    'In-lounge Shopping',
+    'In-Lounge Shopping',
+    'In-lounge Shopping Service',
+  ]);
+  const catalogAddons = isStandalonePreview
+    ? []
+    : (booking.addons ?? []).filter((a) => {
+        const name = (a.name ?? '').trim();
+        if (!name) return false;
+        if (LANE_A_OR_DEDICATED_CARD_NAMES.has(name)) return false;
+        if (isPrivateSalesName(name)) return false;
+        return Number(a.quantity ?? 0) > 0;
+      });
 
   // ── Action Handlers ────────────────────────────────────────────────────────
   const handleApprove = () => {
@@ -871,6 +959,14 @@ export function BookingReviewPage({
             <div className="grid grid-cols-3 gap-6">
               <Field label="Guest Name">
                 <span className="font-medium">{booking.guestName}</span>
+                {booking.isCelebrity && (
+                  <Badge
+                    className="ml-2 text-xs bg-rose-100 text-rose-800 border border-rose-200"
+                    data-testid="review-celebrity-flag"
+                  >
+                    Celebrity / VIP artist
+                  </Badge>
+                )}
               </Field>
               <Field label="Account No.">
                 <span className="font-mono">{booking.accountNo}</span>
@@ -916,7 +1012,10 @@ export function BookingReviewPage({
                 <span>{formatPaymentLabel(booking)}</span>
               </Field>
               <Field label="Account Discount">
-                <span className={booking.agencyDiscountRate || id % 4 === 0 ? 'text-green-600' : ''}>
+                <span
+                  className={hasRealDiscount ? 'text-green-600' : 'text-gray-400'}
+                  data-testid="review-account-discount"
+                >
                   {accountDiscount}
                 </span>
               </Field>
@@ -926,7 +1025,12 @@ export function BookingReviewPage({
                   : <span className="text-gray-400">—</span>}
               </Field>
               <Field label="Account Remark">
-                <span className={accountRemark !== '—' ? 'text-blue-600' : 'text-gray-400'}>{accountRemark}</span>
+                <span
+                  className={accountRemark !== '—' ? 'text-blue-600' : 'text-gray-400'}
+                  data-testid="review-account-remark"
+                >
+                  {accountRemark}
+                </span>
               </Field>
               <Field label="Booking Channel">
                 <span>{booking.bookingType}</span>
@@ -949,6 +1053,13 @@ export function BookingReviewPage({
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200">
                     <Plane className="w-3.5 h-3.5 -rotate-45" /> Arrival
                   </span>
+                ) : booking.flightType === 'Transit' ? (
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-teal-100 text-teal-800 border border-teal-200"
+                    data-testid="review-flight-type-transit"
+                  >
+                    <Plane className="w-3.5 h-3.5" /> Transit
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-purple-100 text-purple-800 border border-purple-200">
                     <Plane className="w-3.5 h-3.5 rotate-45" /> Departure
@@ -968,27 +1079,72 @@ export function BookingReviewPage({
                 <span className="font-medium">{booking.flightTime}</span>
               </Field>
               <Field label="Route">
-                <span>{booking.flightOrigin || '—'} → {booking.flightDestination || '—'}</span>
+                <span data-testid="review-route">{routeLabel}</span>
               </Field>
               <Field label="Number of Luggage">
                 <div className="flex items-center gap-1.5">
                   <Luggage className="w-4 h-4 text-gray-400" />
-                  <span>{numberOfLuggage} pcs</span>
+                  <span data-testid="review-luggage">
+                    {numberOfLuggage == null ? '—' : `${numberOfLuggage} pcs`}
+                  </span>
                 </div>
               </Field>
               <Field label="Flight Class (Main VIP)">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
-                  flightClass === 'First Class'
-                    ? 'bg-amber-50 text-amber-800 border-amber-200'
-                    : flightClass === 'Business Class'
-                    ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
-                    : 'bg-gray-50 text-gray-700 border-gray-200'
-                }`}>
-                  {flightClass === 'First Class' && <Star className="w-3.5 h-3.5 fill-current" />}
-                  {flightClass}
-                </span>
+                {flightClass ? (
+                  <span
+                    data-testid="review-flight-class"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border ${
+                      flightClass === 'First Class'
+                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                        : flightClass === 'Business Class'
+                        ? 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                    }`}
+                  >
+                    {flightClass === 'First Class' && <Star className="w-3.5 h-3.5 fill-current" />}
+                    {flightClass}
+                  </span>
+                ) : (
+                  <span data-testid="review-flight-class" className="text-gray-400">—</span>
+                )}
               </Field>
             </div>
+            {transitLegs.length > 0 && (
+              <div className="mt-6" data-testid="review-transit-legs">
+                <p className="text-xs text-gray-500 mb-3">Transit legs</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Leg</th>
+                        <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Flight</th>
+                        <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Time</th>
+                        <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Route</th>
+                        <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Class</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {transitLegs.map((leg, idx) => {
+                        const legOrigin = (leg.flightOrigin ?? '').trim();
+                        const legDest = (leg.flightDestination ?? leg.destination ?? '').trim();
+                        const legRoute = legOrigin || legDest
+                          ? `${legOrigin || '—'} → ${legDest || '—'}`
+                          : '—';
+                        return (
+                          <tr key={`transit-leg-${idx}`} data-testid={`review-transit-leg:${idx}`}>
+                            <td className="px-3 py-2.5 text-gray-500">{idx + 1}</td>
+                            <td className="px-3 py-2.5 font-medium">{leg.flightNo || '—'}</td>
+                            <td className="px-3 py-2.5">{leg.flightTime || '—'}</td>
+                            <td className="px-3 py-2.5">{legRoute}</td>
+                            <td className="px-3 py-2.5">{leg.flightClass || '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* ── 3. Booking Details ── */}
@@ -1108,11 +1264,13 @@ export function BookingReviewPage({
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Membership No.</th>
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Age Group</th>
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Birthday</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Food allergies</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {passengers.map((p, idx) => {
                       const isPS = idx < vipPS;
+                      const allergies = ('foodAllergies' in p ? String((p as { foodAllergies?: string }).foodAllergies ?? '') : '').trim();
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-3 py-2.5 text-gray-500">{idx + 1}</td>
@@ -1126,6 +1284,12 @@ export function BookingReviewPage({
                           <td className="px-3 py-2.5 font-mono text-gray-600">{p.mem || '—'}</td>
                           <td className="px-3 py-2.5 text-gray-600">{p.ageGroup}</td>
                           <td className="px-3 py-2.5 text-gray-600">{p.day} {p.month} {p.year}</td>
+                          <td
+                            className={`px-3 py-2.5 ${allergies ? 'text-red-700' : 'text-gray-400'}`}
+                            data-testid={`review-passenger-allergies:${idx}`}
+                          >
+                            {allergies || '—'}
+                          </td>
                         </tr>
                       );
                     })}
@@ -1155,11 +1319,13 @@ export function BookingReviewPage({
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Section</th>
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Name</th>
                       <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Age Group</th>
+                      <th className="text-left px-3 py-2 text-xs text-gray-500 font-medium">Food allergies</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {nonFlyingGuestList.map((g, idx) => {
                       const isPS = idx < nonFlyingPS;
+                      const allergies = ('foodAllergies' in g ? String((g as { foodAllergies?: string }).foodAllergies ?? '') : '').trim();
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
                           <td className="px-3 py-2.5 text-gray-500">{idx + 1}</td>
@@ -1170,6 +1336,12 @@ export function BookingReviewPage({
                           </td>
                           <td className="px-3 py-2.5 font-medium">{g.title} {g.firstName} {g.lastName}</td>
                           <td className="px-3 py-2.5 text-gray-600">{g.ageGroup}</td>
+                          <td
+                            className={`px-3 py-2.5 ${allergies ? 'text-red-700' : 'text-gray-400'}`}
+                            data-testid={`review-nfg-allergies:${idx}`}
+                          >
+                            {allergies || '—'}
+                          </td>
                         </tr>
                       );
                     })}
@@ -1183,11 +1355,24 @@ export function BookingReviewPage({
           <Card className="p-6">
             <h2 className="text-sm uppercase tracking-wide text-gray-500 mb-5">Services Included</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className={`flex items-center gap-2 p-3 rounded-lg border ${booking.hasLimousine ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border ${booking.hasLimousine ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}
+                data-testid="review-lane-a-limo"
+              >
                 <Car className={`w-5 h-5 ${booking.hasLimousine ? 'text-purple-600' : 'text-gray-400'}`} />
                 <div>
                   <p className={`text-sm font-medium ${booking.hasLimousine ? 'text-purple-800' : 'text-gray-400'}`}>Limousine Transfer</p>
                   <p className="text-xs text-gray-500">{booking.hasLimousine ? 'Included' : 'Not included'}</p>
+                  {booking.hasLimousine && limoDestinations.length > 0 && (
+                    <p className="text-xs text-purple-700 mt-0.5" data-testid="review-limo-destinations">
+                      {limoDestinations.join(' → ')}
+                    </p>
+                  )}
+                  {booking.hasLimousine && limoPickupTime && (
+                    <p className="text-xs text-purple-700" data-testid="review-limo-pickup">
+                      Pick-up {limoPickupTime}
+                    </p>
+                  )}
                 </div>
                 {booking.hasLimousine && <CheckCircle className="w-4 h-4 text-purple-500 ml-auto" />}
               </div>
@@ -1225,15 +1410,37 @@ export function BookingReviewPage({
                   </div>
                 );
               })()}
-              <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasWheelchair ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border ${hasWheelchair ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}
+                data-testid="review-lane-a-wheelchair"
+              >
                 <Accessibility className={`w-5 h-5 ${hasWheelchair ? 'text-blue-600' : 'text-gray-400'}`} />
                 <div>
                   <p className={`text-sm font-medium ${hasWheelchair ? 'text-blue-800' : 'text-gray-400'}`}>Wheelchair Assistance</p>
                   <p className="text-xs text-gray-500">{hasWheelchair ? 'Requested' : 'Not required'}</p>
+                  {hasWheelchair && wheelchairRecipient && (
+                    <p className="text-xs text-blue-700 mt-0.5" data-testid="review-wheelchair-recipient">
+                      {wheelchairRecipient}
+                    </p>
+                  )}
                 </div>
                 {hasWheelchair && <CheckCircle className="w-4 h-4 text-blue-500 ml-auto" />}
               </div>
-              <div className={`flex items-center gap-2 p-3 rounded-lg border ${hasPrivateSales ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}>
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border ${hasSecurity ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}
+                data-testid="review-lane-a-security"
+              >
+                <ShieldCheck className={`w-5 h-5 ${hasSecurity ? 'text-orange-600' : 'text-gray-400'}`} />
+                <div>
+                  <p className={`text-sm font-medium ${hasSecurity ? 'text-orange-800' : 'text-gray-400'}`}>Security Escort</p>
+                  <p className="text-xs text-gray-500">{hasSecurity ? 'Requested' : 'Not requested'}</p>
+                </div>
+                {hasSecurity && <CheckCircle className="w-4 h-4 text-orange-500 ml-auto" />}
+              </div>
+              <div
+                className={`flex items-center gap-2 p-3 rounded-lg border ${hasPrivateSales ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200 opacity-50'}`}
+                data-testid="review-lane-a-private-sales"
+              >
                 <Star className={`w-5 h-5 ${hasPrivateSales ? 'text-amber-600' : 'text-gray-400'}`} />
                 <div>
                   <p className={`text-sm font-medium ${hasPrivateSales ? 'text-amber-800' : 'text-gray-400'}`}>Private Sales</p>
@@ -1241,6 +1448,23 @@ export function BookingReviewPage({
                 </div>
                 {hasPrivateSales && <CheckCircle className="w-4 h-4 text-amber-500 ml-auto" />}
               </div>
+              {catalogAddons.map((addon, idx) => {
+                const qty = Number(addon.quantity ?? 1);
+                return (
+                  <div
+                    key={`lane-b-${addon.name}-${idx}`}
+                    className="flex items-center gap-2 p-3 rounded-lg border bg-teal-50 border-teal-200"
+                    data-testid={`review-lane-b-addon:${addon.name}`}
+                  >
+                    <Tag className="w-5 h-5 text-teal-600" />
+                    <div>
+                      <p className="text-sm font-medium text-teal-800">{addon.name}</p>
+                      <p className="text-xs text-gray-500">{qty > 1 ? `Qty ${qty}` : 'Requested'}</p>
+                    </div>
+                    <CheckCircle className="w-4 h-4 text-teal-500 ml-auto" />
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
@@ -1304,14 +1528,14 @@ export function BookingReviewPage({
                 {booking.agencyDiscountRate && booking.originalAmountValue ? (
                   <div className="space-y-1">
                     <p className="text-sm text-gray-400 line-through">HK${booking.originalAmountValue.toLocaleString()}</p>
-                    <p className="text-2xl text-green-700 font-bold">{booking.amount}</p>
+                    <p className="text-2xl text-green-700 font-bold" data-testid="review-amount">{amountLabel}</p>
                     <div className="flex items-center gap-1 text-sm text-green-700">
                       <BadgePercent className="w-4 h-4" />
                       <span>{booking.agencyDiscountRate}% agency discount applied</span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-2xl font-bold text-gray-900">{booking.amount}</p>
+                  <p className="text-2xl font-bold text-gray-900" data-testid="review-amount">{amountLabel}</p>
                 )}
               </div>
               <Button
