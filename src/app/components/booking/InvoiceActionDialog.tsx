@@ -19,7 +19,11 @@ import { toast } from 'sonner@2.0.3';
 import type { InvoiceHistoryEntry } from './BookingInvoiceDialog';
 import { InvoiceDocumentPreview } from './InvoiceDocumentPreview';
 import { buildVipPassengerSummary } from './invoiceDocumentModel';
-import { invoiceRowKey } from './manageInvoicesList';
+import {
+  canIssueVirtualBookingInvoice,
+  invoiceRowKey,
+  virtualInvoiceSendTooltip,
+} from './manageInvoicesList';
 
 export type InvoiceActionModalMode = 'invoice' | 'receipt';
 
@@ -46,6 +50,8 @@ export interface InvoiceActionBookingContext {
   /** @deprecated Prefer invoiceRemarks — was wrongly mapped from notes/memo. */
   serviceRemarks?: string | null;
   paymentStatus?: string | null;
+  /** Wire or display status — first-issue send requires Approved/Confirmed. */
+  status?: string | null;
   billingName?: string | null;
   billingCompany?: string | null;
   billingEmail?: string | null;
@@ -80,6 +86,11 @@ export interface InvoiceActionDialogProps {
   /** Fired after a successful resend so the parent can refresh booking state. */
   onInvoiceSent?: (response: { invoice_no: string; data: Record<string, unknown> }) => void;
   /**
+   * First-issue send for the virtual Booking Fee draft.
+   * Parent owns `POST /bookings/{id}/send-invoice` (invoice + Pay Now + email).
+   */
+  onSendInvoice?: () => Promise<unknown>;
+  /**
    * Persist invoice Bill-To fields (`advanced_details.billing`) via a
    * targeted booking update. Shared by Manage Invoices and Manage Receipts.
    */
@@ -90,7 +101,7 @@ type BusyAction = 'pdf' | 'excel' | 'send';
 type ViewMode = 'list' | 'preview';
 
 const VIRTUAL_SEND_TOOLTIP =
-  'This draft is not yet a persisted invoice. Save and issue the booking fee before sending.';
+  'This draft is not yet a persisted invoice.';
 
 function formatInvoiceTypeLabel(invoiceType: string): string {
   if (invoiceType === 'pos_fnb') {
@@ -131,6 +142,7 @@ export function InvoiceActionDialog({
   apiBaseUrl,
   authToken,
   onInvoiceSent,
+  onSendInvoice,
   onSaveBillingDetails,
 }: InvoiceActionDialogProps) {
   const baseUrl = String(
@@ -187,6 +199,13 @@ export function InvoiceActionDialog({
     setInvoiceRemarks(booking?.invoiceRemarks ?? '');
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot billing when modal opens
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!selectedInvoice?.isVirtual) return;
+    if (displayInvoices.some((row) => row.isVirtual)) return;
+    setViewMode('list');
+    setSelectedInvoice(null);
+  }, [displayInvoices, selectedInvoice]);
 
   const busyId = (entry: InvoiceHistoryEntry, action: BusyAction) =>
     `${invoiceRowKey(entry)}:${action}`;
@@ -351,12 +370,28 @@ export function InvoiceActionDialog({
     }
   };
 
+  const issueContext = {
+    status: booking?.status,
+    paymentStatus: booking?.paymentStatus,
+    mode,
+  };
+
+  const canIssue = (entry: InvoiceHistoryEntry) =>
+    canIssueVirtualBookingInvoice(entry, issueContext);
+
+  const sendTitle = (entry: InvoiceHistoryEntry) => {
+    if (entry.status === 'Voided') return 'Cannot send a voided invoice.';
+    if (entry.isVirtual) return virtualInvoiceSendTooltip(entry, issueContext);
+    return 'Send to Customer';
+  };
+
   const sendToCustomer = async (entry: InvoiceHistoryEntry) => {
-    if (entry.isVirtual) {
-      toast.error(VIRTUAL_SEND_TOOLTIP);
+    const issuing = canIssue(entry);
+    if (entry.isVirtual && !issuing) {
+      toast.error(virtualInvoiceSendTooltip(entry, issueContext) || VIRTUAL_SEND_TOOLTIP);
       return;
     }
-    if (!token) {
+    if (!issuing && !token) {
       toast.error('Not signed in. Please log in to send.');
       return;
     }
@@ -368,6 +403,56 @@ export function InvoiceActionDialog({
     const key = busyId(entry, 'send');
     setBusyKey(key);
     try {
+      if (issuing) {
+        if (onSendInvoice) {
+          const result = await onSendInvoice();
+          const data = (result && typeof result === 'object')
+            ? result as Record<string, unknown>
+            : {};
+          const invoiceNo = typeof data.invoice_no === 'string'
+            ? data.invoice_no
+            : (bookingNo || booking?.bookingNo || 'Invoice');
+          onInvoiceSent?.({ invoice_no: invoiceNo, data });
+          return;
+        }
+        if (!token) {
+          toast.error('Not signed in. Please log in to send.');
+          return;
+        }
+        const response = await fetch(
+          `${baseUrl}/bookings/${bookingId}/send-invoice`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: '{}',
+          },
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.success) {
+          throw new Error(body.message || `HTTP ${response.status}`);
+        }
+        const invoiceNo = body.data?.invoice_no ?? '';
+        const paymentId = body.data?.payment_id ?? null;
+        const paymentLinkReason = body.data?.payment_link_reason ?? null;
+        toast.success('Invoice + payment link sent!', {
+          description: paymentId
+            ? `${invoiceNo} + Adyen payment link emailed to ${booking?.guestName || 'the customer'} (one email, PDF attached + Pay Now button).`
+            : `${invoiceNo} emailed to ${booking?.guestName || 'the customer'} (PDF attached, no Pay Now CTA).${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
+        });
+        onInvoiceSent?.({
+          invoice_no: invoiceNo,
+          data: (body.data ?? {}) as Record<string, unknown>,
+        });
+        return;
+      }
+      if (!token) {
+        toast.error('Not signed in. Please log in to send.');
+        return;
+      }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/invoices/${entry.id}/resend`,
         {
@@ -598,7 +683,8 @@ export function InvoiceActionDialog({
                   const excelBusy = busyKey === busyId(entry, 'excel');
                   const sendBusy = busyKey === busyId(entry, 'send');
                   const rowBusy = pdfBusy || excelBusy || sendBusy;
-                  const sendDisabled = rowBusy || entry.status === 'Voided' || Boolean(entry.isVirtual);
+                  const issuing = canIssue(entry);
+                  const sendDisabled = rowBusy || entry.status === 'Voided' || (Boolean(entry.isVirtual) && !issuing);
                   return (
                     <li
                       key={rowKey}
@@ -683,20 +769,22 @@ export function InvoiceActionDialog({
                           </Button>
                           <Button
                             type="button"
-                            variant="outline"
+                            variant={issuing ? 'default' : 'outline'}
                             size="sm"
                             disabled={sendDisabled}
                             onClick={() => void sendToCustomer(entry)}
                             data-testid={`invoice-action-send-${rowKey}`}
-                            title={entry.isVirtual ? VIRTUAL_SEND_TOOLTIP : 'Send to Customer'}
-                            className="border-blue-200 text-blue-800 hover:bg-blue-50"
+                            title={sendTitle(entry)}
+                            className={issuing
+                              ? 'bg-green-600 hover:bg-green-700 text-white'
+                              : 'border-blue-200 text-blue-800 hover:bg-blue-50'}
                           >
                             {sendBusy ? (
                               <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                             ) : (
                               <Mail className="w-4 h-4 mr-1.5" />
                             )}
-                            Send
+                            {issuing ? 'Send Invoice & Payment Link' : 'Send'}
                           </Button>
                         </div>
                       </div>
@@ -808,19 +896,23 @@ export function InvoiceActionDialog({
               </Button>
               <Button
                 type="button"
-                variant="outline"
-                disabled={previewBusy || selectedInvoice.status === 'Voided' || Boolean(selectedInvoice.isVirtual)}
+                variant={canIssue(selectedInvoice) ? 'default' : 'outline'}
+                disabled={previewBusy || selectedInvoice.status === 'Voided' || (Boolean(selectedInvoice.isVirtual) && !canIssue(selectedInvoice))}
                 onClick={() => void sendToCustomer(selectedInvoice)}
                 data-testid={`invoice-action-preview-send-${invoiceRowKey(selectedInvoice)}`}
-                title={selectedInvoice.isVirtual ? VIRTUAL_SEND_TOOLTIP : 'Send to Customer'}
-                className="border-blue-200 text-blue-800 hover:bg-blue-50"
+                title={sendTitle(selectedInvoice)}
+                className={canIssue(selectedInvoice)
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'border-blue-200 text-blue-800 hover:bg-blue-50'}
               >
                 {busyKey === busyId(selectedInvoice, 'send') ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
                   <Mail className="w-4 h-4 mr-2" />
                 )}
-                {isReceiptMode ? 'Send Receipt' : 'Send Invoice'}
+                {canIssue(selectedInvoice)
+                  ? 'Send Invoice & Payment Link'
+                  : (isReceiptMode ? 'Send Receipt' : 'Send Invoice')}
               </Button>
             </div>
           </>

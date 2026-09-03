@@ -440,12 +440,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    * refresh booking details + pending merge suggestions.
    */
   onMergeComplete?: () => void | Promise<void>;
-  // 2026-06-23 (round 6.2.49 follow-up #3) — parent-delegated
-  // invoice handlers. The current figma-ui dialog is still
-  // self-contained (it uses `apiBaseUrl`/`authToken`/`onInvoiceSent`),
-  // but the parent wrapper also passes these for the delegated
-  // variant. Keep them optional so the wrapper type-checks; they
-  // are intentionally ignored until the next figma-ui refactor.
+  // First-issue invoice + Pay Now from Manage Invoices (virtual draft).
+  // Parent wrapper owns POST /bookings/{id}/send-invoice.
   onSendInvoice?: () => Promise<unknown>;
   onDownloadPdf?: () => Promise<void>;
   // 2026-06-18 (round 6.2.48) — Movement Log (round-trip
@@ -581,7 +577,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   fieldErrors?: Record<string, string[]>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onSendPaymentLink, onInvoiceSent, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -4432,6 +4428,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           flightOrigin: booking.flightOrigin,
           flightDestination: booking.flightDestination,
           serviceRemarks: formData?.invoiceRemarks ?? booking.invoiceRemarks ?? null,
+          status: booking.status,
           paymentStatus: booking.paymentStatus,
           billingName: formData?.billingName ?? booking.billingName,
           billingCompany: formData?.billingCompany ?? booking.billingCompany,
@@ -4450,6 +4447,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         apiBaseUrl={apiBaseUrl}
         authToken={authToken}
         onInvoiceSent={onInvoiceSent}
+        onSendInvoice={onSendInvoice}
         onSaveBillingDetails={onSaveBillingDetails}
       />
 

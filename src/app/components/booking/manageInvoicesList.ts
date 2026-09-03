@@ -72,3 +72,53 @@ export function isPaidReceipt(entry: InvoiceHistoryEntry): boolean {
 export function filterPaidReceipts(entries: InvoiceHistoryEntry[]): InvoiceHistoryEntry[] {
   return (entries ?? []).filter(isPaidReceipt);
 }
+
+const APPROVED_STATUSES = new Set(['Approved', 'Confirmed']);
+const BLOCKED_PAYMENT_STATUSES = new Set([
+  'Paid',
+  'Refunded',
+  'Not Required',
+  'NotRequired',
+]);
+
+export interface VirtualInvoiceSendContext {
+  status?: string | null;
+  paymentStatus?: string | null;
+  mode?: 'invoice' | 'receipt';
+}
+
+/**
+ * First-issue (not resend): virtual Booking Fee row after double approval.
+ * Same gate as the old BookingInvoiceDialog "Send Invoice & Payment Link".
+ */
+export function canIssueVirtualBookingInvoice(
+  entry: Pick<InvoiceHistoryEntry, 'isVirtual' | 'invoiceType' | 'totalAmount'>,
+  context: VirtualInvoiceSendContext = {},
+): boolean {
+  if (context.mode === 'receipt') return false;
+  if (!entry.isVirtual) return false;
+  if (entry.invoiceType === 'pos_fnb') return false;
+  if (!Number.isFinite(entry.totalAmount) || entry.totalAmount <= 0.009) return false;
+  if (!APPROVED_STATUSES.has(String(context.status ?? ''))) return false;
+  if (BLOCKED_PAYMENT_STATUSES.has(String(context.paymentStatus ?? ''))) return false;
+  return true;
+}
+
+export function virtualInvoiceSendTooltip(
+  entry: Pick<InvoiceHistoryEntry, 'isVirtual' | 'invoiceType' | 'totalAmount'>,
+  context: VirtualInvoiceSendContext = {},
+): string {
+  if (canIssueVirtualBookingInvoice(entry, context)) {
+    return 'Creates the booking-fee invoice, Adyen Pay Now link, and emails the customer.';
+  }
+  if (!APPROVED_STATUSES.has(String(context.status ?? ''))) {
+    return 'Approve the booking before sending the invoice and payment link.';
+  }
+  if (BLOCKED_PAYMENT_STATUSES.has(String(context.paymentStatus ?? ''))) {
+    return 'This booking does not need an invoice email.';
+  }
+  if (!Number.isFinite(entry.totalAmount) || entry.totalAmount <= 0.009) {
+    return 'No invoice to send for a complimentary booking.';
+  }
+  return 'This draft is not yet a persisted invoice.';
+}
