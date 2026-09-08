@@ -140,6 +140,8 @@ function getKitchenStatusBadgeClass(status: string): string {
       return 'bg-orange-100 text-orange-800 border border-orange-200';
     case 'Cancelled':
       return 'bg-gray-100 text-gray-600 border border-gray-200';
+    case 'Unserved':
+      return 'bg-amber-100 text-amber-800 border border-amber-200';
     default:
       return 'bg-gray-100 text-gray-800 border border-gray-200';
   }
@@ -299,13 +301,15 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                       </tr>
                     ) : (
                       order.items.map((item) => {
-                        const isCancelled = item.cancelledAt !== null;
+                        const kitchenStatus = item.kitchenStatus;
+                        const isInactive =
+                          kitchenStatus === 'Cancelled' || kitchenStatus === 'Unserved';
 
                         return (
                           <tr key={item.id}>
                             <td className="px-4 py-2.5 align-top">
                               <div className="flex items-center gap-2">
-                                <p className={isCancelled ? 'line-through text-gray-400 font-medium' : 'font-medium text-gray-900'}>
+                                <p className={isInactive ? 'line-through text-gray-400 font-medium' : 'font-medium text-gray-900'}>
                                   {item.itemName}
                                 </p>
                                 {item.isUnfiredPreorder ? (
@@ -315,7 +319,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                                 ) : null}
                               </div>
                               {item.itemNameZh ? (
-                                <p className={isCancelled ? 'line-through text-gray-400 text-xs mt-0.5' : 'text-xs text-gray-500 mt-0.5'}>
+                                <p className={isInactive ? 'line-through text-gray-400 text-xs mt-0.5' : 'text-xs text-gray-500 mt-0.5'}>
                                   {item.itemNameZh}
                                 </p>
                               ) : null}
@@ -323,38 +327,32 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                                 <div className="mt-1.5 flex">
                                   <span
                                     className={`inline-flex max-w-full items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 ${
-                                      isCancelled ? 'opacity-60' : ''
+                                      isInactive ? 'opacity-60' : ''
                                     }`}
                                   >
                                     <Pencil className="h-3 w-3 shrink-0" strokeWidth={2.5} aria-hidden />
-                                    <span className={`line-clamp-2 ${isCancelled ? 'line-through' : ''}`}>
+                                    <span className={`line-clamp-2 ${isInactive ? 'line-through' : ''}`}>
                                       {item.remarks.trim()}
                                     </span>
                                   </span>
                                 </div>
                               ) : null}
                             </td>
-                            <td className={`px-4 py-2.5 text-center align-top ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                            <td className={`px-4 py-2.5 text-center align-top ${isInactive ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                               {item.quantity}
                             </td>
-                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap ${isCancelled ? 'line-through text-gray-400' : item.unitPrice > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
+                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap ${isInactive ? 'line-through text-gray-400' : item.unitPrice > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
                               {formatPosItemUnitPrice(item.unitPrice)}
                             </td>
-                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap font-medium ${isCancelled ? 'line-through text-gray-400' : item.lineTotal > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap font-medium ${isInactive ? 'line-through text-gray-400' : item.lineTotal > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
                               {formatPosItemLineTotal(item.lineTotal)}
                             </td>
                             <td className="px-4 py-2.5 text-center align-top">
-                              {isCancelled ? (
-                                <Badge className="bg-gray-100 text-gray-600 border border-gray-200">
-                                  Cancelled
-                                </Badge>
-                              ) : (
-                                <Badge className={getKitchenStatusBadgeClass(item.kitchenStatus)}>
-                                  {item.kitchenStatus}
-                                </Badge>
-                              )}
+                              <Badge className={getKitchenStatusBadgeClass(kitchenStatus)}>
+                                {kitchenStatus || '—'}
+                              </Badge>
                             </td>
-                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap ${isCancelled ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                            <td className={`px-4 py-2.5 text-right align-top whitespace-nowrap ${isInactive ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                               {item.displayTime ? (
                                 <span className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                                   <Clock className="w-3 h-3 text-gray-400 shrink-0" />

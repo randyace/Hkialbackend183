@@ -66,6 +66,10 @@ export interface InvoiceHistoryEntry {
   sentAt: string | null;
   createdAt: string | null;
   posOrderId?: number | null;
+  /** Customer-facing Adyen / landing URL when an active link covers this invoice. */
+  paymentLinkUrl?: string | null;
+  /** True when an active exact-coverage payment link already exists. */
+  hasActivePaymentLink?: boolean;
   /** True when synthesized client-side (not yet persisted in `invoices`). */
   isVirtual?: boolean;
 }

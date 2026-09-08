@@ -32,7 +32,7 @@ interface OrderItem {
   remarks?: string;
   unitPrice: number;
   total: number;
-  status: 'pending' | 'preparing' | 'served' | 'cancelled';
+  status: 'pending' | 'preparing' | 'served' | 'cancelled' | 'unserved';
   orderTime: string;
   servedTime?: string;
   cancelledAt?: string | null;
@@ -279,7 +279,12 @@ type TicketItemDialog = 'remarks' | 'quantity' | null;
 type BatchMode = 'none' | 'expedite' | 'served';
 
 function isOrderItemExpediteStatusEligible(order: OrderItem): boolean {
-  if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served') {
+  if (
+    order.cancelledAt
+    || order.status === 'cancelled'
+    || order.status === 'unserved'
+    || order.status === 'served'
+  ) {
     return false;
   }
   return order.isNew === true || order.status === 'pending' || order.status === 'preparing';
@@ -292,7 +297,13 @@ function isOrderItemExpediteSelectable(order: OrderItem): boolean {
 
 /** Submitted Pending/Preparing items — selectable in batch served mode. */
 function isOrderItemServedSelectable(order: OrderItem): boolean {
-  if (order.cancelledAt || order.status === 'cancelled' || order.status === 'served' || order.isNew) {
+  if (
+    order.cancelledAt
+    || order.status === 'cancelled'
+    || order.status === 'unserved'
+    || order.status === 'served'
+    || order.isNew
+  ) {
     return false;
   }
   return (
@@ -852,7 +863,7 @@ export function POSBookingDetail({
 
   const ticketTotal = useMemo(() => {
     return booking.orders.reduce((sum, order) => {
-      if (order.cancelledAt || order.status === 'cancelled') {
+      if (order.cancelledAt || order.status === 'cancelled' || order.status === 'unserved') {
         return sum;
       }
 
@@ -876,6 +887,8 @@ export function POSBookingDetail({
         return 'bg-green-100 text-green-800 border border-green-200';
       case 'cancelled':
         return 'bg-gray-100 text-gray-600 border border-gray-200';
+      case 'unserved':
+        return 'bg-amber-100 text-amber-800 border border-amber-200';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -924,6 +937,7 @@ export function POSBookingDetail({
 
   const formatOrderStatusLabel = (status: OrderItem['status']): string => {
     if (status === 'cancelled') return 'Cancelled';
+    if (status === 'unserved') return 'Unserved';
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
@@ -1189,7 +1203,9 @@ export function POSBookingDetail({
           <p className="text-sm text-gray-400 text-center py-6">No order items yet.</p>
         ) : (
           booking.orders.map((order) => {
-            const isCancelled = Boolean(order.cancelledAt);
+            const isCancelled = Boolean(order.cancelledAt)
+              || order.status === 'cancelled'
+              || order.status === 'unserved';
 
             return (
               <TicketOrderItemRow
