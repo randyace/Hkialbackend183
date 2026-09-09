@@ -3,13 +3,16 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronRight,
+  Copy,
   Download,
   Eye,
   FileSpreadsheet,
+  Link2,
   Loader2,
   Mail,
   FileText,
   Save,
+  XOctagon,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -97,11 +100,40 @@ export interface InvoiceActionDialogProps {
   onSaveBillingDetails?: (details: InvoiceBillingDetails) => Promise<void>;
 }
 
-type BusyAction = 'pdf' | 'excel' | 'send';
+type BusyAction = 'pdf' | 'excel' | 'send' | 'generate-link' | 'revoke-link';
 type ViewMode = 'list' | 'preview';
 
 const VIRTUAL_SEND_TOOLTIP =
   'This draft is not yet a persisted invoice.';
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (
+    typeof navigator !== 'undefined'
+    && typeof navigator.clipboard?.writeText === 'function'
+  ) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to execCommand.
+    }
+  }
+
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    return ok;
+  } catch {
+    return false;
+  }
+}
 
 function formatInvoiceTypeLabel(invoiceType: string): string {
   if (invoiceType === 'pos_fnb') {
@@ -379,10 +411,227 @@ export function InvoiceActionDialog({
   const canIssue = (entry: InvoiceHistoryEntry) =>
     canIssueVirtualBookingInvoice(entry, issueContext);
 
+  const isDraftRow = (entry: InvoiceHistoryEntry) =>
+    Boolean(entry.isVirtual) || entry.status === 'Draft' || entry.status === 'Pending';
+
+  /** Paid / Voided / settled rows never show Generate/Copy payment actions. */
+  const showPaymentLinkActions = (entry: InvoiceHistoryEntry) => {
+    if (entry.status === 'Paid' || entry.status === 'Voided' || entry.status === 'Refunded') {
+      return false;
+    }
+    if (Number(entry.totalAmount) <= 0) {
+      return false;
+    }
+    return (
+      Boolean(entry.isVirtual)
+      || entry.status === 'Draft'
+      || entry.status === 'Pending'
+      || entry.status === 'Sent'
+      || entry.status === 'Unpaid'
+    );
+  };
+
+  const generateLinkDisabledReason = (entry: InvoiceHistoryEntry): string | null => {
+    if (!showPaymentLinkActions(entry)) {
+      return 'Payment link actions are only available for unpaid invoices.';
+    }
+    if (entry.isVirtual || entry.status === 'Draft') {
+      if (entry.isVirtual && !canIssue(entry)) {
+        return virtualInvoiceSendTooltip(entry, issueContext) || VIRTUAL_SEND_TOOLTIP;
+      }
+      return null;
+    }
+    return null;
+  };
+
   const sendTitle = (entry: InvoiceHistoryEntry) => {
     if (entry.status === 'Voided') return 'Cannot send a voided invoice.';
     if (entry.isVirtual) return virtualInvoiceSendTooltip(entry, issueContext);
     return 'Send to Customer';
+  };
+
+  const generatePaymentLink = async (entry: InvoiceHistoryEntry) => {
+    const blocked = generateLinkDisabledReason(entry);
+    if (blocked) {
+      toast.error(blocked);
+      return;
+    }
+    if (!token) {
+      toast.error('Not signed in. Please log in to generate a payment link.');
+      return;
+    }
+    if (busyKey) return;
+    const key = busyId(entry, 'generate-link');
+    setBusyKey(key);
+    try {
+      // Virtual / Draft booking-fee row: persist invoice + mint link without emailing.
+      if (entry.isVirtual || entry.status === 'Draft') {
+        const response = await fetch(
+          `${baseUrl}/bookings/${bookingId}/send-invoice`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ send_email: false }),
+          },
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok || !body.success) {
+          throw new Error(body.message || `HTTP ${response.status}`);
+        }
+        const invoiceNo = typeof body.data?.invoice_no === 'string'
+          ? body.data.invoice_no
+          : entry.invoiceNo;
+        const url = typeof body.data?.payment_link_url === 'string'
+          ? body.data.payment_link_url.trim()
+          : '';
+        toast.success(
+          url ? 'Invoice created and payment link generated' : 'Invoice created',
+          { description: invoiceNo },
+        );
+        onInvoiceSent?.({
+          invoice_no: invoiceNo,
+          data: {
+            ...(body.data ?? {}),
+            payment_link_url: url || null,
+            status: 'Sent',
+          },
+        });
+        return;
+      }
+
+      const response = await fetch(
+        `${baseUrl}/invoices/${entry.id}/payment-link`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ send_email: false }),
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.success) {
+        throw new Error(body.message || `HTTP ${response.status}`);
+      }
+      const url = typeof body.data?.payment_link_url === 'string'
+        ? body.data.payment_link_url.trim()
+        : '';
+      if (!url) {
+        throw new Error('No payment link URL was returned.');
+      }
+      toast.success(
+        body.data?.reused ? 'Payment link ready' : 'Payment link generated',
+        { description: entry.invoiceNo },
+      );
+      onInvoiceSent?.({
+        invoice_no: entry.invoiceNo,
+        data: {
+          payment_link_url: url,
+          payment_id: body.data?.payment_id ?? null,
+          reused: Boolean(body.data?.reused),
+          status: entry.status === 'Sent' ? 'Sent' : entry.status,
+        },
+      });
+    } catch (error) {
+      toast.error('Failed to generate payment link', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const copyPaymentLink = async (entry: InvoiceHistoryEntry) => {
+    const url = typeof entry.paymentLinkUrl === 'string'
+      ? entry.paymentLinkUrl.trim()
+      : '';
+    if (!url) {
+      toast.error('No active payment link to copy. Generate one first.');
+      return;
+    }
+    const copied = await copyTextToClipboard(url);
+    if (!copied) {
+      toast.error('Clipboard copy failed', { description: url });
+      return;
+    }
+    toast.success('Payment link copied', { description: entry.invoiceNo });
+  };
+
+  const hasActivePaymentLink = (entry: InvoiceHistoryEntry) => {
+    const url = typeof entry.paymentLinkUrl === 'string' ? entry.paymentLinkUrl.trim() : '';
+    return Boolean(entry.hasActivePaymentLink) || url !== '';
+  };
+
+  const revokePaymentLink = async (entry: InvoiceHistoryEntry) => {
+    if (entry.isVirtual || !entry.id || entry.id <= 0) {
+      toast.error('Cannot revoke a draft invoice payment link.');
+      return;
+    }
+    if (!hasActivePaymentLink(entry)) {
+      toast.error('No active payment link to revoke.');
+      return;
+    }
+    if (!token) {
+      toast.error('Not signed in. Please log in to revoke a payment link.');
+      return;
+    }
+
+    const isFnB = entry.invoiceType === 'pos_fnb';
+    const confirmed = window.confirm(
+      isFnB
+        ? 'Revoke this payment link and void the F&B invoice? You can generate a new invoice/link afterward.'
+        : 'Revoke (expire) this payment link? The invoice will stay unpaid so you can generate a new link.',
+    );
+    if (!confirmed) return;
+
+    if (busyKey) return;
+    const key = busyId(entry, 'revoke-link');
+    setBusyKey(key);
+    try {
+      const response = await fetch(
+        `${baseUrl}/invoices/${entry.id}/revoke-payment-link`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: '{}',
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.success) {
+        throw new Error(body.message || `HTTP ${response.status}`);
+      }
+      toast.success(
+        body.data?.voided
+          ? 'Payment link revoked and invoice voided'
+          : 'Payment link revoked',
+        { description: entry.invoiceNo },
+      );
+      onInvoiceSent?.({
+        invoice_no: entry.invoiceNo,
+        data: {
+          ...(body.data ?? {}),
+          payment_link_url: null,
+          has_active_payment_link: false,
+          revoked: true,
+        },
+      });
+    } catch (error) {
+      toast.error('Failed to revoke payment link', {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    } finally {
+      setBusyKey(null);
+    }
   };
 
   const sendToCustomer = async (entry: InvoiceHistoryEntry) => {
@@ -681,9 +930,19 @@ export function InvoiceActionDialog({
                   const pay = paidLabel(entry.status);
                   const pdfBusy = busyKey === busyId(entry, 'pdf');
                   const excelBusy = busyKey === busyId(entry, 'excel');
+                  const generateLinkBusy = busyKey === busyId(entry, 'generate-link');
+                  const revokeLinkBusy = busyKey === busyId(entry, 'revoke-link');
                   const sendBusy = busyKey === busyId(entry, 'send');
-                  const rowBusy = pdfBusy || excelBusy || sendBusy;
+                  const rowBusy = pdfBusy || excelBusy || generateLinkBusy || revokeLinkBusy || sendBusy;
                   const issuing = canIssue(entry);
+                  const showLinkActions = showPaymentLinkActions(entry);
+                  const activeLink = hasActivePaymentLink(entry);
+                  const generateBlocked = generateLinkDisabledReason(entry);
+                  const generateDisabled = rowBusy || Boolean(generateBlocked);
+                  const copyUrl = typeof entry.paymentLinkUrl === 'string'
+                    ? entry.paymentLinkUrl.trim()
+                    : '';
+                  const canCopyPaymentLink = copyUrl !== '';
                   const sendDisabled = rowBusy || entry.status === 'Voided' || (Boolean(entry.isVirtual) && !issuing);
                   return (
                     <li
@@ -691,7 +950,7 @@ export function InvoiceActionDialog({
                       className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
                       data-testid={`invoice-action-row-${rowKey}`}
                     >
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className={`font-semibold text-gray-900 text-sm ${entry.isVirtual ? '' : 'font-mono'}`}>
@@ -718,74 +977,144 @@ export function InvoiceActionDialog({
                               : 'Complimentary'}
                           </p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={rowBusy}
-                            onClick={() => openPreview(entry)}
-                            data-testid={`invoice-action-preview-${rowKey}`}
-                            title="Preview"
+                        <div className="flex flex-col gap-2 sm:items-end">
+                          <div
+                            className="flex flex-wrap items-center gap-1.5"
+                            data-testid={`invoice-action-doc-group-${rowKey}`}
                           >
-                            <Eye className="w-4 h-4 mr-1.5" />
-                            Preview
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={rowBusy}
-                            onClick={() => void downloadPdf(entry)}
-                            data-testid={`invoice-action-pdf-${rowKey}`}
-                            title={entry.isVirtual
-                              ? 'Download PDF from current booking (on-the-fly)'
-                              : 'Download PDF'}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={rowBusy}
+                              onClick={() => openPreview(entry)}
+                              data-testid={`invoice-action-preview-${rowKey}`}
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4 mr-1.5" />
+                              Preview
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={rowBusy}
+                              onClick={() => void downloadPdf(entry)}
+                              data-testid={`invoice-action-pdf-${rowKey}`}
+                              title={entry.isVirtual
+                                ? 'Download PDF from current booking (on-the-fly)'
+                                : 'Download PDF'}
+                            >
+                              {pdfBusy ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4 mr-1.5" />
+                              )}
+                              PDF
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              disabled={rowBusy}
+                              onClick={() => void downloadExcel(entry)}
+                              data-testid={`invoice-action-excel-${rowKey}`}
+                              title={entry.isVirtual
+                                ? 'Download Excel from current booking (on-the-fly)'
+                                : 'Download Excel'}
+                            >
+                              {excelBusy ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+                              )}
+                              Excel
+                            </Button>
+                          </div>
+                          <div
+                            className="flex flex-wrap items-center gap-1.5"
+                            data-testid={`invoice-action-pay-group-${rowKey}`}
                           >
-                            {pdfBusy ? (
-                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                            ) : (
-                              <Download className="w-4 h-4 mr-1.5" />
-                            )}
-                            PDF
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            disabled={rowBusy}
-                            onClick={() => void downloadExcel(entry)}
-                            data-testid={`invoice-action-excel-${rowKey}`}
-                            title={entry.isVirtual
-                              ? 'Download Excel from current booking (on-the-fly)'
-                              : 'Download Excel'}
-                          >
-                            {excelBusy ? (
-                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                            ) : (
-                              <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-                            )}
-                            Excel
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={issuing ? 'default' : 'outline'}
-                            size="sm"
-                            disabled={sendDisabled}
-                            onClick={() => void sendToCustomer(entry)}
-                            data-testid={`invoice-action-send-${rowKey}`}
-                            title={sendTitle(entry)}
-                            className={issuing
-                              ? 'bg-green-600 hover:bg-green-700 text-white'
-                              : 'border-blue-200 text-blue-800 hover:bg-blue-50'}
-                          >
-                            {sendBusy ? (
-                              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                            ) : (
-                              <Mail className="w-4 h-4 mr-1.5" />
-                            )}
-                            {issuing ? 'Send Invoice & Payment Link' : 'Send'}
-                          </Button>
+                            {showLinkActions ? (
+                              <>
+                                {activeLink && !entry.isVirtual ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={rowBusy}
+                                    onClick={() => void revokePaymentLink(entry)}
+                                    data-testid={`invoice-action-revoke-link-${rowKey}`}
+                                    title={entry.invoiceType === 'pos_fnb'
+                                      ? 'Expire Adyen link and void this F&B invoice'
+                                      : 'Expire Adyen link (invoice stays unpaid)'}
+                                    className="border-red-200 text-red-700 hover:bg-red-50"
+                                  >
+                                    {revokeLinkBusy ? (
+                                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                                    ) : (
+                                      <XOctagon className="w-4 h-4 mr-1.5" />
+                                    )}
+                                    Revoke Link
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={generateDisabled}
+                                    onClick={() => void generatePaymentLink(entry)}
+                                    data-testid={`invoice-action-generate-link-${rowKey}`}
+                                    title={generateBlocked ?? (isDraftRow(entry)
+                                      ? 'Create invoice and generate payment link (no email)'
+                                      : 'Generate Adyen payment link for this invoice')}
+                                    className="border-amber-200 text-amber-900 hover:bg-amber-50"
+                                  >
+                                    {generateLinkBusy ? (
+                                      <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                                    ) : (
+                                      <Link2 className="w-4 h-4 mr-1.5" />
+                                    )}
+                                    Generate Link
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={rowBusy || !canCopyPaymentLink}
+                                  onClick={() => void copyPaymentLink(entry)}
+                                  data-testid={`invoice-action-copy-link-${rowKey}`}
+                                  title={canCopyPaymentLink
+                                    ? 'Copy existing payment link'
+                                    : 'Generate a payment link first'}
+                                  className="border-amber-200 text-amber-900 hover:bg-amber-50"
+                                >
+                                  <Copy className="w-4 h-4 mr-1.5" />
+                                  Copy Link
+                                </Button>
+                              </>
+                            ) : null}
+                            <Button
+                              type="button"
+                              variant={issuing ? 'default' : 'outline'}
+                              size="sm"
+                              disabled={sendDisabled}
+                              onClick={() => void sendToCustomer(entry)}
+                              data-testid={`invoice-action-send-${rowKey}`}
+                              title={sendTitle(entry)}
+                              className={issuing
+                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                : 'border-blue-200 text-blue-800 hover:bg-blue-50'}
+                            >
+                              {sendBusy ? (
+                                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                              ) : (
+                                <Mail className="w-4 h-4 mr-1.5" />
+                              )}
+                              {issuing ? 'Send Invoice & Payment Link' : 'Send'}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </li>
