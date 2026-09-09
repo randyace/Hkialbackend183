@@ -358,6 +358,12 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /** Staff uncancel — restore a Cancelled booking (parent owns the API). */
   onReactivateCancelled?: () => Promise<void>;
   isReactivatingCancelled?: boolean;
+  /**
+   * Staff records a pending refund (amount in HKD, optional reason).
+   * Parent owns POST /bookings/{id}/refund — no Adyen call.
+   */
+  onProcessRefund?: (amount: number, reason: string) => Promise<void>;
+  isProcessingRefund?: boolean;
   // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
   // Adyen payment link callback. Forwarded from the parent
   // wrapper (which owns the `paymentApi` import) for payment
@@ -577,7 +583,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   fieldErrors?: Record<string, string[]>;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onProcessRefund, isProcessingRefund = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -1388,6 +1394,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           label: 'Process Refund',
           icon: <DollarSign className="w-4 h-4 mr-2" />,
           className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
+          onClick: () => {
+            setRefundAmount('');
+            setRefundReason('');
+            setShowRefundDialog(true);
+          },
         }]
       : []),
     ...(isConfirmedAndPaid
@@ -1430,15 +1441,26 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         }]
       : []),
   ];
-  const handleProcessRefund = () => {
+  const handleProcessRefund = async () => {
     const amt = parseFloat(refundAmount.replace(/[^0-9.]/g, ''));
     if (!amt || amt <= 0) { toast.error('Please enter a valid refund amount.'); return; }
     if (amt > amountDueAfterVouchers) {
       toast.error(`Refund amount cannot exceed the maximum refundable amount of HK$${amountDueAfterVouchers.toLocaleString()}.`);
       return;
     }
+    if (onProcessRefund) {
+      try {
+        await onProcessRefund(amt, refundReason.trim());
+        setShowRefundDialog(false);
+        setRefundAmount('');
+        setRefundReason('');
+      } catch {
+        // Parent toasts the API error.
+      }
+      return;
+    }
     toast.success('Refund case submitted!', {
-      description: `HK$${amt.toLocaleString()} refund for ${booking.bookingNo} has been passed to Refund Reports.`,
+      description: `HK$${amt.toLocaleString()} pending refund for ${booking.bookingNo} will show in Payment history.`,
     });
     setShowRefundDialog(false);
     setRefundAmount('');
@@ -4814,7 +4836,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             <div className="flex items-start gap-2 px-3 py-2.5 bg-purple-50 border border-purple-100 rounded-lg">
               <AlertCircle className="w-4 h-4 text-purple-500 shrink-0 mt-0.5" />
               <p className="text-xs text-purple-700">
-                After confirmation, this refund case will be logged in <strong>Refund Reports</strong> and a notification will be sent to the Finance team for processing.
+                After confirmation, a <strong>Pending</strong> refund is added to Payment history. Finance processes the card refund in Adyen separately — this screen does not call Adyen.
               </p>
             </div>
           </div>
@@ -4825,10 +4847,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             </Button>
             <Button
               className="flex-1 bg-purple-600 hover:bg-purple-700"
-              onClick={handleProcessRefund}
+              onClick={() => void handleProcessRefund()}
+              disabled={isProcessingRefund}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Confirm Refund
+              {isProcessingRefund ? 'Saving…' : 'Confirm Refund'}
             </Button>
           </div>
         </DialogContent>
