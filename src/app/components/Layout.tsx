@@ -13,8 +13,6 @@ export function Layout({}: LayoutProps = {}) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isPOSPage = location.pathname.startsWith('/pos');
-
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -45,8 +43,9 @@ export function Layout({}: LayoutProps = {}) {
           <h1 className="text-gray-900">HKIA VIP Lounge Backend System</h1>
         </div>
 
-        {/* POS Food Alert — pinned below top bar on all /pos pages */}
-        {isPOSPage && (
+        {/* POS Food Alert — floor plan only (/pos, /pos/floor-plan) */}
+        {(location.pathname.replace(/\/+$/, '') === '/pos'
+          || location.pathname.replace(/\/+$/, '') === '/pos/floor-plan') && (
           <POSFoodAlert
             onViewBooking={(bookingNo) => navigate(`/pos/booking/${bookingNo}`)}
           />

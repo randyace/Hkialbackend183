@@ -58,8 +58,13 @@ type AdjustmentReason =
   | 'Booking Date Change'
   | 'Flight Class Change';
 
+type RefundSourceType = 'manual' | 'booking_overpayment' | 'adyen';
+
 interface RefundRecord {
   id: number;
+  sourceType?: RefundSourceType;
+  unifiedKey?: string;
+  canComplete?: boolean;
   refundNo: string;
   bookingNo: string;
   accountNo: string;
@@ -380,14 +385,22 @@ function RefundDetailModal({
 }: {
   record: RefundRecord;
   onClose: () => void;
-  onStatusChange: (id: number, status: RefundStatus, notes: string) => void;
+  onStatusChange: (
+    id: number,
+    status: RefundStatus,
+    notes: string,
+    sourceType?: RefundSourceType,
+  ) => void;
 }) {
   const [financeNotes, setFinanceNotes] = useState(record.financeNotes ?? '');
   const [newStatus, setNewStatus] = useState<RefundStatus>(record.status);
   const statusCfg = STATUS_CONFIG[record.status];
+  const sourceType = record.sourceType ?? 'manual';
+  const isAdyen = sourceType === 'adyen';
+  const canEditStatus = record.canComplete !== false && !isAdyen;
 
   const handleSave = () => {
-    onStatusChange(record.id, newStatus, financeNotes);
+    onStatusChange(record.id, newStatus, financeNotes, sourceType);
     onClose();
   };
 
@@ -499,7 +512,11 @@ function RefundDetailModal({
           <div className="mt-3 text-right">
             <span className="text-sm text-gray-500">Reduction: </span>
             <span className="text-sm text-red-600">
-              -{((record.refundAmount / record.originalAmount) * 100).toFixed(1)}%
+              -
+              {record.originalAmount > 0
+                ? ((record.refundAmount / record.originalAmount) * 100).toFixed(1)
+                : '0.0'}
+              %
             </span>
           </div>
         </Card>
@@ -556,13 +573,30 @@ function RefundDetailModal({
             <DollarSign className="w-4 h-4 text-blue-500" /> Finance Action
           </h3>
           <div className="space-y-3">
+            <div className="text-xs text-gray-500">
+              Source:{' '}
+              <span className="font-medium text-gray-700">
+                {sourceType === 'booking_overpayment'
+                  ? 'Booking overpayment'
+                  : sourceType === 'adyen'
+                    ? 'Adyen'
+                    : 'Manual finance'}
+              </span>
+            </div>
+            {isAdyen && (
+              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
+                Adyen refunds are completed via payment-provider webhooks and cannot be marked
+                Completed manually from this report.
+              </p>
+            )}
             <div>
               <label className="block text-sm text-gray-600 mb-[10px]">Update Refund Status</label>
               <div className="relative">
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as RefundStatus)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-8"
+                  disabled={!canEditStatus}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm appearance-none pr-8 disabled:bg-gray-100 disabled:text-gray-500"
                 >
                   <option value="Pending Review">Pending Review</option>
                   <option value="Processing">Processing</option>
@@ -586,7 +620,12 @@ function RefundDetailModal({
               <Button variant="outline" size="sm" onClick={onClose}>
                 Cancel
               </Button>
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+                onClick={handleSave}
+                disabled={!canEditStatus}
+              >
                 Save Changes
               </Button>
             </div>
@@ -602,7 +641,12 @@ export interface RefundReportProps {
   /** Pass array from container; omitted → MOCK (Figma). Defined [] stays empty. */
   refunds?: RefundRecord[];
   onViewDetail?: (id: number) => void;
-  onUpdateStatus?: (id: number, status: RefundStatus, notes: string) => void;
+  onUpdateStatus?: (
+    id: number,
+    status: RefundStatus,
+    notes: string,
+    sourceType?: RefundSourceType,
+  ) => void;
   isLoading?: boolean;
   page?: number;
   totalPages?: number;
@@ -667,10 +711,19 @@ export function RefundReport({
     });
   }, [records, searchQuery, statusFilter, accountTypeFilter, reasonFilter, startDate, endDate]);
 
-  const handleStatusChange = (id: number, status: RefundStatus, notes: string) => {
+  const handleStatusChange = (
+    id: number,
+    status: RefundStatus,
+    notes: string,
+    sourceType: RefundSourceType = 'manual',
+  ) => {
+    if (onUpdateStatus) {
+      onUpdateStatus(id, status, notes, sourceType);
+      return;
+    }
     setRecords((prev) =>
       prev.map((r) =>
-        r.id === id
+        r.id === id && (r.sourceType ?? 'manual') === sourceType
           ? {
               ...r,
               status,
@@ -970,13 +1023,18 @@ export function RefundReport({
                   const sc = STATUS_CONFIG[r.status];
                   return (
                     <tr
-                      key={r.id}
+                      key={r.unifiedKey ?? `${r.sourceType ?? 'manual'}:${r.id}`}
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => setSelectedRecord(r)}
                     >
                       {/* Refund No */}
                       <td className="px-4 py-3">
                         <span className="font-mono text-xs text-gray-700">{r.refundNo}</span>
+                        {r.sourceType && r.sourceType !== 'manual' && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            {r.sourceType === 'adyen' ? 'Adyen' : 'Overpayment'}
+                          </p>
+                        )}
                       </td>
 
                       {/* Booking No */}
