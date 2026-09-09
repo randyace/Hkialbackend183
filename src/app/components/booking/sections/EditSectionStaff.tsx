@@ -15,11 +15,15 @@
  *
  * 2026-09-09 — filter roster to Administrator / Operation Officer /
  * Supervisor and default the section collapsed to save vertical space.
+ *
+ * 2026-09-10 — match Update History Expand/Collapse button UX
+ * (`BookingAccessHistory`) instead of bare chevron toggle.
  */
 
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, UserCheck } from 'lucide-react';
+import { ChevronDown, ChevronUp, UserCheck } from 'lucide-react';
 import { Card } from '../../ui/card';
+import { Button } from '../../ui/button';
 import { Checkbox } from '../../ui/checkbox';
 import type { BookingFormData, EditStaffOption } from '../BookingEditView';
 
@@ -68,32 +72,43 @@ export function EditSectionStaff({
   };
 
   return (
-    <Card className="p-5" data-testid="edit-section-in-charge-staff">
-      <button
-        type="button"
-        className="w-full flex items-center justify-between gap-3 text-left"
-        onClick={() => setExpanded((open) => !open)}
-        aria-expanded={expanded}
-        data-testid="in-charge-staff-toggle"
-      >
-        <h3 className="text-sm uppercase tracking-wide text-gray-500 flex items-center gap-2">
-          <UserCheck className="w-4 h-4" />
-          In-Charge Staff
-          {assignedVisible.length > 0 ? (
-            <span className="normal-case tracking-normal text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
-              {assignedVisible.length} assigned
-            </span>
-          ) : null}
-        </h3>
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" aria-hidden />
-        ) : (
-          <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" aria-hidden />
-        )}
-      </button>
+    <Card className="p-4 border-slate-200" data-testid="edit-section-in-charge-staff">
+      <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${expanded ? 'mb-3' : ''}`}>
+        <div>
+          <h3 className="text-sm uppercase tracking-wide text-gray-500 flex items-center gap-2">
+            <UserCheck className="w-4 h-4" />
+            In-Charge Staff
+            {assignedVisible.length > 0 ? (
+              <span className="normal-case tracking-normal text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+                {assignedVisible.length} assigned
+              </span>
+            ) : null}
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Select staff responsible for this booking (Administrator, Operation Officer, Supervisor).
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+            data-testid="in-charge-staff-toggle"
+          >
+            {expanded ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+            <span className="ml-1.5">{expanded ? 'Collapse' : 'Expand'}</span>
+          </Button>
+        </div>
+      </div>
 
       {expanded ? (
-        <div className="mt-4" data-testid="in-charge-staff-body">
+        <div data-testid="in-charge-staff-body">
           <p className="text-xs text-gray-500 mb-4">
             Select one or more staff members who will be responsible for this booking.
             Multiple selections allowed. Showing Administrator, Operation Officer, and Supervisor roles only.

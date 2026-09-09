@@ -361,8 +361,13 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   /**
    * Staff records a pending refund (amount in HKD, optional reason).
    * Parent owns POST /bookings/{id}/refund — no Adyen call.
+   * Pass `amountTbd: true` to mark refund_status=pending_amount without an amount.
    */
-  onProcessRefund?: (amount: number, reason: string) => Promise<void>;
+  onProcessRefund?: (
+    amount: number,
+    reason: string,
+    options?: { amountTbd?: boolean },
+  ) => Promise<void>;
   isProcessingRefund?: boolean;
   // 2026-06-19 (round 6.2.49, payment_getway merge) — Send
   // Adyen payment link callback. Forwarded from the parent
@@ -1313,6 +1318,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [showRefundDialog, setShowRefundDialog] = useState(false);
   const [refundAmount,     setRefundAmount]     = useState('');
   const [refundReason,     setRefundReason]     = useState('');
+  const [refundAmountTbd,  setRefundAmountTbd]  = useState(false);
 
   // Actions card config array. Cancel Booking is a status change
   // (→ Cancelled), not a delete — always available when the booking
@@ -1397,6 +1403,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           onClick: () => {
             setRefundAmount('');
             setRefundReason('');
+            setRefundAmountTbd(false);
             setShowRefundDialog(true);
           },
         }]
@@ -1410,6 +1417,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           onClick: () => {
             setRefundAmount('');
             setRefundReason('');
+            setRefundAmountTbd(false);
             setShowRefundDialog(true);
           },
         }]
@@ -1442,29 +1450,45 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       : []),
   ];
   const handleProcessRefund = async () => {
-    const amt = parseFloat(refundAmount.replace(/[^0-9.]/g, ''));
-    if (!amt || amt <= 0) { toast.error('Please enter a valid refund amount.'); return; }
-    if (amt > amountDueAfterVouchers) {
-      toast.error(`Refund amount cannot exceed the maximum refundable amount of HK$${amountDueAfterVouchers.toLocaleString()}.`);
+    // Isolated API only — never ties into Save All Changes / react-hook-form.
+    if (!onProcessRefund) {
+      toast.error('Refund action is unavailable. Refresh the page and try again.');
       return;
     }
-    if (onProcessRefund) {
+
+    if (refundAmountTbd) {
       try {
-        await onProcessRefund(amt, refundReason.trim());
+        await onProcessRefund(0, refundReason.trim(), { amountTbd: true });
         setShowRefundDialog(false);
         setRefundAmount('');
         setRefundReason('');
+        setRefundAmountTbd(false);
       } catch {
-        // Parent toasts the API error.
+        // Parent mutation onError toasts the API error; keep dialog open.
       }
       return;
     }
-    toast.success('Refund case submitted!', {
-      description: `HK$${amt.toLocaleString()} pending refund for ${booking.bookingNo} will show in Payment history.`,
-    });
-    setShowRefundDialog(false);
-    setRefundAmount('');
-    setRefundReason('');
+
+    const amt = parseFloat(refundAmount.replace(/[^0-9.]/g, ''));
+    if (!amt || amt <= 0) {
+      toast.error('Please enter a valid refund amount, or mark Amount to be determined.');
+      return;
+    }
+    if (amountDueAfterVouchers > 0 && amt > amountDueAfterVouchers) {
+      toast.error(
+        `Refund amount cannot exceed the maximum refundable amount of HK$${amountDueAfterVouchers.toLocaleString()}.`,
+      );
+      return;
+    }
+    try {
+      await onProcessRefund(amt, refundReason.trim());
+      setShowRefundDialog(false);
+      setRefundAmount('');
+      setRefundReason('');
+      setRefundAmountTbd(false);
+    } catch {
+      // Parent mutation onError toasts the API error; keep dialog open.
+    }
   };
 
   // Round 6.2.13 (2026-06-08) — REMOVED `headCountRate` and
@@ -1845,7 +1869,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     const n = parseFloat(cleaned);
     return Number.isFinite(n) ? n : 0;
   };
-  const amountDueAfterVouchers = parseAmount(booking.amount);
+  const amountDueAfterVouchers = (() => {
+    const fromAmount = parseAmount(booking.amount);
+    if (fromAmount > 0) return fromAmount;
+    if (booking.totalPrice != null && Number.isFinite(Number(booking.totalPrice))) {
+      return Math.max(0, Number(booking.totalPrice));
+    }
+    if (bookingMasterTotal != null && Number.isFinite(bookingMasterTotal)) {
+      return Math.max(0, bookingMasterTotal);
+    }
+    return 0;
+  })();
   const sourcePriceBreakdown =
     (livePreviewBreakdown && livePreviewBreakdown.length > 0)
       ? livePreviewBreakdown
@@ -2154,6 +2188,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </span>
                     : null}
               </Badge>
+            )}
+            {(booking.refundStatus === 'pending_amount' || booking.refundStatus === 'due') && (
+              <span
+                data-testid="booking-header-pending-refund"
+                className="ml-3 px-2 py-1 bg-red-100 text-red-600 font-bold text-xs rounded border border-red-200"
+              >
+                Action Required: Pending Refund
+              </span>
             )}
           </div>
           <p className="text-gray-600">View and manage booking information</p>
@@ -2558,6 +2600,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       {/* 8. Booking Details */}
       <Card className="p-6">
         <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-4">Booking Details</h3>
+        {(booking.refundStatus === 'pending_amount' || booking.refundStatus === 'due') && (
+          <div className="mb-4">
+            <span
+              data-testid="booking-visit-payment-pending-refund"
+              className="px-2 py-1 bg-red-100 text-red-600 font-bold text-xs rounded border border-red-200"
+            >
+              Action Required: Pending Refund
+            </span>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <label className="text-sm text-gray-600">Suite/Lounge</label>
@@ -4642,52 +4694,54 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             onFormChange={onFormChange}
             staffOptions={staffOptions}
           />
-
-          {/* Master Save bar — sticky so staff do not hunt past Status */}
-          <Card
-            className="p-5 border-blue-300 bg-blue-50/40 sticky bottom-0 z-20 shadow-md"
-            data-testid="booking-detail-sticky-save"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                {/* 2026-06-28 — Sky removed the "Master Save" title
-                    and the "Sends all section values to PUT /api/bookings/{id}.
-                    The detail page re-fetches on success." description
-                    from this bar. The save button below still says
-                    "Save All Changes" so the user knows what it does. */}
-                {isEditDirty !== undefined && (
-                  <p
-                    className={`text-xs mt-2 ${isEditDirty ? 'text-blue-700' : 'text-gray-500'}`}
-                    data-testid="booking-detail-dirty-state"
-                  >
-                    {isEditDirty ? 'Unsaved changes' : 'All changes saved'}
-                  </p>
-                )}
-                {hasGuestErrorsFinal && (
-                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {effectiveIncompleteVipInfoCount > 0
-                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group / Nationality) before saving.`
-                      : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.'}
-                  </p>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onBack}
-                  disabled={isSavingAllChanges}
-                >
-                  <X className="w-4 h-4 mr-1.5" /> Back
-                </Button>
-              </div>
-            </div>
-          </Card>
         </div>
       )}
 
       {afterCardsSlot}
+
+      {/* Unsaved-changes bar — after Update History; sticky to viewport bottom */}
+      {formData && onFormChange && (
+        <Card
+          className="mt-6 p-5 sticky bottom-4 z-40 shadow-lg border border-blue-200 bg-white"
+          data-testid="booking-detail-sticky-save"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              {/* 2026-06-28 — Sky removed the "Master Save" title
+                  and the "Sends all section values to PUT /api/bookings/{id}.
+                  The detail page re-fetches on success." description
+                  from this bar. The save button below still says
+                  "Save All Changes" so the user knows what it does. */}
+              {isEditDirty !== undefined && (
+                <p
+                  className={`text-xs mt-2 ${isEditDirty ? 'text-blue-700' : 'text-gray-500'}`}
+                  data-testid="booking-detail-dirty-state"
+                >
+                  {isEditDirty ? 'Unsaved changes' : 'All changes saved'}
+                </p>
+              )}
+              {hasGuestErrorsFinal && (
+                <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  {effectiveIncompleteVipInfoCount > 0
+                    ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group / Nationality) before saving.`
+                    : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.'}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onBack}
+                disabled={isSavingAllChanges}
+              >
+                <X className="w-4 h-4 mr-1.5" /> Back
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* ── Refund Dialog ────────────────────────────────────────────────── */}
       <Dialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
@@ -4779,7 +4833,33 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </div>
             )}
 
+            {/* Amount TBD */}
+            <label className="flex items-start gap-3 px-3 py-2.5 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={refundAmountTbd}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setRefundAmountTbd(checked);
+                  if (checked) {
+                    setRefundAmount('');
+                  }
+                }}
+                data-testid="refund-amount-tbd"
+              />
+              <span>
+                <span className="block text-sm font-medium text-gray-800">
+                  Amount to be determined (Mark for later)
+                </span>
+                <span className="block text-xs text-gray-500 mt-0.5">
+                  Flag this booking for a refund without entering the amount yet. It will appear on the Refund Report as TBD.
+                </span>
+              </span>
+            </label>
+
             {/* Refund Amount */}
+            {!refundAmountTbd && (
             <div>
               <label className="text-sm text-gray-700 font-medium block mb-[10px]">
                 Refund Amount (HKD) <span className="text-red-500">*</span>
@@ -4819,6 +4899,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 )
               )}
             </div>
+            )}
 
             {/* Refund Reason */}
             <div>
@@ -4842,13 +4923,27 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           </div>
 
           <div className="flex gap-3 pt-4 border-t">
-            <Button variant="outline" className="flex-1" onClick={() => setShowRefundDialog(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setShowRefundDialog(false)}
+              disabled={isProcessingRefund}
+            >
               Cancel
             </Button>
             <Button
+              type="button"
               className="flex-1 bg-purple-600 hover:bg-purple-700"
-              onClick={() => void handleProcessRefund()}
-              disabled={isProcessingRefund}
+              data-testid="confirm-refund"
+              disabled={isProcessingRefund || !onProcessRefund}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Hard-wired to isolated parent mutation (POST /bookings/{id}/refund).
+                // Never bubbles into Save All Changes / form submit.
+                void handleProcessRefund();
+              }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               {isProcessingRefund ? 'Saving…' : 'Confirm Refund'}

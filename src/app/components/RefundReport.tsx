@@ -65,6 +65,7 @@ interface RefundRecord {
   sourceType?: RefundSourceType;
   unifiedKey?: string;
   canComplete?: boolean;
+  amountTbd?: boolean;
   refundNo: string;
   bookingNo: string;
   accountNo: string;
@@ -506,7 +507,11 @@ function RefundDetailModal({
             </div>
             <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-4 text-center">
               <p className="text-xs text-red-500 mb-1">Refund Amount</p>
-              <p className="text-xl text-red-600">{fmtHKD(record.refundAmount)}</p>
+              <p className="text-xl text-red-600">
+                {record.amountTbd || (record.refundAmount === 0 && record.adjustmentDetail?.includes('pending_amount'))
+                  ? 'TBD'
+                  : fmtHKD(record.refundAmount)}
+              </p>
             </div>
           </div>
           <div className="mt-3 text-right">
@@ -1070,10 +1075,18 @@ export function RefundReport({
 
                       {/* Refund Amt */}
                       <td className="px-4 py-3 text-right">
-                        <span className="text-red-600">{fmtHKD(r.refundAmount)}</span>
-                        <p className="text-xs text-gray-400">
-                          -{((r.refundAmount / r.originalAmount) * 100).toFixed(0)}%
-                        </p>
+                        {r.amountTbd || (r.refundAmount === 0 && r.adjustmentDetail?.includes('pending_amount')) ? (
+                          <span className="text-amber-700 font-medium">TBD</span>
+                        ) : (
+                          <>
+                            <span className="text-red-600">{fmtHKD(r.refundAmount)}</span>
+                            {r.originalAmount > 0 && (
+                              <p className="text-xs text-gray-400">
+                                -{((r.refundAmount / r.originalAmount) * 100).toFixed(0)}%
+                              </p>
+                            )}
+                          </>
+                        )}
                       </td>
 
                       {/* Reason */}

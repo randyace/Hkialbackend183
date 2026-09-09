@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
-  ChevronRight,
+  ChevronUp,
   Copy,
   Download,
   Eye,
@@ -188,6 +188,8 @@ export function InvoiceActionDialog({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceHistoryEntry | null>(null);
+  /** Row-key → payment URL overlay so Copy enables immediately after Generate (no browser navigation). */
+  const [localPaymentLinks, setLocalPaymentLinks] = useState<Record<string, string | null>>({});
   const [billingExpanded, setBillingExpanded] = useState(true);
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingName, setBillingName] = useState('');
@@ -199,10 +201,23 @@ export function InvoiceActionDialog({
   const [invoiceRemarks, setInvoiceRemarks] = useState('');
 
   // Parent owns virtual-master injection + Paid/pending partition.
-  const displayInvoices = useMemo(
-    () => (Array.isArray(invoices) ? invoices : []),
-    [invoices],
-  );
+  // Local overlay keeps freshly minted Adyen URLs available for Copy without redirecting.
+  const displayInvoices = useMemo(() => {
+    const base = Array.isArray(invoices) ? invoices : [];
+    return base.map((entry) => {
+      const key = invoiceRowKey(entry);
+      if (!Object.prototype.hasOwnProperty.call(localPaymentLinks, key)) {
+        return entry;
+      }
+      const url = localPaymentLinks[key];
+      const trimmed = typeof url === 'string' ? url.trim() : '';
+      return {
+        ...entry,
+        paymentLinkUrl: trimmed || null,
+        hasActivePaymentLink: trimmed !== '',
+      };
+    });
+  }, [invoices, localPaymentLinks]);
   const isReceiptMode = mode === 'receipt';
   const listTitle = isReceiptMode ? 'Select Receipt' : 'Select Invoice';
   const listTitleZh = isReceiptMode ? '（選擇收據）' : '（選擇發票）';
@@ -218,6 +233,7 @@ export function InvoiceActionDialog({
       setSelectedInvoice(null);
       setBusyKey(null);
       setBillingSaving(false);
+      setLocalPaymentLinks({});
       return;
     }
     // Hydrate Bill To once per open so typing is not clobbered by parent re-renders.
@@ -450,6 +466,15 @@ export function InvoiceActionDialog({
     return 'Send to Customer';
   };
 
+  const rememberPaymentLink = (entry: InvoiceHistoryEntry, url: string | null) => {
+    const key = invoiceRowKey(entry);
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    setLocalPaymentLinks((prev) => ({
+      ...prev,
+      [key]: trimmed || null,
+    }));
+  };
+
   const generatePaymentLink = async (entry: InvoiceHistoryEntry) => {
     const blocked = generateLinkDisabledReason(entry);
     if (blocked) {
@@ -465,6 +490,7 @@ export function InvoiceActionDialog({
     setBusyKey(key);
     try {
       // Virtual / Draft booking-fee row: persist invoice + mint link without emailing.
+      // Never navigate the staff browser to the Adyen URL — mirror Payment History (Copy only).
       if (entry.isVirtual || entry.status === 'Draft') {
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
@@ -488,6 +514,7 @@ export function InvoiceActionDialog({
         const url = typeof body.data?.payment_link_url === 'string'
           ? body.data.payment_link_url.trim()
           : '';
+        rememberPaymentLink(entry, url || null);
         toast.success(
           url ? 'Invoice created and payment link generated' : 'Invoice created',
           { description: invoiceNo },
@@ -525,6 +552,7 @@ export function InvoiceActionDialog({
       if (!url) {
         throw new Error('No payment link URL was returned.');
       }
+      rememberPaymentLink(entry, url);
       toast.success(
         body.data?.reused ? 'Payment link ready' : 'Payment link generated',
         { description: entry.invoiceNo },
@@ -616,6 +644,7 @@ export function InvoiceActionDialog({
           : 'Payment link revoked',
         { description: entry.invoiceNo },
       );
+      rememberPaymentLink(entry, null);
       onInvoiceSent?.({
         invoice_no: entry.invoiceNo,
         data: {
@@ -777,13 +806,7 @@ export function InvoiceActionDialog({
               className="rounded-lg border border-gray-200 bg-slate-50/80 mb-4"
               data-testid="invoice-billing-details"
             >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
-                onClick={() => setBillingExpanded((open) => !open)}
-                aria-expanded={billingExpanded}
-                data-testid="invoice-billing-details-toggle"
-              >
+              <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between px-4 py-3 ${billingExpanded ? 'border-b border-gray-200' : ''}`}>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
                     Invoice Billing Details (發票抬頭)
@@ -792,14 +815,26 @@ export function InvoiceActionDialog({
                     Shown on the invoice PDF Bill To. Leave blank to keep guest / account defaults.
                   </p>
                 </div>
-                {billingExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
-                )}
-              </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-expanded={billingExpanded}
+                    onClick={() => setBillingExpanded((open) => !open)}
+                    data-testid="invoice-billing-details-toggle"
+                  >
+                    {billingExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                    <span className="ml-1.5">{billingExpanded ? 'Collapse' : 'Expand'}</span>
+                  </Button>
+                </div>
+              </div>
               {billingExpanded ? (
-                <div className="border-t border-gray-200 px-4 pb-4 pt-3 space-y-3">
+                <div className="px-4 pb-4 pt-3 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1.5">Bill-to name</label>

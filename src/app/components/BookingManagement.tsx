@@ -104,6 +104,10 @@ interface Booking {
   hasUpcomingBirthday?: boolean;
   /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
   updatedAt?: string;
+  /** Booking refund workflow status (e.g. due, pending_amount, partial). */
+  refundStatus?: string | null;
+  /** Outstanding refund amount when known. */
+  refundDue?: number | null;
 }
 
 // Travel Agency master data with default discount rates
@@ -324,6 +328,7 @@ export interface BookingManagementProps {
   searchTerm?: string;
   statusFilter?: string;
   paymentStatusFilter?: string;
+  refundStatusFilter?: string;
   bookingCategoryFilter?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -346,6 +351,7 @@ export interface BookingManagementProps {
   onSearchTermChange?: (value: string) => void;
   onStatusFilterChange?: (value: string) => void;
   onPaymentStatusFilterChange?: (value: string) => void;
+  onRefundStatusFilterChange?: (value: string) => void;
   onBookingCategoryFilterChange?: (value: string) => void;
   /** 2026-07-15 PR7 — filter by request type badge (New / Edit / Cancel). */
   requestTypeFilter?: string;
@@ -372,6 +378,7 @@ export function BookingManagement({
   searchTerm: searchTermProp,
   statusFilter: statusFilterProp,
   paymentStatusFilter: paymentStatusFilterProp,
+  refundStatusFilter: refundStatusFilterProp,
   bookingCategoryFilter: bookingCategoryFilterProp,
   requestTypeFilter: requestTypeFilterProp,
   dateFrom: dateFromProp,
@@ -392,6 +399,7 @@ export function BookingManagement({
   onSearchTermChange,
   onStatusFilterChange,
   onPaymentStatusFilterChange,
+  onRefundStatusFilterChange,
   onBookingCategoryFilterChange,
   onRequestTypeFilterChange,
   onDateFromChange,
@@ -408,6 +416,7 @@ export function BookingManagement({
   const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [internalStatusFilter, setInternalStatusFilter] = useState('all');
   const [internalPaymentStatusFilter, setInternalPaymentStatusFilter] = useState('all');
+  const [internalRefundStatusFilter, setInternalRefundStatusFilter] = useState('all');
   const [internalBookingCategoryFilter, setInternalBookingCategoryFilter] = useState('all');
   const [internalRequestTypeFilter, setInternalRequestTypeFilter] = useState('all');
   const [internalDateFrom, setInternalDateFrom] = useState('');
@@ -418,6 +427,7 @@ export function BookingManagement({
   const searchTerm = searchTermProp ?? internalSearchTerm;
   const statusFilter = statusFilterProp ?? internalStatusFilter;
   const paymentStatusFilter = paymentStatusFilterProp ?? internalPaymentStatusFilter;
+  const refundStatusFilter = refundStatusFilterProp ?? internalRefundStatusFilter;
   const requestTypeFilter = requestTypeFilterProp ?? internalRequestTypeFilter;
   const bookingCategoryFilter = bookingCategoryFilterProp ?? internalBookingCategoryFilter;
   const dateFrom = dateFromProp ?? internalDateFrom;
@@ -430,6 +440,7 @@ export function BookingManagement({
   const setSearchTerm = onSearchTermChange ?? setInternalSearchTerm;
   const setStatusFilter = onStatusFilterChange ?? setInternalStatusFilter;
   const setPaymentStatusFilter = onPaymentStatusFilterChange ?? setInternalPaymentStatusFilter;
+  const setRefundStatusFilter = onRefundStatusFilterChange ?? setInternalRefundStatusFilter;
   const setBookingCategoryFilter = onBookingCategoryFilterChange ?? setInternalBookingCategoryFilter;
   const setRequestTypeFilter = onRequestTypeFilterChange ?? setInternalRequestTypeFilter;
   const setDateFrom = onDateFromChange ?? setInternalDateFrom;
@@ -502,6 +513,15 @@ export function BookingManagement({
                          booking.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     const matchesPaymentStatus = paymentStatusFilter === 'all' || booking.paymentStatus === paymentStatusFilter;
+    const matchesRefundStatus =
+      refundStatusFilter === 'all'
+      || (refundStatusFilter === 'action_required'
+        && (
+          booking.refundStatus === 'due'
+          || booking.refundStatus === 'pending_amount'
+          || booking.refundStatus === 'partial'
+          || (Number(booking.refundDue) || 0) > 0
+        ));
     
     // Booking Category filter logic
     let matchesBookingCategory = true;
@@ -520,7 +540,7 @@ export function BookingManagement({
     // PR7 — request type badge filter (New / Edit / Cancel open requests)
     const matchesRequestType =
       requestTypeFilter === 'all' || booking.requestType === requestTypeFilter;
-    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesBookingCategory && matchesDateRange && matchesRequestType;
+    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesRefundStatus && matchesBookingCategory && matchesDateRange && matchesRequestType;
   }).sort((a, b) => b.id - a.id);
 
   const localTotalPages = Math.ceil(filteredBookings.length / itemsPerPage);
@@ -710,6 +730,15 @@ export function BookingManagement({
                 <SelectItem value="Paid">Paid</SelectItem>
                 <SelectItem value="Overdue">Overdue</SelectItem>
                 <SelectItem value="Refunded">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={refundStatusFilter} onValueChange={setRefundStatusFilter}>
+              <SelectTrigger className="w-full md:w-56" data-testid="refund-status-filter">
+                <SelectValue placeholder="Refund Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Refund Status</SelectItem>
+                <SelectItem value="action_required">Action Required</SelectItem>
               </SelectContent>
             </Select>
             <Select value={bookingCategoryFilter} onValueChange={setBookingCategoryFilter}>
@@ -979,9 +1008,27 @@ export function BookingManagement({
                             <Building2 className="w-3 h-3" />{booking.agencyName}
                           </p>
                         )}
+                        {(booking.refundStatus === 'due'
+                          || booking.refundStatus === 'pending_amount'
+                          || booking.refundStatus === 'partial'
+                          || (Number(booking.refundDue) || 0) > 0) && (
+                          <div className="text-red-500 font-bold text-xs mt-1">
+                            (Pending Refund)
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <span>{booking.amount}</span>
+                      <div>
+                        <span>{booking.amount}</span>
+                        {(booking.refundStatus === 'due'
+                          || booking.refundStatus === 'pending_amount'
+                          || booking.refundStatus === 'partial'
+                          || (Number(booking.refundDue) || 0) > 0) && (
+                          <div className="text-red-500 font-bold text-xs mt-1">
+                            (Pending Refund)
+                          </div>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
