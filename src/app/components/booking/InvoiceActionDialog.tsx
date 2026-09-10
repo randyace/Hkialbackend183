@@ -62,12 +62,19 @@ export interface InvoiceActionBookingContext {
   billingAddress?: string | null;
   showBillingInfo?: boolean | null;
   invoiceRemarks?: string | null;
+  /** Booking contact person email — optional CC on Send. */
+  contactEmail?: string | null;
   passengers?: Array<{
     title?: string | null;
     firstName?: string | null;
     lastName?: string | null;
   }>;
 }
+
+export type InvoiceSendEmailOptions = {
+  additional_email?: string;
+  cc_contact?: boolean;
+};
 
 export interface InvoiceActionDialogProps {
   isOpen: boolean;
@@ -92,7 +99,7 @@ export interface InvoiceActionDialogProps {
    * First-issue send for the virtual Booking Fee draft.
    * Parent owns `POST /bookings/{id}/send-invoice` (invoice + Pay Now + email).
    */
-  onSendInvoice?: () => Promise<unknown>;
+  onSendInvoice?: (opts?: InvoiceSendEmailOptions) => Promise<unknown>;
   /**
    * Persist invoice Bill-To fields (`advanced_details.billing`) via a
    * targeted booking update. Shared by Manage Invoices and Manage Receipts.
@@ -199,6 +206,8 @@ export function InvoiceActionDialog({
   const [billingAddress, setBillingAddress] = useState('');
   const [showBillingInfo, setShowBillingInfo] = useState(false);
   const [invoiceRemarks, setInvoiceRemarks] = useState('');
+  const [additionalRecipientEmail, setAdditionalRecipientEmail] = useState('');
+  const [ccContactEmail, setCcContactEmail] = useState(false);
 
   // Parent owns virtual-master injection + Paid/pending partition.
   // Local overlay keeps freshly minted Adyen URLs available for Copy without redirecting.
@@ -234,6 +243,8 @@ export function InvoiceActionDialog({
       setBusyKey(null);
       setBillingSaving(false);
       setLocalPaymentLinks({});
+      setAdditionalRecipientEmail('');
+      setCcContactEmail(false);
       return;
     }
     // Hydrate Bill To once per open so typing is not clobbered by parent re-renders.
@@ -663,6 +674,29 @@ export function InvoiceActionDialog({
     }
   };
 
+  const contactEmail = typeof booking?.contactEmail === 'string'
+    ? booking.contactEmail.trim()
+    : '';
+
+  const buildSendEmailPayload = () => {
+    const additional = additionalRecipientEmail.trim();
+    return {
+      ...(additional ? { additional_email: additional } : {}),
+      ...(ccContactEmail ? { cc_contact: true } : {}),
+    };
+  };
+
+  const sendRecipientHint = () => {
+    const parts: string[] = ['primary account / guest'];
+    if (additionalRecipientEmail.trim()) {
+      parts.push(additionalRecipientEmail.trim());
+    }
+    if (ccContactEmail && contactEmail) {
+      parts.push(`CC ${contactEmail}`);
+    }
+    return parts.join(' + ');
+  };
+
   const sendToCustomer = async (entry: InvoiceHistoryEntry) => {
     const issuing = canIssue(entry);
     if (entry.isVirtual && !issuing) {
@@ -677,19 +711,27 @@ export function InvoiceActionDialog({
       toast.error('Cannot send a voided invoice.');
       return;
     }
+    if (ccContactEmail && !contactEmail) {
+      toast.error('No booking contact email to CC. Add a contact email on the booking first.');
+      return;
+    }
     if (busyKey) return;
     const key = busyId(entry, 'send');
     setBusyKey(key);
+    const emailOpts = buildSendEmailPayload();
     try {
       if (issuing) {
         if (onSendInvoice) {
-          const result = await onSendInvoice();
+          const result = await onSendInvoice(emailOpts);
           const data = (result && typeof result === 'object')
             ? result as Record<string, unknown>
             : {};
           const invoiceNo = typeof data.invoice_no === 'string'
             ? data.invoice_no
             : (bookingNo || booking?.bookingNo || 'Invoice');
+          toast.success('Invoice emailed', {
+            description: `Sent to ${sendRecipientHint()}`,
+          });
           onInvoiceSent?.({ invoice_no: invoiceNo, data });
           return;
         }
@@ -706,7 +748,7 @@ export function InvoiceActionDialog({
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
-            body: '{}',
+            body: JSON.stringify(emailOpts),
           },
         );
         const body = await response.json().catch(() => ({}));
@@ -718,8 +760,8 @@ export function InvoiceActionDialog({
         const paymentLinkReason = body.data?.payment_link_reason ?? null;
         toast.success('Invoice + payment link sent!', {
           description: paymentId
-            ? `${invoiceNo} + Adyen payment link emailed to ${booking?.guestName || 'the customer'} (one email, PDF attached + Pay Now button).`
-            : `${invoiceNo} emailed to ${booking?.guestName || 'the customer'} (PDF attached, no Pay Now CTA).${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
+            ? `${invoiceNo} emailed to ${sendRecipientHint()} (PDF + Pay Now).`
+            : `${invoiceNo} emailed to ${sendRecipientHint()}.${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
         });
         onInvoiceSent?.({
           invoice_no: invoiceNo,
@@ -740,23 +782,26 @@ export function InvoiceActionDialog({
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
-          body: '{}',
+          body: JSON.stringify({
+            ...emailOpts,
+            ...(isReceiptMode || entry.status === 'Paid' ? { as_receipt: true } : {}),
+          }),
         },
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      toast.success('Sent to customer', {
-        description: `${entry.invoiceNo} emailed successfully.`,
+      toast.success(isReceiptMode || entry.status === 'Paid' ? 'Receipt emailed' : 'Invoice emailed', {
+        description: `${entry.invoiceNo} → ${sendRecipientHint()}`,
       });
       onInvoiceSent?.({
         invoice_no: entry.invoiceNo,
         data: (body.data ?? {}) as Record<string, unknown>,
       });
-    } catch (err) {
-      toast.error('Failed to send invoice', {
-        description: err instanceof Error ? err.message : 'Unknown error',
+    } catch (error) {
+      toast.error('Failed to send email', {
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setBusyKey(null);
@@ -890,6 +935,47 @@ export function InvoiceActionDialog({
                         placeholder="Billing address"
                         rows={3}
                       />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-600 mb-1.5">
+                        Additional Recipient Email
+                      </label>
+                      <input
+                        type="email"
+                        data-testid="input-additional-recipient-email"
+                        value={additionalRecipientEmail}
+                        onChange={(e) => setAdditionalRecipientEmail(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="extra@example.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Optional CC beyond the primary account / guest recipient.
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label
+                        className="flex items-start gap-3 cursor-pointer select-none"
+                        data-testid="cc-contact-email-toggle"
+                      >
+                        <Switch
+                          checked={ccContactEmail}
+                          onCheckedChange={setCcContactEmail}
+                          disabled={!contactEmail}
+                          aria-label="CC booking contact email"
+                        />
+                        <span className="text-sm text-gray-700">
+                          CC Booking Contact Email
+                          {contactEmail ? (
+                            <span className="block text-xs text-gray-500 mt-0.5 font-mono">
+                              ({contactEmail})
+                            </span>
+                          ) : (
+                            <span className="block text-xs text-amber-700 mt-0.5">
+                              No contact email on this booking
+                            </span>
+                          )}
+                        </span>
+                      </label>
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

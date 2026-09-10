@@ -453,7 +453,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   onMergeComplete?: () => void | Promise<void>;
   // First-issue invoice + Pay Now from Manage Invoices (virtual draft).
   // Parent wrapper owns POST /bookings/{id}/send-invoice.
-  onSendInvoice?: () => Promise<unknown>;
+  onSendInvoice?: (opts?: { additional_email?: string; cc_contact?: boolean }) => Promise<unknown>;
   onDownloadPdf?: () => Promise<void>;
   // 2026-06-18 (round 6.2.48) — Movement Log (round-trip
   // through `GET/POST/DELETE /api/bookings/{id}/movements`).
@@ -4511,6 +4511,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           billingAddress: formData?.billingAddress ?? booking.billingAddress,
           showBillingInfo: formData?.showBillingInfo ?? booking.showBillingInfo,
           invoiceRemarks: formData?.invoiceRemarks ?? booking.invoiceRemarks,
+          contactEmail: formData?.contactEmail ?? contactEmail ?? null,
           passengers: (passengersOverride ?? booking.passengers ?? []).map((p) => ({
             title: p.title,
             firstName: p.firstName,
