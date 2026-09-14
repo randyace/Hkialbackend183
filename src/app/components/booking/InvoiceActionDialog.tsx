@@ -30,6 +30,20 @@ import {
 
 export type InvoiceActionModalMode = 'invoice' | 'receipt';
 
+/** Staff Copy/Generate must never surface the customer SPA `/payment/pay?...` wrapper. */
+function staffFacingPaymentLinkUrl(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  for (const candidate of candidates) {
+    const url = typeof candidate === 'string' ? candidate.trim() : '';
+    if (!url || url.includes('/payment/pay')) {
+      continue;
+    }
+    return url;
+  }
+  return null;
+}
+
 export interface InvoiceBillingDetails {
   billingName: string;
   billingCompany: string;
@@ -215,15 +229,14 @@ export function InvoiceActionDialog({
     const base = Array.isArray(invoices) ? invoices : [];
     return base.map((entry) => {
       const key = invoiceRowKey(entry);
-      if (!Object.prototype.hasOwnProperty.call(localPaymentLinks, key)) {
-        return entry;
-      }
-      const url = localPaymentLinks[key];
-      const trimmed = typeof url === 'string' ? url.trim() : '';
+      const localUrl = Object.prototype.hasOwnProperty.call(localPaymentLinks, key)
+        ? localPaymentLinks[key]
+        : undefined;
+      const staffUrl = staffFacingPaymentLinkUrl(localUrl, entry.paymentLinkUrl);
       return {
         ...entry,
-        paymentLinkUrl: trimmed || null,
-        hasActivePaymentLink: trimmed !== '',
+        paymentLinkUrl: staffUrl,
+        hasActivePaymentLink: Boolean(staffUrl),
       };
     });
   }, [invoices, localPaymentLinks]);
@@ -522,10 +535,17 @@ export function InvoiceActionDialog({
         const invoiceNo = typeof body.data?.invoice_no === 'string'
           ? body.data.invoice_no
           : entry.invoiceNo;
-        const url = typeof body.data?.payment_link_url === 'string'
-          ? body.data.payment_link_url.trim()
-          : '';
-        rememberPaymentLink(entry, url || null);
+        const url = staffFacingPaymentLinkUrl(
+          typeof body.data?.payment_link_url === 'string'
+            ? body.data.payment_link_url
+            : null,
+        );
+        if (!url && body.data?.payment_id) {
+          toast.error('Payment link generated without a usable Adyen URL', {
+            description: 'API returned a SPA landing URL instead of test.adyen.link / checkout-test.adyen.com.',
+          });
+        }
+        rememberPaymentLink(entry, url);
         toast.success(
           url ? 'Invoice created and payment link generated' : 'Invoice created',
           { description: invoiceNo },
@@ -534,7 +554,7 @@ export function InvoiceActionDialog({
           invoice_no: invoiceNo,
           data: {
             ...(body.data ?? {}),
-            payment_link_url: url || null,
+            payment_link_url: url,
             status: 'Sent',
           },
         });
@@ -557,11 +577,15 @@ export function InvoiceActionDialog({
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      const url = typeof body.data?.payment_link_url === 'string'
-        ? body.data.payment_link_url.trim()
-        : '';
+      const url = staffFacingPaymentLinkUrl(
+        typeof body.data?.payment_link_url === 'string'
+          ? body.data.payment_link_url
+          : null,
+      );
       if (!url) {
-        throw new Error('No payment link URL was returned.');
+        throw new Error(
+          'No Adyen payment link URL was returned (SPA /payment/pay wrappers are not used for staff Copy).',
+        );
       }
       rememberPaymentLink(entry, url);
       toast.success(
@@ -587,11 +611,9 @@ export function InvoiceActionDialog({
   };
 
   const copyPaymentLink = async (entry: InvoiceHistoryEntry) => {
-    const url = typeof entry.paymentLinkUrl === 'string'
-      ? entry.paymentLinkUrl.trim()
-      : '';
+    const url = staffFacingPaymentLinkUrl(entry.paymentLinkUrl);
     if (!url) {
-      toast.error('No active payment link to copy. Generate one first.');
+      toast.error('No active Adyen payment link to copy. Generate one first.');
       return;
     }
     const copied = await copyTextToClipboard(url);
@@ -603,8 +625,7 @@ export function InvoiceActionDialog({
   };
 
   const hasActivePaymentLink = (entry: InvoiceHistoryEntry) => {
-    const url = typeof entry.paymentLinkUrl === 'string' ? entry.paymentLinkUrl.trim() : '';
-    return Boolean(entry.hasActivePaymentLink) || url !== '';
+    return Boolean(staffFacingPaymentLinkUrl(entry.paymentLinkUrl));
   };
 
   const revokePaymentLink = async (entry: InvoiceHistoryEntry) => {
@@ -1060,9 +1081,7 @@ export function InvoiceActionDialog({
                   const activeLink = hasActivePaymentLink(entry);
                   const generateBlocked = generateLinkDisabledReason(entry);
                   const generateDisabled = rowBusy || Boolean(generateBlocked);
-                  const copyUrl = typeof entry.paymentLinkUrl === 'string'
-                    ? entry.paymentLinkUrl.trim()
-                    : '';
+                  const copyUrl = staffFacingPaymentLinkUrl(entry.paymentLinkUrl) ?? '';
                   const canCopyPaymentLink = copyUrl !== '';
                   const sendDisabled = rowBusy || entry.status === 'Voided' || (Boolean(entry.isVirtual) && !issuing);
                   return (
