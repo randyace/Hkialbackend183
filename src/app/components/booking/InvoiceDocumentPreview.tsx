@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import {
   formatDocumentDate,
   formatDocumentMoney,
@@ -5,6 +6,11 @@ import {
   groupInvoiceBreakdownLines,
   type InvoiceBreakdownLine,
 } from './invoiceDocumentModel';
+import {
+  resolveInvoiceTermsAckText,
+  splitInvoiceTermsAck,
+  contentPagesService,
+} from '../../../../../../services/contentPagesService';
 
 export interface InvoiceDocumentBillingData {
   name?: string;
@@ -31,6 +37,8 @@ export interface InvoiceDocumentPreviewProps {
   /** When true, render the Bill To block from `billingData` (no placeholders). */
   showBillingInfo?: boolean;
   billingData?: InvoiceDocumentBillingData | null;
+  /** Optional override; otherwise loaded from content_pages.invoice_terms_ack. */
+  termsAcknowledgment?: string | null;
   'data-testid'?: string;
 }
 
@@ -53,8 +61,35 @@ export function InvoiceDocumentPreview({
   serviceRemarks,
   showBillingInfo = false,
   billingData = null,
+  termsAcknowledgment = null,
   'data-testid': dataTestId = 'invoice-document-preview',
 }: InvoiceDocumentPreviewProps) {
+  const [cmsTermsText, setCmsTermsText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof termsAcknowledgment === 'string' && termsAcknowledgment.trim() !== '') {
+      setCmsTermsText(termsAcknowledgment.trim());
+      return;
+    }
+    let cancelled = false;
+    void contentPagesService
+      .showPublic('invoice_terms_ack')
+      .then((response) => {
+        if (cancelled) return;
+        setCmsTermsText(resolveInvoiceTermsAckText(response.data));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCmsTermsText(resolveInvoiceTermsAckText(null));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [termsAcknowledgment]);
+
+  const termsText = (termsAcknowledgment?.trim() || cmsTermsText || resolveInvoiceTermsAckText(null)).trim();
+  const termsParts = useMemo(() => splitInvoiceTermsAck(termsText), [termsText]);
+
   const groups = groupInvoiceBreakdownLines(priceBreakdown, {
     vipSummary: vipPassengerSummary,
     invoiceType,
@@ -201,7 +236,7 @@ export function InvoiceDocumentPreview({
 
         <div className="border-t border-black w-full" />
 
-        <div className="w-full pt-2.5 pb-16">
+        <div className="w-full pt-2.5 pb-4">
           <span className="font-bold text-[12px]">Service Remarks</span>
           {serviceRemarks ? (
             <div className="mt-1 text-[12px] whitespace-pre-wrap">{serviceRemarks}</div>
@@ -209,6 +244,29 @@ export function InvoiceDocumentPreview({
             <div className="mt-1 min-h-[1.5rem]" aria-hidden />
           )}
         </div>
+
+        {termsText ? (
+          <div
+            className="w-full text-left text-[9px] leading-snug text-gray-800 pb-3"
+            data-testid="invoice-terms-ack"
+          >
+            {termsParts.url ? (
+              <>
+                {termsParts.prefix ? `${termsParts.prefix}: ` : null}
+                <a
+                  href={termsParts.url}
+                  className="underline text-black"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {termsParts.url}
+                </a>
+              </>
+            ) : (
+              termsText
+            )}
+          </div>
+        ) : null}
 
         <div className="border-t border-black w-full mb-2.5" />
 
