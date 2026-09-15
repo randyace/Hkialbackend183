@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ChevronDown,
-  ChevronRight,
+  ChevronUp,
   Copy,
   Download,
   Eye,
@@ -29,6 +29,20 @@ import {
 } from './manageInvoicesList';
 
 export type InvoiceActionModalMode = 'invoice' | 'receipt';
+
+/** Staff Copy/Generate must never surface the customer SPA `/payment/pay?...` wrapper. */
+function staffFacingPaymentLinkUrl(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  for (const candidate of candidates) {
+    const url = typeof candidate === 'string' ? candidate.trim() : '';
+    if (!url || url.includes('/payment/pay')) {
+      continue;
+    }
+    return url;
+  }
+  return null;
+}
 
 export interface InvoiceBillingDetails {
   billingName: string;
@@ -62,12 +76,19 @@ export interface InvoiceActionBookingContext {
   billingAddress?: string | null;
   showBillingInfo?: boolean | null;
   invoiceRemarks?: string | null;
+  /** Booking contact person email — optional CC on Send. */
+  contactEmail?: string | null;
   passengers?: Array<{
     title?: string | null;
     firstName?: string | null;
     lastName?: string | null;
   }>;
 }
+
+export type InvoiceSendEmailOptions = {
+  additional_email?: string;
+  cc_contact?: boolean;
+};
 
 export interface InvoiceActionDialogProps {
   isOpen: boolean;
@@ -92,7 +113,7 @@ export interface InvoiceActionDialogProps {
    * First-issue send for the virtual Booking Fee draft.
    * Parent owns `POST /bookings/{id}/send-invoice` (invoice + Pay Now + email).
    */
-  onSendInvoice?: () => Promise<unknown>;
+  onSendInvoice?: (opts?: InvoiceSendEmailOptions) => Promise<unknown>;
   /**
    * Persist invoice Bill-To fields (`advanced_details.billing`) via a
    * targeted booking update. Shared by Manage Invoices and Manage Receipts.
@@ -188,6 +209,8 @@ export function InvoiceActionDialog({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceHistoryEntry | null>(null);
+  /** Row-key → payment URL overlay so Copy enables immediately after Generate (no browser navigation). */
+  const [localPaymentLinks, setLocalPaymentLinks] = useState<Record<string, string | null>>({});
   const [billingExpanded, setBillingExpanded] = useState(true);
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingName, setBillingName] = useState('');
@@ -197,12 +220,26 @@ export function InvoiceActionDialog({
   const [billingAddress, setBillingAddress] = useState('');
   const [showBillingInfo, setShowBillingInfo] = useState(false);
   const [invoiceRemarks, setInvoiceRemarks] = useState('');
+  const [additionalRecipientEmail, setAdditionalRecipientEmail] = useState('');
+  const [ccContactEmail, setCcContactEmail] = useState(false);
 
   // Parent owns virtual-master injection + Paid/pending partition.
-  const displayInvoices = useMemo(
-    () => (Array.isArray(invoices) ? invoices : []),
-    [invoices],
-  );
+  // Local overlay keeps freshly minted Adyen URLs available for Copy without redirecting.
+  const displayInvoices = useMemo(() => {
+    const base = Array.isArray(invoices) ? invoices : [];
+    return base.map((entry) => {
+      const key = invoiceRowKey(entry);
+      const localUrl = Object.prototype.hasOwnProperty.call(localPaymentLinks, key)
+        ? localPaymentLinks[key]
+        : undefined;
+      const staffUrl = staffFacingPaymentLinkUrl(localUrl, entry.paymentLinkUrl);
+      return {
+        ...entry,
+        paymentLinkUrl: staffUrl,
+        hasActivePaymentLink: Boolean(staffUrl),
+      };
+    });
+  }, [invoices, localPaymentLinks]);
   const isReceiptMode = mode === 'receipt';
   const listTitle = isReceiptMode ? 'Select Receipt' : 'Select Invoice';
   const listTitleZh = isReceiptMode ? '（選擇收據）' : '（選擇發票）';
@@ -218,6 +255,9 @@ export function InvoiceActionDialog({
       setSelectedInvoice(null);
       setBusyKey(null);
       setBillingSaving(false);
+      setLocalPaymentLinks({});
+      setAdditionalRecipientEmail('');
+      setCcContactEmail(false);
       return;
     }
     // Hydrate Bill To once per open so typing is not clobbered by parent re-renders.
@@ -450,6 +490,15 @@ export function InvoiceActionDialog({
     return 'Send to Customer';
   };
 
+  const rememberPaymentLink = (entry: InvoiceHistoryEntry, url: string | null) => {
+    const key = invoiceRowKey(entry);
+    const trimmed = typeof url === 'string' ? url.trim() : '';
+    setLocalPaymentLinks((prev) => ({
+      ...prev,
+      [key]: trimmed || null,
+    }));
+  };
+
   const generatePaymentLink = async (entry: InvoiceHistoryEntry) => {
     const blocked = generateLinkDisabledReason(entry);
     if (blocked) {
@@ -465,6 +514,7 @@ export function InvoiceActionDialog({
     setBusyKey(key);
     try {
       // Virtual / Draft booking-fee row: persist invoice + mint link without emailing.
+      // Never navigate the staff browser to the Adyen URL — mirror Payment History (Copy only).
       if (entry.isVirtual || entry.status === 'Draft') {
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
@@ -485,9 +535,17 @@ export function InvoiceActionDialog({
         const invoiceNo = typeof body.data?.invoice_no === 'string'
           ? body.data.invoice_no
           : entry.invoiceNo;
-        const url = typeof body.data?.payment_link_url === 'string'
-          ? body.data.payment_link_url.trim()
-          : '';
+        const url = staffFacingPaymentLinkUrl(
+          typeof body.data?.payment_link_url === 'string'
+            ? body.data.payment_link_url
+            : null,
+        );
+        if (!url && body.data?.payment_id) {
+          toast.error('Payment link generated without a usable Adyen URL', {
+            description: 'API returned a SPA landing URL instead of test.adyen.link / checkout-test.adyen.com.',
+          });
+        }
+        rememberPaymentLink(entry, url);
         toast.success(
           url ? 'Invoice created and payment link generated' : 'Invoice created',
           { description: invoiceNo },
@@ -496,7 +554,7 @@ export function InvoiceActionDialog({
           invoice_no: invoiceNo,
           data: {
             ...(body.data ?? {}),
-            payment_link_url: url || null,
+            payment_link_url: url,
             status: 'Sent',
           },
         });
@@ -519,12 +577,17 @@ export function InvoiceActionDialog({
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      const url = typeof body.data?.payment_link_url === 'string'
-        ? body.data.payment_link_url.trim()
-        : '';
+      const url = staffFacingPaymentLinkUrl(
+        typeof body.data?.payment_link_url === 'string'
+          ? body.data.payment_link_url
+          : null,
+      );
       if (!url) {
-        throw new Error('No payment link URL was returned.');
+        throw new Error(
+          'No Adyen payment link URL was returned (SPA /payment/pay wrappers are not used for staff Copy).',
+        );
       }
+      rememberPaymentLink(entry, url);
       toast.success(
         body.data?.reused ? 'Payment link ready' : 'Payment link generated',
         { description: entry.invoiceNo },
@@ -548,11 +611,9 @@ export function InvoiceActionDialog({
   };
 
   const copyPaymentLink = async (entry: InvoiceHistoryEntry) => {
-    const url = typeof entry.paymentLinkUrl === 'string'
-      ? entry.paymentLinkUrl.trim()
-      : '';
+    const url = staffFacingPaymentLinkUrl(entry.paymentLinkUrl);
     if (!url) {
-      toast.error('No active payment link to copy. Generate one first.');
+      toast.error('No active Adyen payment link to copy. Generate one first.');
       return;
     }
     const copied = await copyTextToClipboard(url);
@@ -564,8 +625,7 @@ export function InvoiceActionDialog({
   };
 
   const hasActivePaymentLink = (entry: InvoiceHistoryEntry) => {
-    const url = typeof entry.paymentLinkUrl === 'string' ? entry.paymentLinkUrl.trim() : '';
-    return Boolean(entry.hasActivePaymentLink) || url !== '';
+    return Boolean(staffFacingPaymentLinkUrl(entry.paymentLinkUrl));
   };
 
   const revokePaymentLink = async (entry: InvoiceHistoryEntry) => {
@@ -616,6 +676,7 @@ export function InvoiceActionDialog({
           : 'Payment link revoked',
         { description: entry.invoiceNo },
       );
+      rememberPaymentLink(entry, null);
       onInvoiceSent?.({
         invoice_no: entry.invoiceNo,
         data: {
@@ -634,6 +695,29 @@ export function InvoiceActionDialog({
     }
   };
 
+  const contactEmail = typeof booking?.contactEmail === 'string'
+    ? booking.contactEmail.trim()
+    : '';
+
+  const buildSendEmailPayload = () => {
+    const additional = additionalRecipientEmail.trim();
+    return {
+      ...(additional ? { additional_email: additional } : {}),
+      ...(ccContactEmail ? { cc_contact: true } : {}),
+    };
+  };
+
+  const sendRecipientHint = () => {
+    const parts: string[] = ['primary account / guest'];
+    if (additionalRecipientEmail.trim()) {
+      parts.push(additionalRecipientEmail.trim());
+    }
+    if (ccContactEmail && contactEmail) {
+      parts.push(`CC ${contactEmail}`);
+    }
+    return parts.join(' + ');
+  };
+
   const sendToCustomer = async (entry: InvoiceHistoryEntry) => {
     const issuing = canIssue(entry);
     if (entry.isVirtual && !issuing) {
@@ -648,19 +732,27 @@ export function InvoiceActionDialog({
       toast.error('Cannot send a voided invoice.');
       return;
     }
+    if (ccContactEmail && !contactEmail) {
+      toast.error('No booking contact email to CC. Add a contact email on the booking first.');
+      return;
+    }
     if (busyKey) return;
     const key = busyId(entry, 'send');
     setBusyKey(key);
+    const emailOpts = buildSendEmailPayload();
     try {
       if (issuing) {
         if (onSendInvoice) {
-          const result = await onSendInvoice();
+          const result = await onSendInvoice(emailOpts);
           const data = (result && typeof result === 'object')
             ? result as Record<string, unknown>
             : {};
           const invoiceNo = typeof data.invoice_no === 'string'
             ? data.invoice_no
             : (bookingNo || booking?.bookingNo || 'Invoice');
+          toast.success('Invoice emailed', {
+            description: `Sent to ${sendRecipientHint()}`,
+          });
           onInvoiceSent?.({ invoice_no: invoiceNo, data });
           return;
         }
@@ -677,7 +769,7 @@ export function InvoiceActionDialog({
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
-            body: '{}',
+            body: JSON.stringify(emailOpts),
           },
         );
         const body = await response.json().catch(() => ({}));
@@ -689,8 +781,8 @@ export function InvoiceActionDialog({
         const paymentLinkReason = body.data?.payment_link_reason ?? null;
         toast.success('Invoice + payment link sent!', {
           description: paymentId
-            ? `${invoiceNo} + Adyen payment link emailed to ${booking?.guestName || 'the customer'} (one email, PDF attached + Pay Now button).`
-            : `${invoiceNo} emailed to ${booking?.guestName || 'the customer'} (PDF attached, no Pay Now CTA).${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
+            ? `${invoiceNo} emailed to ${sendRecipientHint()} (PDF + Pay Now).`
+            : `${invoiceNo} emailed to ${sendRecipientHint()}.${paymentLinkReason ? ` Reason: ${paymentLinkReason}` : ''}`,
         });
         onInvoiceSent?.({
           invoice_no: invoiceNo,
@@ -711,23 +803,26 @@ export function InvoiceActionDialog({
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
-          body: '{}',
+          body: JSON.stringify({
+            ...emailOpts,
+            ...(isReceiptMode || entry.status === 'Paid' ? { as_receipt: true } : {}),
+          }),
         },
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      toast.success('Sent to customer', {
-        description: `${entry.invoiceNo} emailed successfully.`,
+      toast.success(isReceiptMode || entry.status === 'Paid' ? 'Receipt emailed' : 'Invoice emailed', {
+        description: `${entry.invoiceNo} → ${sendRecipientHint()}`,
       });
       onInvoiceSent?.({
         invoice_no: entry.invoiceNo,
         data: (body.data ?? {}) as Record<string, unknown>,
       });
-    } catch (err) {
-      toast.error('Failed to send invoice', {
-        description: err instanceof Error ? err.message : 'Unknown error',
+    } catch (error) {
+      toast.error('Failed to send email', {
+        description: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
       setBusyKey(null);
@@ -777,13 +872,7 @@ export function InvoiceActionDialog({
               className="rounded-lg border border-gray-200 bg-slate-50/80 mb-4"
               data-testid="invoice-billing-details"
             >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
-                onClick={() => setBillingExpanded((open) => !open)}
-                aria-expanded={billingExpanded}
-                data-testid="invoice-billing-details-toggle"
-              >
+              <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between px-4 py-3 ${billingExpanded ? 'border-b border-gray-200' : ''}`}>
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
                     Invoice Billing Details (發票抬頭)
@@ -792,14 +881,26 @@ export function InvoiceActionDialog({
                     Shown on the invoice PDF Bill To. Leave blank to keep guest / account defaults.
                   </p>
                 </div>
-                {billingExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-gray-500 shrink-0" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-gray-500 shrink-0" />
-                )}
-              </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-expanded={billingExpanded}
+                    onClick={() => setBillingExpanded((open) => !open)}
+                    data-testid="invoice-billing-details-toggle"
+                  >
+                    {billingExpanded ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                    <span className="ml-1.5">{billingExpanded ? 'Collapse' : 'Expand'}</span>
+                  </Button>
+                </div>
+              </div>
               {billingExpanded ? (
-                <div className="border-t border-gray-200 px-4 pb-4 pt-3 space-y-3">
+                <div className="px-4 pb-4 pt-3 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-600 mb-1.5">Bill-to name</label>
@@ -855,6 +956,47 @@ export function InvoiceActionDialog({
                         placeholder="Billing address"
                         rows={3}
                       />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-600 mb-1.5">
+                        Additional Recipient Email
+                      </label>
+                      <input
+                        type="email"
+                        data-testid="input-additional-recipient-email"
+                        value={additionalRecipientEmail}
+                        onChange={(e) => setAdditionalRecipientEmail(e.target.value)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                        placeholder="extra@example.com"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Optional CC beyond the primary account / guest recipient.
+                      </p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label
+                        className="flex items-start gap-3 cursor-pointer select-none"
+                        data-testid="cc-contact-email-toggle"
+                      >
+                        <Switch
+                          checked={ccContactEmail}
+                          onCheckedChange={setCcContactEmail}
+                          disabled={!contactEmail}
+                          aria-label="CC booking contact email"
+                        />
+                        <span className="text-sm text-gray-700">
+                          CC Booking Contact Email
+                          {contactEmail ? (
+                            <span className="block text-xs text-gray-500 mt-0.5 font-mono">
+                              ({contactEmail})
+                            </span>
+                          ) : (
+                            <span className="block text-xs text-amber-700 mt-0.5">
+                              No contact email on this booking
+                            </span>
+                          )}
+                        </span>
+                      </label>
                     </div>
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -939,9 +1081,7 @@ export function InvoiceActionDialog({
                   const activeLink = hasActivePaymentLink(entry);
                   const generateBlocked = generateLinkDisabledReason(entry);
                   const generateDisabled = rowBusy || Boolean(generateBlocked);
-                  const copyUrl = typeof entry.paymentLinkUrl === 'string'
-                    ? entry.paymentLinkUrl.trim()
-                    : '';
+                  const copyUrl = staffFacingPaymentLinkUrl(entry.paymentLinkUrl) ?? '';
                   const canCopyPaymentLink = copyUrl !== '';
                   const sendDisabled = rowBusy || entry.status === 'Voided' || (Boolean(entry.isVirtual) && !issuing);
                   return (

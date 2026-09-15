@@ -122,6 +122,10 @@ export interface Booking {
   }>;
   status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
+  /** Booking refund workflow status (e.g. due, pending_amount, partial). */
+  refundStatus?: string | null;
+  /** Outstanding refund amount when known. */
+  refundDue?: number | null;
   /** All persisted invoices for this booking (newest first). */
   invoiceHistory?: Array<{
     id: number;

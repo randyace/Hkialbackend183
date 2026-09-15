@@ -14,7 +14,7 @@ import {
 import {
   Download, FileText, Calendar, TrendingUp, Users, DollarSign,
   Clock, Target, AlertTriangle, Ticket, UserPlus, Heart, Wallet,
-  ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2, Check,
+  ArrowUpRight, ArrowDownRight, RefreshCw, BarChart2, Check, Loader2,
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -796,6 +796,7 @@ function OperationalReports({
   onExport,
   onPreview,
   isLoading = false,
+  loadingAction = null,
   exportFormat = 'csv',
   onExportFormatChange,
   preview,
@@ -809,6 +810,8 @@ function OperationalReports({
   onExport?: (reportType: string) => void;
   onPreview?: (reportType: string) => void;
   isLoading?: boolean;
+  /** Active card action key, e.g. `daily-booking-preview` or `sales-report-export`. */
+  loadingAction?: string | null;
   exportFormat?: ExportFormat;
   onExportFormatChange?: (format: ExportFormat) => void;
   preview?: ReportPreviewState | null;
@@ -911,14 +914,20 @@ function OperationalReports({
           </div>
           <Button
             variant="outline"
-            disabled={isLoading}
+            disabled={isLoading || Boolean(loadingAction)}
             data-testid="operational-apply-filter"
             onClick={() => onApplyFilter?.(draftStart, draftEnd)}
           >
-            {isLoading ? 'Loading…' : 'Apply Filter'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Applying…
+              </>
+            ) : (
+              'Apply Filter'
+            )}
           </Button>
         </div>
-        {isLoading && <p className="text-xs text-gray-500 mt-2">Refreshing data for selected period…</p>}
         <p className="text-xs text-gray-500 mt-2">Preview and export use this period after you apply it. The 48-hour report always uses the next 48 hours in HKT.</p>
       </Card>
 
@@ -942,23 +951,58 @@ function OperationalReports({
               </div>
             </div>
             <div className="flex gap-2 mt-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                data-testid={`preview-${report.id}`}
-                onClick={() => onPreview?.(report.id)}
-              >
-                <FileText className="w-3.5 h-3.5 mr-1.5" />Preview
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
-                data-testid={`export-${report.id}`}
-                onClick={() => onExport?.(report.id)}
-              >
-                <Download className="w-3.5 h-3.5 mr-1.5" />Export
-              </Button>
+              {(() => {
+                const previewKey = `${report.id}-preview`;
+                const exportKey = `${report.id}-export`;
+                const isPreviewing = loadingAction === previewKey;
+                const isExporting = loadingAction === exportKey;
+                const busy = Boolean(loadingAction);
+                return (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      data-testid={`preview-${report.id}`}
+                      disabled={busy}
+                      onClick={() => onPreview?.(report.id)}
+                    >
+                      {isPreviewing ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                          Previewing…
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-3.5 h-3.5 mr-1.5" />
+                          Preview
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="flex-1 bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+                      data-testid={`export-${report.id}`}
+                      disabled={busy}
+                      onClick={() => onExport?.(report.id)}
+                    >
+                      {isExporting ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                          Exporting…
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-3.5 h-3.5 mr-1.5" />
+                          Export
+                        </>
+                      )}
+                    </Button>
+                  </>
+                );
+              })()}
             </div>
           </Card>
         ))}
@@ -1069,10 +1113,22 @@ function OperationalReports({
           <DialogFooter>
             <Button variant="outline" onClick={() => onClosePreview?.()}>Close</Button>
             <Button
+              type="button"
               className="bg-[#0f2942] hover:bg-[#1a3a5c] text-white"
+              disabled={Boolean(loadingAction)}
               onClick={() => preview && onExport?.(preview.reportId)}
             >
-              <Download className="w-4 h-4 mr-2" />Export
+              {preview && loadingAction === `${preview.reportId}-export` ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Exporting…
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1200,6 +1256,7 @@ const ANALYTICS_TABS = [
 export interface ReportsProps {
   reportData?: ReportsData;
   isLoading?: boolean;
+  loadingAction?: string | null;
   onExport?: (reportType: string) => void;
   onPreview?: (reportType: string) => void;
   customerSpendingContent?: ReactNode;
@@ -1216,6 +1273,7 @@ export interface ReportsProps {
 export function Reports({
   reportData,
   isLoading,
+  loadingAction = null,
   onExport,
   onPreview,
   customerSpendingContent,
@@ -1306,6 +1364,7 @@ export function Reports({
               onExport={onExport}
               onPreview={onPreview}
               isLoading={isLoading}
+              loadingAction={loadingAction}
               exportFormat={exportFormat}
               onExportFormatChange={onExportFormatChange}
               preview={preview}

@@ -69,6 +69,8 @@ export interface POSCheckoutProps {
   onComplete?: (paymentData: { method: string; total: number }) => void | Promise<void>;
   onGeneratePaymentLink?: () => void | Promise<void>;
   onSendPaymentEmail?: (email: string) => void | Promise<void>;
+  /** Email a Paid F&B receipt to the Customer Email field. */
+  onSendReceipt?: (email: string) => void | Promise<void>;
   onRefreshPaymentStatus?: () => void | Promise<void>;
   onRevokePaymentLink?: () => void | Promise<void>;
   onDownloadInvoice?: (entry: POSCheckoutPaymentHistoryItem) => void | Promise<void>;
@@ -186,6 +188,7 @@ export function POSCheckout({
   onComplete,
   onGeneratePaymentLink,
   onSendPaymentEmail,
+  onSendReceipt,
   onRefreshPaymentStatus,
   onRevokePaymentLink,
   onDownloadInvoice,
@@ -193,6 +196,7 @@ export function POSCheckout({
   const [paymentEmail, setPaymentEmail] = useState(guestEmailProp);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSendingPaymentEmail, setIsSendingPaymentEmail] = useState(false);
+  const [isSendingReceipt, setIsSendingReceipt] = useState(false);
   const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle');
@@ -305,6 +309,23 @@ export function POSCheckout({
       await Promise.resolve(onSendPaymentEmail(email));
     } finally {
       setIsSendingPaymentEmail(false);
+    }
+  };
+
+  const handleSendReceipt = async () => {
+    const email = paymentEmail.trim();
+    if (!email) {
+      return;
+    }
+    if (!onSendReceipt || isSendingReceipt) {
+      return;
+    }
+
+    setIsSendingReceipt(true);
+    try {
+      await Promise.resolve(onSendReceipt(email));
+    } finally {
+      setIsSendingReceipt(false);
     }
   };
 
@@ -558,11 +579,47 @@ export function POSCheckout({
             </div>
 
             {!requiresPayment ? (
-              <p className="text-sm text-gray-500">
-                {fnbSubtotal > 0
-                  ? 'F&amp;B balance is fully paid. You can complete checkout.'
-                  : 'No F&amp;B charges on this order. You can complete checkout without sending a payment link.'}
-              </p>
+              <div className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  {fnbSubtotal > 0
+                    ? 'F&B balance is fully paid. You can complete checkout.'
+                    : 'No F&B charges on this order. You can complete checkout without sending a payment link.'}
+                </p>
+                {!isWalkIn && onSendReceipt && paymentHistory.some((row) => row.status === 'Paid') ? (
+                  <>
+                    <div>
+                      <Label htmlFor="payment-email" className="mb-2">Customer Email</Label>
+                      <Input
+                        id="payment-email"
+                        type="email"
+                        placeholder="guest@example.com"
+                        value={paymentEmail}
+                        onChange={(event) => setPaymentEmail(event.target.value)}
+                        data-testid="pos-receipt-email-input"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      className="w-full sm:w-auto bg-green-600 text-white hover:bg-green-700"
+                      onClick={() => void handleSendReceipt()}
+                      disabled={isSendingReceipt || !paymentEmail.trim()}
+                      data-testid="pos-send-receipt-button"
+                    >
+                      {isSendingReceipt ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Sending receipt…
+                        </>
+                      ) : (
+                        <>
+                          <Mail className="w-4 h-4 mr-2" />
+                          Send Receipt
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             ) : isWalkIn ? (
               <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
                 Walk-in sessions cannot send a booking-linked payment link from this screen. Collect payment before checkout.
