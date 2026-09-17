@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { PaymentQrModal } from '../../../../ui/PaymentQrModal';
 
 interface OrderItem {
   id: number;
@@ -201,9 +202,6 @@ export function POSCheckout({
   const [isComplete, setIsComplete] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [isQrOpen, setIsQrOpen] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
-  const [qrError, setQrError] = useState<string | null>(null);
-  const [isQrLoading, setIsQrLoading] = useState(false);
   const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<number | null>(null);
   const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -222,47 +220,9 @@ export function POSCheckout({
   useEffect(() => {
     if (!paymentLinkUrl) {
       setIsQrOpen(false);
-      setQrDataUrl(null);
       setCopyFeedback('idle');
     }
   }, [paymentLinkUrl]);
-
-  useEffect(() => {
-    if (!isQrOpen || !paymentLinkUrl) {
-      return;
-    }
-
-    let cancelled = false;
-    setIsQrLoading(true);
-    setQrError(null);
-    setQrDataUrl(null);
-
-    void (async () => {
-      try {
-        const QRCode = (await import('qrcode')).default;
-        const dataUrl = await QRCode.toDataURL(paymentLinkUrl, {
-          width: 256,
-          margin: 2,
-          color: { dark: '#0f2942', light: '#ffffff' },
-        });
-        if (!cancelled) {
-          setQrDataUrl(dataUrl);
-        }
-      } catch {
-        if (!cancelled) {
-          setQrError('Could not generate QR code.');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsQrLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isQrOpen, paymentLinkUrl]);
 
   const bookingData: BookingData = bookingDataProp ?? {
     bookingNo: bookingNoProp ?? '—',
@@ -937,57 +897,13 @@ export function POSCheckout({
         </div>
       </div>
 
-      {isQrOpen && paymentLinkUrl ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="pos-payment-qr-title"
-          data-testid="pos-payment-qr-dialog"
-          onClick={() => setIsQrOpen(false)}
-        >
-          <Card
-            className="w-full max-w-sm p-6 space-y-4 bg-white"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div>
-              <h3 id="pos-payment-qr-title" className="text-lg font-semibold">
-                Scan to pay
-              </h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Guest can scan this QR code with their phone camera.
-              </p>
-            </div>
-
-            <div className="flex min-h-[256px] items-center justify-center rounded-lg border border-gray-200 bg-white p-4">
-              {isQrLoading ? (
-                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-              ) : qrError ? (
-                <p className="text-sm text-red-600 text-center">{qrError}</p>
-              ) : qrDataUrl ? (
-                <img
-                  src={qrDataUrl}
-                  alt="Payment link QR code"
-                  width={256}
-                  height={256}
-                  className="h-64 w-64"
-                  data-testid="pos-payment-qr-image"
-                />
-              ) : null}
-            </div>
-
-            <Button
-              type="button"
-              className="w-full"
-              variant="outline"
-              onClick={() => setIsQrOpen(false)}
-              data-testid="pos-payment-qr-close-button"
-            >
-              Close
-            </Button>
-          </Card>
-        </div>
-      ) : null}
+      <PaymentQrModal
+        open={isQrOpen}
+        paymentUrl={paymentLinkUrl}
+        onClose={() => setIsQrOpen(false)}
+        testIdPrefix="pos-payment-qr"
+        titleId="pos-payment-qr-title"
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   FileText,
+  QrCode,
   Save,
   XOctagon,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import {
   invoiceRowKey,
   virtualInvoiceSendTooltip,
 } from './manageInvoicesList';
+import { PaymentQrModal } from '../../../../../ui/PaymentQrModal';
 
 export type InvoiceActionModalMode = 'invoice' | 'receipt';
 
@@ -211,6 +213,8 @@ export function InvoiceActionDialog({
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceHistoryEntry | null>(null);
   /** Row-key → payment URL overlay so Copy enables immediately after Generate (no browser navigation). */
   const [localPaymentLinks, setLocalPaymentLinks] = useState<Record<string, string | null>>({});
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrPaymentUrl, setQrPaymentUrl] = useState<string | null>(null);
   const [billingExpanded, setBillingExpanded] = useState(true);
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingName, setBillingName] = useState('');
@@ -256,6 +260,8 @@ export function InvoiceActionDialog({
       setBusyKey(null);
       setBillingSaving(false);
       setLocalPaymentLinks({});
+      setIsQrModalOpen(false);
+      setQrPaymentUrl(null);
       setAdditionalRecipientEmail('');
       setCcContactEmail(false);
       return;
@@ -848,6 +854,7 @@ export function InvoiceActionDialog({
     : false;
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent
         className="!max-w-[calc(100%-2rem)] sm:!max-w-5xl w-[95vw] max-h-[85vh] overflow-y-auto"
@@ -1233,6 +1240,24 @@ export function InvoiceActionDialog({
                                   <Copy className="w-4 h-4 mr-1.5" />
                                   Copy Link
                                 </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={rowBusy || !canCopyPaymentLink}
+                                  onClick={() => {
+                                    setQrPaymentUrl(copyUrl);
+                                    setIsQrModalOpen(true);
+                                  }}
+                                  data-testid={`invoice-action-show-qr-${rowKey}`}
+                                  title={canCopyPaymentLink
+                                    ? 'Show QR code for face-to-face payment'
+                                    : 'Generate a payment link first'}
+                                  className="border-amber-200 text-amber-900 hover:bg-amber-50"
+                                >
+                                  <QrCode className="w-4 h-4 mr-1.5" />
+                                  Show QR Code
+                                </Button>
                               </>
                             ) : null}
                             <Button
@@ -1388,5 +1413,16 @@ export function InvoiceActionDialog({
         )}
       </DialogContent>
     </Dialog>
+    <PaymentQrModal
+      open={isQrModalOpen}
+      paymentUrl={qrPaymentUrl}
+      onClose={() => {
+        setIsQrModalOpen(false);
+        setQrPaymentUrl(null);
+      }}
+      testIdPrefix="invoice-action-payment-qr"
+      titleId="invoice-action-payment-qr-title"
+    />
+    </>
   );
 }
