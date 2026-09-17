@@ -69,6 +69,26 @@ export interface SystemUserEditProps {
   initialTab?: 'profile' | 'permissions';
   onBack?: () => void;
   onSave?: (data: SystemUserFormData) => void;
+  /**
+   * Presentational Microsoft AD-link section on the Profile tab.
+   * Null hides the section (create, self-edit, flag off, cannot update target).
+   * Parent owns every mutation.
+   */
+  microsoftLink?: MicrosoftLinkProps | null;
+}
+
+export interface MicrosoftLinkProps {
+  enabled: boolean;
+  linked: boolean;
+  upn: string | null;
+  oidTruncated: string | null;
+  pending?: { upn: string; oidTruncated: string } | null;
+  saving?: boolean;
+  onSaveUpn: (upn: string) => void;
+  onUnlink: () => void;
+  onLinkWithMicrosoft: () => void;
+  onConfirmLink?: () => void;
+  onCancelPending?: () => void;
 }
 
 const DEFAULT_ROLE_LABELS: Record<SystemUserRole, string> = {
@@ -128,6 +148,91 @@ function GroupSelectAllCheckbox({
   );
 }
 
+function MicrosoftLinkCard({ microsoftLink }: { microsoftLink: MicrosoftLinkProps }) {
+  const [upnDraft, setUpnDraft] = useState(microsoftLink.upn ?? '');
+
+  useEffect(() => {
+    setUpnDraft(microsoftLink.upn ?? '');
+  }, [microsoftLink.upn]);
+
+  const pending = microsoftLink.pending ?? null;
+  const saving = microsoftLink.saving === true;
+
+  return (
+    <Card className="p-6 space-y-4">
+      <h3 className="text-base font-semibold text-gray-900">Microsoft account</h3>
+      {pending ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p>
+            Microsoft account {pending.upn} (oid {pending.oidTruncated}) will be linked to this staff
+            user.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Button type="button" onClick={microsoftLink.onConfirmLink} disabled={saving}>
+              Confirm
+            </Button>
+            <Button type="button" variant="outline" onClick={microsoftLink.onCancelPending} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <p className="text-sm text-gray-700">
+        Status: {microsoftLink.linked ? 'Linked' : 'Not linked'}
+      </p>
+      {microsoftLink.linked && microsoftLink.oidTruncated ? (
+        <div>
+          <label htmlFor="su-azure-oid" className="mb-[10px] block text-sm text-gray-700">
+            Object ID
+          </label>
+          <input
+            id="su-azure-oid"
+            type="text"
+            value={microsoftLink.oidTruncated}
+            readOnly
+            className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+          />
+        </div>
+      ) : null}
+      <div>
+        <label htmlFor="su-azure-upn" className="mb-[10px] block text-sm text-gray-700">
+          Azure UPN
+        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            id="su-azure-upn"
+            type="text"
+            value={upnDraft}
+            onChange={(e) => setUpnDraft(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md"
+            placeholder="user@tenant.onmicrosoft.com"
+            disabled={saving}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => microsoftLink.onSaveUpn(upnDraft)}
+            disabled={saving}
+            className="shrink-0"
+          >
+            Save UPN
+          </Button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {microsoftLink.linked ? (
+          <Button type="button" variant="outline" onClick={microsoftLink.onUnlink} disabled={saving}>
+            Unlink
+          </Button>
+        ) : null}
+        <Button type="button" onClick={microsoftLink.onLinkWithMicrosoft} disabled={saving}>
+          Link with Microsoft
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
 export function SystemUserEdit({
   userId = null,
   isLoading = false,
@@ -146,6 +251,7 @@ export function SystemUserEdit({
   initialTab = 'profile',
   onBack = () => {},
   onSave = () => {},
+  microsoftLink = null,
 }: SystemUserEditProps) {
   const isEditMode = !!userId;
 
@@ -486,6 +592,7 @@ export function SystemUserEdit({
                 </div>
               </div>
             </Card>
+            {microsoftLink ? <MicrosoftLinkCard microsoftLink={microsoftLink} /> : null}
           </TabsContent>
 
           <TabsContent
