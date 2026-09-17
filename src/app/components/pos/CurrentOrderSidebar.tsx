@@ -29,6 +29,12 @@ export interface OrderCartItem {
   remarks: string;
   price?: number;
   isExpedited?: boolean;
+  selectedOptions?: Array<{
+    optionId: number;
+    name: string;
+    groupName: string;
+    groupId: number;
+  }>;
 }
 
 export interface CurrentOrderSidebarProps {

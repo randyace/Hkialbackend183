@@ -11,6 +11,14 @@ export interface PosOrderingMenuItem extends MenuCardItem {
   /** Active-menu section id used for tab filtering. */
   categoryId: number;
   itemAllergens: string[];
+  /** Mapped option groups for Add-to-Cart intercept. */
+  optionGroups?: Array<{
+    id: number;
+    name: string;
+    minSelect: number;
+    maxSelect: number;
+    options: Array<{ id: number; name: string }>;
+  }>;
 }
 
 export interface PosOrderingMenuProps {
