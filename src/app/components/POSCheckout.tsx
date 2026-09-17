@@ -178,7 +178,7 @@ export function POSCheckout({
   paidFnbAmount: paidFnbAmountProp,
   outstandingFnbAmount: outstandingFnbAmountProp,
   guestEmail: guestEmailProp = '',
-  isWalkIn = false,
+  isWalkIn: _isWalkIn = false,
   orderPaymentStatus = 'Unpaid',
   paymentLinkUrl = null,
   paymentLinkInvoiceId = null,
@@ -545,7 +545,7 @@ export function POSCheckout({
                     ? 'F&B balance is fully paid. You can complete checkout.'
                     : 'No F&B charges on this order. You can complete checkout without sending a payment link.'}
                 </p>
-                {!isWalkIn && onSendReceipt && paymentHistory.some((row) => row.status === 'Paid') ? (
+                {onSendReceipt && paymentHistory.some((row) => row.status === 'Paid') ? (
                   <>
                     <div>
                       <Label htmlFor="payment-email" className="mb-2">Customer Email</Label>
@@ -580,10 +580,6 @@ export function POSCheckout({
                   </>
                 ) : null}
               </div>
-            ) : isWalkIn ? (
-              <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                Walk-in sessions cannot send a booking-linked payment link from this screen. Collect payment before checkout.
-              </p>
             ) : (
               <div className="space-y-4">
                 <div>
@@ -602,7 +598,7 @@ export function POSCheckout({
                     variant="outline"
                     className="w-full sm:flex-1 bg-white border border-blue-600 text-blue-600 hover:bg-blue-50"
                     onClick={() => void handleGeneratePaymentLink()}
-                    disabled={isGeneratingPaymentLink}
+                    disabled={isGeneratingPaymentLink || !onGeneratePaymentLink}
                     data-testid="pos-generate-payment-link-button"
                   >
                     {isGeneratingPaymentLink ? (
