@@ -30,6 +30,7 @@ export interface RolePermissionModule {
 export interface RoleOption {
   id: number;
   name: string;
+  is_core?: boolean;
 }
 
 export interface RolePermissionMatrixProps {
