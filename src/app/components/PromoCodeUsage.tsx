@@ -26,6 +26,7 @@ import {
   QrCode, CheckCircle2, LayoutList,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { spreadsheetText } from '../../../../../lib/spreadsheetCell';
 
 // INV-X18: product calendar day is HKT.
 const localDateStr = (d: Date = new Date()): string =>
@@ -401,7 +402,7 @@ export function PromoCodeUsage({
       b.totalBookings, b.totalRevenueImpact, b.createdDate, b.startDate, b.endDate, b.status,
     ]);
     const csvContent = [headers, ...rows]
-      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .map(r => r.map(cell => `"${spreadsheetText(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
@@ -419,7 +420,7 @@ export function PromoCodeUsage({
       t.usedAt, t.bookingRef, t.guestName, t.freeBookingsGranted,
     ]);
     const csvContent = [headers, ...rows]
-      .map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .map(r => r.map(cell => `"${spreadsheetText(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url  = URL.createObjectURL(blob);
