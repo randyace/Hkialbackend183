@@ -16,6 +16,16 @@ import {
   XOctagon,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
@@ -215,6 +225,8 @@ export function InvoiceActionDialog({
   const [localPaymentLinks, setLocalPaymentLinks] = useState<Record<string, string | null>>({});
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrPaymentUrl, setQrPaymentUrl] = useState<string | null>(null);
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [pendingRevokeEntry, setPendingRevokeEntry] = useState<InvoiceHistoryEntry | null>(null);
   const [billingExpanded, setBillingExpanded] = useState(true);
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingName, setBillingName] = useState('');
@@ -634,7 +646,7 @@ export function InvoiceActionDialog({
     return Boolean(staffFacingPaymentLinkUrl(entry.paymentLinkUrl));
   };
 
-  const revokePaymentLink = async (entry: InvoiceHistoryEntry) => {
+  const openRevokePaymentLinkDialog = (entry: InvoiceHistoryEntry) => {
     if (entry.isVirtual || !entry.id || entry.id <= 0) {
       toast.error('Cannot revoke a draft invoice payment link.');
       return;
@@ -647,16 +659,23 @@ export function InvoiceActionDialog({
       toast.error('Not signed in. Please log in to revoke a payment link.');
       return;
     }
+    setPendingRevokeEntry(entry);
+    setIsRevokeDialogOpen(true);
+  };
 
-    const isFnB = entry.invoiceType === 'pos_fnb';
-    const confirmed = window.confirm(
-      isFnB
-        ? 'Revoke this payment link and void the F&B invoice? You can generate a new invoice/link afterward.'
-        : 'Revoke (expire) this payment link? The invoice will stay unpaid so you can generate a new link.',
-    );
-    if (!confirmed) return;
-
+  const confirmRevokePaymentLink = async () => {
+    const entry = pendingRevokeEntry;
+    setIsRevokeDialogOpen(false);
+    setPendingRevokeEntry(null);
+    if (!entry || entry.isVirtual || !entry.id || entry.id <= 0) {
+      return;
+    }
+    if (!token) {
+      toast.error('Not signed in. Please log in to revoke a payment link.');
+      return;
+    }
     if (busyKey) return;
+
     const key = busyId(entry, 'revoke-link');
     setBusyKey(key);
     try {
@@ -670,6 +689,7 @@ export function InvoiceActionDialog({
             'Content-Type': 'application/json',
           },
           body: '{}',
+          credentials: 'include',
         },
       );
       const body = await response.json().catch(() => ({}));
@@ -1190,7 +1210,7 @@ export function InvoiceActionDialog({
                                     variant="outline"
                                     size="sm"
                                     disabled={rowBusy}
-                                    onClick={() => void revokePaymentLink(entry)}
+                                    onClick={() => openRevokePaymentLinkDialog(entry)}
                                     data-testid={`invoice-action-revoke-link-${rowKey}`}
                                     title={entry.invoiceType === 'pos_fnb'
                                       ? 'Expire Adyen link and void this F&B invoice'
@@ -1423,6 +1443,39 @@ export function InvoiceActionDialog({
       testIdPrefix="invoice-action-payment-qr"
       titleId="invoice-action-payment-qr-title"
     />
+    <AlertDialog
+      open={isRevokeDialogOpen}
+      onOpenChange={(open) => {
+        setIsRevokeDialogOpen(open);
+        if (!open) {
+          setPendingRevokeEntry(null);
+        }
+      }}
+    >
+      <AlertDialogContent data-testid="invoice-action-revoke-link-dialog">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Revoke Payment Link</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to revoke this payment link? The customer will no longer be able to pay using it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="invoice-action-revoke-link-cancel">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            data-testid="invoice-action-revoke-link-confirm"
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={(event) => {
+              event.preventDefault();
+              void confirmRevokePaymentLink();
+            }}
+          >
+            Revoke
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
