@@ -56,6 +56,67 @@ function staffFacingPaymentLinkUrl(
   return null;
 }
 
+/** Cookie session flag used by Admin SPA after Bearer tokens were removed. */
+const STAFF_AUTH_SESSION_KEY = 'auth_session';
+
+function hasStaffCookieSession(): boolean {
+  return typeof window !== 'undefined'
+    && localStorage.getItem(STAFF_AUTH_SESSION_KEY) === '1';
+}
+
+function isStaffSignedIn(bearer: string | null | undefined): boolean {
+  return (typeof bearer === 'string' && bearer.trim() !== '') || hasStaffCookieSession();
+}
+
+function readXsrfToken(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  if (!match?.[1]) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/** Cookie-auth fetch for Manage Invoices (Bearer optional for legacy/tests). */
+function staffFetchInit(
+  bearer: string | null | undefined,
+  init: RequestInit = {},
+): RequestInit {
+  const headers = new Headers(init.headers);
+  if (typeof bearer === 'string' && bearer.trim() !== '') {
+    headers.set('Authorization', `Bearer ${bearer.trim()}`);
+  }
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    const xsrf = readXsrfToken();
+    if (xsrf) {
+      headers.set('X-XSRF-TOKEN', xsrf);
+    }
+  }
+  return {
+    ...init,
+    credentials: 'include',
+    headers,
+  };
+}
+
+async function ensureStaffCsrfCookie(apiBaseUrl: string): Promise<void> {
+  if (readXsrfToken()) {
+    return;
+  }
+  const origin = apiBaseUrl.replace(/\/api\/?$/i, '').replace(/\/$/, '') || window.location.origin;
+  await fetch(`${origin}/sanctum/csrf-cookie`, {
+    method: 'GET',
+    credentials: 'include',
+  });
+}
+
 export interface InvoiceBillingDetails {
   billingName: string;
   billingCompany: string;
@@ -215,8 +276,11 @@ export function InvoiceActionDialog({
       ?? (typeof window !== 'undefined' ? window.location?.origin : '')
       ?? '',
   ).replace(/\/$/, '');
-  const token = authToken
-    ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+  // Prefer explicit prop / legacy Bearer; cookie session alone is enough after Sanctum migration.
+  const token = (typeof authToken === 'string' && authToken.trim() !== '')
+    ? authToken.trim()
+    : (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+  const signedIn = isStaffSignedIn(token);
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -348,7 +412,7 @@ export function InvoiceActionDialog({
   };
 
   const downloadPdf = async (entry: InvoiceHistoryEntry) => {
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to download.');
       return;
     }
@@ -364,13 +428,12 @@ export function InvoiceActionDialog({
       }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document.pdf?${query.toString()}`,
-        {
+        staffFetchInit(token, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/pdf',
           },
-        },
+        }),
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -404,7 +467,7 @@ export function InvoiceActionDialog({
   };
 
   const downloadExcel = async (entry: InvoiceHistoryEntry) => {
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to download.');
       return;
     }
@@ -419,13 +482,12 @@ export function InvoiceActionDialog({
       }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document/excel?${query.toString()}`,
-        {
+        staffFetchInit(token, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           },
-        },
+        }),
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -523,7 +585,7 @@ export function InvoiceActionDialog({
       toast.error(blocked);
       return;
     }
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to generate a payment link.');
       return;
     }
@@ -531,20 +593,20 @@ export function InvoiceActionDialog({
     const key = busyId(entry, 'generate-link');
     setBusyKey(key);
     try {
+      await ensureStaffCsrfCookie(baseUrl);
       // Virtual / Draft booking-fee row: persist invoice + mint link without emailing.
       // Never navigate the staff browser to the Adyen URL — mirror Payment History (Copy only).
       if (entry.isVirtual || entry.status === 'Draft') {
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
-          {
+          staffFetchInit(token, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ send_email: false }),
-          },
+          }),
         );
         const body = await response.json().catch(() => ({}));
         if (!response.ok || !body.success) {
@@ -581,15 +643,14 @@ export function InvoiceActionDialog({
 
       const response = await fetch(
         `${baseUrl}/invoices/${entry.id}/payment-link`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ send_email: false }),
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
@@ -655,7 +716,7 @@ export function InvoiceActionDialog({
       toast.error('No active payment link to revoke.');
       return;
     }
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to revoke a payment link.');
       return;
     }
@@ -670,7 +731,7 @@ export function InvoiceActionDialog({
     if (!entry || entry.isVirtual || !entry.id || entry.id <= 0) {
       return;
     }
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to revoke a payment link.');
       return;
     }
@@ -679,18 +740,17 @@ export function InvoiceActionDialog({
     const key = busyId(entry, 'revoke-link');
     setBusyKey(key);
     try {
+      await ensureStaffCsrfCookie(baseUrl);
       const response = await fetch(
         `${baseUrl}/invoices/${entry.id}/revoke-payment-link`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: '{}',
-          credentials: 'include',
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
@@ -750,7 +810,7 @@ export function InvoiceActionDialog({
       toast.error(virtualInvoiceSendTooltip(entry, issueContext) || VIRTUAL_SEND_TOOLTIP);
       return;
     }
-    if (!issuing && !token) {
+    if (!issuing && !signedIn) {
       toast.error('Not signed in. Please log in to send.');
       return;
     }
@@ -782,21 +842,21 @@ export function InvoiceActionDialog({
           onInvoiceSent?.({ invoice_no: invoiceNo, data });
           return;
         }
-        if (!token) {
+        if (!signedIn) {
           toast.error('Not signed in. Please log in to send.');
           return;
         }
+        await ensureStaffCsrfCookie(baseUrl);
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
-          {
+          staffFetchInit(token, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(emailOpts),
-          },
+          }),
         );
         const body = await response.json().catch(() => ({}));
         if (!response.ok || !body.success) {
@@ -816,16 +876,16 @@ export function InvoiceActionDialog({
         });
         return;
       }
-      if (!token) {
+      if (!signedIn) {
         toast.error('Not signed in. Please log in to send.');
         return;
       }
+      await ensureStaffCsrfCookie(baseUrl);
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/invoices/${entry.id}/resend`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
@@ -833,7 +893,7 @@ export function InvoiceActionDialog({
             ...emailOpts,
             ...(isReceiptMode || entry.status === 'Paid' ? { as_receipt: true } : {}),
           }),
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
