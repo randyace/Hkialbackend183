@@ -16,6 +16,16 @@ import {
   XOctagon,
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
@@ -44,6 +54,67 @@ function staffFacingPaymentLinkUrl(
     return url;
   }
   return null;
+}
+
+/** Cookie session flag used by Admin SPA after Bearer tokens were removed. */
+const STAFF_AUTH_SESSION_KEY = 'auth_session';
+
+function hasStaffCookieSession(): boolean {
+  return typeof window !== 'undefined'
+    && localStorage.getItem(STAFF_AUTH_SESSION_KEY) === '1';
+}
+
+function isStaffSignedIn(bearer: string | null | undefined): boolean {
+  return (typeof bearer === 'string' && bearer.trim() !== '') || hasStaffCookieSession();
+}
+
+function readXsrfToken(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+  if (!match?.[1]) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+/** Cookie-auth fetch for Manage Invoices (Bearer optional for legacy/tests). */
+function staffFetchInit(
+  bearer: string | null | undefined,
+  init: RequestInit = {},
+): RequestInit {
+  const headers = new Headers(init.headers);
+  if (typeof bearer === 'string' && bearer.trim() !== '') {
+    headers.set('Authorization', `Bearer ${bearer.trim()}`);
+  }
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && method !== 'HEAD') {
+    const xsrf = readXsrfToken();
+    if (xsrf) {
+      headers.set('X-XSRF-TOKEN', xsrf);
+    }
+  }
+  return {
+    ...init,
+    credentials: 'include',
+    headers,
+  };
+}
+
+async function ensureStaffCsrfCookie(apiBaseUrl: string): Promise<void> {
+  if (readXsrfToken()) {
+    return;
+  }
+  const origin = apiBaseUrl.replace(/\/api\/?$/i, '').replace(/\/$/, '') || window.location.origin;
+  await fetch(`${origin}/sanctum/csrf-cookie`, {
+    method: 'GET',
+    credentials: 'include',
+  });
 }
 
 export interface InvoiceBillingDetails {
@@ -205,8 +276,11 @@ export function InvoiceActionDialog({
       ?? (typeof window !== 'undefined' ? window.location?.origin : '')
       ?? '',
   ).replace(/\/$/, '');
-  const token = authToken
-    ?? (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+  // Prefer explicit prop / legacy Bearer; cookie session alone is enough after Sanctum migration.
+  const token = (typeof authToken === 'string' && authToken.trim() !== '')
+    ? authToken.trim()
+    : (typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null);
+  const signedIn = isStaffSignedIn(token);
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -215,6 +289,8 @@ export function InvoiceActionDialog({
   const [localPaymentLinks, setLocalPaymentLinks] = useState<Record<string, string | null>>({});
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrPaymentUrl, setQrPaymentUrl] = useState<string | null>(null);
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [pendingRevokeEntry, setPendingRevokeEntry] = useState<InvoiceHistoryEntry | null>(null);
   const [billingExpanded, setBillingExpanded] = useState(true);
   const [billingSaving, setBillingSaving] = useState(false);
   const [billingName, setBillingName] = useState('');
@@ -336,7 +412,7 @@ export function InvoiceActionDialog({
   };
 
   const downloadPdf = async (entry: InvoiceHistoryEntry) => {
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to download.');
       return;
     }
@@ -352,13 +428,12 @@ export function InvoiceActionDialog({
       }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document.pdf?${query.toString()}`,
-        {
+        staffFetchInit(token, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/pdf',
           },
-        },
+        }),
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -392,7 +467,7 @@ export function InvoiceActionDialog({
   };
 
   const downloadExcel = async (entry: InvoiceHistoryEntry) => {
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to download.');
       return;
     }
@@ -407,13 +482,12 @@ export function InvoiceActionDialog({
       }
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/document/excel?${query.toString()}`,
-        {
+        staffFetchInit(token, {
           method: 'GET',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           },
-        },
+        }),
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -511,7 +585,7 @@ export function InvoiceActionDialog({
       toast.error(blocked);
       return;
     }
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to generate a payment link.');
       return;
     }
@@ -519,20 +593,20 @@ export function InvoiceActionDialog({
     const key = busyId(entry, 'generate-link');
     setBusyKey(key);
     try {
+      await ensureStaffCsrfCookie(baseUrl);
       // Virtual / Draft booking-fee row: persist invoice + mint link without emailing.
       // Never navigate the staff browser to the Adyen URL — mirror Payment History (Copy only).
       if (entry.isVirtual || entry.status === 'Draft') {
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
-          {
+          staffFetchInit(token, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ send_email: false }),
-          },
+          }),
         );
         const body = await response.json().catch(() => ({}));
         if (!response.ok || !body.success) {
@@ -569,15 +643,14 @@ export function InvoiceActionDialog({
 
       const response = await fetch(
         `${baseUrl}/invoices/${entry.id}/payment-link`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ send_email: false }),
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
@@ -634,7 +707,7 @@ export function InvoiceActionDialog({
     return Boolean(staffFacingPaymentLinkUrl(entry.paymentLinkUrl));
   };
 
-  const revokePaymentLink = async (entry: InvoiceHistoryEntry) => {
+  const openRevokePaymentLinkDialog = (entry: InvoiceHistoryEntry) => {
     if (entry.isVirtual || !entry.id || entry.id <= 0) {
       toast.error('Cannot revoke a draft invoice payment link.');
       return;
@@ -643,34 +716,41 @@ export function InvoiceActionDialog({
       toast.error('No active payment link to revoke.');
       return;
     }
-    if (!token) {
+    if (!signedIn) {
       toast.error('Not signed in. Please log in to revoke a payment link.');
       return;
     }
+    setPendingRevokeEntry(entry);
+    setIsRevokeDialogOpen(true);
+  };
 
-    const isFnB = entry.invoiceType === 'pos_fnb';
-    const confirmed = window.confirm(
-      isFnB
-        ? 'Revoke this payment link and void the F&B invoice? You can generate a new invoice/link afterward.'
-        : 'Revoke (expire) this payment link? The invoice will stay unpaid so you can generate a new link.',
-    );
-    if (!confirmed) return;
-
+  const confirmRevokePaymentLink = async () => {
+    const entry = pendingRevokeEntry;
+    setIsRevokeDialogOpen(false);
+    setPendingRevokeEntry(null);
+    if (!entry || entry.isVirtual || !entry.id || entry.id <= 0) {
+      return;
+    }
+    if (!signedIn) {
+      toast.error('Not signed in. Please log in to revoke a payment link.');
+      return;
+    }
     if (busyKey) return;
+
     const key = busyId(entry, 'revoke-link');
     setBusyKey(key);
     try {
+      await ensureStaffCsrfCookie(baseUrl);
       const response = await fetch(
         `${baseUrl}/invoices/${entry.id}/revoke-payment-link`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
           body: '{}',
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
@@ -730,7 +810,7 @@ export function InvoiceActionDialog({
       toast.error(virtualInvoiceSendTooltip(entry, issueContext) || VIRTUAL_SEND_TOOLTIP);
       return;
     }
-    if (!issuing && !token) {
+    if (!issuing && !signedIn) {
       toast.error('Not signed in. Please log in to send.');
       return;
     }
@@ -762,21 +842,21 @@ export function InvoiceActionDialog({
           onInvoiceSent?.({ invoice_no: invoiceNo, data });
           return;
         }
-        if (!token) {
+        if (!signedIn) {
           toast.error('Not signed in. Please log in to send.');
           return;
         }
+        await ensureStaffCsrfCookie(baseUrl);
         const response = await fetch(
           `${baseUrl}/bookings/${bookingId}/send-invoice`,
-          {
+          staffFetchInit(token, {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
               Accept: 'application/json',
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(emailOpts),
-          },
+          }),
         );
         const body = await response.json().catch(() => ({}));
         if (!response.ok || !body.success) {
@@ -796,16 +876,16 @@ export function InvoiceActionDialog({
         });
         return;
       }
-      if (!token) {
+      if (!signedIn) {
         toast.error('Not signed in. Please log in to send.');
         return;
       }
+      await ensureStaffCsrfCookie(baseUrl);
       const response = await fetch(
         `${baseUrl}/bookings/${bookingId}/invoices/${entry.id}/resend`,
-        {
+        staffFetchInit(token, {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${token}`,
             Accept: 'application/json',
             'Content-Type': 'application/json',
           },
@@ -813,7 +893,7 @@ export function InvoiceActionDialog({
             ...emailOpts,
             ...(isReceiptMode || entry.status === 'Paid' ? { as_receipt: true } : {}),
           }),
-        },
+        }),
       );
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.success) {
@@ -1190,7 +1270,7 @@ export function InvoiceActionDialog({
                                     variant="outline"
                                     size="sm"
                                     disabled={rowBusy}
-                                    onClick={() => void revokePaymentLink(entry)}
+                                    onClick={() => openRevokePaymentLinkDialog(entry)}
                                     data-testid={`invoice-action-revoke-link-${rowKey}`}
                                     title={entry.invoiceType === 'pos_fnb'
                                       ? 'Expire Adyen link and void this F&B invoice'
@@ -1423,6 +1503,39 @@ export function InvoiceActionDialog({
       testIdPrefix="invoice-action-payment-qr"
       titleId="invoice-action-payment-qr-title"
     />
+    <AlertDialog
+      open={isRevokeDialogOpen}
+      onOpenChange={(open) => {
+        setIsRevokeDialogOpen(open);
+        if (!open) {
+          setPendingRevokeEntry(null);
+        }
+      }}
+    >
+      <AlertDialogContent data-testid="invoice-action-revoke-link-dialog">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Revoke Payment Link</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to revoke this payment link? The customer will no longer be able to pay using it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="invoice-action-revoke-link-cancel">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            data-testid="invoice-action-revoke-link-confirm"
+            className="bg-destructive text-white hover:bg-destructive/90"
+            onClick={(event) => {
+              event.preventDefault();
+              void confirmRevokePaymentLink();
+            }}
+          >
+            Revoke
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

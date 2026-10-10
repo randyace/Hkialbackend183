@@ -17,22 +17,24 @@ export interface AuditLog {
   user: string;
   action: string;
   module: string;
+  /** e.g. "Booking #12345", or "—" when no entity_id */
+  targetRecord?: string;
   details: string;
   ipAddress: string;
   status: 'success' | 'failed' | 'warning';
 }
 
 const MOCK_AUDIT_LOGS: AuditLog[] = [
-  { id: '1',  timestamp: '2024-10-22 14:30:25', user: 'HKIAL Staff',    action: 'UPDATE', module: 'Booking',      details: 'Changed status from Pending to Approved for A-202602-000001',          ipAddress: '192.168.1.100', status: 'warning' },
-  { id: '2',  timestamp: '2024-10-22 14:15:12', user: 'Wong Chi Ming',  action: 'CREATE', module: 'Application',  details: 'Approved application APP-2024-015 and assigned account ACC-2024-0234', ipAddress: '192.168.1.105', status: 'success' },
-  { id: '3',  timestamp: '2024-10-22 13:45:33', user: 'Chan Siu Lan',   action: 'LOGIN',  module: 'auth',         details: 'Invalid password entered',                                              ipAddress: '192.168.1.120', status: 'failed'  },
-  { id: '4',  timestamp: '2024-10-22 13:30:18', user: 'Lee Ka Wai',     action: 'CREATE', module: 'Booking',      details: 'Created booking A-202602-000045 for guest John Smith',                  ipAddress: '192.168.1.108', status: 'success' },
-  { id: '5',  timestamp: '2024-10-22 12:20:44', user: 'Lam Mei Ling',   action: 'UPDATE', module: 'BookableItem', details: 'Changed price of VIP Suite A from HK$4,200 to HK$4,500',               ipAddress: '192.168.1.115', status: 'warning' },
-  { id: '6',  timestamp: '2024-10-22 11:55:09', user: 'HKIAL Staff',    action: 'CREATE', module: 'SystemUser',   details: 'Created new staff account for Tang Wai Hong',                           ipAddress: '192.168.1.100', status: 'success' },
-  { id: '7',  timestamp: '2024-10-22 11:30:22', user: 'Wong Chi Ming',  action: 'VIEW',   module: 'Report',       details: 'Generated and exported Daily Booking Report for 2024-10-22',            ipAddress: '192.168.1.105', status: 'success' },
-  { id: '8',  timestamp: '2024-10-22 10:45:15', user: 'Lee Ka Wai',     action: 'OTHER',  module: 'SystemUser',   details: 'Tried to access System Users Management without permission',            ipAddress: '192.168.1.108', status: 'warning' },
-  { id: '9',  timestamp: '2024-10-22 10:15:38', user: 'Chan Siu Lan',   action: 'UPDATE', module: 'Booking',      details: 'Rejected booking A-202602-000044 - Reason: Suite not available',        ipAddress: '192.168.1.120', status: 'warning' },
-  { id: '10', timestamp: '2024-10-22 09:30:51', user: 'HKIAL Staff',    action: 'UPDATE', module: 'system',       details: 'Changed email notification settings for booking confirmations',         ipAddress: '192.168.1.100', status: 'warning' },
+  { id: '1',  timestamp: '2024-10-22 14:30:25', user: 'HKIAL Staff',    action: 'UPDATE', module: 'Booking',      targetRecord: 'Booking #1001', details: 'Changed status from Pending to Approved for A-202602-000001',          ipAddress: '192.168.1.100', status: 'warning' },
+  { id: '2',  timestamp: '2024-10-22 14:15:12', user: 'Wong Chi Ming',  action: 'CREATE', module: 'Application',  targetRecord: 'Application #15', details: 'Approved application APP-2024-015 and assigned account ACC-2024-0234', ipAddress: '192.168.1.105', status: 'success' },
+  { id: '3',  timestamp: '2024-10-22 13:45:33', user: 'Chan Siu Lan',   action: 'LOGIN',  module: 'auth',         targetRecord: '—', details: 'Invalid password entered',                                              ipAddress: '192.168.1.120', status: 'failed'  },
+  { id: '4',  timestamp: '2024-10-22 13:30:18', user: 'Lee Ka Wai',     action: 'CREATE', module: 'Booking',      targetRecord: 'Booking #1045', details: 'Created booking A-202602-000045 for guest John Smith',                  ipAddress: '192.168.1.108', status: 'success' },
+  { id: '5',  timestamp: '2024-10-22 12:20:44', user: 'Lam Mei Ling',   action: 'UPDATE', module: 'BookableItem', targetRecord: 'BookableItem #3', details: 'Changed price of VIP Suite A from HK$4,200 to HK$4,500',               ipAddress: '192.168.1.115', status: 'warning' },
+  { id: '6',  timestamp: '2024-10-22 11:55:09', user: 'HKIAL Staff',    action: 'CREATE', module: 'SystemUser',   targetRecord: 'SystemUser #12', details: 'Created new staff account for Tang Wai Hong',                           ipAddress: '192.168.1.100', status: 'success' },
+  { id: '7',  timestamp: '2024-10-22 11:30:22', user: 'Wong Chi Ming',  action: 'VIEW',   module: 'Report',       targetRecord: '—', details: 'Generated and exported Daily Booking Report for 2024-10-22',            ipAddress: '192.168.1.105', status: 'success' },
+  { id: '8',  timestamp: '2024-10-22 10:45:15', user: 'Lee Ka Wai',     action: 'OTHER',  module: 'SystemUser',   targetRecord: '—', details: 'Tried to access System Users Management without permission',            ipAddress: '192.168.1.108', status: 'warning' },
+  { id: '9',  timestamp: '2024-10-22 10:15:38', user: 'Chan Siu Lan',   action: 'UPDATE', module: 'Booking',      targetRecord: 'Booking #1044', details: 'Rejected booking A-202602-000044 - Reason: Suite not available',        ipAddress: '192.168.1.120', status: 'warning' },
+  { id: '10', timestamp: '2024-10-22 09:30:51', user: 'HKIAL Staff',    action: 'UPDATE', module: 'system',       targetRecord: '—', details: 'Changed email notification settings for booking confirmations',         ipAddress: '192.168.1.100', status: 'warning' },
 ];
 
 const MODULE_LABELS: Record<string, string> = {
@@ -196,6 +198,7 @@ export function AuditLogs({
         log.user.toLowerCase().includes(q) ||
         log.action.toLowerCase().includes(q) ||
         log.module.toLowerCase().includes(q) ||
+        (log.targetRecord ?? '').toLowerCase().includes(q) ||
         log.details.toLowerCase().includes(q);
       const matchesModule = moduleFilter === 'all' || log.module === moduleFilter;
       const matchesAction = actionFilter === 'all' || log.action === actionFilter;
@@ -365,6 +368,7 @@ export function AuditLogs({
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Timestamp</th>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">User</th>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Module</th>
+                  <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Target Record</th>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Action</th>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Details</th>
                   <th className="px-6 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">IP Address</th>
@@ -378,6 +382,12 @@ export function AuditLogs({
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{log.user}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge variant="outline">{MODULE_LABELS[log.module] ?? log.module}</Badge>
+                    </td>
+                    <td
+                      className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-800"
+                      title={log.targetRecord ?? '—'}
+                    >
+                      {log.targetRecord ?? '—'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{ACTION_LABELS[log.action] ?? log.action}</td>
                     <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate" title={log.details}>
