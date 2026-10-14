@@ -3691,7 +3691,7 @@ export function CreateBooking({
               {passengers.slice(0, vipPS + vipLD).map((p, idx) => {
                 const isPS = idx < vipPS;
                 return (
-                  {/* overflow-visible so NationalityTypeahead list is not clipped */}
+                  // overflow-visible so NationalityTypeahead list is not clipped
                   <div key={idx} className="border border-gray-200 rounded-lg overflow-visible">
                     <div className={`flex items-center gap-3 px-4 py-2 rounded-t-lg ${isPS ? 'bg-purple-50 border-b border-purple-100' : 'bg-blue-50 border-b border-blue-100'}`}>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPS ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
@@ -3843,7 +3843,7 @@ export function CreateBooking({
               {nonFlyingGuests.slice(0, nonFlyingPS + nonFlyingLD).map((g, idx) => {
                 const isPS = idx < nonFlyingPS;
                 return (
-                  {/* overflow-visible so NationalityTypeahead list is not clipped */}
+                  // overflow-visible so NationalityTypeahead list is not clipped
                   <div key={idx} className="border border-gray-200 rounded-lg overflow-visible">
                     <div className={`flex items-center gap-3 px-4 py-2 rounded-t-lg ${isPS ? 'bg-purple-50 border-b border-purple-100' : 'bg-blue-50 border-b border-blue-100'}`}>
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${isPS ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
