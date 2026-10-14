@@ -2988,9 +2988,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 : 'border-gray-200';
 
               return (
-                <div key={idx} className={`border rounded-lg overflow-hidden ${cardBorder}`}>
+                <div key={idx} className={`border rounded-lg overflow-visible ${cardBorder}`}>
                   {/* Passenger header */}
-                  <div className={`flex items-center gap-3 px-4 py-2 ${
+                  <div className={`flex items-center gap-3 px-4 py-2 rounded-t-lg ${
                     isOwner ? 'bg-amber-50 border-b border-amber-200' :
                     isSpouse ? 'bg-rose-50 border-b border-rose-200' :
                     isPS ? 'bg-purple-50 border-b border-purple-100' : 'bg-blue-50 border-b border-blue-100'
@@ -3238,9 +3238,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 : 'border-gray-200';
 
               return (
-                <div key={idx} className={`border rounded-lg overflow-hidden ${cardBorder}`}>
+                <div key={idx} className={`border rounded-lg overflow-visible ${cardBorder}`}>
                   {/* Guest header */}
-                  <div className={`flex items-center gap-3 px-4 py-2 ${
+                  <div className={`flex items-center gap-3 px-4 py-2 rounded-t-lg ${
                     isSpouseNFG ? 'bg-rose-50 border-b border-rose-200' :
                     isPS ? 'bg-purple-50 border-b border-purple-100' : 'bg-blue-50 border-b border-blue-100'
                   }`}>
