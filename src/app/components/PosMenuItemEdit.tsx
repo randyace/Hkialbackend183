@@ -91,6 +91,7 @@ export function PosMenuItemEdit({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialData) {
@@ -124,12 +125,20 @@ export function PosMenuItemEdit({
 
   const handleFile = (file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) return;
+    if (!/\.(jpg|png)$/i.test(file.name) || file.size > 20 * 1024 * 1024) {
+      setImageError(!/\.(jpg|png)$/i.test(file.name)
+        ? 'Only JPG and PNG files are allowed.'
+        : 'File too large (max 20 MB).');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setImageError(null);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
 
   const clearImage = () => {
+    setImageError(null);
     setImageFile(null);
     setImagePreview(formData.existingImageUrl);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -316,10 +325,14 @@ export function PosMenuItemEdit({
                 </Button>
               </div>
             )}
+            <p id="menuImageHint" className="text-xs text-gray-500 mt-3">JPG or PNG, up to 20 MB.</p>
+            {imageError && <p id="menuImageError" role="alert" className="text-xs text-red-600 mt-1">{imageError}</p>}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept=".jpg,.png"
+              aria-label="Menu item image"
+              aria-describedby="menuImageHint menuImageError"
               className="hidden"
               onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
             />
