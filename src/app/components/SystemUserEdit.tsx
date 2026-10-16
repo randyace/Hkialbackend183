@@ -75,6 +75,9 @@ export interface SystemUserEditProps {
    * Parent owns every mutation.
    */
   microsoftLink?: MicrosoftLinkProps | null;
+  staffAccountPolicy?: { allowed_email_domains: string[]; ad_email_domains: string[] };
+  adAccountLocked?: boolean;
+  accountTypeReadOnly?: boolean;
 }
 
 export interface MicrosoftLinkProps {
@@ -252,6 +255,9 @@ export function SystemUserEdit({
   onBack = () => {},
   onSave = () => {},
   microsoftLink = null,
+  staffAccountPolicy,
+  adAccountLocked = false,
+  accountTypeReadOnly = false,
 }: SystemUserEditProps) {
   const isEditMode = !!userId;
 
@@ -265,6 +271,16 @@ export function SystemUserEdit({
   const [rolePermissionsReady, setRolePermissionsReady] = useState(false);
   const [formStatus, setFormStatus] = useState<SystemUserStatus>(DEFAULT_FORM.status);
   const [formPassword, setFormPassword] = useState('');
+  const [formAdAccount, setFormAdAccount] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const emailDomain = formEmail.trim().split('@')[1]?.toLowerCase();
+  const domainRequiresAd = staffAccountPolicy?.ad_email_domains.some((domain) => domain.toLowerCase() === emailDomain) === true;
+  const effectiveAdAccount = formAdAccount || domainRequiresAd || adAccountLocked;
+  const passwordRequired = !isEditMode || (initialData?.is_ad_account === true && !effectiveAdAccount);
+
+  useEffect(() => {
+    if (effectiveAdAccount) setFormPassword('');
+  }, [effectiveAdAccount]);
 
   const effectiveSet = useMemo(() => {
     if (effectivePermissionNames == null) return null;
@@ -344,6 +360,8 @@ export function SystemUserEdit({
         setDirectPermissions([]);
         setFormStatus(DEFAULT_FORM.status);
         setFormPassword('');
+        setFormAdAccount(false);
+        setEmailError('');
       }
       return;
     }
@@ -353,6 +371,8 @@ export function SystemUserEdit({
     setFormDepartment(initialData.department);
     setFormStatus(initialData.status);
     setFormPassword('');
+    setFormAdAccount(initialData.is_ad_account === true);
+    setEmailError('');
   }, [initialData, isEditMode]);
 
   // Hydrate direct permissions from dedicated API (preferred) or form payload.
@@ -444,7 +464,14 @@ export function SystemUserEdit({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formName.trim() || !formEmail.trim() || (!isEditMode && formPassword.length < 8)) {
+    setEmailError('');
+    const unchangedEmail = isEditMode && formEmail.trim().toLowerCase() === initialData?.email.trim().toLowerCase();
+    if (!accountTypeReadOnly && !unchangedEmail && staffAccountPolicy && !staffAccountPolicy.allowed_email_domains.some((domain) => domain.toLowerCase() === emailDomain)) {
+      setEmailError('Use an email address from an allowed domain.');
+      setActiveTab('profile');
+      return;
+    }
+    if (!formName.trim() || !formEmail.trim() || (passwordRequired && !effectiveAdAccount && formPassword.length < 8)) {
       setActiveTab('profile');
       return;
     }
@@ -456,7 +483,8 @@ export function SystemUserEdit({
       // Persist only extras — role defaults stay on the role template.
       permissions: directPermissions.filter((name) => !inheritedSet.has(name)),
       status: formStatus,
-      password: formPassword || undefined,
+      is_ad_account: effectiveAdAccount,
+      ...(!effectiveAdAccount && formPassword ? { password: formPassword } : {}),
     });
   };
 
@@ -519,12 +547,41 @@ export function SystemUserEdit({
                     id="su-email"
                     type="email"
                     value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
+                    onChange={(e) => { setFormEmail(e.target.value); setEmailError(''); }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
-                    placeholder="email@hkial.com"
+                    aria-describedby="su-email-policy su-email-error"
+                    aria-invalid={!!emailError}
+                    placeholder="Email address"
                     required
                   />
+                  <p id="su-email-policy" className="mt-2 text-sm text-gray-700 break-words">
+                    {staffAccountPolicy
+                      ? `Allowed email domains: ${staffAccountPolicy.allowed_email_domains.join(', ') || 'None configured'}`
+                      : 'Email domain policy is unavailable. Reload this page before creating an account or changing an email.'}
+                  </p>
+                  {emailError ? <p id="su-email-error" role="alert" className="mt-1 text-sm text-red-700">{emailError}</p> : null}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="su-ad-account" className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    id="su-ad-account"
+                    type="checkbox"
+                    checked={effectiveAdAccount}
+                    disabled={domainRequiresAd || adAccountLocked || accountTypeReadOnly}
+                    onChange={(e) => setFormAdAccount(e.target.checked)}
+                    aria-describedby="su-ad-account-hint"
+                    className="rounded border-gray-300 accent-black disabled:cursor-not-allowed"
+                  />
+                  AD login account
+                </label>
+                <p id="su-ad-account-hint" className="text-sm text-gray-700">
+                  {effectiveAdAccount
+                    ? 'This account uses AD login only. Local passwords and password reminders do not apply.'
+                    : 'Select for staff who must sign in through AD.'}
+                  {domainRequiresAd ? ' AD login is required for this email domain.' : adAccountLocked ? ' AD login is required while a Microsoft identity is linked.' : ''}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -575,9 +632,9 @@ export function SystemUserEdit({
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
-                <div>
+                {!effectiveAdAccount ? <div>
                   <label htmlFor="su-password" className="mb-[10px] block text-sm text-gray-700">
-                    Password {isEditMode && '(leave blank to keep current)'}
+                    Password {isEditMode && !passwordRequired && '(leave blank to keep current)'}
                   </label>
                   <input
                     id="su-password"
@@ -586,10 +643,10 @@ export function SystemUserEdit({
                     onChange={(e) => setFormPassword(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md"
                     placeholder={isEditMode ? '••••••••' : 'Minimum 8 characters'}
-                    required={!isEditMode}
-                    minLength={isEditMode ? undefined : 8}
+                    required={passwordRequired}
+                    minLength={passwordRequired ? 8 : undefined}
                   />
-                </div>
+                </div> : null}
               </div>
             </Card>
             {microsoftLink ? <MicrosoftLinkCard microsoftLink={microsoftLink} /> : null}

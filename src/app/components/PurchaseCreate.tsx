@@ -309,7 +309,7 @@ export function PurchaseCreate({
   const [paymentMethod, setPaymentMethod]   = useState<PaymentMethod>('Bank Transfer');
   const [transactionRef, setTransactionRef] = useState('');
   const [purchaseNotes, setPurchaseNotes]   = useState('');
-  // 2026-07-02 — payment proof (image/PDF) attached at Payment Details.
+  // 2026-07-02 — payment proof (JPG/PNG) attached at Payment Details.
   // The view collects the file; the parent wrapper uploads it to Azure
   // Blob before POSTing the purchase.
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
@@ -1043,10 +1043,10 @@ export function PurchaseCreate({
                 />
               </div>
 
-              {/* ── 2026-07-02 — payment proof upload (image / PDF) ── */}
+              {/* ── 2026-07-02 — payment proof upload (JPG / PNG) ── */}
               <div>
                 <Label htmlFor="paymentProof" className="mb-[10px] block">
-                  Payment Proof <span className="text-gray-400 font-normal">(image or PDF, optional)</span>
+                  Payment Proof <span className="text-gray-400 font-normal">(JPG or PNG, optional)</span>
                 </Label>
                 {paymentProofFile ? (
                   <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
@@ -1072,12 +1072,15 @@ export function PurchaseCreate({
                   <Input
                     id="paymentProof"
                     type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp,application/pdf"
+                    accept=".jpg,.png"
+                    aria-describedby="paymentProofHint paymentProofError"
                     onChange={e => {
                       const file = e.target.files?.[0] ?? null;
                       setPaymentProofError(null);
-                      if (file && file.size > 10 * 1024 * 1024) {
-                        setPaymentProofError('File too large (max 10 MB).');
+                      if (file && (!/\.(jpg|png)$/i.test(file.name) || file.size > 20 * 1024 * 1024)) {
+                        setPaymentProofError(!/\.(jpg|png)$/i.test(file.name)
+                          ? 'Only JPG and PNG files are allowed.'
+                          : 'File too large (max 20 MB).');
                         setPaymentProofFile(null);
                         e.target.value = '';
                         return;
@@ -1088,10 +1091,10 @@ export function PurchaseCreate({
                   />
                 )}
                 {paymentProofError && (
-                  <p className="text-xs text-red-600 mt-1">{paymentProofError}</p>
+                  <p id="paymentProofError" role="alert" className="text-xs text-red-600 mt-1">{paymentProofError}</p>
                 )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Uploaded to Azure Blob Storage after you confirm the purchase.
+                <p id="paymentProofHint" className="text-xs text-gray-500 mt-1">
+                  JPG or PNG, up to 20 MB. Uploaded after you confirm the purchase.
                 </p>
               </div>
 

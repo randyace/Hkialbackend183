@@ -59,6 +59,7 @@ export interface SystemUserFormData {
   permissions: string[];
   status:      SystemUserStatus;
   password?:   string;
+  is_ad_account?: boolean;
 }
 
 export interface PermissionOption {
