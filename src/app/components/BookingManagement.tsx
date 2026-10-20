@@ -873,9 +873,10 @@ export function BookingManagement({
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="inline-flex items-center gap-1.5">
                       <Link
-                        to={`/bookings/${booking.id}`}
+                        to={`/customers/${encodeURIComponent(booking.accountNo)}`}
                         data-testid={`guest-name-link-${booking.id}`}
                         className="text-blue-600 hover:text-blue-800 hover:underline"
+                        title="View Customer"
                       >
                         {booking.guestName}
                       </Link>
