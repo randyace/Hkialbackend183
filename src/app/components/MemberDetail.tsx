@@ -133,7 +133,7 @@ const ALL_PAYMENT_METHODS = ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purcha
 export interface Member {
   accountNumber: string;
   accountType: 'Individual' | 'Corporate' | 'Agency';
-  status: 'Active' | 'Pending' | 'Suspended';
+  status: 'Active' | 'Inactive' | 'Pending' | 'Suspended';
   name: string;
   title: string;
   firstName: string;
@@ -349,6 +349,8 @@ export interface MemberDetailProps {
   showResetPwConfirm?: boolean;
   showForceLogoutConfirm?: boolean;
   showReset2FAConfirm?: boolean;
+  showDeactivateConfirm?: boolean;
+  showActivateConfirm?: boolean;
   onShowUnlockConfirm?: () => void;
   onHideUnlockConfirm?: () => void;
   onShowResetPwConfirm?: () => void;
@@ -359,6 +361,14 @@ export interface MemberDetailProps {
   onForceLogout?: () => void | Promise<void>;
   onShowReset2FAConfirm?: () => void;
   onHideReset2FAConfirm?: () => void;
+  onShowDeactivateConfirm?: () => void;
+  onHideDeactivateConfirm?: () => void;
+  /** Soft-deactivate: status → Inactive. Container owns the API call. */
+  onDeactivateAccount?: () => void | Promise<void>;
+  onShowActivateConfirm?: () => void;
+  onHideActivateConfirm?: () => void;
+  /** Reactivate: status → Active. Container owns the API call. */
+  onActivateAccount?: () => void | Promise<void>;
 }
 
 export interface Preference {
@@ -561,6 +571,8 @@ export function MemberDetail({
   showResetPwConfirm: showResetPwConfirmProp,
   showForceLogoutConfirm: showForceLogoutConfirmProp,
   showReset2FAConfirm: showReset2FAConfirmProp,
+  showDeactivateConfirm: showDeactivateConfirmProp,
+  showActivateConfirm: showActivateConfirmProp,
   onShowUnlockConfirm,
   onHideUnlockConfirm,
   onShowResetPwConfirm,
@@ -570,6 +582,12 @@ export function MemberDetail({
   onForceLogout,
   onShowReset2FAConfirm,
   onHideReset2FAConfirm,
+  onShowDeactivateConfirm,
+  onHideDeactivateConfirm,
+  onDeactivateAccount,
+  onShowActivateConfirm,
+  onHideActivateConfirm,
+  onActivateAccount,
 }: MemberDetailProps) {
   // Use passed member or fall back to mock — single source of truth
   const memberData: Member = memberProp ?? MOCK_MEMBER;
@@ -669,6 +687,8 @@ export function MemberDetail({
   const [mockShowResetPwConfirm, setMockShowResetPwConfirm]             = useState(false);
   const [mockShowForceLogoutConfirm, setMockShowForceLogoutConfirm]     = useState(false);
   const [mockShowReset2FAConfirm, setMockShowReset2FAConfirm]           = useState(false);
+  const [mockShowDeactivateConfirm, setMockShowDeactivateConfirm]       = useState(false);
+  const [mockShowActivateConfirm, setMockShowActivateConfirm]           = useState(false);
 
   // Mock login history (demo fallback — LoginAttempt type is now top-level)
   const [mockLoginHistory] = useState<LoginAttempt[]>([
@@ -760,6 +780,10 @@ export function MemberDetail({
   const activeShowResetPwConfirm      = showResetPwConfirmProp     ?? mockShowResetPwConfirm;
   const activeShowForceLogoutConfirm  = showForceLogoutConfirmProp ?? mockShowForceLogoutConfirm;
   const activeShowReset2FAConfirm     = showReset2FAConfirmProp    ?? mockShowReset2FAConfirm;
+  const activeShowDeactivateConfirm   = showDeactivateConfirmProp  ?? mockShowDeactivateConfirm;
+  const activeShowActivateConfirm     = showActivateConfirmProp    ?? mockShowActivateConfirm;
+  const accountIsActive = memberData.status === 'Active';
+  const accountIsInactive = memberData.status === 'Inactive';
 
   // Form state
   const activeAllergyTarget           = allergyTargetProp          ?? mockAllergyTarget;
@@ -772,6 +796,7 @@ export function MemberDetail({
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       'Active': 'bg-green-100 text-green-700',
+      'Inactive': 'bg-gray-100 text-gray-700',
       'Pending': 'bg-yellow-100 text-yellow-700',
       'Suspended': 'bg-red-100 text-red-700',
     };
@@ -2158,13 +2183,52 @@ export function MemberDetail({
             </div>
           )}
 
+          {/* Inactive account banner */}
+          {accountIsInactive && (
+            <div className="flex items-start gap-4 p-4 bg-gray-50 border border-gray-300 rounded-lg">
+              <UserX className="w-6 h-6 text-gray-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800">Account is inactive</p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Customer cannot sign in until the account is reactivated.
+                </p>
+              </div>
+              {onActivateAccount && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 shrink-0"
+                  onClick={() => { onShowActivateConfirm?.(); setMockShowActivateConfirm(true); }}
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                  Activate Now
+                </Button>
+              )}
+            </div>
+          )}
+
           {/* Security Status Overview */}
           <Card className="p-6">
             <h3 className="flex items-center gap-2 mb-5">
               <Shield className="w-5 h-5 text-blue-600" />
               Security Status
             </h3>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {/* Account status (Active / Inactive) */}
+              <div className={`rounded-lg p-4 border ${accountIsActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {accountIsActive
+                    ? <ShieldCheck className="w-4 h-4 text-green-600" />
+                    : <UserX className="w-4 h-4 text-gray-500" />}
+                  <span className="text-xs text-gray-500 uppercase tracking-wide">Account Status</span>
+                </div>
+                <p className={`text-sm font-semibold ${accountIsActive ? 'text-green-700' : 'text-gray-700'}`}>
+                  {memberData.status}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {accountIsActive ? 'Can sign in' : 'Cannot sign in'}
+                </p>
+              </div>
+
               {/* Account Lock Status */}
               <div className={`rounded-lg p-4 border ${activeIsAccountLocked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                 <div className="flex items-center gap-2 mb-1">
@@ -2224,6 +2288,60 @@ export function MemberDetail({
             <p className="text-sm text-gray-500 mb-5">Manage account access and credentials. All actions are logged in the audit trail.</p>
 
             <div className="grid grid-cols-2 gap-4">
+              {/* Deactivate Account */}
+              {(onDeactivateAccount || onActivateAccount) && (
+              <div className={`flex items-start gap-4 p-4 border rounded-lg ${accountIsActive ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${accountIsActive ? 'bg-red-100' : 'bg-gray-100'}`}>
+                  <UserX className={`w-5 h-5 ${accountIsActive ? 'text-red-600' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">Deactivate Account</p>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                    {accountIsActive
+                      ? 'Set status to Inactive. The customer cannot sign in. The record is kept (not permanently deleted).'
+                      : 'Account is already inactive. Use Activate Account to restore access.'}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!accountIsActive || !onDeactivateAccount}
+                    className={accountIsActive && onDeactivateAccount ? 'border-red-300 text-red-700 hover:bg-red-100' : ''}
+                    onClick={() => { onShowDeactivateConfirm?.(); setMockShowDeactivateConfirm(true); }}
+                  >
+                    <UserX className="w-3.5 h-3.5 mr-1.5" />
+                    Deactivate
+                  </Button>
+                </div>
+              </div>
+              )}
+
+              {/* Activate Account */}
+              {(onDeactivateAccount || onActivateAccount) && (
+              <div className={`flex items-start gap-4 p-4 border rounded-lg ${accountIsInactive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${accountIsInactive ? 'bg-green-100' : 'bg-gray-100'}`}>
+                  <ShieldCheck className={`w-5 h-5 ${accountIsInactive ? 'text-green-600' : 'text-gray-400'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">Activate Account</p>
+                  <p className="text-xs text-gray-500 mt-0.5 mb-3">
+                    {accountIsInactive
+                      ? 'Set status to Active so the customer can sign in again.'
+                      : 'Account is already active. No action required.'}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!accountIsInactive || !onActivateAccount}
+                    className={accountIsInactive && onActivateAccount ? 'border-green-300 text-green-700 hover:bg-green-50' : ''}
+                    onClick={() => { onShowActivateConfirm?.(); setMockShowActivateConfirm(true); }}
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 mr-1.5" />
+                    Activate
+                  </Button>
+                </div>
+              </div>
+              )}
+
               {/* Reset Password */}
               <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                 <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
@@ -2497,6 +2615,87 @@ export function MemberDetail({
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out All Sessions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Deactivate Account Confirmation ─────────────────────────────────── */}
+      <Dialog open={activeShowDeactivateConfirm} onOpenChange={open => { if (!open) { onHideDeactivateConfirm?.(); setMockShowDeactivateConfirm(false); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserX className="w-5 h-5 text-red-600" />
+              Deactivate Account
+            </DialogTitle>
+            <DialogDescription>
+              Set <strong>{memberData.name}</strong> to Inactive. The record is kept (not permanently deleted).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800 space-y-1">
+            <p>The customer will not be able to sign in.</p>
+            <p>Active sessions will be signed out.</p>
+            <p>You can reactivate later from this Security tab.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { onHideDeactivateConfirm?.(); setMockShowDeactivateConfirm(false); }}>Cancel</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700"
+              onClick={async () => {
+                try {
+                  if (onDeactivateAccount) {
+                    await onDeactivateAccount();
+                  } else {
+                    toast.success('Account deactivated (demo).');
+                  }
+                } finally {
+                  onHideDeactivateConfirm?.();
+                  setMockShowDeactivateConfirm(false);
+                }
+              }}
+            >
+              <UserX className="w-4 h-4 mr-2" />
+              Confirm Deactivate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Activate Account Confirmation ───────────────────────────────────── */}
+      <Dialog open={activeShowActivateConfirm} onOpenChange={open => { if (!open) { onHideActivateConfirm?.(); setMockShowActivateConfirm(false); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-green-600" />
+              Activate Account
+            </DialogTitle>
+            <DialogDescription>
+              Set <strong>{memberData.name}</strong> back to Active so they can sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm text-green-800 space-y-1">
+            <p>Status will change from Inactive to Active.</p>
+            <p>This action is recorded in the audit log.</p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { onHideActivateConfirm?.(); setMockShowActivateConfirm(false); }}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700"
+              onClick={async () => {
+                try {
+                  if (onActivateAccount) {
+                    await onActivateAccount();
+                  } else {
+                    toast.success('Account activated (demo).');
+                  }
+                } finally {
+                  onHideActivateConfirm?.();
+                  setMockShowActivateConfirm(false);
+                }
+              }}
+            >
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Confirm Activate
             </Button>
           </DialogFooter>
         </DialogContent>
