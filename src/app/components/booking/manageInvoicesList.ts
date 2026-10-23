@@ -28,10 +28,23 @@ export interface MasterInvoiceSource {
   paymentStatus?: string | null;
 }
 
+const SETTLED_INVOICE_STATUSES = new Set(['Paid', 'Voided', 'Refunded']);
+
+/** Persisted invoice that is still collectible (must not be painted Paid from booking). */
+export function hasUnpaidPersistedInvoice(invoices: InvoiceHistoryEntry[]): boolean {
+  return invoices.some(
+    (entry) => !entry.isVirtual && !SETTLED_INVOICE_STATUSES.has(String(entry.status ?? '')),
+  );
+}
+
 /**
  * Ensure Manage Invoices always lists the main Booking Fee at index 0.
  * When no non-voided persisted booking invoice exists (Pending / unpaid),
  * inject a virtual master invoice built from the booking payable total.
+ *
+ * Virtual status must NOT inherit booking.paymentStatus when any sibling
+ * invoice is still unpaid — that caused cross-contamination (one Paid invoice
+ * made the unpaid booking-fee draft show green Paid).
  */
 export function buildManageInvoicesList(
   persisted: InvoiceHistoryEntry[],
@@ -42,8 +55,9 @@ export function buildManageInvoicesList(
     return rows;
   }
 
-  const paid = master.paymentStatus === 'Paid'
+  const bookingLooksPaid = master.paymentStatus === 'Paid'
     || master.paymentStatus === 'PaymentLinkPaid';
+  const paid = bookingLooksPaid && !hasUnpaidPersistedInvoice(rows);
 
   const virtual: InvoiceHistoryEntry = {
     id: VIRTUAL_MAIN_INVOICE_ID,
