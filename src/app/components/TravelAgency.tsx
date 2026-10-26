@@ -30,6 +30,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './ui/pagination';
+import { t } from '../../../../../lib/i18n/t';
 
 interface TravelAgency {
   id: number;
@@ -82,7 +83,8 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
   // Use controlled props if provided, otherwise use internal state
   const isDialogOpen = isDialogOpenProp ?? internalIsDialogOpen;
   const setIsDialogOpen = onOpenDialog ? (v: boolean) => onOpenDialog(v) : setInternalIsDialogOpen;
-  const editingAgency = isEditing !== undefined ? (isEditing ? internalEditingAgency : null) : internalEditingAgency;
+  const isControlledEditing = isEditing !== undefined;
+  const isEditMode = isControlledEditing ? Boolean(isEditing) : Boolean(internalEditingAgency);
   const setEditingAgency = setInternalEditingAgency;
 
   const agencies: TravelAgency[] = agenciesProp ?? [];
@@ -120,7 +122,19 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
   const handleEdit = (agency: TravelAgency) => {
     if (onEditAgency) {
       onEditAgency(agency.id);
+      return;
     }
+    setInternalEditingAgency(agency);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenCreateDialog = () => {
+    if (onCreateAgency) {
+      onCreateAgency();
+      return;
+    }
+    setEditingAgency(null);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
@@ -139,9 +153,9 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           <h1>Agency Management</h1>
           <p className="text-gray-600">Manage agency partnerships and credit accounts</p>
         </div>
-        <Button type="button" onClick={() => { setEditingAgency(null); setIsDialogOpen(true); }}>
+        <Button type="button" onClick={handleOpenCreateDialog}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Agency
+          {t('agency.add_agency')}
         </Button>
       </div>
 
@@ -505,9 +519,11 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingAgency ? 'Edit Agency' : 'Add New Agency'}</DialogTitle>
+            <DialogTitle>
+              {t(isEditMode ? 'agency.edit_title' : 'agency.add_title')}
+            </DialogTitle>
             <DialogDescription>
-              {editingAgency ? 'Update agency information' : 'Create a new agency partnership'}
+              {t(isEditMode ? 'agency.edit_subtitle' : 'agency.add_subtitle')}
             </DialogDescription>
           </DialogHeader>
           
@@ -704,10 +720,10 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" aria-hidden />
-                  {editingAgency ? 'Saving…' : 'Creating…'}
+                  {t(isEditMode ? 'agency.saving' : 'agency.creating')}
                 </>
               ) : (
-                <>{editingAgency ? 'Update Agency' : 'Add Agency'}</>
+                <>{t(isEditMode ? 'agency.save_changes' : 'agency.add_agency')}</>
               )}
             </Button>
           </div>
