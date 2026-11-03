@@ -20,6 +20,7 @@ import { Checkbox } from './ui/checkbox';
 export const MENU_BUILDER_LANGUAGES = [
   { code: 'en', label: 'EN' },
   { code: 'zh', label: 'ZH' },
+  { code: 'zh_hans', label: 'CN' },
 ] as const;
 
 export type MenuBuilderLanguageCode = (typeof MENU_BUILDER_LANGUAGES)[number]['code'];
@@ -27,6 +28,7 @@ export type MenuBuilderLanguageCode = (typeof MENU_BUILDER_LANGUAGES)[number]['c
 export interface MenuBuilderSectionNames {
   en: string;
   zh: string;
+  zh_hans: string;
 }
 
 export interface MenuBuilderCatalogItem {
@@ -94,7 +96,7 @@ export interface MenuBuilderViewProps {
 }
 
 function sectionDisplayName(section: MenuBuilderSection): string {
-  return section.names.en.trim() || section.names.zh.trim() || 'Section';
+  return section.names.en.trim() || section.names.zh.trim() || section.names.zh_hans.trim() || 'Section';
 }
 
 function ProductImage({
@@ -150,7 +152,7 @@ export function MenuBuilderView({
   const [activeCategoryTab, setActiveCategoryTab] = useState('All');
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
   const [renamingKey, setRenamingKey] = useState<string | null>(null);
-  const [renameDraft, setRenameDraft] = useState<MenuBuilderSectionNames>({ en: '', zh: '' });
+  const [renameDraft, setRenameDraft] = useState<MenuBuilderSectionNames>({ en: '', zh: '', zh_hans: '' });
 
   const activeSection = sections.find((s) => s.clientKey === activeSectionKey) ?? null;
   const assignedInActive = useMemo(
@@ -263,14 +265,15 @@ export function MenuBuilderView({
     onRenameSection?.(renamingKey, {
       en,
       zh: renameDraft.zh.trim(),
+      zh_hans: renameDraft.zh_hans.trim(),
     });
     setRenamingKey(null);
-    setRenameDraft({ en: '', zh: '' });
+    setRenameDraft({ en: '', zh: '', zh_hans: '' });
   };
 
   const cancelRename = () => {
     setRenamingKey(null);
-    setRenameDraft({ en: '', zh: '' });
+    setRenameDraft({ en: '', zh: '', zh_hans: '' });
   };
 
   if (isLoading) {
@@ -539,9 +542,11 @@ export function MenuBuilderView({
                           <h3 className="text-sm font-semibold text-gray-900 truncate">
                             {sectionDisplayName(activeSection)}
                           </h3>
-                          {activeSection.names.zh.trim() ? (
+                          {activeSection.names.zh.trim() || activeSection.names.zh_hans.trim() ? (
                             <p className="text-xs text-gray-500 truncate mt-0.5">
-                              {activeSection.names.zh}
+                              {[activeSection.names.zh.trim(), activeSection.names.zh_hans.trim()]
+                                .filter(Boolean)
+                                .join(' / ')}
                             </p>
                           ) : null}
                         </div>

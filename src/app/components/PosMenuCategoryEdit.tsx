@@ -5,7 +5,9 @@ import { Switch } from './ui/switch';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 
 export interface PosMenuCategoryFormData {
-  name: string;
+  nameEn: string;
+  nameZh: string;
+  nameZhHans: string;
   sortOrder: number;
   isActive: boolean;
 }
@@ -20,7 +22,9 @@ export interface PosMenuCategoryEditProps {
 }
 
 const defaultFormData: PosMenuCategoryFormData = {
-  name: '',
+  nameEn: '',
+  nameZh: '',
+  nameZhHans: '',
   sortOrder: 0,
   isActive: true,
 };
@@ -46,8 +50,8 @@ export function PosMenuCategoryEdit({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      setNameError('Category name is required');
+    if (!formData.nameEn.trim()) {
+      setNameError('Category name (EN) is required');
       return;
     }
 
@@ -81,21 +85,41 @@ export function PosMenuCategoryEdit({
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Category Name</span>
-            <input
-              required
-              value={formData.name}
-              onChange={(e) => {
-                setFormData((prev) => ({ ...prev, name: e.target.value }));
-                if (nameError) setNameError(null);
-              }}
-              className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                nameError ? 'border-red-400 focus:ring-red-500' : 'border-gray-200'
-              }`}
-            />
-            {nameError ? <p className="text-xs text-red-600">{nameError}</p> : null}
-          </label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Category Name (EN)</span>
+              <input
+                required
+                value={formData.nameEn}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, nameEn: e.target.value }));
+                  if (nameError) setNameError(null);
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                  nameError ? 'border-red-400 focus:ring-red-500' : 'border-gray-200'
+                }`}
+              />
+              {nameError ? <p className="text-xs text-red-600">{nameError}</p> : null}
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Category Name (ZH)</span>
+              <input
+                value={formData.nameZh}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nameZh: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Category Name (CN)</span>
+              <input
+                value={formData.nameZhHans}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nameZhHans: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+          </div>
 
           <label className="block space-y-1.5">
             <span className="text-sm font-medium text-gray-700">Sort Order</span>
