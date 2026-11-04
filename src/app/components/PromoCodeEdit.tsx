@@ -126,6 +126,10 @@ export interface PromoCodeEditInitialData {
   descriptionEn: string;
   descriptionSimpChi: string;
   descriptionTradChi: string;
+  /** Read-only contract label on Edit (company / account / purchase name). */
+  contractDisplayName?: string;
+  /** Read-only contract / purchase reference (e.g. CO-20260817). */
+  contractRef?: string;
 }
 
 export interface PromoCodeEditProps {
@@ -214,6 +218,15 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       setDescriptionTradChi(initialData.descriptionTradChi);
     }
   }, [initialData]);
+
+  const editContractDisplayName =
+    selectedContract?.primaryName
+    || initialData?.contractDisplayName
+    || null;
+  const editContractRef =
+    selectedContract?.purchaseRef
+    || initialData?.contractRef
+    || null;
 
   // ── When contract changes, auto-fill code name + prefix + quantity + dates ─
   // 2026-07-15 — Corporate contracts carry promo_code_name / quantity from
@@ -500,16 +513,24 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                 <div className="flex flex-col gap-2 px-3 py-3 bg-gray-50 border border-gray-200 rounded-md">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-900">{selectedContract?.primaryName ?? '—'}</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {editContractDisplayName ?? '—'}
+                    </span>
                     <Badge variant="outline" className="ml-auto text-xs font-mono">{prefix}</Badge>
                   </div>
-                  {selectedContract && (
-                    <div className="text-xs text-gray-500 pl-6 space-y-0.5">
-                      <div>Contract ID: {selectedContract.purchaseRef}</div>
-                      <div>Price: HKD {selectedContract.packagePrice.toLocaleString()}</div>
-                      <div>Quantity: {selectedContract.promoCodeQuantity ?? selectedContract.sessionsAdded ?? 0}</div>
-                    </div>
-                  )}
+                  <div className="text-xs text-gray-500 pl-6 space-y-0.5">
+                    {editContractRef ? (
+                      <div>Contract ID: {editContractRef}</div>
+                    ) : null}
+                    {selectedContract ? (
+                      <>
+                        <div>Price: HKD {selectedContract.packagePrice.toLocaleString()}</div>
+                        <div>Quantity: {selectedContract.promoCodeQuantity ?? selectedContract.sessionsAdded ?? 0}</div>
+                      </>
+                    ) : codeCount > 0 ? (
+                      <div>Quantity: {codeCount}</div>
+                    ) : null}
+                  </div>
                 </div>
               ) : (
                 <>
