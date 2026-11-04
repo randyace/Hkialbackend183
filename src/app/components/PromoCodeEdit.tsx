@@ -14,6 +14,7 @@ import { toast } from 'sonner@2.0.3';
 import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
 import {
   downloadPromoCodeImportTemplate,
+  findContractOptionByImportRef,
   getLongestCommonPrefix,
   parsePromoCodeImportSheet,
   type PromoCodeImportMetadata,
@@ -165,7 +166,10 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
   const availableContracts = getAvailableContracts(availableContractsProp);
 
   // ── Contract & prefix state ────────────────────────────────────────────────
+  // Radix Select is keyed by unique `value` (Corporate-{id} / Agency-{id});
+  // numeric id alone is ambiguous across purchases vs travel_agency_contracts.
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
+  const [selectedContractValue, setSelectedContractValue] = useState('');
   const [prefix, setPrefix]     = useState('');
   const [codeCount, setCodeCount] = useState<number>(10);
   /** Pre-generated codes from Excel/CSV import (create mode only). */
@@ -219,25 +223,26 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
   // Start/end dates come from the contract validity window so promo expiry
   // stays aligned with the Corporate order (and later contract edits sync
   // end_date on the API side).
-  const handleContractChange = (val: string) => {
+  const handleContractChange = (val: string, options?: { skipAutofill?: boolean }) => {
     const contract = availableContracts.find(c => c.value === val);
     if (!contract) return;
 
     setSelectedContractId(contract.id);
+    setSelectedContractValue(contract.value);
 
-    // Excel import owns quantity + (editable) LCP prefix — don't overwrite.
-    if (uploadedCodes.length === 0) {
-      const rawName = (contract.promoCodeName ?? '').trim();
-      const cleanedPrefix = rawName
-        ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
-        : generateShortCode(contract.primaryName);
-      setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
-
-      const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
-      setCodeCount(Math.max(1, Math.min(10000, Number(qty) > 0 ? Number(qty) : 1)));
+    // Excel import already set quantity/prefix/titles/dates — only bind the Select.
+    if (options?.skipAutofill || uploadedCodes.length > 0) {
+      return;
     }
 
     const rawName = (contract.promoCodeName ?? '').trim();
+    const cleanedPrefix = rawName
+      ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
+      : generateShortCode(contract.primaryName);
+    setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
+
+    const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
+    setCodeCount(Math.max(1, Math.min(10000, Number(qty) > 0 ? Number(qty) : 1)));
 
     // Code name → Title (English). Always overwrite when the contract has a
     // name so the intended code name wins over a previous selection.
@@ -317,17 +322,12 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
 
   const applyImportMetadata = useCallback(
     (metadata: PromoCodeImportMetadata) => {
-      // Overwrite form fields when the spreadsheet provides values.
+      // Only overwrite fields that the spreadsheet actually provided.
       if (metadata.contractRef) {
-        const needle = metadata.contractRef.trim().toLowerCase();
-        const match = availableContracts.find(
-          (c) =>
-            c.purchaseRef.trim().toLowerCase() === needle
-            || c.value.trim().toLowerCase() === needle
-            || String(c.id) === metadata.contractRef?.trim(),
-        );
+        const match = findContractOptionByImportRef(availableContracts, metadata.contractRef);
         if (match) {
-          setSelectedContractId(match.id);
+          // Bind Radix Select via unique option value (not ambiguous numeric id).
+          handleContractChange(match.value, { skipAutofill: true });
         } else {
           toast.message('Contract from file not matched', {
             description: `No available contract matches “${metadata.contractRef}”. Select one manually.`,
@@ -343,6 +343,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       if (metadata.descriptionZh) setDescriptionTradChi(metadata.descriptionZh);
       if (metadata.descriptionCn) setDescriptionSimpChi(metadata.descriptionCn);
     },
+    // handleContractChange closes over availableContracts / uploadedCodes;
+    // availableContracts is the dependency that matters for matching.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [availableContracts],
   );
 
@@ -439,7 +442,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     });
   };
 
-  const selectedContract = availableContracts.find(c => c.id === selectedContractId);
+  const selectedContract =
+    availableContracts.find((c) => c.value === selectedContractValue)
+    ?? availableContracts.find((c) => c.id === selectedContractId);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -509,8 +514,8 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
               ) : (
                 <>
                   <Select
-                    value={availableContracts.find(c => c.id === selectedContractId)?.value ?? ''}
-                    onValueChange={handleContractChange}
+                    value={selectedContractValue}
+                    onValueChange={(val) => handleContractChange(val)}
                     required
                   >
                     <SelectTrigger>
