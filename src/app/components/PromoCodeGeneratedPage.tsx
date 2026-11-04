@@ -30,9 +30,26 @@ async function renderQRToCanvas(text: string, size = 200): Promise<HTMLCanvasEle
 export interface GeneratedCodesData {
   prefix: string;
   codes: string[];
+  /** True when codes came from Excel/CSV import (not random generation). */
+  fromUpload?: boolean;
   companyName?: string;
   purchaseCategory?: 'Corporate' | 'Agency';
   mode: 'generate' | 'view';
+  // Form fields forwarded on create so the wrapper can POST /promo-codes/batch.
+  codeType?: 'Discount' | 'Free bookings';
+  amount?: number;
+  useLimit?: number;
+  reusable?: boolean;
+  startDate?: string;
+  endDate?: string;
+  titleEn?: string;
+  titleSimpChi?: string;
+  titleTradChi?: string;
+  descriptionEn?: string;
+  descriptionSimpChi?: string;
+  descriptionTradChi?: string;
+  selectedContractId?: number | null;
+  companyId?: number | null;
 }
 
 export interface PromoCodeGeneratedPageProps {

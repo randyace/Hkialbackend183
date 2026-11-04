@@ -1,15 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import * as XLSX from 'xlsx';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Save, Building2, Eye, Receipt } from 'lucide-react';
+import { ArrowLeft, Download, Save, Building2, Eye, FileSpreadsheet, Receipt, Upload, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { INITIAL_RECORDS } from './PurchaseCreate';
 import { toast } from 'sonner@2.0.3';
 import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
+import {
+  downloadPromoCodeImportTemplate,
+  getLongestCommonPrefix,
+  parsePromoCodeImportSheet,
+  type PromoCodeImportMetadata,
+} from '../../../../../lib/promoCodeImport';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 // 2026-07-02 — wrapper-supplied contract shape. Mirrors the PurchaseRecord
@@ -160,6 +168,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
   const [selectedContractId, setSelectedContractId] = useState<number | null>(null);
   const [prefix, setPrefix]     = useState('');
   const [codeCount, setCodeCount] = useState<number>(10);
+  /** Pre-generated codes from Excel/CSV import (create mode only). */
+  const [uploadedCodes, setUploadedCodes] = useState<string[]>([]);
+  const [uploadFileName, setUploadFileName] = useState<string | null>(null);
 
   // ── Form fields ──────────────────────────────────────────────────────────
   const [codeType, setCodeType]   = useState<'Discount' | 'Free bookings'>('Free bookings');
@@ -214,14 +225,19 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
 
     setSelectedContractId(contract.id);
 
-    const rawName = (contract.promoCodeName ?? '').trim();
-    const cleanedPrefix = rawName
-      ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
-      : generateShortCode(contract.primaryName);
-    setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
+    // Excel import owns quantity + (editable) LCP prefix — don't overwrite.
+    if (uploadedCodes.length === 0) {
+      const rawName = (contract.promoCodeName ?? '').trim();
+      const cleanedPrefix = rawName
+        ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
+        : generateShortCode(contract.primaryName);
+      setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
 
-    const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
-    setCodeCount(Math.max(1, Math.min(10000, Number(qty) > 0 ? Number(qty) : 1)));
+      const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
+      setCodeCount(Math.max(1, Math.min(10000, Number(qty) > 0 ? Number(qty) : 1)));
+    }
+
+    const rawName = (contract.promoCodeName ?? '').trim();
 
     // Code name → Title (English). Always overwrite when the contract has a
     // name so the intended code name wins over a previous selection.
@@ -250,7 +266,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Agency');
 
     toast.success('Promo code batch saved successfully!', {
-      description: 'Batch record created. Generating unique codes…',
+      description: uploadedCodes.length > 0
+        ? `Batch record created with ${uploadedCodes.length} imported codes…`
+        : 'Batch record created. Generating unique codes…',
     });
 
     if (isCorporateOrTA && !isEditMode) {
@@ -262,12 +280,16 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       }, 500);
     }
 
-    // Generate codes and navigate to full-page display
+    // Prefer Excel/CSV import; otherwise generate random codes from prefix.
     setTimeout(() => {
-      const generatedCodes = generateUniqueCodes(prefix, codeCount);
+      const fromUpload = uploadedCodes.length > 0;
+      const batchCodes = fromUpload
+        ? uploadedCodes
+        : generateUniqueCodes(prefix, codeCount);
       onNavigateToCodesPage({
         prefix,
-        codes: generatedCodes,
+        codes: batchCodes,
+        fromUpload,
         companyName: contract?.primaryName,
         purchaseCategory: contract?.purchaseCategory as 'Corporate' | 'Agency' | undefined,
         mode: 'generate',
@@ -292,6 +314,118 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       });
     }, 800);
   };
+
+  const applyImportMetadata = useCallback(
+    (metadata: PromoCodeImportMetadata) => {
+      // Overwrite form fields when the spreadsheet provides values.
+      if (metadata.contractRef) {
+        const needle = metadata.contractRef.trim().toLowerCase();
+        const match = availableContracts.find(
+          (c) =>
+            c.purchaseRef.trim().toLowerCase() === needle
+            || c.value.trim().toLowerCase() === needle
+            || String(c.id) === metadata.contractRef?.trim(),
+        );
+        if (match) {
+          setSelectedContractId(match.id);
+        } else {
+          toast.message('Contract from file not matched', {
+            description: `No available contract matches “${metadata.contractRef}”. Select one manually.`,
+          });
+        }
+      }
+      if (metadata.startDate) setStartDate(metadata.startDate);
+      if (metadata.endDate) setEndDate(metadata.endDate);
+      if (metadata.titleEn) setTitleEn(metadata.titleEn);
+      if (metadata.titleZh) setTitleTradChi(metadata.titleZh);
+      if (metadata.titleCn) setTitleSimpChi(metadata.titleCn);
+      if (metadata.descriptionEn) setDescriptionEn(metadata.descriptionEn);
+      if (metadata.descriptionZh) setDescriptionTradChi(metadata.descriptionZh);
+      if (metadata.descriptionCn) setDescriptionSimpChi(metadata.descriptionCn);
+    },
+    [availableContracts],
+  );
+
+  const applyUploadedCodes = useCallback(
+    (codes: string[], fileName: string, metadata: PromoCodeImportMetadata = {}) => {
+      if (codes.length === 0) {
+        toast.error('No promo codes found in the file', {
+          description: 'Put one code per row in the first column (optional “Promo code” header).',
+        });
+        return;
+      }
+      if (codes.length > 10000) {
+        toast.error('Too many codes', { description: 'Maximum 10,000 codes per batch.' });
+        return;
+      }
+      const lcp = getLongestCommonPrefix(codes);
+      setUploadedCodes(codes);
+      setUploadFileName(fileName);
+      setCodeCount(codes.length);
+      // Prefix stays editable — LCP is only a starting suggestion.
+      setPrefix(lcp.toUpperCase().replace(/[^A-Z0-9]/g, '') || prefix);
+      applyImportMetadata(metadata);
+      const metaBits: string[] = [];
+      if (metadata.contractRef) metaBits.push('contract');
+      if (metadata.startDate || metadata.endDate) metaBits.push('dates');
+      if (metadata.titleEn || metadata.titleZh || metadata.titleCn) metaBits.push('titles');
+      toast.success(`Imported ${codes.length} promo codes`, {
+        description: [
+          lcp ? `Suggested prefix: ${lcp}` : 'Could not detect a shared prefix — enter one manually.',
+          metaBits.length ? `Also filled ${metaBits.join(', ')} from row 1.` : null,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      });
+    },
+    [applyImportMetadata, prefix],
+  );
+
+  const clearUploadedCodes = useCallback(() => {
+    setUploadedCodes([]);
+    setUploadFileName(null);
+  }, []);
+
+  const onDropPromoFile = useCallback(
+    async (accepted: File[]) => {
+      const file = accepted[0];
+      if (!file) return;
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: 'array' });
+        // Prefer "Import Data" sheet from the official template when present.
+        const sheetName =
+          workbook.SheetNames.find((name) => name.trim().toLowerCase() === 'import data')
+          ?? workbook.SheetNames[0];
+        if (!sheetName) {
+          toast.error('The file has no sheets');
+          return;
+        }
+        const sheet = workbook.Sheets[sheetName];
+        const parsed = parsePromoCodeImportSheet(sheet);
+        applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
+      } catch {
+        toast.error('Could not read the file', {
+          description: 'Upload a .xlsx or .csv using the Promo Code Import Template.',
+        });
+      }
+    },
+    [applyUploadedCodes],
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (files) => {
+      void onDropPromoFile(files);
+    },
+    accept: {
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],
+      'text/csv': ['.csv'],
+      'text/plain': ['.csv'],
+    },
+    multiple: false,
+    disabled: isEditMode,
+  });
 
   // ── View codes (edit mode) ───────────────────────────────────────────────
   const handleViewCodes = () => {
@@ -431,6 +565,77 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
               )}
             </div>
 
+            {/* Excel / CSV import (create mode) */}
+            {!isEditMode ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Import pre-generated codes (optional)
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 shrink-0"
+                    onClick={() => {
+                      downloadPromoCodeImportTemplate();
+                      toast.success('Template downloaded', {
+                        description: 'Promo_Code_Import_Template.xlsx',
+                      });
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Template
+                  </Button>
+                </div>
+                {uploadedCodes.length > 0 ? (
+                  <div className="flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-emerald-900 truncate">
+                          {uploadFileName ?? 'Uploaded file'}
+                        </p>
+                        <p className="text-xs text-emerald-800 mt-0.5">
+                          {uploadedCodes.length.toLocaleString()} codes imported — quantity locked; prefix is editable.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0 text-emerald-800 hover:text-red-600"
+                      onClick={clearUploadedCodes}
+                      aria-label="Clear uploaded codes"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    {...getRootProps()}
+                    className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
+                      isDragActive
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    <Upload className="w-6 h-6 text-gray-500" />
+                    <p className="text-sm text-gray-700">
+                      {isDragActive
+                        ? 'Drop the file here…'
+                        : 'Drag & drop an Excel or CSV file, or click to browse'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Use the template: first column = codes; Contract / dates / titles / descriptions on row 1 are auto-filled.
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
             {/* Prefix & Quantity */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div>
@@ -446,7 +651,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   disabled={isEditMode}
                 />
                 <p className="text-xs text-blue-700 mt-1">
-                  Format: <span className="font-mono font-medium">{prefix || 'PREFIX'}-XXXXXX</span>
+                  {uploadedCodes.length > 0
+                    ? 'Auto-filled from longest common prefix — you can still edit it.'
+                    : <>Format: <span className="font-mono font-medium">{prefix || 'PREFIX'}-XXXXXX</span></>}
                 </p>
               </div>
               <div>
@@ -466,7 +673,9 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                   readOnly
                 />
                 <p className="text-xs text-blue-700 mt-1">
-                  Locked to the selected contract quantity (not editable)
+                  {uploadedCodes.length > 0
+                    ? 'Locked to the number of imported codes'
+                    : 'Locked to the selected contract quantity (not editable)'}
                 </p>
               </div>
             </div>
