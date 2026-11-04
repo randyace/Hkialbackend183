@@ -1043,10 +1043,10 @@ export function PurchaseCreate({
                 />
               </div>
 
-              {/* ── 2026-07-02 — payment proof upload (JPG / PNG) ── */}
+              {/* ── payment proof upload (JPG / PNG / PDF) ── */}
               <div>
                 <Label htmlFor="paymentProof" className="mb-[10px] block">
-                  Payment Proof <span className="text-gray-400 font-normal">(JPG or PNG, optional)</span>
+                  Payment Proof <span className="text-gray-400 font-normal">(image or PDF, optional)</span>
                 </Label>
                 {paymentProofFile ? (
                   <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
@@ -1072,14 +1072,14 @@ export function PurchaseCreate({
                   <Input
                     id="paymentProof"
                     type="file"
-                    accept=".jpg,.png"
+                    accept=".jpg,.png,.pdf,image/jpeg,image/png,application/pdf"
                     aria-describedby="paymentProofHint paymentProofError"
                     onChange={e => {
                       const file = e.target.files?.[0] ?? null;
                       setPaymentProofError(null);
-                      if (file && (!/\.(jpg|png)$/i.test(file.name) || file.size > 20 * 1024 * 1024)) {
-                        setPaymentProofError(!/\.(jpg|png)$/i.test(file.name)
-                          ? 'Only JPG and PNG files are allowed.'
+                      if (file && (!/\.(jpg|png|pdf)$/i.test(file.name) || file.size > 20 * 1024 * 1024)) {
+                        setPaymentProofError(!/\.(jpg|png|pdf)$/i.test(file.name)
+                          ? 'Only JPG, PNG, and PDF files are allowed.'
                           : 'File too large (max 20 MB).');
                         setPaymentProofFile(null);
                         e.target.value = '';
@@ -1094,7 +1094,7 @@ export function PurchaseCreate({
                   <p id="paymentProofError" role="alert" className="text-xs text-red-600 mt-1">{paymentProofError}</p>
                 )}
                 <p id="paymentProofHint" className="text-xs text-gray-500 mt-1">
-                  JPG or PNG, up to 20 MB. Uploaded after you confirm the purchase.
+                  JPG, PNG or PDF, up to 20 MB. Uploaded after you confirm the purchase.
                 </p>
               </div>
 

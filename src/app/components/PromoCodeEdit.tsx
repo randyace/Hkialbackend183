@@ -219,6 +219,13 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
     }
   }, [initialData]);
 
+  // Must be declared before editContractDisplayName / handleSubmit — those
+  // close over it. Declaring later caused TDZ: "Cannot access 'ze' before
+  // initialization" (minified) and a blank create/edit page.
+  const selectedContract =
+    availableContracts.find((c) => c.value === selectedContractValue)
+    ?? availableContracts.find((c) => c.id === selectedContractId);
+
   const editContractDisplayName =
     selectedContract?.primaryName
     || initialData?.contractDisplayName
@@ -454,10 +461,6 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       mode: 'view',
     });
   };
-
-  const selectedContract =
-    availableContracts.find((c) => c.value === selectedContractValue)
-    ?? availableContracts.find((c) => c.id === selectedContractId);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
