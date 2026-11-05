@@ -136,12 +136,20 @@ export interface PromoCodeEditProps {
   promoCodeId?: number | null;
   initialData?: PromoCodeEditInitialData | null;
   onBack?: () => void;
-  onNavigateToCodesPage?: (data: GeneratedCodesData) => void;
+  onNavigateToCodesPage?: (data: GeneratedCodesData) => void | Promise<void>;
   // 2026-07-02 — wrapper fetches real contracts (Corporate purchases +
   // TravelAgency contracts) and passes them down. When provided (including
   // `[]`), mock INITIAL_RECORDS must not appear. INITIAL_RECORDS is only
   // for figma Make when this prop is omitted.
   availableContracts?: ContractOption[];
+  /**
+   * Codes rejected by POST /promo-codes/batch as already in the DB.
+   * When set, the import selection is cleared and an alert is shown under
+   * the upload field so the admin can fix the spreadsheet.
+   */
+  duplicateImportCodes?: string[] | null;
+  /** Clears `duplicateImportCodes` in the container after the admin dismisses / re-uploads. */
+  onClearDuplicateImportCodes?: () => void;
 }
 
 // ─── Mock batch data for edit mode ───────────────────────────────────────────
@@ -165,7 +173,15 @@ const MOCK_BATCH_EDIT = {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCodesPage, availableContracts: availableContractsProp }: PromoCodeEditProps) {
+export function PromoCodeEdit({
+  promoCodeId,
+  initialData,
+  onBack,
+  onNavigateToCodesPage,
+  availableContracts: availableContractsProp,
+  duplicateImportCodes = null,
+  onClearDuplicateImportCodes,
+}: PromoCodeEditProps) {
   const isEditMode = promoCodeId !== null;
   const availableContracts = getAvailableContracts(availableContractsProp);
 
@@ -287,31 +303,15 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
       toast.error('Please select a contract');
       return;
     }
-    const isCorporateOrTA = contract &&
-      (contract.purchaseCategory === 'Corporate' || contract.purchaseCategory === 'Agency');
-
-    toast.success('Promo code batch saved successfully!', {
-      description: uploadedCodes.length > 0
-        ? `Batch record created with ${uploadedCodes.length} imported codes…`
-        : 'Batch record created. Generating unique codes…',
-    });
-
-    if (isCorporateOrTA && !isEditMode) {
-      setTimeout(() => {
-        toast.info('VIP Account Creation Request Sent', {
-          description: `A request has been sent to create VIP accounts for ${contract.primaryName}.`,
-          duration: 5000,
-        });
-      }, 500);
-    }
 
     // Prefer Excel/CSV import; otherwise generate random codes from prefix.
-    setTimeout(() => {
-      const fromUpload = uploadedCodes.length > 0;
-      const batchCodes = fromUpload
-        ? uploadedCodes
-        : generateUniqueCodes(prefix, codeCount);
-      onNavigateToCodesPage({
+    // Success toast is deferred until the container batch API succeeds.
+    const fromUpload = uploadedCodes.length > 0;
+    const batchCodes = fromUpload
+      ? uploadedCodes
+      : generateUniqueCodes(prefix, codeCount);
+    void Promise.resolve(
+      onNavigateToCodesPage?.({
         prefix,
         codes: batchCodes,
         fromUpload,
@@ -336,8 +336,8 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         // the container can send it as `company_id` in the batch payload
         // (rather than the misleading `selectedContractId`).
         companyId: contract?.companyId ?? null,
-      });
-    }, 800);
+      }),
+    );
   };
 
   const applyImportMetadata = useCallback(
@@ -381,6 +381,7 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
         toast.error('Too many codes', { description: 'Maximum 10,000 codes per batch.' });
         return;
       }
+      onClearDuplicateImportCodes?.();
       const lcp = getLongestCommonPrefix(codes);
       setUploadedCodes(codes);
       setUploadFileName(fileName);
@@ -401,13 +402,21 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
           .join(' '),
       });
     },
-    [applyImportMetadata, prefix],
+    [applyImportMetadata, onClearDuplicateImportCodes, prefix],
   );
 
   const clearUploadedCodes = useCallback(() => {
     setUploadedCodes([]);
     setUploadFileName(null);
-  }, []);
+    onClearDuplicateImportCodes?.();
+  }, [onClearDuplicateImportCodes]);
+
+  // Server rejected the import — force a corrected file upload.
+  useEffect(() => {
+    if (!duplicateImportCodes || duplicateImportCodes.length === 0) return;
+    setUploadedCodes([]);
+    setUploadFileName(null);
+  }, [duplicateImportCodes]);
 
   const onDropPromoFile = useCallback(
     async (accepted: File[]) => {
@@ -662,6 +671,32 @@ export function PromoCodeEdit({ promoCodeId, initialData, onBack, onNavigateToCo
                     </p>
                   </div>
                 )}
+                {duplicateImportCodes && duplicateImportCodes.length > 0 ? (
+                  <div
+                    role="alert"
+                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+                    data-testid="promo-import-duplicates"
+                  >
+                    <p className="font-medium">
+                      The following codes already exist in the system and cannot be imported:
+                    </p>
+                    <ul className="mt-2 list-disc space-y-0.5 pl-5 font-mono text-xs">
+                      {duplicateImportCodes.slice(0, 50).map((code) => (
+                        <li key={code}>{code}</li>
+                      ))}
+                    </ul>
+                    {duplicateImportCodes.length > 50 ? (
+                      <p className="mt-2 text-xs text-red-800">
+                        …and {duplicateImportCodes.length - 50} more. Remove the duplicates from the
+                        spreadsheet and upload again.
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs text-red-800">
+                        Remove these codes from the spreadsheet and upload a corrected file.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
             ) : null}
 

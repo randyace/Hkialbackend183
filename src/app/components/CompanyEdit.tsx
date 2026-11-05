@@ -206,41 +206,28 @@ export function CompanyEdit({
   ]);
   const [companyStatus, setCompanyStatus] = useState<boolean>(company?.status === 'active');
 
-  // ── Sync initialData (from API fetch) into all form fields ────────────────
+  // Hydrate once per company id — do not re-bind on every parent object
+  // identity change (that made Contact email/phone feel locked while typing).
   useEffect(() => {
-    if (initialData !== undefined && initialData !== null) {
-      setCompany(initialData);
-      setFormCompanyName(initialData.companyName || '');
-      setFormCompanyCode(initialData.companyCode || '');
-      setFormPaymentMethod(initialData.paymentMethod || 'Upfront');
-      setFormDiscountRate(initialData.discountRate ?? 0);
-      setFormBillingAddress(initialData.address || '');
-      setFormRemarks(initialData.remarks || '');
-      setCompanyStatus(initialData.status === 'active');
-      // Sync first contact person from initialData
-      if (initialData.contactPerson || initialData.email || initialData.phone) {
-        setContactPersons([{
-          id: '1',
-          name: initialData.contactPerson || '',
-          email: initialData.email || '',
-          phone: initialData.phone || '',
-        }]);
-      }
+    if (initialData === undefined || initialData === null) {
+      return;
     }
-  }, [initialData]);
-
-  // ── Re-sync contact persons when company changes ─────────────────────────
-  useEffect(() => {
-    if (company && contactPersons.length === 1 && contactPersons[0].id === '1' &&
-        !contactPersons[0].name && !contactPersons[0].email && !contactPersons[0].phone) {
-      setContactPersons([{
-        id: '1',
-        name: company.contactPerson || '',
-        email: company.email || '',
-        phone: company.phone || '',
-      }]);
-    }
-  }, [company]);
+    setCompany(initialData);
+    setFormCompanyName(initialData.companyName || '');
+    setFormCompanyCode(initialData.companyCode || '');
+    setFormPaymentMethod(initialData.paymentMethod || 'Upfront');
+    setFormDiscountRate(initialData.discountRate ?? 0);
+    setFormBillingAddress(initialData.address || '');
+    setFormRemarks(initialData.remarks || '');
+    setCompanyStatus(initialData.status === 'active');
+    // Contact email/phone are administrative reference only — fully editable.
+    setContactPersons([{
+      id: '1',
+      name: initialData.contactPerson || '',
+      email: initialData.email || '',
+      phone: initialData.phone || '',
+    }]);
+  }, [initialData?.id, companyId]);
 
   const isEditMode = companyId !== null;
 
@@ -455,6 +442,7 @@ export function CompanyEdit({
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'email', e.target.value)}
                         placeholder="email@company.com"
                         className="h-9"
+                        autoComplete="off"
                       />
                     </div>
                     <div>
@@ -465,6 +453,7 @@ export function CompanyEdit({
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'phone', e.target.value)}
                         placeholder="+852 1234 5678"
                         className="h-9"
+                        autoComplete="off"
                       />
                     </div>
                   </div>
