@@ -616,6 +616,7 @@ export function SystemUserEdit({
                     <option value="Security">Security</option>
                     <option value="Housekeeping">Housekeeping</option>
                     <option value="F&B Services">F&amp;B Services</option>
+                    <option value="Business Development">Business Development</option>
                   </select>
                 </div>
               </div>

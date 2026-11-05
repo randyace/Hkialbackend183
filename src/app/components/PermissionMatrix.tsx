@@ -219,24 +219,22 @@ export function PermissionMatrix({
                               {specials.map((action) => {
                                 const checked = selectedSet.has(action.name);
                                 return (
-                                  <label
+                                  <button
                                     key={action.name}
-                                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer transition-colors ${
+                                    type="button"
+                                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
                                       checked
                                         ? 'border-gray-900 bg-gray-900 text-white'
                                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                                    } ${!canSave || isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    } ${!canSave || isSaving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                                     title={action.description ?? action.name}
+                                    aria-pressed={checked}
+                                    aria-label={`${feature.label} ${action.label}`}
+                                    disabled={!canSave || isSaving}
+                                    onClick={() => onTogglePermission(action.name, !checked)}
                                   >
-                                    <input
-                                      type="checkbox"
-                                      className="sr-only"
-                                      checked={checked}
-                                      disabled={!canSave || isSaving}
-                                      onChange={() => onTogglePermission(action.name, !checked)}
-                                    />
-                                    <span>{action.label}</span>
-                                  </label>
+                                    {action.label}
+                                  </button>
                                 );
                               })}
                             </div>
