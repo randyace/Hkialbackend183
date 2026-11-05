@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User, DollarSign, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User, DollarSign, Users, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
