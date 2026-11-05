@@ -143,18 +143,21 @@ export interface PromoCodeEditProps {
   // for figma Make when this prop is omitted.
   availableContracts?: ContractOption[];
   /**
-   * Codes rejected by validate-import / batch as already in the DB.
-   * When set, the import selection is cleared and an alert is shown under
-   * the upload field so the admin can fix the spreadsheet.
+   * Codes already in the DB that were auto-skipped from this import.
+   * Non-blocking warning under the upload field; valid codes remain selected.
    */
   duplicateImportCodes?: string[] | null;
   /** Clears `duplicateImportCodes` in the container after the admin dismisses / re-uploads. */
   onClearDuplicateImportCodes?: () => void;
   /**
    * DB uniqueness preflight after client-side Excel parse.
-   * Returns duplicate codes (and surfaces them via `duplicateImportCodes`) or `null` when clear.
+   * Returns filtered valid codes + any skipped duplicates (never hard-blocks partial overlaps).
    */
-  onValidateImportCodes?: (codes: string[]) => Promise<string[] | null>;
+  onValidateImportCodes?: (codes: string[]) => Promise<{
+    validCodes: string[];
+    duplicateCodes: string[];
+    prefix?: string;
+  }>;
 }
 
 // ─── Mock batch data for edit mode ───────────────────────────────────────────
@@ -389,7 +392,6 @@ export function PromoCodeEdit({
         toast.error('Too many codes', { description: 'Maximum 10,000 codes per batch.' });
         return;
       }
-      onClearDuplicateImportCodes?.();
       const lcp = getLongestCommonPrefix(codes);
       setUploadedCodes(codes);
       setUploadFileName(fileName);
@@ -410,7 +412,7 @@ export function PromoCodeEdit({
           .join(' '),
       });
     },
-    [applyImportMetadata, onClearDuplicateImportCodes, prefix],
+    [applyImportMetadata, prefix],
   );
 
   const clearUploadedCodes = useCallback(() => {
@@ -418,13 +420,6 @@ export function PromoCodeEdit({
     setUploadFileName(null);
     onClearDuplicateImportCodes?.();
   }, [onClearDuplicateImportCodes]);
-
-  // Server rejected the import — force a corrected file upload.
-  useEffect(() => {
-    if (!duplicateImportCodes || duplicateImportCodes.length === 0) return;
-    setUploadedCodes([]);
-    setUploadFileName(null);
-  }, [duplicateImportCodes]);
 
   const onDropPromoFile = useCallback(
     async (accepted: File[]) => {
@@ -459,16 +454,23 @@ export function PromoCodeEdit({
           return;
         }
 
+        let codesToApply = parsed.codes;
         if (onValidateImportCodes) {
           try {
-            const duplicates = await onValidateImportCodes(parsed.codes);
-            if (duplicates && duplicates.length > 0) {
+            const result = await onValidateImportCodes(parsed.codes);
+            codesToApply = result.validCodes;
+            if (codesToApply.length === 0) {
               setUploadedCodes([]);
               setUploadFileName(null);
-              toast.error('Duplicate codes found', {
-                description: `${duplicates.length} code(s) already exist — see the list under Import.`,
+              toast.error('No new codes to import', {
+                description: 'Every code in the file already exists in the system.',
               });
               return;
+            }
+            if (result.duplicateCodes.length > 0) {
+              toast.message('Some codes were skipped', {
+                description: `${result.duplicateCodes.length} duplicate(s) already exist — see the warning under Import.`,
+              });
             }
           } catch (err) {
             setUploadedCodes([]);
@@ -480,7 +482,7 @@ export function PromoCodeEdit({
           }
         }
 
-        applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
+        applyUploadedCodes(codesToApply, file.name, parsed.metadata);
       } finally {
         setIsParsingExcel(false);
       }
@@ -732,11 +734,13 @@ export function PromoCodeEdit({
                 {duplicateImportCodes && duplicateImportCodes.length > 0 ? (
                   <div
                     role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+                    className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
                     data-testid="promo-import-duplicates"
                   >
                     <p className="font-medium">
-                      The following codes already exist in the system and cannot be imported:
+                      Warning: {duplicateImportCodes.length.toLocaleString()} code
+                      {duplicateImportCodes.length === 1 ? ' was' : 's were'} already imported
+                      previously and will be skipped:
                     </p>
                     <ul className="mt-2 list-disc space-y-0.5 pl-5 font-mono text-xs">
                       {duplicateImportCodes.slice(0, 50).map((code) => (
@@ -744,13 +748,13 @@ export function PromoCodeEdit({
                       ))}
                     </ul>
                     {duplicateImportCodes.length > 50 ? (
-                      <p className="mt-2 text-xs text-red-800">
-                        …and {duplicateImportCodes.length - 50} more. Remove the duplicates from the
-                        spreadsheet and upload again.
+                      <p className="mt-2 text-xs text-amber-900">
+                        …and {duplicateImportCodes.length - 50} more. The remaining new codes are
+                        ready to import below.
                       </p>
                     ) : (
-                      <p className="mt-2 text-xs text-red-800">
-                        Remove these codes from the spreadsheet and upload a corrected file.
+                      <p className="mt-2 text-xs text-amber-900">
+                        The remaining new codes are ready to import below.
                       </p>
                     )}
                   </div>
