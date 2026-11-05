@@ -66,7 +66,7 @@ export interface SidebarProps {
   onEditProfile?: () => void;
   /** Full menu structure — if omitted, falls back to MOCK_MENU_ITEMS */
   menuItems?: SidebarMenuItem[];
-  /** Tenant branding from GET /api/tenant-config */
+  /** Tenant branding logo (hostname-resolved by the container). */
   logoUrl?: string;
   brandName?: string;
   /** Sidebar background — defaults to CSS var / commercial navy */
