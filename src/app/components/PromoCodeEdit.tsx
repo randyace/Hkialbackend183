@@ -7,7 +7,7 @@ import { Input } from './ui/input';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
-import { ArrowLeft, Download, Save, Building2, Eye, FileSpreadsheet, Receipt, Upload, X } from 'lucide-react';
+import { ArrowLeft, Download, Save, Building2, Eye, FileSpreadsheet, Loader2, Receipt, Upload, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { INITIAL_RECORDS } from './PurchaseCreate';
 import { toast } from 'sonner@2.0.3';
@@ -143,13 +143,18 @@ export interface PromoCodeEditProps {
   // for figma Make when this prop is omitted.
   availableContracts?: ContractOption[];
   /**
-   * Codes rejected by POST /promo-codes/batch as already in the DB.
+   * Codes rejected by validate-import / batch as already in the DB.
    * When set, the import selection is cleared and an alert is shown under
    * the upload field so the admin can fix the spreadsheet.
    */
   duplicateImportCodes?: string[] | null;
   /** Clears `duplicateImportCodes` in the container after the admin dismisses / re-uploads. */
   onClearDuplicateImportCodes?: () => void;
+  /**
+   * DB uniqueness preflight after client-side Excel parse.
+   * Returns duplicate codes (and surfaces them via `duplicateImportCodes`) or `null` when clear.
+   */
+  onValidateImportCodes?: (codes: string[]) => Promise<string[] | null>;
 }
 
 // ─── Mock batch data for edit mode ───────────────────────────────────────────
@@ -181,6 +186,7 @@ export function PromoCodeEdit({
   availableContracts: availableContractsProp,
   duplicateImportCodes = null,
   onClearDuplicateImportCodes,
+  onValidateImportCodes,
 }: PromoCodeEditProps) {
   const isEditMode = promoCodeId !== null;
   const availableContracts = getAvailableContracts(availableContractsProp);
@@ -195,6 +201,8 @@ export function PromoCodeEdit({
   /** Pre-generated codes from Excel/CSV import (create mode only). */
   const [uploadedCodes, setUploadedCodes] = useState<string[]>([]);
   const [uploadFileName, setUploadFileName] = useState<string | null>(null);
+  /** True while reading the spreadsheet and/or calling validate-import. */
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
 
   // ── Form fields ──────────────────────────────────────────────────────────
   const [codeType, setCodeType]   = useState<'Discount' | 'Free bookings'>('Free bookings');
@@ -422,27 +430,62 @@ export function PromoCodeEdit({
     async (accepted: File[]) => {
       const file = accepted[0];
       if (!file) return;
+      setIsParsingExcel(true);
+      onClearDuplicateImportCodes?.();
       try {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: 'array' });
-        // Prefer "Import Data" sheet from the official template when present.
-        const sheetName =
-          workbook.SheetNames.find((name) => name.trim().toLowerCase() === 'import data')
-          ?? workbook.SheetNames[0];
-        if (!sheetName) {
-          toast.error('The file has no sheets');
+        let parsed: ReturnType<typeof parsePromoCodeImportSheet>;
+        try {
+          const buffer = await file.arrayBuffer();
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          // Prefer "Import Data" sheet from the official template when present.
+          const sheetName =
+            workbook.SheetNames.find((name) => name.trim().toLowerCase() === 'import data')
+            ?? workbook.SheetNames[0];
+          if (!sheetName) {
+            toast.error('The file has no sheets');
+            return;
+          }
+          const sheet = workbook.Sheets[sheetName];
+          parsed = parsePromoCodeImportSheet(sheet);
+        } catch {
+          toast.error('Could not read the file', {
+            description: 'Upload a .xlsx or .csv using the Promo Code Import Template.',
+          });
           return;
         }
-        const sheet = workbook.Sheets[sheetName];
-        const parsed = parsePromoCodeImportSheet(sheet);
+
+        if (parsed.codes.length === 0) {
+          applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
+          return;
+        }
+
+        if (onValidateImportCodes) {
+          try {
+            const duplicates = await onValidateImportCodes(parsed.codes);
+            if (duplicates && duplicates.length > 0) {
+              setUploadedCodes([]);
+              setUploadFileName(null);
+              toast.error('Duplicate codes found', {
+                description: `${duplicates.length} code(s) already exist — see the list under Import.`,
+              });
+              return;
+            }
+          } catch (err) {
+            setUploadedCodes([]);
+            setUploadFileName(null);
+            toast.error('Could not validate codes', {
+              description: err instanceof Error ? err.message : 'Please try again.',
+            });
+            return;
+          }
+        }
+
         applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
-      } catch {
-        toast.error('Could not read the file', {
-          description: 'Upload a .xlsx or .csv using the Promo Code Import Template.',
-        });
+      } finally {
+        setIsParsingExcel(false);
       }
     },
-    [applyUploadedCodes],
+    [applyUploadedCodes, onClearDuplicateImportCodes, onValidateImportCodes],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -456,7 +499,7 @@ export function PromoCodeEdit({
       'text/plain': ['.csv'],
     },
     multiple: false,
-    disabled: isEditMode,
+    disabled: isEditMode || isParsingExcel,
   });
 
   // ── View codes (edit mode) ───────────────────────────────────────────────
@@ -653,22 +696,37 @@ export function PromoCodeEdit({
                 ) : (
                   <div
                     {...getRootProps()}
-                    className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
-                      isDragActive
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50'
+                    className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors ${
+                      isParsingExcel
+                        ? 'cursor-wait border-blue-400 bg-blue-50/70'
+                        : isDragActive
+                          ? 'cursor-pointer border-blue-500 bg-blue-50'
+                          : 'cursor-pointer border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/50'
                     }`}
+                    aria-busy={isParsingExcel}
                   >
                     <input {...getInputProps()} />
-                    <Upload className="w-6 h-6 text-gray-500" />
-                    <p className="text-sm text-gray-700">
-                      {isDragActive
-                        ? 'Drop the file here…'
-                        : 'Drag & drop an Excel or CSV file, or click to browse'}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Use the template: first column = codes; Contract / dates / titles / descriptions on row 1 are auto-filled.
-                    </p>
+                    {isParsingExcel ? (
+                      <>
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" aria-hidden />
+                        <p className="text-sm font-medium text-blue-900">Validating codes…</p>
+                        <p className="text-xs text-blue-800">
+                          Parsing the spreadsheet and checking for duplicates in the database.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-gray-500" />
+                        <p className="text-sm text-gray-700">
+                          {isDragActive
+                            ? 'Drop the file here…'
+                            : 'Drag & drop an Excel or CSV file, or click to browse'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Use the template: first column = codes; Contract / dates / titles / descriptions on row 1 are auto-filled.
+                        </p>
+                      </>
+                    )}
                   </div>
                 )}
                 {duplicateImportCodes && duplicateImportCodes.length > 0 ? (
