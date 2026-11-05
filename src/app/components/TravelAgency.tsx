@@ -2,14 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User, DollarSign, Users, Loader2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from './ui/dialog';
+import { Plus, Edit2, Trash2, Search, Building2, Calendar, Mail, Phone, User, DollarSign, Users } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -17,10 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
-import { Label } from './ui/label';
 import {
   Pagination,
   PaginationContent,
@@ -52,40 +43,27 @@ interface TravelAgency {
 export interface TravelAgencyProps {
   agencies?: TravelAgency[];
   isLoading?: boolean;
+  /** Navigates to dedicated Edit Agency page (container). */
   onEditAgency?: (agencyId: number) => void;
+  /** Navigates to dedicated Create Agency page (container). */
   onCreateAgency?: () => void;
-  // Controlled dialog props (container drives these)
-  isDialogOpen?: boolean;
-  onOpenDialog?: (open: boolean) => void;
-  formData?: Record<string, string>;
-  onFormChange?: (field: string, value: string) => void;
-  onSubmit?: () => void;
-  isEditing?: boolean;
   onDelete?: (id: number) => void;
-  /** True while create/update mutation is in flight */
-  isSubmitting?: boolean;
-  /** Field-level validation errors keyed by snake_case API field name */
-  fieldErrors?: Record<string, string>;
 }
 
-export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAgency, isDialogOpen: isDialogOpenProp, onOpenDialog, formData: formDataProp, onFormChange, onSubmit, isEditing, onDelete, isLoading = false, isSubmitting = false, fieldErrors = {} }: TravelAgencyProps = {}) {
+export function TravelAgency({
+  agencies: agenciesProp,
+  onEditAgency,
+  onCreateAgency,
+  onDelete,
+  isLoading = false,
+}: TravelAgencyProps = {}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  // View-level state for when container doesn't provide controlled props
-  const [internalIsDialogOpen, setInternalIsDialogOpen] = useState(false);
-  const [internalEditingAgency, setInternalEditingAgency] = useState<TravelAgency | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  // Use controlled props if provided, otherwise use internal state
-  const isDialogOpen = isDialogOpenProp ?? internalIsDialogOpen;
-  const setIsDialogOpen = onOpenDialog ? (v: boolean) => onOpenDialog(v) : setInternalIsDialogOpen;
-  const isControlledEditing = isEditing !== undefined;
-  const isEditMode = isControlledEditing ? Boolean(isEditing) : Boolean(internalEditingAgency);
-  const setEditingAgency = setInternalEditingAgency;
 
   const agencies: TravelAgency[] = agenciesProp ?? [];
 
@@ -114,27 +92,12 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
     setCurrentPage((p) => (p > maxPage ? maxPage : p));
   }, [filteredAgencies.length, itemsPerPage]);
 
-  const handleAddOrEdit = () => {
-    setIsDialogOpen(false);
-    setEditingAgency(null);
-  };
-
   const handleEdit = (agency: TravelAgency) => {
-    if (onEditAgency) {
-      onEditAgency(agency.id);
-      return;
-    }
-    setInternalEditingAgency(agency);
-    setIsDialogOpen(true);
+    onEditAgency?.(agency.id);
   };
 
-  const handleOpenCreateDialog = () => {
-    if (onCreateAgency) {
-      onCreateAgency();
-      return;
-    }
-    setEditingAgency(null);
-    setIsDialogOpen(true);
+  const handleOpenCreate = () => {
+    onCreateAgency?.();
   };
 
   const handleDelete = (id: number) => {
@@ -153,7 +116,7 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           <h1>Agency Management</h1>
           <p className="text-gray-600">Manage agency partnerships and credit accounts</p>
         </div>
-        <Button type="button" onClick={handleOpenCreateDialog}>
+        <Button type="button" onClick={handleOpenCreate}>
           <Plus className="w-4 h-4 mr-2" />
           {t('agency.add_agency')}
         </Button>
@@ -514,221 +477,6 @@ export function TravelAgency({ agencies: agenciesProp, onEditAgency, onCreateAge
           )}
         </div>
       </Card>
-
-      {/* Add/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {t(isEditMode ? 'agency.edit_title' : 'agency.add_title')}
-            </DialogTitle>
-            <DialogDescription>
-              {t(isEditMode ? 'agency.edit_subtitle' : 'agency.add_subtitle')}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {Object.keys(fieldErrors).length > 0 && (
-              <div
-                className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 space-y-1"
-                role="alert"
-                data-testid="agency-form-validation-banner"
-              >
-                {Object.values(fieldErrors).map((msg, i) => (
-                  <p key={`${i}-${msg}`}>{msg}</p>
-                ))}
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="mb-2">Agency Name</Label>
-                <Input
-                  placeholder="Enter agency name"
-                  value={formDataProp?.agency_name ?? ''}
-                  onChange={e => onFormChange?.('agency_name', e.target.value)}
-                  aria-invalid={!!fieldErrors.agency_name}
-                  style={fieldErrors.agency_name ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                {fieldErrors.agency_name && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.agency_name}</p>
-                )}
-              </div>
-              <div>
-                <Label className="mb-2">Agency Code</Label>
-                <Input
-                  placeholder="TA-XXX-001"
-                  value={formDataProp?.agency_code ?? ''}
-                  onChange={e => onFormChange?.('agency_code', e.target.value)}
-                  aria-invalid={!!fieldErrors.agency_code}
-                  style={fieldErrors.agency_code ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                {fieldErrors.agency_code && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.agency_code}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="mb-2">Contact Person</Label>
-                <Input
-                  placeholder="Enter contact name"
-                  value={formDataProp?.contact_person ?? ''}
-                  onChange={e => onFormChange?.('contact_person', e.target.value)}
-                  aria-invalid={!!fieldErrors.contact_person}
-                  style={fieldErrors.contact_person ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                {fieldErrors.contact_person && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_person}</p>
-                )}
-              </div>
-              <div>
-                <Label className="mb-2">Phone Number</Label>
-                <Input
-                  placeholder="+852 XXXX XXXX"
-                  value={formDataProp?.contact_phone ?? ''}
-                  onChange={e => onFormChange?.('contact_phone', e.target.value)}
-                  aria-invalid={!!fieldErrors.contact_phone}
-                  style={fieldErrors.contact_phone ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                {fieldErrors.contact_phone && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_phone}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-2">Email Address</Label>
-              <Input
-                type="email"
-                placeholder="contact@agency.com"
-                value={formDataProp?.contact_email ?? ''}
-                onChange={e => onFormChange?.('contact_email', e.target.value)}
-                aria-invalid={!!fieldErrors.contact_email}
-                style={fieldErrors.contact_email ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-              />
-              {fieldErrors.contact_email && (
-                <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.contact_email}</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="mb-2">Payment Method</Label>
-                <Select value={formDataProp?.payment_method ?? 'On-Credit'} onValueChange={v => onFormChange?.('payment_method', v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Upfront">Upfront</SelectItem>
-                    <SelectItem value="Net Upfront">Net Upfront</SelectItem>
-                    <SelectItem value="On-Credit">On-Credit</SelectItem>
-                    <SelectItem value="Monthly Invoice">Monthly Invoice</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="mb-2">Discount Rate (%)</Label>
-                <Input
-                  type="number"
-                  placeholder="0-30"
-                  min="0"
-                  max="30"
-                  value={formDataProp?.discount_rate ?? '10'}
-                  onChange={e => onFormChange?.('discount_rate', e.target.value)}
-                  aria-invalid={!!fieldErrors.discount_rate}
-                  style={fieldErrors.discount_rate ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                {fieldErrors.discount_rate && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.discount_rate}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="mb-2">Overdraft Limit (HKD)</Label>
-                <Input
-                  type="number"
-                  placeholder="100000"
-                  value={formDataProp?.credit_limit ?? ''}
-                  onChange={e => onFormChange?.('credit_limit', e.target.value)}
-                  aria-invalid={!!fieldErrors.credit_limit}
-                  style={fieldErrors.credit_limit ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Max amount the agency may overdraw on On-Credit (available = balance + this limit).
-                </p>
-                {fieldErrors.credit_limit && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.credit_limit}</p>
-                )}
-              </div>
-              <div>
-                <Label className="mb-2">Status</Label>
-                <Select
-                  value={(() => {
-                    const s = formDataProp?.status;
-                    if (!s) return 'Active';
-                    if (s === 'Inactive' || s.toLowerCase() === 'inactive' || s.toLowerCase() === 'suspended') {
-                      return 'Inactive';
-                    }
-                    return 'Active';
-                  })()}
-                  onValueChange={v => onFormChange?.('status', v)}
-                >
-                  <SelectTrigger
-                    aria-invalid={!!fieldErrors.status}
-                    style={fieldErrors.status ? { borderColor: '#dc2626', borderWidth: 2, backgroundColor: '#fef2f2' } : undefined}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-                {fieldErrors.status && (
-                  <p className="mt-1 text-xs text-red-600" role="alert">{fieldErrors.status}</p>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-2">Remarks / Notes</Label>
-              <Textarea
-                placeholder="Additional information about this agency..."
-                rows={3}
-                value={formDataProp?.remarks ?? ''}
-                onChange={e => onFormChange?.('remarks', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setIsDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
-              onClick={() => {
-                onSubmit?.();
-              }}
-              className="min-w-[8.5rem]"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin shrink-0" aria-hidden />
-                  {t(isEditMode ? 'agency.saving' : 'agency.creating')}
-                </>
-              ) : (
-                <>{t(isEditMode ? 'agency.save_changes' : 'agency.add_agency')}</>
-              )}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

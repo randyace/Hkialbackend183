@@ -4126,8 +4126,8 @@ export function CreateBooking({
                                   />
                                 </div>
                               </div>
-                              )}
-                            </div>
+                    )}
+                  </div>
                           </td>
                         </tr>
                       </>
