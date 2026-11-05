@@ -137,6 +137,8 @@ export interface CustomerProfile {
   totalBookings: number;
   createdDate: string;
   company?: string;
+  /** Staff celebrity / famous-person flag on the account. */
+  isCelebrity?: boolean;
   // Detail sections — sourced from the Account's profile_*
   // JSON columns via the parent wrapper. All optional;
   // accounts may have none of these on record. When the

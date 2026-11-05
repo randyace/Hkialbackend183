@@ -25,6 +25,7 @@ export interface PosOptionGroupOption {
   id: number;
   name_en: string;
   name_zh?: string | null;
+  name_zh_hans?: string | null;
   selection_type: 'single' | 'multiple';
   is_required: boolean;
   sort_order: number;
@@ -33,6 +34,7 @@ export interface PosOptionGroupOption {
 export interface PosMenuItemFormData {
   nameEn: string;
   nameZh: string;
+  nameZhHans: string;
   printName: string;
   categoryId: number | '';
   expectedPrepTime: number;
@@ -61,6 +63,7 @@ export interface PosMenuItemEditProps {
 const defaultFormData: PosMenuItemFormData = {
   nameEn: '',
   nameZh: '',
+  nameZhHans: '',
   printName: '',
   categoryId: '',
   expectedPrepTime: 15,
@@ -180,7 +183,7 @@ export function PosMenuItemEdit({
         <Card className="p-6 space-y-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Product Details</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="space-y-1.5">
               <span className="text-sm font-medium text-gray-700">Product Name EN</span>
               <input
@@ -199,7 +202,15 @@ export function PosMenuItemEdit({
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
             </label>
-            <label className="space-y-1.5 md:col-span-2">
+            <label className="space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Product Name CN</span>
+              <input
+                value={formData.nameZhHans}
+                onChange={(e) => updateField('nameZhHans', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+            <label className="space-y-1.5 md:col-span-3">
               <span className="text-sm font-medium text-gray-700">Print Name</span>
               <input
                 value={formData.printName}

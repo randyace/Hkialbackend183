@@ -10,6 +10,7 @@ export interface PosOptionFormRow {
   id?: number;
   nameEn: string;
   nameZh: string;
+  nameZhHans: string;
   priceExtra: number;
   code: string;
   sortOrder: number;
@@ -19,6 +20,7 @@ export interface PosOptionFormRow {
 export interface PosOptionGroupFormData {
   nameEn: string;
   nameZh: string;
+  nameZhHans: string;
   selectionType: OptionGroupSelectionType;
   isRequired: boolean;
   sortOrder: number;
@@ -37,6 +39,7 @@ export interface PosOptionGroupEditProps {
 const defaultOptionRow = (): PosOptionFormRow => ({
   nameEn: '',
   nameZh: '',
+  nameZhHans: '',
   priceExtra: 0,
   code: '',
   sortOrder: 0,
@@ -46,6 +49,7 @@ const defaultOptionRow = (): PosOptionFormRow => ({
 const defaultFormData: PosOptionGroupFormData = {
   nameEn: '',
   nameZh: '',
+  nameZhHans: '',
   selectionType: 'single',
   isRequired: false,
   sortOrder: 0,
@@ -121,7 +125,7 @@ export function PosOptionGroupEdit({
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-6 w-full max-w-7xl">
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" />
@@ -139,8 +143,8 @@ export function PosOptionGroupEdit({
         <Card className="p-6 space-y-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Group Details</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="block space-y-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="block space-y-1.5 min-w-0">
               <span className="text-sm font-medium text-gray-700">Name (EN)</span>
               <input
                 required
@@ -149,25 +153,34 @@ export function PosOptionGroupEdit({
                   setFormData((prev) => ({ ...prev, nameEn: e.target.value }));
                   if (nameEnError) setNameEnError(null);
                 }}
-                className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                className={`w-full min-w-0 px-3 py-2 border rounded-lg text-sm ${
                   nameEnError ? 'border-red-400' : 'border-gray-200'
                 }`}
               />
               {nameEnError ? <p className="text-xs text-red-600">{nameEnError}</p> : null}
             </label>
 
-            <label className="block space-y-1.5">
+            <label className="block space-y-1.5 min-w-0">
               <span className="text-sm font-medium text-gray-700">Name (ZH)</span>
               <input
                 value={formData.nameZh}
                 onChange={(e) => setFormData((prev) => ({ ...prev, nameZh: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+
+            <label className="block space-y-1.5 min-w-0">
+              <span className="text-sm font-medium text-gray-700">Name (CN)</span>
+              <input
+                value={formData.nameZhHans}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nameZhHans: e.target.value }))}
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <label className="block space-y-1.5">
+            <label className="block space-y-1.5 min-w-0">
               <span className="text-sm font-medium text-gray-700">Selection Type</span>
               <select
                 value={formData.selectionType}
@@ -175,14 +188,14 @@ export function PosOptionGroupEdit({
                   ...prev,
                   selectionType: e.target.value as OptionGroupSelectionType,
                 }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
               >
                 <option value="single">Single</option>
                 <option value="multiple">Multiple</option>
               </select>
             </label>
 
-            <label className="block space-y-1.5">
+            <label className="block space-y-1.5 min-w-0">
               <span className="text-sm font-medium text-gray-700">Sort Order</span>
               <input
                 type="number"
@@ -192,7 +205,7 @@ export function PosOptionGroupEdit({
                   ...prev,
                   sortOrder: Number(e.target.value) || 0,
                 }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
               />
             </label>
 
@@ -212,7 +225,7 @@ export function PosOptionGroupEdit({
         <Card className="p-6 space-y-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">Options</h2>
-            <Button type="button" variant="outline" size="sm" onClick={addOption} className="gap-1">
+            <Button type="button" variant="outline" size="sm" onClick={addOption} className="gap-1 shrink-0">
               <Plus className="w-4 h-4" />
               Add Option
             </Button>
@@ -220,62 +233,78 @@ export function PosOptionGroupEdit({
 
           <div className="space-y-3">
             {formData.options.map((option, index) => (
-              <div key={option.id ?? `new-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end border border-gray-100 rounded-lg p-4">
-                <label className="md:col-span-3 block space-y-1">
-                  <span className="text-xs font-medium text-gray-600">Name</span>
-                  <input
-                    value={option.nameEn}
-                    onChange={(e) => updateOption(index, { nameEn: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    placeholder="e.g. Hot"
-                  />
-                </label>
-                <label className="md:col-span-2 block space-y-1">
-                  <span className="text-xs font-medium text-gray-600">Price Extra</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={option.priceExtra}
-                    onChange={(e) => updateOption(index, { priceExtra: Number(e.target.value) || 0 })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  />
-                </label>
-                <label className="md:col-span-2 block space-y-1">
-                  <span className="text-xs font-medium text-gray-600">Code</span>
-                  <input
-                    value={option.code}
-                    onChange={(e) => updateOption(index, { code: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                    placeholder="e.g. HOT"
-                  />
-                </label>
-                <label className="md:col-span-2 block space-y-1">
-                  <span className="text-xs font-medium text-gray-600">Name (ZH)</span>
-                  <input
-                    value={option.nameZh}
-                    onChange={(e) => updateOption(index, { nameZh: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                  />
-                </label>
-                <div className="md:col-span-2 flex items-center gap-2">
-                  <Switch
-                    checked={option.isActive}
-                    onCheckedChange={(checked) => updateOption(index, { isActive: checked })}
-                  />
-                  <span className="text-xs text-gray-600">Active</span>
+              <div
+                key={option.id ?? `new-${index}`}
+                className="border border-gray-100 rounded-lg p-4 space-y-3"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <label className="block space-y-1 min-w-0">
+                    <span className="text-xs font-medium text-gray-600">Name (EN)</span>
+                    <input
+                      value={option.nameEn}
+                      onChange={(e) => updateOption(index, { nameEn: e.target.value })}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      placeholder="e.g. Hot"
+                    />
+                  </label>
+                  <label className="block space-y-1 min-w-0">
+                    <span className="text-xs font-medium text-gray-600">Name (ZH)</span>
+                    <input
+                      value={option.nameZh}
+                      onChange={(e) => updateOption(index, { nameZh: e.target.value })}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </label>
+                  <label className="block space-y-1 min-w-0 sm:col-span-2 lg:col-span-1">
+                    <span className="text-xs font-medium text-gray-600">Name (CN)</span>
+                    <input
+                      value={option.nameZhHans}
+                      onChange={(e) => updateOption(index, { nameZhHans: e.target.value })}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </label>
                 </div>
-                <div className="md:col-span-1 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeOption(index)}
-                    disabled={formData.options.length <= 1}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[minmax(0,12rem)_minmax(0,12rem)_auto_auto] gap-3 items-end">
+                  <label className="block space-y-1 min-w-0">
+                    <span className="text-xs font-medium text-gray-600">Price Extra</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={option.priceExtra}
+                      onChange={(e) => updateOption(index, { priceExtra: Number(e.target.value) || 0 })}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                    />
+                  </label>
+                  <label className="block space-y-1 min-w-0">
+                    <span className="text-xs font-medium text-gray-600">Code</span>
+                    <input
+                      value={option.code}
+                      onChange={(e) => updateOption(index, { code: e.target.value })}
+                      className="w-full min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                      placeholder="e.g. HOT"
+                    />
+                  </label>
+                  <div className="flex items-center gap-2 h-10">
+                    <Switch
+                      checked={option.isActive}
+                      onCheckedChange={(checked) => updateOption(index, { isActive: checked })}
+                    />
+                    <span className="text-xs text-gray-600 whitespace-nowrap">Active</span>
+                  </div>
+                  <div className="flex sm:justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => removeOption(index)}
+                      disabled={formData.options.length <= 1}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

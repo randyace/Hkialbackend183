@@ -141,6 +141,8 @@ export interface Member {
   email: string;
   phone: string;
   nationality: string;
+  /** Staff flag — celebrity / famous person. */
+  isCelebrity?: boolean;
   passportNumber: string;
   dateOfBirth?: string;
   internalGrouping: string;
@@ -185,6 +187,7 @@ const MOCK_MEMBER: Member = {
   email: 'john.smith@email.com',
   phone: '+852 9876 5432',
   nationality: 'GB',
+  isCelebrity: false,
   passportNumber: 'UK123456789',
   dateOfBirth: '1980-06-15',
   internalGrouping: 'HSBC',
@@ -611,6 +614,7 @@ export function MemberDetail({
     email: memberData.email,
     phone: memberData.phone,
     nationality: memberData.nationality,
+    isCelebrity: Boolean(memberData.isCelebrity),
     passportNumber: memberData.passportNumber,
     dateOfBirth: memberData.dateOfBirth ?? '',
   });
@@ -637,6 +641,7 @@ export function MemberDetail({
       email: memberData.email,
       phone: memberData.phone,
       nationality: memberData.nationality,
+      isCelebrity: Boolean(memberData.isCelebrity),
       passportNumber: memberData.passportNumber,
       dateOfBirth: memberData.dateOfBirth ?? '',
     });
@@ -658,6 +663,7 @@ export function MemberDetail({
     memberData.email,
     memberData.phone,
     memberData.nationality,
+    memberData.isCelebrity,
     memberData.passportNumber,
     memberData.dateOfBirth,
     memberData.internalGrouping,
@@ -852,7 +858,17 @@ export function MemberDetail({
 
   const handleCancel = () => {
     // Reset all form state back to current memberData
-    setBasicForm({ title: memberData.title, firstName: memberData.firstName, lastName: memberData.lastName, email: memberData.email, phone: memberData.phone, nationality: memberData.nationality, passportNumber: memberData.passportNumber, dateOfBirth: memberData.dateOfBirth ?? '' });
+    setBasicForm({
+      title: memberData.title,
+      firstName: memberData.firstName,
+      lastName: memberData.lastName,
+      email: memberData.email,
+      phone: memberData.phone,
+      nationality: memberData.nationality,
+      isCelebrity: Boolean(memberData.isCelebrity),
+      passportNumber: memberData.passportNumber,
+      dateOfBirth: memberData.dateOfBirth ?? '',
+    });
     setAccountForm({
       internalGrouping: memberData.internalGrouping,
       paymentMethod: memberData.paymentMethod,
@@ -1260,6 +1276,24 @@ export function MemberDetail({
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50 pl-9 pr-8 bg-white"
                 />
+              </div>
+              <div className="md:col-span-2">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={Boolean(basicForm.isCelebrity)}
+                    disabled={!isEditing}
+                    onChange={(e) => setBasicForm((f) => ({ ...f, isCelebrity: e.target.checked }))}
+                    data-testid="member-is-celebrity"
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-gray-800">Is Celebrity / Famous Person</span>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Marks this customer profile as a celebrity for staff recognition.
+                    </p>
+                  </span>
+                </label>
               </div>
               <div>
                 <label>First 4 digits of Passport Number</label>

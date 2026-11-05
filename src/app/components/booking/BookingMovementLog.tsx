@@ -136,8 +136,11 @@ export function BookingMovementLog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[96vw] w-[96vw] min-w-[1000px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent
+        className="flex flex-col w-[90vw] max-w-7xl h-[85vh] max-h-[90vh] gap-3 overflow-hidden p-6"
+        data-testid="booking-movement-log-dialog"
+      >
+        <DialogHeader className="shrink-0 pr-8">
           <DialogTitle className="flex items-center gap-2">
             <History className="w-5 h-5 text-blue-600" />
             Movement Log — {booking.bookingNo}
@@ -147,7 +150,7 @@ export function BookingMovementLog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between mt-2 mb-3">
+        <div className="flex shrink-0 items-center justify-between">
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <p>{bookingMovements.length} record{bookingMovements.length !== 1 ? 's' : ''}</p>
             <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-blue-100 border border-blue-200"></span> Booking ref columns</span>
@@ -162,7 +165,7 @@ export function BookingMovementLog({
           </Button>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto rounded-lg border border-gray-200">
           <table className="text-xs border-collapse" style={{ minWidth: '3280px' }}>
             <thead>
               <tr className="bg-[#0f2942] text-white">
