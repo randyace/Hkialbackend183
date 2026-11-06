@@ -1418,7 +1418,10 @@ export function CreateBooking({
       && selectedAccount?.ps_free_upgrades_remaining !== undefined
       && Number.isFinite(selectedAccount.ps_free_upgrades_remaining)
       && selectedAccount.ps_free_upgrades_remaining > 0);
-  const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit);
+  const hasPromoCode = Boolean(promoApplied?.promoCodeId ?? promoApplied?.code);
+  const canUseFreeLd = Boolean(
+    showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit && !hasPromoCode,
+  );
   const maxLdUnits = canUseFreeLd
     ? eligibleLdCreditSlots(
         membershipSitting,
@@ -1435,13 +1438,18 @@ export function CreateBooking({
     && (membershipSitting.memberAtPs || membershipSitting.spouseAtPs);
 
   useEffect(() => {
+    if (hasPromoCode) {
+      if (ldUnitsRequested !== 0) setLdUnitsRequested(0);
+      if (useMembershipPsFree) setUseMembershipPsFree(false);
+      return;
+    }
     if (ldUnitsRequested > maxLdUnits) {
       setLdUnitsRequested(maxLdUnits);
     }
     if ((!canUseFreePs || !useMembershipLdFree) && useMembershipPsFree) {
       setUseMembershipPsFree(false);
     }
-  }, [canUseFreePs, ldUnitsRequested, maxLdUnits, useMembershipLdFree, useMembershipPsFree]);
+  }, [canUseFreePs, hasPromoCode, ldUnitsRequested, maxLdUnits, useMembershipLdFree, useMembershipPsFree]);
 
   useEffect(() => {
     if (useMembershipPsFree && (!bookingIncludesPremiereSuite || !useMembershipLdFree)) {
@@ -2869,6 +2877,14 @@ export function CreateBooking({
                   </div>
                 </div>
                 <div className="mt-3 space-y-4">
+                  {hasPromoCode && (
+                    <p
+                      className="text-xs text-amber-800"
+                      data-testid="create-membership-promo-mutex-hint"
+                    >
+                      Quota selection is disabled because a Promo Code is currently applied.
+                    </p>
+                  )}
                   <div className={canUseFreeLd ? '' : 'opacity-60'}>
                     <p className="text-sm font-medium text-[#0f2942] mb-2">Use free LD entry credit</p>
                     <CreditQuantityBar

@@ -17,6 +17,7 @@
  * around line 687-749 (Card "Account Settings"). Now extracted.
  */
 
+import { useEffect } from 'react';
 import { Award, Minus, Plus } from 'lucide-react';
 import { Card } from '../../ui/card';
 import {
@@ -25,6 +26,14 @@ import {
 import type {
   BookingFormData, EditMembershipTier, EditBookingChannel,
 } from '../BookingEditView';
+
+/** Promo and membership free credits are mutually exclusive on edit. */
+export function hasEditPromoCodeApplied(formData: Pick<BookingFormData, 'promoCodeId' | 'promoCode'>): boolean {
+  if (formData.promoCodeId != null && Number.isFinite(Number(formData.promoCodeId))) {
+    return true;
+  }
+  return Boolean(String(formData.promoCode ?? '').trim());
+}
 
 export interface EditSectionAccountInfoProps {
   formData: BookingFormData;
@@ -118,10 +127,35 @@ export function EditSectionAccountInfo({
   promoCodeOptions = [],
   membershipControls,
 }: EditSectionAccountInfoProps) {
+  const hasPromoCode = hasEditPromoCodeApplied(formData);
   const membershipLdDisabled =
-    membershipControls !== undefined && !membershipControls.canUseLdFree;
+    (membershipControls !== undefined && !membershipControls.canUseLdFree)
+    || hasPromoCode;
   const membershipPsDisabled =
-    membershipControls !== undefined && !membershipControls.canUsePsFree;
+    (membershipControls !== undefined && !membershipControls.canUsePsFree)
+    || hasPromoCode;
+
+  // Selecting / loading a promo clears membership credits so reprice cannot
+  // double-dip. Clearing the promo re-enables the steppers without auto-restoring.
+  useEffect(() => {
+    if (!hasPromoCode) return;
+    const needsClear =
+      formData.useMembershipLdFree === true
+      || formData.useMembershipPsFree === true
+      || (typeof formData.useMembershipLdUnits === 'number' && formData.useMembershipLdUnits > 0);
+    if (!needsClear) return;
+    onFormChange({
+      useMembershipLdFree: false,
+      useMembershipLdUnits: 0,
+      useMembershipPsFree: false,
+    });
+  }, [
+    hasPromoCode,
+    formData.useMembershipLdFree,
+    formData.useMembershipLdUnits,
+    formData.useMembershipPsFree,
+    onFormChange,
+  ]);
 
   return (
     <Card className="p-5">
@@ -175,26 +209,36 @@ export function EditSectionAccountInfo({
             // null-clear pattern at handleMasterSave:1171-1173).
             <Select
               value={formData.promoCodeId == null ? 'none' : String(formData.promoCodeId)}
-              onValueChange={v => onFormChange({
-                promoCodeId: v === 'none' ? null : Number(v),
-                // Also seed the legacy `promoCode` STRING field
-                // (the wrapper still writes the legacy nested
-                // `advanced_details.account.promoApplied.code`
-                // block for back-compat with pre-6.2.80 admin-
-                // created bookings that used the text input).
-                promoCode: v === 'none'
-                  ? ''
-                  : (promoCodeOptions.find((o) => o.id === Number(v))?.code ?? ''),
-                promoDiscountPct: v === 'none'
-                  ? undefined
-                  : (() => {
-                      const opt = promoCodeOptions.find((o) => o.id === Number(v));
-                      if (!opt) return undefined;
-                      return opt.discountType === 'percentage'
-                        ? Number(opt.discountValue)
-                        : undefined;
-                    })(),
-              })}
+              onValueChange={v => {
+                const clearing = v === 'none';
+                onFormChange({
+                  promoCodeId: clearing ? null : Number(v),
+                  // Also seed the legacy `promoCode` STRING field
+                  // (the wrapper still writes the legacy nested
+                  // `advanced_details.account.promoApplied.code`
+                  // block for back-compat with pre-6.2.80 admin-
+                  // created bookings that used the text input).
+                  promoCode: clearing
+                    ? ''
+                    : (promoCodeOptions.find((o) => o.id === Number(v))?.code ?? ''),
+                  promoDiscountPct: clearing
+                    ? undefined
+                    : (() => {
+                        const opt = promoCodeOptions.find((o) => o.id === Number(v));
+                        if (!opt) return undefined;
+                        return opt.discountType === 'percentage'
+                          ? Number(opt.discountValue)
+                          : undefined;
+                      })(),
+                  ...(!clearing
+                    ? {
+                        useMembershipLdFree: false,
+                        useMembershipLdUnits: 0,
+                        useMembershipPsFree: false,
+                      }
+                    : {}),
+                });
+              }}
             >
               <SelectTrigger><SelectValue placeholder="— Select —" /></SelectTrigger>
               <SelectContent>
@@ -269,6 +313,14 @@ export function EditSectionAccountInfo({
               </p>
             </div>
           </div>
+          {hasPromoCode && (
+            <p
+              className="text-xs text-amber-800 mb-3"
+              data-testid="edit-membership-promo-mutex-hint"
+            >
+              Quota selection is disabled because a Promo Code is currently applied.
+            </p>
+          )}
           <div className="space-y-4">
             {(() => {
               const maxLdUnits = membershipLdDisabled
