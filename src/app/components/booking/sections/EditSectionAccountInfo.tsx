@@ -19,6 +19,10 @@
 
 import { useEffect } from 'react';
 import { Award, Minus, Plus } from 'lucide-react';
+import {
+  maxSelectableMembershipQuota,
+  promoCoveredGuestCount,
+} from '../../../../../../../lib/promoMembershipOverlap';
 import { Card } from '../../ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -27,7 +31,6 @@ import type {
   BookingFormData, EditMembershipTier, EditBookingChannel,
 } from '../BookingEditView';
 
-/** Promo and membership free credits are mutually exclusive on edit. */
 export function hasEditPromoCodeApplied(formData: Pick<BookingFormData, 'promoCodeId' | 'promoCode'>): boolean {
   if (formData.promoCodeId != null && Number.isFinite(Number(formData.promoCodeId))) {
     return true;
@@ -52,6 +55,7 @@ export interface EditSectionAccountInfoProps {
     code: string;
     discountType: 'percentage' | 'fixed';
     discountValue: number | string;
+    freeSessions?: number | null;
   }>;
   /**
    * Wrapper-owned membership eligibility. When omitted, standalone Figma
@@ -127,33 +131,59 @@ export function EditSectionAccountInfo({
   promoCodeOptions = [],
   membershipControls,
 }: EditSectionAccountInfoProps) {
-  const hasPromoCode = hasEditPromoCodeApplied(formData);
+  const selectedPromo = formData.promoCodeId != null
+    ? promoCodeOptions.find((o) => o.id === formData.promoCodeId)
+    : undefined;
+  const totalLdGuests = Math.max(0, Math.trunc(formData.vipPassengersInLoungeDeluxe ?? 0));
+  const eligibleSlots = membershipControls !== undefined
+    ? (membershipControls.canUseLdFree ? (membershipControls.maxLdUnits ?? 1) : 0)
+    : 1;
+  const promoCovered = promoCoveredGuestCount({
+    totalGuests: totalLdGuests,
+    freeSessions: selectedPromo?.freeSessions,
+    discountType: selectedPromo?.discountType,
+    discountValue: selectedPromo?.discountValue,
+  });
+  // LD VIP seats drive free-lounge promo overlap. When there are no LD
+  // VIPs (e.g. PS-only + LD credit for 40%), promo coverage does not
+  // shrink membership slots.
+  const maxSelectableLd = totalLdGuests > 0
+    ? maxSelectableMembershipQuota({
+        availableQuota: formData.ldEntriesRemaining,
+        eligibleSlots,
+        totalGuests: totalLdGuests,
+        promoCoveredCount: promoCovered,
+      })
+    : (eligibleSlots > 0
+      ? maxSelectableMembershipQuota({
+          availableQuota: formData.ldEntriesRemaining,
+          eligibleSlots,
+          totalGuests: eligibleSlots,
+          promoCoveredCount: 0,
+        })
+      : 0);
   const membershipLdDisabled =
-    (membershipControls !== undefined && !membershipControls.canUseLdFree)
-    || hasPromoCode;
+    membershipControls !== undefined
+      ? !membershipControls.canUseLdFree || maxSelectableLd < 1
+      : maxSelectableLd < 1;
   const membershipPsDisabled =
-    (membershipControls !== undefined && !membershipControls.canUsePsFree)
-    || hasPromoCode;
+    membershipControls !== undefined && !membershipControls.canUsePsFree;
 
-  // Selecting / loading a promo clears membership credits so reprice cannot
-  // double-dip. Clearing the promo re-enables the steppers without auto-restoring.
+  // Clamp selected units when promo coverage / eligibility shrinks the max.
   useEffect(() => {
-    if (!hasPromoCode) return;
-    const needsClear =
-      formData.useMembershipLdFree === true
-      || formData.useMembershipPsFree === true
-      || (typeof formData.useMembershipLdUnits === 'number' && formData.useMembershipLdUnits > 0);
-    if (!needsClear) return;
+    const current = formData.useMembershipLdUnits
+      ?? (formData.useMembershipLdFree === false ? 0 : null);
+    if (current == null) return;
+    if (current <= maxSelectableLd) return;
     onFormChange({
-      useMembershipLdFree: false,
-      useMembershipLdUnits: 0,
-      useMembershipPsFree: false,
+      useMembershipLdUnits: maxSelectableLd,
+      useMembershipLdFree: maxSelectableLd > 0,
+      ...(maxSelectableLd <= 0 ? { useMembershipPsFree: false } : {}),
     });
   }, [
-    hasPromoCode,
-    formData.useMembershipLdFree,
+    maxSelectableLd,
     formData.useMembershipLdUnits,
-    formData.useMembershipPsFree,
+    formData.useMembershipLdFree,
     onFormChange,
   ]);
 
@@ -230,13 +260,6 @@ export function EditSectionAccountInfo({
                           ? Number(opt.discountValue)
                           : undefined;
                       })(),
-                  ...(!clearing
-                    ? {
-                        useMembershipLdFree: false,
-                        useMembershipLdUnits: 0,
-                        useMembershipPsFree: false,
-                      }
-                    : {}),
                 });
               }}
             >
@@ -313,26 +336,24 @@ export function EditSectionAccountInfo({
               </p>
             </div>
           </div>
-          {hasPromoCode && (
+          {promoCovered > 0 && (
             <p
               className="text-xs text-amber-800 mb-3"
-              data-testid="edit-membership-promo-mutex-hint"
+              data-testid="edit-membership-promo-overlap-hint"
             >
-              Quota selection is disabled because a Promo Code is currently applied.
+              {maxSelectableLd < 1
+                ? 'Promo Code already covers all Lounge Deluxe VIP seats — membership free entry is unavailable for this booking.'
+                : `Promo Code covers ${promoCovered} Lounge Deluxe VIP seat(s). Membership free entry can still be applied to up to ${maxSelectableLd} remaining eligible seat(s).`}
             </p>
           )}
           <div className="space-y-4">
             {(() => {
-              const maxLdUnits = membershipLdDisabled
-                ? 0
-                : (membershipControls?.maxLdUnits ?? 1);
-              const ldValue = membershipLdDisabled
-                ? 0
-                : Math.min(
-                    formData.useMembershipLdUnits
-                      ?? (formData.useMembershipLdFree === false ? 0 : maxLdUnits),
-                    maxLdUnits,
-                  );
+              const maxLdUnits = maxSelectableLd;
+              const ldValue = Math.min(
+                formData.useMembershipLdUnits
+                  ?? (formData.useMembershipLdFree === false ? 0 : maxLdUnits),
+                maxLdUnits,
+              );
               const includesPs = (formData.numPremiereSuites ?? 0) > 0
                 || (formData.vipPassengersInPremiereSuite ?? 0) > 0
                 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0;

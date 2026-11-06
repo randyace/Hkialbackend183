@@ -25,6 +25,10 @@ import {
   lineBaseTotal,
   lineRowSubtotal,
 } from '../../../../../lib/pricing/priceOverrides';
+import {
+  maxSelectableMembershipQuota,
+  promoCoveredGuestCount,
+} from '../../../../../lib/promoMembershipOverlap';
 import { upsertCatalogSelection } from '../../../../../lib/addons/bookingAddonCatalog';
 import { hktTodayYmd } from '../../../../../lib/hktDate';
 import { Input } from './ui/input';
@@ -1418,17 +1422,31 @@ export function CreateBooking({
       && selectedAccount?.ps_free_upgrades_remaining !== undefined
       && Number.isFinite(selectedAccount.ps_free_upgrades_remaining)
       && selectedAccount.ps_free_upgrades_remaining > 0);
-  const hasPromoCode = Boolean(promoApplied?.promoCodeId ?? promoApplied?.code);
-  const canUseFreeLd = Boolean(
-    showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit && !hasPromoCode,
+  const canUseFreeLdBase = Boolean(
+    showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit,
   );
-  const maxLdUnits = canUseFreeLd
+  const eligibleSlots = canUseFreeLdBase
     ? eligibleLdCreditSlots(
         membershipSitting,
         selectedAccount?.ld_entries_remaining,
         bookingIncludesPremiereSuite,
       )
     : 0;
+  const promoCovered = promoCoveredGuestCount({
+    totalGuests: vipLD,
+    freeSessions: promoApplied?.freeSessions,
+    discountType: promoApplied?.promoType === 'Free bookings' ? 'fixed' : 'percentage',
+    discountValue: promoApplied?.discountPct,
+  });
+  const maxLdUnits = vipLD > 0
+    ? maxSelectableMembershipQuota({
+        availableQuota: selectedAccount?.ld_entries_remaining,
+        eligibleSlots,
+        totalGuests: vipLD,
+        promoCoveredCount: promoCovered,
+      })
+    : eligibleSlots;
+  const canUseFreeLd = maxLdUnits > 0;
   const useMembershipLdUnits = Math.min(Math.max(0, ldUnitsRequested), maxLdUnits);
   const useMembershipLdFree = useMembershipLdUnits > 0;
   const canUseFreePs = canUseFreeLd
@@ -1438,18 +1456,13 @@ export function CreateBooking({
     && (membershipSitting.memberAtPs || membershipSitting.spouseAtPs);
 
   useEffect(() => {
-    if (hasPromoCode) {
-      if (ldUnitsRequested !== 0) setLdUnitsRequested(0);
-      if (useMembershipPsFree) setUseMembershipPsFree(false);
-      return;
-    }
     if (ldUnitsRequested > maxLdUnits) {
       setLdUnitsRequested(maxLdUnits);
     }
     if ((!canUseFreePs || !useMembershipLdFree) && useMembershipPsFree) {
       setUseMembershipPsFree(false);
     }
-  }, [canUseFreePs, hasPromoCode, ldUnitsRequested, maxLdUnits, useMembershipLdFree, useMembershipPsFree]);
+  }, [canUseFreePs, ldUnitsRequested, maxLdUnits, useMembershipLdFree, useMembershipPsFree]);
 
   useEffect(() => {
     if (useMembershipPsFree && (!bookingIncludesPremiereSuite || !useMembershipLdFree)) {
@@ -2877,12 +2890,14 @@ export function CreateBooking({
                   </div>
                 </div>
                 <div className="mt-3 space-y-4">
-                  {hasPromoCode && (
+                  {promoCovered > 0 && (
                     <p
                       className="text-xs text-amber-800"
-                      data-testid="create-membership-promo-mutex-hint"
+                      data-testid="create-membership-promo-overlap-hint"
                     >
-                      Quota selection is disabled because a Promo Code is currently applied.
+                      {maxLdUnits < 1
+                        ? 'Promo Code already covers all Lounge Deluxe VIP seats — membership free entry is unavailable for this booking.'
+                        : `Promo Code covers ${promoCovered} Lounge Deluxe VIP seat(s). Membership free entry can still be applied to up to ${maxLdUnits} remaining eligible seat(s).`}
                     </p>
                   )}
                   <div className={canUseFreeLd ? '' : 'opacity-60'}>
