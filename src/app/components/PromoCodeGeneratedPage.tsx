@@ -50,6 +50,8 @@ export interface GeneratedCodesData {
   descriptionTradChi?: string;
   selectedContractId?: number | null;
   companyId?: number | null;
+  /** Excel import: replace DB-colliding codes instead of skipping them. */
+  autoRegenerateDuplicates?: boolean;
 }
 
 export interface PromoCodeGeneratedPageProps {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
 import { Card } from './ui/card';
@@ -9,6 +9,16 @@ import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Download, Save, Building2, Eye, FileSpreadsheet, Loader2, Receipt, Upload, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog';
 import { INITIAL_RECORDS } from './PurchaseCreate';
 import { toast } from 'sonner@2.0.3';
 import type { GeneratedCodesData } from './PromoCodeGeneratedPage';
@@ -143,19 +153,23 @@ export interface PromoCodeEditProps {
   // for figma Make when this prop is omitted.
   availableContracts?: ContractOption[];
   /**
-   * Codes already in the DB that were auto-skipped from this import.
-   * Non-blocking warning under the upload field; valid codes remain selected.
+   * Codes already in the DB that will be skipped or regenerated on import.
+   * Non-blocking warning under the upload field; remaining codes stay selected.
    */
   duplicateImportCodes?: string[] | null;
   /** Clears `duplicateImportCodes` in the container after the admin dismisses / re-uploads. */
   onClearDuplicateImportCodes?: () => void;
   /**
-   * DB uniqueness preflight after client-side Excel parse.
-   * Returns filtered valid codes + any skipped duplicates (never hard-blocks partial overlaps).
+   * DB uniqueness + contract collision preflight after client-side Excel parse.
    */
-  onValidateImportCodes?: (codes: string[]) => Promise<{
+  onValidateImportCodes?: (
+    codes: string[],
+    context?: { companyId?: number; corporateOrderId?: number },
+  ) => Promise<{
     validCodes: string[];
     duplicateCodes: string[];
+    duplicateCount: number;
+    contractHasExistingCodes: boolean;
     prefix?: string;
   }>;
 }
@@ -206,6 +220,19 @@ export function PromoCodeEdit({
   const [uploadFileName, setUploadFileName] = useState<string | null>(null);
   /** True while reading the spreadsheet and/or calling validate-import. */
   const [isParsingExcel, setIsParsingExcel] = useState(false);
+  /** Contract already has promo codes in DB — soft warning after validate-import. */
+  const [contractHasExistingCodes, setContractHasExistingCodes] = useState(false);
+  /** When true, batch create asks the API to replace DB-colliding codes. */
+  const [autoRegenerateDuplicates, setAutoRegenerateDuplicates] = useState(false);
+  /** Pending import awaiting Skip vs Auto-Generate choice. */
+  const [duplicateDecision, setDuplicateDecision] = useState<{
+    fileName: string;
+    metadata: PromoCodeImportMetadata;
+    allCodes: string[];
+    validCodes: string[];
+    duplicateCodes: string[];
+  } | null>(null);
+  const duplicateChoiceMadeRef = useRef(false);
 
   // ── Form fields ──────────────────────────────────────────────────────────
   const [codeType, setCodeType]   = useState<'Discount' | 'Free bookings'>('Free bookings');
@@ -347,6 +374,7 @@ export function PromoCodeEdit({
         // the container can send it as `company_id` in the batch payload
         // (rather than the misleading `selectedContractId`).
         companyId: contract?.companyId ?? null,
+        autoRegenerateDuplicates: fromUpload ? autoRegenerateDuplicates : false,
       }),
     );
   };
@@ -418,14 +446,73 @@ export function PromoCodeEdit({
   const clearUploadedCodes = useCallback(() => {
     setUploadedCodes([]);
     setUploadFileName(null);
+    setContractHasExistingCodes(false);
+    setAutoRegenerateDuplicates(false);
+    setDuplicateDecision(null);
     onClearDuplicateImportCodes?.();
   }, [onClearDuplicateImportCodes]);
+
+  const resolveImportContractContext = useCallback(
+    (metadata: PromoCodeImportMetadata) => {
+      const matched = metadata.contractRef
+        ? findContractOptionByImportRef(availableContracts, metadata.contractRef)
+        : undefined;
+      const contract = matched
+        ?? availableContracts.find((c) => c.value === selectedContractValue)
+        ?? availableContracts.find((c) => c.id === selectedContractId);
+      return {
+        companyId: contract?.companyId,
+        corporateOrderId:
+          contract?.purchaseCategory === 'Corporate' ? contract.id : undefined,
+      };
+    },
+    [availableContracts, selectedContractId, selectedContractValue],
+  );
+
+  const finishImportAfterDuplicateChoice = useCallback(
+    (choice: 'skip' | 'regenerate') => {
+      if (!duplicateDecision) return;
+      const { fileName, metadata, allCodes, validCodes, duplicateCodes } = duplicateDecision;
+      duplicateChoiceMadeRef.current = true;
+      setDuplicateDecision(null);
+
+      if (choice === 'skip') {
+        if (validCodes.length === 0) {
+          setUploadedCodes([]);
+          setUploadFileName(null);
+          setAutoRegenerateDuplicates(false);
+          toast.error('No new codes to import', {
+            description: 'Every code in the file already exists in the system.',
+          });
+          return;
+        }
+        // Keep full file list — batch API skips duplicates when flag is false.
+        setAutoRegenerateDuplicates(false);
+        applyUploadedCodes(allCodes, fileName, metadata);
+        toast.message('Some codes will be skipped', {
+          description: `${duplicateCodes.length} duplicate(s) already exist — see the warning under Import.`,
+        });
+        return;
+      }
+
+      // Keep full file list — batch API regenerates collisions when flag is true.
+      setAutoRegenerateDuplicates(true);
+      applyUploadedCodes(allCodes, fileName, metadata);
+      toast.message('Duplicates will be auto-generated', {
+        description: `${duplicateCodes.length} duplicate(s) will be replaced with new codes using the same prefix.`,
+      });
+    },
+    [applyUploadedCodes, duplicateDecision],
+  );
 
   const onDropPromoFile = useCallback(
     async (accepted: File[]) => {
       const file = accepted[0];
       if (!file) return;
       setIsParsingExcel(true);
+      setContractHasExistingCodes(false);
+      setAutoRegenerateDuplicates(false);
+      setDuplicateDecision(null);
       onClearDuplicateImportCodes?.();
       try {
         let parsed: ReturnType<typeof parsePromoCodeImportSheet>;
@@ -454,24 +541,29 @@ export function PromoCodeEdit({
           return;
         }
 
-        let codesToApply = parsed.codes;
         if (onValidateImportCodes) {
           try {
-            const result = await onValidateImportCodes(parsed.codes);
-            codesToApply = result.validCodes;
-            if (codesToApply.length === 0) {
-              setUploadedCodes([]);
-              setUploadFileName(null);
-              toast.error('No new codes to import', {
-                description: 'Every code in the file already exists in the system.',
+            const context = resolveImportContractContext(parsed.metadata);
+            const result = await onValidateImportCodes(parsed.codes, context);
+            setContractHasExistingCodes(result.contractHasExistingCodes);
+            if (result.contractHasExistingCodes) {
+              toast.message('Contract already has promo codes', {
+                description: 'Warning: This contract is already associated with existing promo codes.',
+              });
+            }
+
+            if (result.duplicateCount > 0) {
+              setDuplicateDecision({
+                fileName: file.name,
+                metadata: parsed.metadata,
+                allCodes: parsed.codes,
+                validCodes: result.validCodes,
+                duplicateCodes: result.duplicateCodes,
               });
               return;
             }
-            if (result.duplicateCodes.length > 0) {
-              toast.message('Some codes were skipped', {
-                description: `${result.duplicateCodes.length} duplicate(s) already exist — see the warning under Import.`,
-              });
-            }
+
+            applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
           } catch (err) {
             setUploadedCodes([]);
             setUploadFileName(null);
@@ -480,14 +572,20 @@ export function PromoCodeEdit({
             });
             return;
           }
+          return;
         }
 
-        applyUploadedCodes(codesToApply, file.name, parsed.metadata);
+        applyUploadedCodes(parsed.codes, file.name, parsed.metadata);
       } finally {
         setIsParsingExcel(false);
       }
     },
-    [applyUploadedCodes, onClearDuplicateImportCodes, onValidateImportCodes],
+    [
+      applyUploadedCodes,
+      onClearDuplicateImportCodes,
+      onValidateImportCodes,
+      resolveImportContractContext,
+    ],
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -731,6 +829,17 @@ export function PromoCodeEdit({
                     )}
                   </div>
                 )}
+                {contractHasExistingCodes ? (
+                  <div
+                    role="alert"
+                    className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+                    data-testid="promo-import-contract-warning"
+                  >
+                    <p className="font-medium">
+                      Warning: This contract is already associated with existing promo codes.
+                    </p>
+                  </div>
+                ) : null}
                 {duplicateImportCodes && duplicateImportCodes.length > 0 ? (
                   <div
                     role="alert"
@@ -740,7 +849,8 @@ export function PromoCodeEdit({
                     <p className="font-medium">
                       Warning: {duplicateImportCodes.length.toLocaleString()} code
                       {duplicateImportCodes.length === 1 ? ' was' : 's were'} already imported
-                      previously and will be skipped:
+                      previously and will be{' '}
+                      {autoRegenerateDuplicates ? 'auto-generated as replacements' : 'skipped'}:
                     </p>
                     <ul className="mt-2 list-disc space-y-0.5 pl-5 font-mono text-xs">
                       {duplicateImportCodes.slice(0, 50).map((code) => (
@@ -749,12 +859,16 @@ export function PromoCodeEdit({
                     </ul>
                     {duplicateImportCodes.length > 50 ? (
                       <p className="mt-2 text-xs text-amber-900">
-                        …and {duplicateImportCodes.length - 50} more. The remaining new codes are
-                        ready to import below.
+                        …and {duplicateImportCodes.length - 50} more.
+                        {autoRegenerateDuplicates
+                          ? ' Replacements will use the same prefix.'
+                          : ' The remaining new codes are ready to import below.'}
                       </p>
                     ) : (
                       <p className="mt-2 text-xs text-amber-900">
-                        The remaining new codes are ready to import below.
+                        {autoRegenerateDuplicates
+                          ? 'Replacements will use the same prefix on Save.'
+                          : 'The remaining new codes are ready to import below.'}
                       </p>
                     )}
                   </div>
@@ -977,6 +1091,53 @@ export function PromoCodeEdit({
           </Button>
         </div>
       </form>
+
+      <AlertDialog
+        open={duplicateDecision !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            if (!duplicateChoiceMadeRef.current) {
+              onClearDuplicateImportCodes?.();
+            }
+            duplicateChoiceMadeRef.current = false;
+            setDuplicateDecision(null);
+          }
+        }}
+      >
+        <AlertDialogContent data-testid="promo-import-duplicates-modal">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Duplicate promo codes found</AlertDialogTitle>
+            <AlertDialogDescription>
+              {`Found ${duplicateDecision?.duplicateCodes.length ?? 0} duplicate codes in the file. How would you like to proceed?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-between gap-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <AlertDialogAction
+                type="button"
+                className="bg-white text-[#0f2942] border border-[#0f2942] hover:bg-gray-50"
+                onClick={(e) => {
+                  e.preventDefault();
+                  finishImportAfterDuplicateChoice('skip');
+                }}
+              >
+                Skip Duplicates
+              </AlertDialogAction>
+              <AlertDialogAction
+                type="button"
+                className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white"
+                onClick={(e) => {
+                  e.preventDefault();
+                  finishImportAfterDuplicateChoice('regenerate');
+                }}
+              >
+                Auto-Generate Replacements
+              </AlertDialogAction>
+            </div>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
