@@ -164,12 +164,14 @@ export interface PromoCodeEditProps {
    */
   onValidateImportCodes?: (
     codes: string[],
-    context?: { companyId?: number; corporateOrderId?: number },
+    context?: { companyId?: number; corporateOrderId?: number; contractRef?: string },
   ) => Promise<{
     validCodes: string[];
     duplicateCodes: string[];
     duplicateCount: number;
     contractHasExistingCodes: boolean;
+    contractError: 'not_found' | 'already_used' | null;
+    usedByBatchId: number | null;
     prefix?: string;
   }>;
 }
@@ -222,6 +224,9 @@ export function PromoCodeEdit({
   const [isParsingExcel, setIsParsingExcel] = useState(false);
   /** Contract already has promo codes in DB — soft warning after validate-import. */
   const [contractHasExistingCodes, setContractHasExistingCodes] = useState(false);
+  /** Excel Contract cell resolution from validate-import (inline under Select Contract). */
+  const [contractError, setContractError] = useState<'not_found' | 'already_used' | null>(null);
+  const [usedByBatchId, setUsedByBatchId] = useState<number | null>(null);
   /** When true, batch create asks the API to replace DB-colliding codes. */
   const [autoRegenerateDuplicates, setAutoRegenerateDuplicates] = useState(false);
   /** Pending import awaiting Skip vs Auto-Generate choice. */
@@ -303,6 +308,9 @@ export function PromoCodeEdit({
 
     setSelectedContractId(contract.id);
     setSelectedContractValue(contract.value);
+    // Manual / successful import bind clears Excel contract_ref errors.
+    setContractError(null);
+    setUsedByBatchId(null);
 
     // Excel import already set quantity/prefix/titles/dates — only bind the Select.
     if (options?.skipAutofill || uploadedCodes.length > 0) {
@@ -382,15 +390,13 @@ export function PromoCodeEdit({
   const applyImportMetadata = useCallback(
     (metadata: PromoCodeImportMetadata) => {
       // Only overwrite fields that the spreadsheet actually provided.
+      // Contract match failures are surfaced as inline red text from
+      // validate-import (not_found / already_used) — no toast here.
       if (metadata.contractRef) {
         const match = findContractOptionByImportRef(availableContracts, metadata.contractRef);
         if (match) {
           // Bind Radix Select via unique option value (not ambiguous numeric id).
           handleContractChange(match.value, { skipAutofill: true });
-        } else {
-          toast.message('Contract from file not matched', {
-            description: `No available contract matches “${metadata.contractRef}”. Select one manually.`,
-          });
         }
       }
       if (metadata.startDate) setStartDate(metadata.startDate);
@@ -447,6 +453,8 @@ export function PromoCodeEdit({
     setUploadedCodes([]);
     setUploadFileName(null);
     setContractHasExistingCodes(false);
+    setContractError(null);
+    setUsedByBatchId(null);
     setAutoRegenerateDuplicates(false);
     setDuplicateDecision(null);
     onClearDuplicateImportCodes?.();
@@ -464,6 +472,7 @@ export function PromoCodeEdit({
         companyId: contract?.companyId,
         corporateOrderId:
           contract?.purchaseCategory === 'Corporate' ? contract.id : undefined,
+        contractRef: metadata.contractRef?.trim() || undefined,
       };
     },
     [availableContracts, selectedContractId, selectedContractValue],
@@ -511,6 +520,8 @@ export function PromoCodeEdit({
       if (!file) return;
       setIsParsingExcel(true);
       setContractHasExistingCodes(false);
+      setContractError(null);
+      setUsedByBatchId(null);
       setAutoRegenerateDuplicates(false);
       setDuplicateDecision(null);
       onClearDuplicateImportCodes?.();
@@ -546,7 +557,9 @@ export function PromoCodeEdit({
             const context = resolveImportContractContext(parsed.metadata);
             const result = await onValidateImportCodes(parsed.codes, context);
             setContractHasExistingCodes(result.contractHasExistingCodes);
-            if (result.contractHasExistingCodes) {
+            setContractError(result.contractError);
+            setUsedByBatchId(result.usedByBatchId);
+            if (result.contractHasExistingCodes && !result.contractError) {
               toast.message('Contract already has promo codes', {
                 description: 'Warning: This contract is already associated with existing promo codes.',
               });
@@ -742,6 +755,18 @@ export function PromoCodeEdit({
                   <p className="text-xs text-gray-500 mt-1">
                     A contract is required. Selecting one auto-fills code name, prefix, quantity (locked), and contract dates.
                   </p>
+                  {contractError === 'not_found' && (
+                    <div className="text-red-500 text-sm mt-2" data-testid="promo-import-contract-not-found">
+                      找不到符合的contract，請選擇相關的contract
+                    </div>
+                  )}
+                  {contractError === 'already_used' && (
+                    <div className="text-red-500 text-sm mt-2" data-testid="promo-import-contract-already-used">
+                      {usedByBatchId != null
+                        ? `contract已被其他Promo Code Batch id ${usedByBatchId} 使用，請選擇其他contract`
+                        : 'contract已被其他Promo Code Batch 使用，請選擇其他contract'}
+                    </div>
+                  )}
                 </>
               )}
             </div>
