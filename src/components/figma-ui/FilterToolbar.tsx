@@ -2,13 +2,16 @@
  * FilterToolbar.tsx
  * Horizontal toolbar combining a search input, one or more select/date/text
  * filter fields, an optional active-filter chip strip, and a reset button.
- * All state lives outside — every change fires a callback.
+ * Search is locally controlled and debounced (500ms) before onSearchChange
+ * so parent list fetches do not remount / steal focus mid-keystroke.
  *
  * Place in: src/components/figma-ui/FilterToolbar.tsx
  */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
+
+const SEARCH_DEBOUNCE_MS = 500;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,10 +43,10 @@ export interface ActiveFilterChip {
 }
 
 export interface FilterToolbarProps {
-  /** Controlled search input value */
+  /** Controlled search input value (synced into local draft; API parents should treat updates as debounced) */
   searchValue: string;
   searchPlaceholder?: string;
-  /** Fires on every keystroke in the search box */
+  /** Fires after 500ms of inactivity (not on every keystroke) */
   onSearchChange: (value: string) => void;
   /** Structured filter fields rendered after the search box */
   filters?: FilterField[];
@@ -77,8 +80,32 @@ export function FilterToolbar({
   rightSlot,
   className = '',
 }: FilterToolbarProps) {
+  const [localSearch, setLocalSearch] = useState(searchValue);
+  const onSearchChangeRef = useRef(onSearchChange);
+  onSearchChangeRef.current = onSearchChange;
+
+  // Sync external resets / Clear-all into the local draft
+  useEffect(() => {
+    setLocalSearch(searchValue);
+  }, [searchValue]);
+
+  // Debounce parent notification so list queries do not fire mid-typing
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (localSearch !== searchValue) {
+        onSearchChangeRef.current(localSearch);
+      }
+    }, SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [localSearch, searchValue]);
+
+  const clearSearch = () => {
+    setLocalSearch('');
+    onSearchChangeRef.current('');
+  };
+
   const hasActiveFilters =
-    searchValue.trim().length > 0 ||
+    localSearch.trim().length > 0 ||
     filters.some((f) => f.value.trim().length > 0);
 
   return (
@@ -90,17 +117,17 @@ export function FilterToolbar({
           <SearchIcon />
           <input
             type="text"
-            value={searchValue}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             placeholder={searchPlaceholder}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg bg-white
               focus:outline-none focus:ring-2 focus:ring-[#0f2942]/30 focus:border-[#0f2942]
               placeholder:text-gray-400 transition-colors"
           />
-          {searchValue && (
+          {localSearch && (
             <button
               type="button"
-              onClick={() => onSearchChange('')}
+              onClick={clearSearch}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400
                 hover:text-gray-600 transition-colors"
               aria-label="Clear search"

@@ -1,17 +1,15 @@
 /**
- * Sidebar.tsx — Pure UI, zero routing hooks.
+ * Sidebar.tsx — presentation + React Router NavLinks.
  *
- * REMOVED: useNavigate, useLocation, ITEM_URL record
- * ADDED:   currentPath prop (parent decides highlight — exact match only)
- *          onNavigate callback (parent handles routing)
- *          menuItems prop (full structure injectable from parent)
- *          user prop (injectable user profile)
- *          onLogout callback
+ * Active highlight is derived from the live URL (`useLocation` / NavLink
+ * `isActive`). Navigation uses `<NavLink>` so the same BrowserRouter history
+ * that drives `<Outlet />` updates — never bare `<a href>` / pushState.
  *
- * Demo mode: all props are optional — falls back to MOCK_MENU_ITEMS / MOCK_USER.
+ * Demo mode: props are optional — falls back to MOCK_MENU_ITEMS / MOCK_USER.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   ChevronDown, LayoutDashboard, Users, Calendar, Package,
   Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature, DollarSign, UserCog,
@@ -51,14 +49,16 @@ export interface SidebarUser {
 }
 
 export interface SidebarProps {
-  /** Current active path — parent passes this, sidebar only renders visual state */
+  /**
+   * Optional override for active path (tests). When omitted, live
+   * `useLocation().pathname` drives the highlight.
+   */
   currentPath?: string;
-  /** Badge count shown on "Point of Sales" group */
   /** Aggregated POS alert count (booking conflicts + overdue order suites). Shown on Point of Sales. */
   overdueOrdersCount?: number;
   /** Logged-in user info */
   user?: SidebarUser;
-  /** Called when any menu item is clicked — parent handles actual routing */
+  /** Optional click hook after NavLink navigation (analytics / close mobile drawer). */
   onNavigate?: (path: string) => void;
   /** Called when Logout is clicked */
   onLogout?: () => void;
@@ -197,17 +197,20 @@ function getInitialOpenGroups(pathname: string): string[] {
     pathname.startsWith('/travel-agency') ||
     pathname.startsWith('/grading-packages')
   ) groups.push('customers');
-  if (
-    pathname.startsWith('/membership/purchase') ||
-    pathname.startsWith('/membership/balance')
-  ) groups.push('contract');
+  if (pathname.startsWith('/purchase') || pathname.startsWith('/balance')) {
+    groups.push('contract');
+  }
   if (pathname.startsWith('/bookings') && !pathname.startsWith('/bookings/schedules')) groups.push('bookings');
   if (pathname.startsWith('/bookings/schedules') || pathname.startsWith('/suites')) groups.push('booking-schedules');
   if (pathname.startsWith('/items'))        groups.push('bookable-items');
-  if (pathname.startsWith('/pos') || pathname.startsWith('/pos/transactions')) groups.push('pos');
-  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/price-management')) groups.push('lounge');
+  if (pathname.startsWith('/pos') || pathname.startsWith('/standalone-preorder') || pathname.startsWith('/kitchen')) {
+    groups.push('pos');
+  }
+  if (pathname.startsWith('/lounge-layout') || pathname.startsWith('/price-management')) {
+    groups.push('lounge');
+  }
   if (pathname.startsWith('/promo-codes'))  groups.push('promo');
-  if (pathname.startsWith('/reports'))      groups.push('reports');
+  if (pathname.startsWith('/reports') || pathname.startsWith('/admin/reports')) groups.push('reports');
   if (
     pathname.startsWith('/system-users') ||
     pathname.startsWith('/audit-logs') ||
@@ -222,10 +225,10 @@ function getInitialOpenGroups(pathname: string): string[] {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function Sidebar({
-  currentPath    = '/dashboard',
+  currentPath: currentPathProp,
   overdueOrdersCount = 0,
   user,
-  onNavigate     = () => {},
+  onNavigate,
   onLogout       = () => {},
   onEditProfile,
   menuItems,
@@ -233,14 +236,24 @@ export function Sidebar({
   brandName = 'HKIA VIP Lounge',
   sidebarBg,
 }: SidebarProps) {
+  const location = useLocation();
+  // Live URL is canonical; prop override is for unit tests only.
+  const currentPath = currentPathProp ?? location.pathname;
+
   // Use prop-supplied menu items; fall back to mock for standalone demo
   const displayMenuItems = menuItems && menuItems.length > 0 ? menuItems : MOCK_MENU_ITEMS;
   const displayUser      = user ?? MOCK_USER;
 
-  // Pure UI state — which accordion groups are open
+  // Accordion open state — expand groups that own the current URL
   const [openMenus, setOpenMenus] = useState<string[]>(() =>
     getInitialOpenGroups(currentPath),
   );
+
+  useEffect(() => {
+    const needed = getInitialOpenGroups(currentPath);
+    if (needed.length === 0) return;
+    setOpenMenus((prev) => Array.from(new Set([...prev, ...needed])));
+  }, [currentPath]);
 
   const toggleMenu = (menuId: string) => {
     setOpenMenus(prev =>
@@ -250,10 +263,24 @@ export function Sidebar({
     );
   };
 
-  // ── Active check — EXACT match only (no startsWith) per spec ──────────────
-  const isActive = (path: string): boolean => {
-    if (path === '/dashboard') return currentPath === '/dashboard' || currentPath === '/';
-    return currentPath === path;
+  const pathIsActive = (path: string, navLinkActive: boolean): boolean => {
+    if (path === '/dashboard' || path === '/') {
+      return currentPath === '/dashboard' || currentPath === '/';
+    }
+    return navLinkActive || currentPath === path;
+  };
+
+  const linkClass = (active: boolean, kind: 'top' | 'sub'): string => {
+    if (kind === 'top') {
+      return `flex items-center gap-3 w-full p-3 rounded transition-colors ${
+        active ? 'bg-blue-600 text-white' : 'text-white hover:bg-gray-700/50'
+      }`;
+    }
+    return `flex items-center justify-between gap-2 w-full text-left p-2 rounded text-sm transition-colors ${
+      active
+        ? 'bg-blue-600 text-white'
+        : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
+    }`;
   };
 
   // Initials for avatar fallback
@@ -278,12 +305,9 @@ export function Sidebar({
             <div key={item.id}>
               {item.submenu ? (
                 <>
-                  <a
-                    href={`#${item.id}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleMenu(item.id);
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => toggleMenu(item.id)}
                     className="flex items-center justify-between w-full p-3 rounded hover:bg-gray-700/50 transition-colors text-white"
                   >
                     <div className="flex items-center gap-3">
@@ -303,23 +327,19 @@ export function Sidebar({
                         }`}
                       />
                     </div>
-                  </a>
+                  </button>
 
                   {openMenus.includes(item.id) && (
                     <div className="ml-11 mt-1 space-y-1">
                       {item.submenu.map(subItem => (
-                        <a
+                        <NavLink
                           key={subItem.id}
-                          href={subItem.path}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            onNavigate(subItem.path);
-                          }}
-                          className={`flex items-center justify-between gap-2 w-full text-left p-2 rounded text-sm transition-colors ${
-                            isActive(subItem.path)
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'
-                          }`}
+                          to={subItem.path}
+                          end
+                          onClick={() => onNavigate?.(subItem.path)}
+                          className={({ isActive }) =>
+                            linkClass(pathIsActive(subItem.path, isActive), 'sub')
+                          }
                         >
                           <span>{subItem.label}</span>
                           {typeof subItem.badge === 'number' && subItem.badge > 0 && (
@@ -327,28 +347,24 @@ export function Sidebar({
                               {subItem.badge > 99 ? '99+' : subItem.badge}
                             </span>
                           )}
-                        </a>
+                        </NavLink>
                       ))}
                     </div>
                   )}
                 </>
-              ) : (
-                <a
-                  href={item.path ?? '#'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (item.path) onNavigate(item.path);
-                  }}
-                  className={`flex items-center gap-3 w-full p-3 rounded transition-colors ${
-                    item.path && isActive(item.path)
-                      ? 'bg-blue-600 text-white'
-                      : 'text-white hover:bg-gray-700/50'
-                  }`}
+              ) : item.path ? (
+                <NavLink
+                  to={item.path}
+                  end={item.path === '/' || item.path === '/dashboard'}
+                  onClick={() => onNavigate?.(item.path!)}
+                  className={({ isActive }) =>
+                    linkClass(pathIsActive(item.path!, isActive), 'top')
+                  }
                 >
                   {item.icon}
                   <span>{item.label}</span>
-                </a>
-              )}
+                </NavLink>
+              ) : null}
             </div>
           ))}
         </div>
