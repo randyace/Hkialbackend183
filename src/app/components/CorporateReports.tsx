@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { Download, TrendingUp, Building2, Plane, Users, BarChart2 } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
+import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 
 const MONTHLY_UTILISATION = [
   { month: 'Aug',  cathaySessions: 18, jardine: 24, wings: 14, hsbc: 6,  pacific: 0 },
@@ -59,6 +60,12 @@ export interface CorporateReportsProps {
   revenueTrend?: typeof REVENUE_TREND;
   onGenerateReport?: (type: string) => void;
   isLoading?: boolean;
+  /** Controlled HKT calendar start (YYYY-MM-DD). */
+  startDate?: string;
+  /** Controlled HKT calendar end (YYYY-MM-DD). */
+  endDate?: string;
+  onStartDateChange?: (ymd: string) => void;
+  onEndDateChange?: (ymd: string) => void;
 }
 
 export function CorporateReports({
@@ -68,14 +75,27 @@ export function CorporateReports({
   revenueTrend: revenueTrendProp,
   onGenerateReport,
   isLoading = false,
+  startDate: startDateProp,
+  endDate: endDateProp,
+  onStartDateChange,
+  onEndDateChange,
 }: CorporateReportsProps = {}) {
   const displayMontly  = monthlyUtilisationProp ?? MOCK_MONTHLY_UTILISATION;
   const displaySummary = companySummaryProp     ?? MOCK_COMPANY_SUMMARY;
   const displayPie     = pieDataProp            ?? MOCK_PIE_DATA;
   const displayTrend   = revenueTrendProp       ?? MOCK_REVENUE_TREND;
 
-  const [filterPeriod, setFilterPeriod] = useState<string>('last-6-months');
-  const [filterType,   setFilterType]   = useState<string>('all');
+  // Uncontrolled fallback for figma Make / Storybook when the container
+  // does not pass dates (container always does in production).
+  const [localStartDate, setLocalStartDate] = useState('');
+  const [localEndDate, setLocalEndDate] = useState('');
+  const startDate = startDateProp ?? localStartDate;
+  const endDate = endDateProp ?? localEndDate;
+  const setStartDate = onStartDateChange ?? setLocalStartDate;
+  const setEndDate = onEndDateChange ?? setLocalEndDate;
+
+  const [filterType, setFilterType] = useState<string>('all');
+  const rangeInvalid = Boolean(startDate && endDate && startDate > endDate);
 
   const filteredSummary = displaySummary.filter(c =>
     filterType === 'all' || c.type === filterType
@@ -102,15 +122,31 @@ export function CorporateReports({
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
-        <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="last-3-months">Last 3 Months</SelectItem>
-            <SelectItem value="last-6-months">Last 6 Months</SelectItem>
-            <SelectItem value="this-year">This Year</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600" htmlFor="bd-usage-start">
+            Start Date
+          </label>
+          <StringDatePicker
+            id="bd-usage-start"
+            data-testid="bd-usage-start-date"
+            value={startDate}
+            onChange={setStartDate}
+            className="w-48"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-gray-600" htmlFor="bd-usage-end">
+            End Date
+          </label>
+          <StringDatePicker
+            id="bd-usage-end"
+            data-testid="bd-usage-end-date"
+            value={endDate}
+            onChange={setEndDate}
+            className="w-48"
+          />
+        </div>
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -119,6 +155,11 @@ export function CorporateReports({
             <SelectItem value="Agency">Agency Only</SelectItem>
           </SelectContent>
         </Select>
+        {rangeInvalid ? (
+          <p className="text-xs text-red-600 sm:pb-2" role="alert">
+            Start Date must be on or before End Date.
+          </p>
+        ) : null}
       </div>
 
       {/* KPI Cards */}

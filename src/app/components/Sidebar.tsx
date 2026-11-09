@@ -16,13 +16,14 @@ import {
   ChevronDown, LayoutDashboard, Users, Calendar, Package,
   Settings, Building2, CreditCard, LogOut, FileText, Tag, FileSignature, DollarSign, UserCog,
 } from 'lucide-react';
-import logoImage from 'figma:asset/5314118f44483d10b69aeb99485c2f5942c726a2.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+
+const DEFAULT_LOGO = '/images/commercial-logo.png';
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -65,6 +66,11 @@ export interface SidebarProps {
   onEditProfile?: () => void;
   /** Full menu structure — if omitted, falls back to MOCK_MENU_ITEMS */
   menuItems?: SidebarMenuItem[];
+  /** Tenant branding logo (hostname-resolved by the container). */
+  logoUrl?: string;
+  brandName?: string;
+  /** Sidebar background — defaults to CSS var / commercial navy */
+  sidebarBg?: string;
 }
 
 // ─── MOCK data (isolated — replace by passing props from container) ───────────
@@ -223,6 +229,9 @@ export function Sidebar({
   onLogout       = () => {},
   onEditProfile,
   menuItems,
+  logoUrl = DEFAULT_LOGO,
+  brandName = 'HKIA VIP Lounge',
+  sidebarBg,
 }: SidebarProps) {
   // Use prop-supplied menu items; fall back to mock for standalone demo
   const displayMenuItems = menuItems && menuItems.length > 0 ? menuItems : MOCK_MENU_ITEMS;
@@ -252,11 +261,14 @@ export function Sidebar({
     ?? displayUser.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="w-80 bg-[#0f2942] text-white flex flex-col h-full min-h-0">
+    <div
+      className="w-80 text-white flex flex-col h-full min-h-0"
+      style={{ backgroundColor: sidebarBg || 'var(--tenant-sidebar-bg, #0f2942)' }}
+    >
 
       {/* Logo */}
-      <div className="p-6 border-b border-gray-700 shrink-0">
-        <img src={logoImage} alt="HKIA VIP Lounge" className="h-10" />
+      <div className="p-6 border-b border-white/15 shrink-0">
+        <img src={logoUrl || DEFAULT_LOGO} alt={brandName} className="h-10 max-w-full object-contain" />
       </div>
 
       {/* Navigation */}

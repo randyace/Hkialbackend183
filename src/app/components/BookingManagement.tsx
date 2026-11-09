@@ -348,6 +348,7 @@ export interface BookingManagementProps {
   onEditBooking?: (bookingId: number) => void;
   onDeleteBooking?: (bookingId: number, bookingNo: string) => void;
   onExportReport?: () => void;
+  isExporting?: boolean;
   onSearchTermChange?: (value: string) => void;
   onStatusFilterChange?: (value: string) => void;
   onPaymentStatusFilterChange?: (value: string) => void;
@@ -396,6 +397,7 @@ export function BookingManagement({
   onEditBooking,
   onDeleteBooking,
   onExportReport,
+  isExporting = false,
   onSearchTermChange,
   onStatusFilterChange,
   onPaymentStatusFilterChange,
@@ -631,9 +633,14 @@ export function BookingManagement({
           {loading && <span className="text-xs text-gray-500">Refreshing…</span>}
           <Button
             onClick={onExportReport}
+            disabled={isExporting || !onExportReport}
           >
-            <Download className="w-4 h-4 mr-2" />
-            Export Report
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {isExporting ? 'Exporting...' : 'Export Report'}
           </Button>
         </div>
       </div>

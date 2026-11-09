@@ -30,7 +30,7 @@ interface TravelAgency {
   contactPerson: string;
   email: string;
   phone: string;
-  paymentMethod: 'Upfront' | 'On-Credit' | 'Monthly Invoice';
+  paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Monthly Invoice';
   discountRate: number;
   status: 'active' | 'inactive' | 'suspended';
 }
@@ -68,15 +68,34 @@ export interface Member {
   lastLogin?: string;
 }
 
+export type AgencyFormSavePayload = {
+  agencyName: string;
+  agencyCode: string;
+  paymentMethod: string;
+  discountRate: number;
+  /** OnCredit overdraft cap → accounts.credit_limit */
+  creditLimit: number;
+  status: 'active' | 'inactive';
+  contacts: Array<{ name: string; email: string; phone: string }>;
+  remarks?: string;
+};
+
 export interface TravelAgencyDetailProps {
   agencyId?: number | null;
   agency?: TravelAgency | null;
   onBack: () => void;
+  /** Preferred save hook — receives full form + contacts array. */
+  onSave?: (payload: AgencyFormSavePayload) => void;
+  /** @deprecated prefer onSave */
   onEdit?: (e: FormEvent<HTMLFormElement>) => void;
   onAddContact?: () => void;
   contactPersons?: ContactPerson[];
   onContactPersonsChange?: (next: ContactPerson[]) => void;
   isLoading?: boolean;
+  isSubmitting?: boolean;
+  fieldErrors?: Record<string, string>;
+  /** Overdraft limit (HKD) — accounts.credit_limit */
+  creditLimit?: number;
   contracts?: Contract[];
   members?: Member[];
   onSaveContract?: (
@@ -85,7 +104,6 @@ export interface TravelAgencyDetailProps {
   ) => void | Promise<unknown>;
   onDeleteContract?: (contractId: string) => void;
   onAddContract?: () => void;
-  onAddMember?: () => void;
   onDeleteMember?: (memberId: number) => void;
 }
 
@@ -151,17 +169,20 @@ export function TravelAgencyDetail({
   agencyId,
   agency: agencyProp,
   onBack,
+  onSave,
   onEdit,
   onAddContact: _onAddContact,
   contactPersons: contactPersonsProp,
   onContactPersonsChange,
   isLoading = false,
+  isSubmitting = false,
+  fieldErrors = {},
+  creditLimit: creditLimitProp,
   contracts: contractsProp,
   members: membersProp,
   onSaveContract,
   onDeleteContract,
   onAddContract,
-  onAddMember,
   onDeleteMember,
 }: TravelAgencyDetailProps) {
   const contracts = contractsProp ?? [];
@@ -179,29 +200,53 @@ export function TravelAgencyDetail({
     }
   };
 
+  const [formAgencyName, setFormAgencyName] = useState('');
+  const [formAgencyCode, setFormAgencyCode] = useState('');
+  const [formPaymentMethod, setFormPaymentMethod] = useState('On-Credit');
+  const [formDiscountRate, setFormDiscountRate] = useState(0);
+  const [formCreditLimit, setFormCreditLimit] = useState(0);
+  const [formRemarks, setFormRemarks] = useState('');
+
   const [agency, setAgency] = useState<TravelAgency | null>(agencyProp ?? null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [editForm, setEditForm] = useState({ expiryDate: '', creditLimit: 0, creditUsed: 0 });
   const [agencyStatus, setAgencyStatus] = useState<boolean>(agencyProp?.status === 'active');
 
-  const isEditMode = agencyId !== null;
+  const isEditMode = agencyId != null;
 
   useEffect(() => {
     setAgency(agencyProp ?? null);
     if (agencyProp) {
       setAgencyStatus(agencyProp.status === 'active');
-      setContactPersonsNext([
-        {
-          id: '1',
-          name: agencyProp.contactPerson || '',
-          email: agencyProp.email || '',
-          phone: agencyProp.phone || '',
-        },
-      ]);
+      setFormAgencyName(agencyProp.agencyName || '');
+      setFormAgencyCode(agencyProp.agencyCode || '');
+      setFormPaymentMethod(agencyProp.paymentMethod || 'On-Credit');
+      setFormDiscountRate(Number(agencyProp.discountRate || 0));
+      setFormCreditLimit(Number(creditLimitProp ?? 0));
+      // Prefer container-provided multi-contact list; fall back to primary scalars.
+      if (contactPersonsProp === undefined) {
+        setContactPersonsNext([
+          {
+            id: '1',
+            name: agencyProp.contactPerson || '',
+            email: agencyProp.email || '',
+            phone: agencyProp.phone || '',
+          },
+        ]);
+      }
     } else if (agencyId === null) {
-      setContactPersonsNext([{ id: '1', name: '', email: '', phone: '' }]);
+      setFormAgencyName('');
+      setFormAgencyCode('');
+      setFormPaymentMethod('On-Credit');
+      setFormDiscountRate(10);
+      setFormCreditLimit(0);
+      setFormRemarks('');
+      setAgencyStatus(true);
+      if (contactPersonsProp === undefined) {
+        setContactPersonsNext([{ id: '1', name: '', email: '', phone: '' }]);
+      }
     }
-  }, [agencyProp?.id, agencyId]);
+  }, [agencyProp?.id, agencyId, creditLimitProp]);
 
   const handleAddContactPerson = () => {
     const newId = (contactPersons.length + 1).toString();
@@ -288,42 +333,78 @@ export function TravelAgencyDetail({
           className="space-y-6"
           onSubmit={(e) => {
             e.preventDefault();
+            const contacts = contactPersons.map((c) => ({
+              name: c.name || '',
+              email: c.email || '',
+              phone: c.phone || '',
+            }));
+            if (onSave) {
+              onSave({
+                agencyName: formAgencyName,
+                agencyCode: formAgencyCode,
+                paymentMethod: formPaymentMethod,
+                discountRate: formDiscountRate,
+                creditLimit: formCreditLimit,
+                status: agencyStatus ? 'active' : 'inactive',
+                contacts,
+                remarks: formRemarks,
+              });
+              return;
+            }
             void onEdit?.(e);
           }}
         >
           {/* Agency Information Section */}
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-700 border-b pb-2">Agency Information</h4>
+            {Object.keys(fieldErrors).length > 0 && (
+              <div
+                className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 space-y-1"
+                role="alert"
+                data-testid="agency-form-validation-banner"
+              >
+                {Object.values(fieldErrors).map((msg, i) => (
+                  <p key={`${i}-${msg}`}>{msg}</p>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label>Agency Name</label>
                 <input
                   type="text"
-                  defaultValue={agency?.agencyName}
+                  value={formAgencyName}
+                  onChange={(e) => setFormAgencyName(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., Wings Agency"
+                  aria-invalid={!!fieldErrors.agency_name}
                 />
               </div>
               <div>
                 <label>Agency Code</label>
                 <input
                   type="text"
-                  defaultValue={agency?.agencyCode}
+                  value={formAgencyCode}
+                  onChange={(e) => setFormAgencyCode(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="e.g., TA-WG-001"
+                  disabled={isEditMode}
+                  aria-invalid={!!fieldErrors.agency_code}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <div>
                 <label>Payment Method</label>
                 <select
-                  defaultValue={agency?.paymentMethod}
+                  value={formPaymentMethod}
+                  onChange={(e) => setFormPaymentMethod(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                 >
-                  <option value="Upfront">Upfront Payment</option>
-                  <option value="On-Credit">On Credit</option>
+                  <option value="Upfront">Upfront</option>
+                  <option value="Net Upfront">Net Upfront</option>
+                  <option value="On-Credit">On-Credit</option>
                   <option value="Monthly Invoice">Monthly Invoice</option>
                 </select>
               </div>
@@ -331,12 +412,28 @@ export function TravelAgencyDetail({
                 <label>Discount Rate (%)</label>
                 <input
                   type="number"
-                  defaultValue={agency?.discountRate}
+                  value={formDiscountRate}
+                  onChange={(e) => setFormDiscountRate(Number(e.target.value))}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md"
                   placeholder="0"
                   min="0"
                   max="100"
                 />
+              </div>
+              <div>
+                <label>Overdraft Limit (HKD)</label>
+                <input
+                  type="number"
+                  value={formCreditLimit}
+                  onChange={(e) => setFormCreditLimit(Number(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                  placeholder="100000"
+                  min="0"
+                  aria-invalid={!!fieldErrors.credit_limit}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Available = balance + this On-Credit overdraft cap.
+                </p>
               </div>
               <div>
                 <label>Status</label>
@@ -421,16 +518,10 @@ export function TravelAgencyDetail({
             </div>
 
             <div>
-              <label>Business Address</label>
-              <Textarea
-                placeholder="Enter agency business address..."
-                rows={3}
-              />
-            </div>
-
-            <div>
               <label>Remarks / Notes</label>
               <Textarea
+                value={formRemarks}
+                onChange={(e) => setFormRemarks(e.target.value)}
                 placeholder="Any additional notes about this agency..."
                 rows={3}
               />
@@ -438,12 +529,14 @@ export function TravelAgencyDetail({
           </div>
 
           <div className="flex gap-3 justify-end pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onBack}>
+            <Button type="button" variant="outline" onClick={onBack} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={isSubmitting}>
               <Save className="w-4 h-4 mr-2" />
-              {isEditMode ? 'Update Agency' : 'Create Agency'}
+              {isSubmitting
+                ? (isEditMode ? 'Saving...' : 'Creating...')
+                : (isEditMode ? 'Update Agency' : 'Create Agency')}
             </Button>
           </div>
         </form>
@@ -566,16 +659,9 @@ export function TravelAgencyDetail({
       {/* Agency Members Section (Only show when editing) */}
       {isEditMode && !isLoading && (
         <Card className="p-6">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Agency Members</h2>
-              <p className="text-sm text-gray-600">All customer accounts associated with this travel agency</p>
-            </div>
-            {onAddMember && (
-              <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={onAddMember}>
-                Add member
-              </Button>
-            )}
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Agency Members</h2>
+            <p className="text-sm text-gray-600">All customer accounts associated with this travel agency</p>
           </div>
 
           {/* Members Summary */}

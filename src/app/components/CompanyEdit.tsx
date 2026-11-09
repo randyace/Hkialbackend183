@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
-import { ArrowLeft, Building2, UserPlus, Mail, Phone, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building2, Mail, Phone, Save, FileText, Calendar, Edit2, AlertTriangle, CheckCircle, XCircle, Plus, Trash2 } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { Switch } from './ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 import {
   Dialog,
   DialogContent,
@@ -40,9 +33,9 @@ export interface CompanyEditProps {
   companyId?: number | null;
   /** Pass full company from CI4; when null falls back to MOCK_COMPANY for demo */
   initialData?: Company | null;
-  /** Pass real company members (from API); falls back to MOCK_MEMBERS when omitted */
+  /** Linked accounts from GET /companies/{id} — empty when none / create mode. */
   members?: Member[] | null;
-  /** Pass real company contracts (from API); falls back to MOCK_CONTRACTS when omitted */
+  /** Normalized contracts from GET /companies/{id} — empty when none / create mode. */
   contracts?: Contract[] | null;
   onSave?: (data: Company) => void;
   onBack: () => void;
@@ -57,6 +50,8 @@ interface Company {
   contactPerson: string;
   email: string;
   phone: string;
+  /** Full Contact Persons list; when present, preferred over primary scalars. */
+  contacts?: Array<{ name: string; email: string; phone: string }>;
   paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase';
   discountRate: number;
   status: 'active' | 'inactive';
@@ -96,25 +91,6 @@ interface Member {
   joinDate: string;
   lastLogin?: string;
 }
-
-// Mock contracts for the company
-const MOCK_CONTRACTS: Contract[] = [
-  { id: 'C1', contractNumber: 'CT-2024-0001', offerName: 'Standard Bundle', purchaseDate: '2024-05-10', startDate: '2024-05-15', expiryDate: '2025-11-10', sessionsTotal: 20, sessionsUsed: 15, status: 'Active', notes: 'Annual corporate package' },
-  { id: 'C2', contractNumber: 'CT-2024-0056', offerName: 'VIP Executive Add-on', purchaseDate: '2024-11-01', startDate: '2024-11-05', expiryDate: '2025-05-05', sessionsTotal: 10, sessionsUsed: 3, status: 'Active', notes: 'Executive lounge access' },
-  { id: 'C3', contractNumber: 'CT-2024-0102', offerName: 'Premium Lounge Access', purchaseDate: '2024-12-10', startDate: '2024-12-15', expiryDate: '2025-06-15', sessionsTotal: 25, sessionsUsed: 8, status: 'Active', notes: 'Additional premium tier' }
-];
-
-// Mock members for the company
-const MOCK_MEMBERS: Member[] = [
-  { id: 1, accountNumber: 'ACC-2024-1001', name: 'Jennifer Lee', email: 'jennifer.lee@cathaypacific.com', phone: '+852 9123 4567', department: 'Sales', role: 'Manager', status: 'active', joinDate: '2024-03-15', lastLogin: '2025-02-24' },
-  { id: 2, accountNumber: 'ACC-2024-1089', name: 'Michael Wong', email: 'michael.wong@cathaypacific.com', phone: '+852 9234 5678', department: 'Marketing', role: 'Executive', status: 'active', joinDate: '2024-05-20', lastLogin: '2025-02-23' },
-  { id: 3, accountNumber: 'ACC-2024-1156', name: 'Sarah Chen', email: 'sarah.chen@cathaypacific.com', phone: '+852 9345 6789', department: 'Operations', role: 'Director', status: 'active', joinDate: '2024-06-10', lastLogin: '2025-02-25' },
-  { id: 4, accountNumber: 'ACC-2024-1234', name: 'David Tam', email: 'david.tam@cathaypacific.com', phone: '+852 9456 7890', department: 'Finance', role: 'Employee', status: 'active', joinDate: '2024-07-05', lastLogin: '2025-02-20' },
-  { id: 5, accountNumber: 'ACC-2024-1301', name: 'Emily Cheng', email: 'emily.cheng@cathaypacific.com', phone: '+852 9567 8901', department: 'HR', role: 'Manager', status: 'inactive', joinDate: '2024-08-12', lastLogin: '2025-01-15' },
-  { id: 6, accountNumber: 'ACC-2024-1445', name: 'Kevin Lau', email: 'kevin.lau@cathaypacific.com', phone: '+852 9678 9012', department: 'IT', role: 'Executive', status: 'active', joinDate: '2024-09-01', lastLogin: '2025-02-24' },
-  { id: 7, accountNumber: 'ACC-2024-1502', name: 'Grace Ho', email: 'grace.ho@cathaypacific.com', phone: '+852 9789 0123', department: 'Legal', role: 'VIP', status: 'active', joinDate: '2024-10-08', lastLogin: '2025-02-25' },
-  { id: 8, accountNumber: 'ACC-2024-1678', name: 'Raymond Ng', email: 'raymond.ng@cathaypacific.com', phone: '+852 9890 1234', department: 'Sales', role: 'Employee', status: 'suspended', joinDate: '2024-11-15', lastLogin: '2025-01-30' }
-];
 
 type BalanceStatus = 'critical' | 'low' | 'ok' | 'full' | 'depleted';
 
@@ -206,41 +182,40 @@ export function CompanyEdit({
   ]);
   const [companyStatus, setCompanyStatus] = useState<boolean>(company?.status === 'active');
 
-  // ── Sync initialData (from API fetch) into all form fields ────────────────
+  // Hydrate once per company id — do not re-bind on every parent object
+  // identity change (that made Contact email/phone feel locked while typing).
   useEffect(() => {
-    if (initialData !== undefined && initialData !== null) {
-      setCompany(initialData);
-      setFormCompanyName(initialData.companyName || '');
-      setFormCompanyCode(initialData.companyCode || '');
-      setFormPaymentMethod(initialData.paymentMethod || 'Upfront');
-      setFormDiscountRate(initialData.discountRate ?? 0);
-      setFormBillingAddress(initialData.address || '');
-      setFormRemarks(initialData.remarks || '');
-      setCompanyStatus(initialData.status === 'active');
-      // Sync first contact person from initialData
-      if (initialData.contactPerson || initialData.email || initialData.phone) {
-        setContactPersons([{
-          id: '1',
-          name: initialData.contactPerson || '',
-          email: initialData.email || '',
-          phone: initialData.phone || '',
-        }]);
-      }
+    if (initialData === undefined || initialData === null) {
+      return;
     }
-  }, [initialData]);
-
-  // ── Re-sync contact persons when company changes ─────────────────────────
-  useEffect(() => {
-    if (company && contactPersons.length === 1 && contactPersons[0].id === '1' &&
-        !contactPersons[0].name && !contactPersons[0].email && !contactPersons[0].phone) {
-      setContactPersons([{
-        id: '1',
-        name: company.contactPerson || '',
-        email: company.email || '',
-        phone: company.phone || '',
-      }]);
-    }
-  }, [company]);
+    setCompany(initialData);
+    setFormCompanyName(initialData.companyName || '');
+    setFormCompanyCode(initialData.companyCode || '');
+    setFormPaymentMethod(initialData.paymentMethod || 'Upfront');
+    setFormDiscountRate(initialData.discountRate ?? 0);
+    setFormBillingAddress(initialData.address || '');
+    setFormRemarks(initialData.remarks || '');
+    setCompanyStatus(initialData.status === 'active');
+    // Prefer full contact_persons list from API; fall back to primary scalars.
+    const loadedContacts = (initialData.contacts ?? [])
+      .map((c, index) => ({
+        id: String(index + 1),
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone || '',
+      }))
+      .filter((c) => c.name || c.email || c.phone);
+    setContactPersons(
+      loadedContacts.length > 0
+        ? loadedContacts
+        : [{
+            id: '1',
+            name: initialData.contactPerson || '',
+            email: initialData.email || '',
+            phone: initialData.phone || '',
+          }],
+    );
+  }, [initialData?.id, companyId]);
 
   const isEditMode = companyId !== null;
 
@@ -280,8 +255,10 @@ export function CompanyEdit({
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
-  const totalSessions = MOCK_CONTRACTS.reduce((sum, c) => sum + c.sessionsTotal, 0);
-  const usedSessions = MOCK_CONTRACTS.reduce((sum, c) => sum + c.sessionsUsed, 0);
+  const displayMembers = members ?? [];
+  const displayContracts = contracts ?? [];
+  const totalSessions = displayContracts.reduce((sum, c) => sum + c.sessionsTotal, 0);
+  const usedSessions = displayContracts.reduce((sum, c) => sum + c.sessionsUsed, 0);
   const remainingSessions = totalSessions - usedSessions;
 
   return (
@@ -307,7 +284,12 @@ export function CompanyEdit({
             e.preventDefault();
             // Build final Company object from form state + contact persons
             // In create mode (company === undefined), build payload directly from form fields
-            const primaryContact = contactPersons[0];
+            const contacts = contactPersons.map((c) => ({
+              name: c.name || '',
+              email: c.email || '',
+              phone: c.phone || '',
+            }));
+            const primaryContact = contacts[0];
             const payload: Company = company
               ? {
                   ...company,
@@ -321,6 +303,7 @@ export function CompanyEdit({
                   contactPerson: primaryContact?.name || '',
                   email: primaryContact?.email || '',
                   phone: primaryContact?.phone || '',
+                  contacts,
                 }
               : {
                   id: 0,
@@ -334,6 +317,7 @@ export function CompanyEdit({
                   contactPerson: primaryContact?.name || '',
                   email: primaryContact?.email || '',
                   phone: primaryContact?.phone || '',
+                  contacts,
                 };
             onSave?.(payload);
           }}
@@ -455,6 +439,7 @@ export function CompanyEdit({
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'email', e.target.value)}
                         placeholder="email@company.com"
                         className="h-9"
+                        autoComplete="off"
                       />
                     </div>
                     <div>
@@ -465,6 +450,7 @@ export function CompanyEdit({
                         onChange={(e) => handleUpdateContactPerson(contact.id, 'phone', e.target.value)}
                         placeholder="+852 1234 5678"
                         className="h-9"
+                        autoComplete="off"
                       />
                     </div>
                   </div>
@@ -517,19 +503,19 @@ export function CompanyEdit({
           <div className="grid grid-cols-4 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Members</p>
-              <p className="text-2xl font-semibold text-blue-900">{(members ?? MOCK_MEMBERS).length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{displayMembers.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Active</p>
-              <p className="text-2xl font-semibold text-green-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'active').length}</p>
+              <p className="text-2xl font-semibold text-green-900">{displayMembers.filter(m => m.status === 'active').length}</p>
             </Card>
             <Card className="p-4 bg-gray-50 border-gray-200">
               <p className="text-xs text-gray-700 mb-1">Inactive</p>
-              <p className="text-2xl font-semibold text-gray-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'inactive').length}</p>
+              <p className="text-2xl font-semibold text-gray-900">{displayMembers.filter(m => m.status === 'inactive').length}</p>
             </Card>
             <Card className="p-4 bg-red-50 border-red-200">
               <p className="text-xs text-red-700 mb-1">Suspended</p>
-              <p className="text-2xl font-semibold text-red-900">{(members ?? MOCK_MEMBERS).filter(m => m.status === 'suspended').length}</p>
+              <p className="text-2xl font-semibold text-red-900">{displayMembers.filter(m => m.status === 'suspended').length}</p>
             </Card>
           </div>
 
@@ -549,7 +535,14 @@ export function CompanyEdit({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {(members ?? MOCK_MEMBERS).map((member) => (
+                {displayMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-6 text-sm text-center text-gray-500">
+                      No linked customer accounts. Link accounts via Customer Management.
+                    </td>
+                  </tr>
+                ) : null}
+                {displayMembers.map((member) => (
                   <tr key={member.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm text-gray-900">{member.accountNumber}</td>
                     <td className="px-4 py-3">
@@ -598,7 +591,7 @@ export function CompanyEdit({
           <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 bg-blue-50 border-blue-200">
               <p className="text-xs text-blue-700 mb-1">Total Contracts</p>
-              <p className="text-2xl font-semibold text-blue-900">{(contracts ?? MOCK_CONTRACTS).length}</p>
+              <p className="text-2xl font-semibold text-blue-900">{displayContracts.length}</p>
             </Card>
             <Card className="p-4 bg-green-50 border-green-200">
               <p className="text-xs text-green-700 mb-1">Total Sessions</p>
@@ -615,7 +608,10 @@ export function CompanyEdit({
 
           {/* Contracts List */}
           <div className="space-y-4">
-            {(contracts ?? MOCK_CONTRACTS).map((contract) => {
+            {displayContracts.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">No contracts found for linked accounts.</p>
+            ) : null}
+            {displayContracts.map((contract) => {
               const days = daysUntilExpiry(contract.expiryDate);
               const expiryColor = days < 30 ? 'text-red-600' : days < 90 ? 'text-amber-600' : 'text-gray-600';
               
@@ -673,126 +669,6 @@ export function CompanyEdit({
                 </Card>
               );
             })}
-          </div>
-        </Card>
-      )}
-
-      {/* Add New Customer Section (Only show when editing) */}
-      {isEditMode && company && (
-        <Card className="p-6">
-          <div className="mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-1">Add New Customer to Company</h2>
-                <p className="text-sm text-gray-600">Create a new customer account associated with this company</p>
-              </div>
-              <UserPlus className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="customerTitle">Title *</Label>
-                <Select>
-                  <SelectTrigger id="customerTitle">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mr">Mr.</SelectItem>
-                    <SelectItem value="mrs">Mrs.</SelectItem>
-                    <SelectItem value="ms">Ms.</SelectItem>
-                    <SelectItem value="dr">Dr.</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="customerFirstName">First Name *</Label>
-                <Input
-                  id="customerFirstName"
-                  placeholder="Enter first name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="customerLastName">Last Name *</Label>
-                <Input
-                  id="customerLastName"
-                  placeholder="Enter last name"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerEmail">Email *</Label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input
-                    id="customerEmail"
-                    type="email"
-                    className="pl-10"
-                    placeholder="email@company.com"
-                  />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="customerPhone">Contact Number *</Label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input
-                    id="customerPhone"
-                    type="tel"
-                    className="pl-10"
-                    placeholder="+852 1234 5678"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="customerRole">Customer Role</Label>
-                <Select>
-                  <SelectTrigger id="customerRole">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="employee">Employee</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="executive">Executive</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="customerDepartment">Department</Label>
-                <Input
-                  id="customerDepartment"
-                  placeholder="e.g., Sales, Marketing"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="customerRemarks">Customer Remarks</Label>
-              <Textarea
-                id="customerRemarks"
-                placeholder="Any notes about this customer..."
-                rows={2}
-              />
-            </div>
-
-            <div className="flex justify-end pt-2">
-              <Button type="button" className="bg-green-600 hover:bg-green-700">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add Customer to Company
-              </Button>
-            </div>
-          </div>
-
-          <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded border mt-4">
-            <strong>Note:</strong> New customers will receive a welcome email with login credentials. 
-            They will be automatically linked to {company.companyName} ({company.companyCode}).
           </div>
         </Card>
       )}

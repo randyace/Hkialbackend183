@@ -233,6 +233,9 @@ export function AccountCreation({
   const [agencySearch, setAgencySearch] = useState('');
   const [showAgencyDropdown, setShowAgencyDropdown] = useState(false);
 
+  // Group Admin / book-on-behalf — staff flag (default off; independent of type).
+  const [canBookOnBehalf, setCanBookOnBehalf] = useState(false);
+
   // ── Corporate bulk sub-forms ─────────────────────────────────────────────
   const [corporateForms, setCorporateForms] = useState<CorporateSubForm[]>([emptySubForm(Date.now())]);
 
@@ -303,8 +306,14 @@ export function AccountCreation({
       return;
     }
 
+    const bookOnBehalf =
+      accountType === 'corporate' || accountType === 'travel-agency'
+        ? canBookOnBehalf
+        : false;
+
     const payload = {
       type: accountType,
+      canBookOnBehalf: bookOnBehalf,
       ...(accountType === 'corporate'
         ? {
             companyId: selectedCompanyId,
@@ -356,7 +365,12 @@ export function AccountCreation({
                 type="radio"
                 id={typeOption}
                 checked={accountType === typeOption}
-                onChange={() => setAccountType(typeOption)}
+                onChange={() => {
+                  setAccountType(typeOption);
+                  if (typeOption === 'individual') {
+                    setCanBookOnBehalf(false);
+                  }
+                }}
                 className="w-4 h-4"
               />
               <Label htmlFor={typeOption} className="cursor-pointer flex items-center gap-1">
@@ -367,6 +381,30 @@ export function AccountCreation({
             </div>
           ))}
         </div>
+        {(accountType === 'corporate' || accountType === 'travel-agency') && (
+          <div
+            className="mt-4 rounded-xl border border-indigo-100 bg-white p-4 shadow-sm"
+            data-testid="create-account-book-on-behalf"
+          >
+            <label className="flex items-start gap-3 cursor-pointer" htmlFor="canBookOnBehalf">
+              <input
+                id="canBookOnBehalf"
+                type="checkbox"
+                className="mt-1"
+                checked={canBookOnBehalf}
+                onChange={(e) => setCanBookOnBehalf(e.target.checked)}
+              />
+              <span>
+                <span className="text-sm font-semibold text-[#0f2942]">
+                  Enable Group Admin (Book on behalf)
+                </span>
+                <p className="text-xs text-gray-500 mt-1">
+                  Grants customer-portal Group Admin. Independent of reporting label — not granted by a contract.
+                </p>
+              </span>
+            </label>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
