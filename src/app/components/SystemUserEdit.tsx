@@ -7,13 +7,17 @@
  *  - Default props fall back to sensible empty values for figma Make
  */
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { expandPermissionAliases } from '@/lib/permissions';
 import { getMasterPermissionGroups } from '@/lib/permissionModules';
+import {
+  PermissionMatrixGrid,
+  type PermissionMatrixModule,
+} from '@/components/permissions/PermissionMatrixGrid';
 import type {
   SystemUserFormData,
   SystemUserRole,
@@ -22,7 +26,7 @@ import type {
 
 export type { SystemUserFormData };
 
-/** One module section for the Direct Permissions 2-column grid. */
+/** Flat module section — converted to matrix modules when `permissionModules` is omitted. */
 export interface DirectPermissionGroup {
   key: string;
   label: string;
@@ -39,7 +43,12 @@ export interface SystemUserEditProps {
   isLoading?: boolean;
   isSaving?: boolean;
   initialData?: SystemUserFormData | null;
-  /** Grouped permissions — defaults to the full PermissionMatrix master catalog. */
+  /**
+   * Canonical Module → Feature → Actions matrix (same as Role Permissions).
+   * Preferred over `permissionGroups`.
+   */
+  permissionModules?: PermissionMatrixModule[];
+  /** Legacy flat groups — used only when `permissionModules` is omitted. */
   permissionGroups?: DirectPermissionGroup[];
   /** Initial direct (user-level) permission names from GET /users/{id}/direct-permissions */
   initialDirectPermissions?: string[];
@@ -61,7 +70,7 @@ export interface SystemUserEditProps {
   effectivePermissionNames?: string[] | null;
   /**
    * Permission names the current actor may grant (editing others).
-   * When set, checkboxes outside this set are hidden.
+   * When set, codes outside this set are disabled as not grantable.
    * Omit / undefined / null with Super Admin = show full matrix.
    */
   grantablePermissionNames?: string[] | null;
@@ -78,6 +87,28 @@ export interface SystemUserEditProps {
   staffAccountPolicy?: { allowed_email_domains: string[]; ad_email_domains: string[] };
   adAccountLocked?: boolean;
   accountTypeReadOnly?: boolean;
+}
+
+/** Convert legacy flat groups into matrix modules (all actions as specials). */
+function groupsToModules(groups: DirectPermissionGroup[]): PermissionMatrixModule[] {
+  return groups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    features: [
+      {
+        key: group.key,
+        label: group.label,
+        actions: group.permissions.map((permission) => ({
+          key: permission.name.includes('.')
+            ? permission.name.split('.').slice(1).join('.')
+            : permission.name,
+          label: permission.label,
+          name: permission.name,
+          exists: true,
+        })),
+      },
+    ],
+  }));
 }
 
 export interface MicrosoftLinkProps {
@@ -116,39 +147,23 @@ function setContainsPermission(set: Set<string>, name: string): boolean {
   return expandPermissionAliases(name).some((alias) => set.has(alias));
 }
 
-function GroupSelectAllCheckbox({
-  id,
-  checked,
-  indeterminate,
-  disabled,
-  onChange,
-}: {
-  id: string;
-  checked: boolean;
-  indeterminate: boolean;
-  disabled?: boolean;
-  onChange: () => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.indeterminate = indeterminate;
-    }
-  }, [indeterminate]);
-
-  return (
-    <input
-      ref={ref}
-      id={id}
-      type="checkbox"
-      className="rounded border-gray-300 accent-black shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
-      checked={checked}
-      disabled={disabled}
-      onChange={onChange}
-      aria-label="Select all permissions in this group"
-    />
-  );
+function filterModulesByEffective(
+  modules: PermissionMatrixModule[],
+  effectiveSet: Set<string>,
+): PermissionMatrixModule[] {
+  return modules
+    .map((module) => ({
+      ...module,
+      features: module.features
+        .map((feature) => ({
+          ...feature,
+          actions: feature.actions.filter((action) =>
+            setContainsPermission(effectiveSet, action.name),
+          ),
+        }))
+        .filter((feature) => feature.actions.length > 0),
+    }))
+    .filter((module) => module.features.length > 0);
 }
 
 function MicrosoftLinkCard({ microsoftLink }: { microsoftLink: MicrosoftLinkProps }) {
@@ -241,6 +256,7 @@ export function SystemUserEdit({
   isLoading = false,
   isSaving = false,
   initialData = null,
+  permissionModules,
   permissionGroups,
   initialDirectPermissions,
   spatieRoles = [],
@@ -302,49 +318,27 @@ export function SystemUserEdit({
     [roleInheritedPermissions],
   );
 
-  /** Role defaults ∪ direct extras — checked state when editing others. */
-  const heldSet = useMemo(
-    () => new Set([...roleInheritedPermissions, ...directPermissions]),
-    [roleInheritedPermissions, directPermissions],
-  );
-
-  const permissionIsOwned = (name: string): boolean => {
-    if (permissionsReadOnly && effectiveSet) {
-      return setContainsPermission(effectiveSet, name);
-    }
-    return heldSet.has(name) || setContainsPermission(heldSet, name);
-  };
-
   /**
-   * Always start from the master PermissionMatrix catalog (never the old 12-item list).
+   * Prefer the Role Permissions matrix modules (API). Fall back to flat groups /
+   * master catalog only when modules are omitted (tests / local figma).
    * Self-view: only permissions present in effective_permissions.
-   * Editing others: show the full catalog and let each checkbox decide whether
-   * it is grantable. This prevents available permissions from disappearing or
-   * looking permanently locked just because they are currently unchecked.
    */
-  const groups = useMemo(() => {
-    const base =
-      permissionGroups && permissionGroups.length > 0
-        ? permissionGroups
-        : getMasterPermissionGroups();
+  const matrixModules = useMemo(() => {
+    const base: PermissionMatrixModule[] =
+      permissionModules && permissionModules.length > 0
+        ? permissionModules
+        : groupsToModules(
+            permissionGroups && permissionGroups.length > 0
+              ? permissionGroups
+              : getMasterPermissionGroups(),
+          );
 
-    return base
-      .map((group) => ({
-        ...group,
-        permissions: group.permissions.filter((p) => {
-          if (permissionsReadOnly) {
-            if (!effectiveSet) return false;
-            return setContainsPermission(effectiveSet, p.name);
-          }
-          return true;
-        }),
-      }))
-      .filter((group) => group.permissions.length > 0);
-  }, [
-    permissionGroups,
-    effectiveSet,
-    permissionsReadOnly,
-  ]);
+    if (permissionsReadOnly) {
+      if (!effectiveSet) return [];
+      return filterModulesByEffective(base, effectiveSet);
+    }
+    return base;
+  }, [permissionModules, permissionGroups, effectiveSet, permissionsReadOnly]);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -434,32 +428,26 @@ export function SystemUserEdit({
     }
   };
 
-  const toggleDirectPermission = (perm: string, checked: boolean) => {
+  const toggleDirectPermission = (perm: string) => {
     if (permissionsReadOnly) return;
     if (inheritedSet.has(perm)) return;
+    if (grantableSet && !setContainsPermission(grantableSet, perm)) return;
     setDirectPermissions((prev) => {
-      if (checked) {
-        return prev.includes(perm) ? prev : [...prev, perm];
+      if (prev.includes(perm)) {
+        return prev.filter((p) => p !== perm);
       }
-      return prev.filter((p) => p !== perm);
+      return [...prev, perm];
     });
   };
 
-  const handleToggleGroup = (groupPermissions: string[], isCurrentlyAllSelected: boolean) => {
+  const handleDirectPermissionsChange = (permissions: string[]) => {
     if (permissionsReadOnly) return;
-    // Only toggle permissions that are not locked as role defaults.
-    const toggleable = groupPermissions.filter(
-      (name) => !inheritedSet.has(name) && (!grantableSet || setContainsPermission(grantableSet, name)),
+    const next = permissions.filter(
+      (name) =>
+        !inheritedSet.has(name) &&
+        (!grantableSet || setContainsPermission(grantableSet, name)),
     );
-    if (toggleable.length === 0) return;
-
-    setDirectPermissions((prev) => {
-      if (isCurrentlyAllSelected) {
-        const remove = new Set(toggleable);
-        return prev.filter((name) => !remove.has(name));
-      }
-      return Array.from(new Set([...prev, ...toggleable]));
-    });
+    setDirectPermissions(next);
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -697,99 +685,26 @@ export function SystemUserEdit({
                   <div className="py-8 text-sm text-gray-500 text-center">
                     Loading role default permissions…
                   </div>
-                ) : null}
-                {rolePermissionsReady ? groups.map((group) => {
-                  const groupPermissionNames = group.permissions.map((p) => p.name);
-                  if (groupPermissionNames.length === 0) {
-                    return null;
-                  }
-
-                  const isPermissionHeld = (name: string) => permissionIsOwned(name);
-
-                  const toggleablePermissions = groupPermissionNames.filter(
-                    (name) => !inheritedSet.has(name) && (!grantableSet || setContainsPermission(grantableSet, name)),
-                  );
-                  const isAllSelected =
-                    groupPermissionNames.length > 0 &&
-                    groupPermissionNames.every(isPermissionHeld);
-                  const isSomeSelected =
-                    groupPermissionNames.some(isPermissionHeld) && !isAllSelected;
-                  const isToggleableAllSelected =
-                    toggleablePermissions.length > 0 &&
-                    toggleablePermissions.every((p) => directPermissions.includes(p));
-                  const selectAllId = `su-group-select-all-${group.key}`;
-
-                  return (
-                    <section key={group.key} className="mb-2">
-                      <div className="flex items-center gap-3 mb-4 border-b border-gray-200 pb-2">
-                        <GroupSelectAllCheckbox
-                          id={selectAllId}
-                          checked={isAllSelected}
-                          indeterminate={isSomeSelected}
-                          disabled={permissionsReadOnly || toggleablePermissions.length === 0}
-                          onChange={() =>
-                            handleToggleGroup(groupPermissionNames, isToggleableAllSelected)
-                          }
-                        />
-                        <label
-                          htmlFor={selectAllId}
-                          className="text-sm font-semibold text-gray-800 cursor-pointer select-none"
-                        >
-                          {group.label}
-                        </label>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 mb-6">
-                        {group.permissions.map((permission) => {
-                          const isInherited = inheritedSet.has(permission.name);
-                          const isHeld = isPermissionHeld(permission.name);
-                          const canGrant = !grantableSet || setContainsPermission(grantableSet, permission.name);
-                          const isLocked = permissionsReadOnly || isInherited;
-                          return (
-                            <label
-                              key={permission.name}
-                              className={`flex items-center gap-3 rounded-md border border-transparent px-1 py-1 ${
-                                isLocked
-                                  ? 'cursor-not-allowed opacity-90'
-                                  : 'cursor-pointer hover:bg-gray-50'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                className="rounded border-gray-300 accent-black shrink-0 disabled:cursor-not-allowed disabled:opacity-60"
-                                checked={isInherited || directPermissions.includes(permission.name)}
-                                disabled={isLocked}
-                                onChange={(e) =>
-                                  toggleDirectPermission(permission.name, e.target.checked)
-                                }
-                              />
-                              <span className={`text-sm ${isLocked ? 'text-gray-500' : 'text-gray-900'}`}>
-                                <span className="block">
-                                  {permission.label}
-                                  {isInherited ? (
-                                    <span className="ml-1.5 text-xs font-normal text-gray-400">
-                                      (Role Default)
-                                    </span>
-                                  ) : !canGrant && !permissionsReadOnly ? (
-                                    <span className="ml-1.5 text-xs font-normal text-gray-400">
-                                      (Not Grantable)
-                                    </span>
-                                  ) : null}
-                                </span>
-                                <span className="block text-xs text-gray-400 font-mono">
-                                  {permission.name}
-                                </span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  );
-                }) : null}
-                {rolePermissionsReady && groups.length === 0 && (
-                  <div className="py-8 text-sm text-gray-500 text-center">
-                    No permissions available.
-                  </div>
+                ) : (
+                  <PermissionMatrixGrid
+                    availablePermissions={matrixModules}
+                    selectedPermissions={
+                      permissionsReadOnly && effectivePermissionNames
+                        ? effectivePermissionNames
+                        : directPermissions
+                    }
+                    lockedPermissions={
+                      permissionsReadOnly ? [] : roleInheritedPermissions
+                    }
+                    grantablePermissions={
+                      permissionsReadOnly ? null : grantablePermissionNames
+                    }
+                    readOnly={permissionsReadOnly}
+                    disabled={isSaving}
+                    onTogglePermission={toggleDirectPermission}
+                    onSelectedPermissionsChange={handleDirectPermissionsChange}
+                    emptyMessage="No permissions available."
+                  />
                 )}
               </div>
             </Card>
