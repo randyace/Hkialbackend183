@@ -504,12 +504,13 @@ export function SystemUserEdit({
         </div>
       </div>
 
-      <form className="flex min-h-0 flex-col space-y-4" onSubmit={handleSubmit}>
+      <form className="space-y-4" onSubmit={handleSubmit}>
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as 'profile' | 'permissions')}
-          className="flex min-h-0 flex-col space-y-4"
-        >          <TabsList className="grid w-full grid-cols-2">
+          className="space-y-4"
+        >
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="profile">Profile &amp; Security</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
           </TabsList>
@@ -643,10 +644,10 @@ export function SystemUserEdit({
 
           <TabsContent
             value="permissions"
-            className="flex min-h-0 flex-col data-[state=inactive]:hidden"
+            className="data-[state=inactive]:hidden"
           >
-            <Card className="flex max-h-[min(40rem,calc(100vh-14rem))] min-h-0 flex-col overflow-hidden p-6">
-              <div className="shrink-0 space-y-6">
+            <Card className="space-y-6 p-6">
+              <div className="space-y-6">
                 <div>
                   <label htmlFor="su-role-permissions" className="mb-[10px] block text-sm text-gray-700">
                     Role
@@ -680,7 +681,7 @@ export function SystemUserEdit({
                 </div>
               </div>
 
-              <div className="mt-6 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+              <div>
                 {!rolePermissionsReady ? (
                   <div className="py-8 text-sm text-gray-500 text-center">
                     Loading role default permissions…

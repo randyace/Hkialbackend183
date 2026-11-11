@@ -122,7 +122,7 @@ export function RolePermissionMatrix({
         </div>
       )}
 
-      <Card className="overflow-hidden p-0">
+      <Card className="p-0">
         <PermissionMatrixGrid
           availablePermissions={groupedPermissions}
           selectedPermissions={rolePermissions}
