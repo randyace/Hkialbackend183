@@ -29,12 +29,11 @@ import {
   PaginationPrevious,
 } from './ui/pagination';
 import {
-
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from './ui/tooltip';
-
+import { BOOKING_STATUS_FILTER_OPTIONS } from '@/lib/bookingStatuses';
 
 function ymdLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -54,7 +53,17 @@ interface Booking {
   flightDestination?: string;
   flightType: 'Arrival' | 'Departure' | 'Transit';
   bookingCategory: 'Agent Booking' | 'Corporate Booking' | 'Individual Booking' | 'Membership Booking' | 'AA Booking';
-  status: 'Pending for Review' | 'Pending for Approval' | 'Approved' | 'Confirmed' | 'Rejected' | 'Cancelled' | 'No-show' | 'Incomplete (No-show)';
+  status:
+    | 'Pending for Review'
+    | 'Pending for Approval'
+    | 'Approved'
+    | 'Confirmed'
+    | 'Checked In'
+    | 'Completed'
+    | 'Rejected'
+    | 'Cancelled'
+    | 'No-show'
+    | 'Incomplete (No-show)';
   paymentStatus: 'Not Required' | 'Pending' | 'Payment Link Sent' | 'Paid' | 'Overdue' | 'Refunded';
   services: string[];
   amount: string | 'Pending Calculation' | 'Re-calculation' | 'Manual Adjustment';
@@ -124,7 +133,17 @@ const TRAVEL_AGENCY_DATA = [
 const generateMockBookings = (): Booking[] => {
   const names = ['John Smith', 'Mary Johnson', 'David Lee', 'Sarah Chen', 'Robert Wang', 'Emma Wilson', 'Michael Brown', 'Lisa Taylor', 'James Anderson', 'Sophia Martinez'];
   const suites = ['VIP Suite A', 'VIP Suite B', 'Executive Suite', 'Business Suite', 'Premier Suite', 'Open Lounge'];
-  const statuses: Booking['status'][] = ['Pending for Review', 'Pending for Approval', 'Approved', 'Confirmed', 'Rejected', 'Cancelled', 'Incomplete (No-show)'];
+  const statuses: Booking['status'][] = [
+    'Pending for Review',
+    'Pending for Approval',
+    'Approved',
+    'Confirmed',
+    'Checked In',
+    'Completed',
+    'Rejected',
+    'Cancelled',
+    'Incomplete (No-show)',
+  ];
   const paymentStatuses: Booking['paymentStatus'][] = ['Not Required', 'Pending', 'Payment Link Sent', 'Paid', 'Overdue', 'Refunded'];
   const airlines = ['CX', 'BA', 'NH', 'SQ', 'QF', 'EK', 'LH'];
   const origins = ['LHR', 'NRT', 'SIN', 'SYD', 'LAX', 'DXB', 'FRA'];
@@ -465,6 +484,8 @@ export function BookingManagement({
       'Pending for Approval': 'bg-blue-100 text-blue-800 border border-blue-200',
       'Approved': 'bg-green-100 text-green-800 border border-green-200',
       'Confirmed': 'bg-green-100 text-green-800 border border-green-200',
+      'Checked In': 'bg-teal-100 text-teal-800 border border-teal-200',
+      'Completed': 'bg-emerald-100 text-emerald-800 border border-emerald-200',
       'Rejected': 'bg-red-100 text-red-800 border border-red-200',
       'Cancelled': 'bg-gray-100 text-gray-800 border border-gray-200',
       'No-show': 'bg-orange-100 text-orange-800 border border-orange-200',
@@ -515,15 +536,15 @@ export function BookingManagement({
                          booking.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     const matchesPaymentStatus = paymentStatusFilter === 'all' || booking.paymentStatus === paymentStatusFilter;
+    const refundActionRequired =
+      booking.refundStatus === 'due'
+      || booking.refundStatus === 'pending_amount'
+      || booking.refundStatus === 'partial'
+      || (Number(booking.refundDue) || 0) > 0;
     const matchesRefundStatus =
       refundStatusFilter === 'all'
-      || (refundStatusFilter === 'action_required'
-        && (
-          booking.refundStatus === 'due'
-          || booking.refundStatus === 'pending_amount'
-          || booking.refundStatus === 'partial'
-          || (Number(booking.refundDue) || 0) > 0
-        ));
+      || (refundStatusFilter === 'action_required' && refundActionRequired)
+      || (refundStatusFilter === 'no_action_required' && !refundActionRequired);
     
     // Booking Category filter logic
     let matchesBookingCategory = true;
@@ -716,13 +737,11 @@ export function BookingManagement({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Booking Status</SelectItem>
-                <SelectItem value="Pending for Review">Pending for Review</SelectItem>
-                <SelectItem value="Pending for Approval">Pending for Approval</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Confirmed">Confirmed</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-                <SelectItem value="Incomplete (No-show)">Incomplete (No-show)</SelectItem>
+                {BOOKING_STATUS_FILTER_OPTIONS.map((option) => (
+                  <SelectItem key={option.wire} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={paymentStatusFilter} onValueChange={setPaymentStatusFilter}>
@@ -746,6 +765,7 @@ export function BookingManagement({
               <SelectContent>
                 <SelectItem value="all">All Refund Status</SelectItem>
                 <SelectItem value="action_required">Action Required</SelectItem>
+                <SelectItem value="no_action_required">No action required</SelectItem>
               </SelectContent>
             </Select>
             <Select value={bookingCategoryFilter} onValueChange={setBookingCategoryFilter}>
