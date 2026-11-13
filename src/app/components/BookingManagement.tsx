@@ -39,6 +39,30 @@ function ymdLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Served booking with no Movement Log rows — matches API `movement_log_status=missing`. */
+function showMissingMovementLogBadge(booking: {
+  status: string;
+  dateTime: string;
+  hasMovementLogs?: boolean;
+}): boolean {
+  if (booking.hasMovementLogs) return false;
+  if (booking.status === 'Completed' || booking.status === 'Checked In') return true;
+  const excluded = new Set([
+    'Cancelled',
+    'Rejected',
+    'Pending for Review',
+    'Pending for Approval',
+    'No-show',
+    'Incomplete (No-show)',
+  ]);
+  if (excluded.has(booking.status)) return false;
+  const raw = booking.dateTime?.trim() ?? '';
+  if (!raw) return false;
+  const dt = new Date(raw.includes('T') ? raw : raw.replace(' ', 'T'));
+  if (Number.isNaN(dt.getTime())) return false;
+  return dt.getTime() < Date.now();
+}
+
 
 interface Booking {
   id: number;
@@ -70,6 +94,8 @@ interface Booking {
   numberOfGuests?: number;
   nonFlyingGuests?: number;
   isAdHoc?: boolean;
+  /** From API `has_movement_logs` — false when staff still need to fill Movement Log. */
+  hasMovementLogs?: boolean;
   hasLimousine?: boolean;
   hasShopping?: boolean;
   cutoffHours?: number;
@@ -349,6 +375,8 @@ export interface BookingManagementProps {
   paymentStatusFilter?: string;
   refundStatusFilter?: string;
   bookingCategoryFilter?: string;
+  /** All | Missing Logs | Logs Completed — API `movement_log_status`. */
+  movementLogFilter?: string;
   dateFrom?: string;
   dateTo?: string;
   // Pagination
@@ -373,6 +401,7 @@ export interface BookingManagementProps {
   onPaymentStatusFilterChange?: (value: string) => void;
   onRefundStatusFilterChange?: (value: string) => void;
   onBookingCategoryFilterChange?: (value: string) => void;
+  onMovementLogFilterChange?: (value: string) => void;
   /** 2026-07-15 PR7 — filter by request type badge (New / Edit / Cancel). */
   requestTypeFilter?: string;
   onRequestTypeFilterChange?: (value: string) => void;
@@ -400,6 +429,7 @@ export function BookingManagement({
   paymentStatusFilter: paymentStatusFilterProp,
   refundStatusFilter: refundStatusFilterProp,
   bookingCategoryFilter: bookingCategoryFilterProp,
+  movementLogFilter: movementLogFilterProp,
   requestTypeFilter: requestTypeFilterProp,
   dateFrom: dateFromProp,
   dateTo: dateToProp,
@@ -422,6 +452,7 @@ export function BookingManagement({
   onPaymentStatusFilterChange,
   onRefundStatusFilterChange,
   onBookingCategoryFilterChange,
+  onMovementLogFilterChange,
   onRequestTypeFilterChange,
   onDateFromChange,
   onDateToChange,
@@ -439,6 +470,7 @@ export function BookingManagement({
   const [internalPaymentStatusFilter, setInternalPaymentStatusFilter] = useState('all');
   const [internalRefundStatusFilter, setInternalRefundStatusFilter] = useState('all');
   const [internalBookingCategoryFilter, setInternalBookingCategoryFilter] = useState('all');
+  const [internalMovementLogFilter, setInternalMovementLogFilter] = useState('all');
   const [internalRequestTypeFilter, setInternalRequestTypeFilter] = useState('all');
   const [internalDateFrom, setInternalDateFrom] = useState('');
   const [internalDateTo, setInternalDateTo] = useState('');
@@ -451,6 +483,7 @@ export function BookingManagement({
   const refundStatusFilter = refundStatusFilterProp ?? internalRefundStatusFilter;
   const requestTypeFilter = requestTypeFilterProp ?? internalRequestTypeFilter;
   const bookingCategoryFilter = bookingCategoryFilterProp ?? internalBookingCategoryFilter;
+  const movementLogFilter = movementLogFilterProp ?? internalMovementLogFilter;
   const dateFrom = dateFromProp ?? internalDateFrom;
   const dateTo = dateToProp ?? internalDateTo;
   const currentPage = currentPageProp ?? internalCurrentPage;
@@ -463,6 +496,7 @@ export function BookingManagement({
   const setPaymentStatusFilter = onPaymentStatusFilterChange ?? setInternalPaymentStatusFilter;
   const setRefundStatusFilter = onRefundStatusFilterChange ?? setInternalRefundStatusFilter;
   const setBookingCategoryFilter = onBookingCategoryFilterChange ?? setInternalBookingCategoryFilter;
+  const setMovementLogFilter = onMovementLogFilterChange ?? setInternalMovementLogFilter;
   const setRequestTypeFilter = onRequestTypeFilterChange ?? setInternalRequestTypeFilter;
   const setDateFrom = onDateFromChange ?? setInternalDateFrom;
   const setDateTo = onDateToChange ?? setInternalDateTo;
@@ -781,6 +815,16 @@ export function BookingManagement({
                 <SelectItem value="AA Booking">AA Booking</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={movementLogFilter} onValueChange={setMovementLogFilter}>
+              <SelectTrigger className="w-full md:w-56" data-testid="movement-log-filter">
+                <SelectValue placeholder="Movement Log" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Movement Logs</SelectItem>
+                <SelectItem value="missing">Missing Logs</SelectItem>
+                <SelectItem value="completed">Logs Completed</SelectItem>
+              </SelectContent>
+            </Select>
             <Select value={requestTypeFilter} onValueChange={setRequestTypeFilter}>
               <SelectTrigger className="w-full md:w-48" data-testid="request-type-filter">
                 <SelectValue placeholder="Request Type" />
@@ -986,9 +1030,21 @@ export function BookingManagement({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusColor(booking.status)}>
-                      {booking.status}
-                    </Badge>
+                    <div className="flex flex-col items-start gap-1">
+                      <Badge className={getStatusColor(booking.status)}>
+                        {booking.status}
+                      </Badge>
+                      {showMissingMovementLogBadge(booking) && (
+                        <span
+                          data-testid={`bookings-list-row-${booking.id}-missing-movement-log`}
+                          className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-800 border border-red-200 px-2 py-0.5 text-[10px] font-medium"
+                          title="Movement log has not been filled out yet."
+                        >
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          Missing Movement Log
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge className={getPaymentStatusColor(booking.paymentStatus)}>

@@ -771,7 +771,16 @@ export function BookingReviewPage({
             )}
             {booking.supervisorRejectedAt && (
               <span data-testid="supervisor-timestamp">
-                {new Date(booking.supervisorRejectedAt).toLocaleString()}
+                {(() => {
+                  const raw = booking.supervisorRejectedAt;
+                  if (!raw) return '';
+                  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(raw) && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(raw)) {
+                    return raw.replace('T', ' ');
+                  }
+                  const d = new Date(raw);
+                  if (Number.isNaN(d.getTime())) return raw;
+                  return d.toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace('T', ' ');
+                })()}
               </span>
             )}
           </div>

@@ -106,16 +106,21 @@ function formatHistoryDateTime(iso: string | null): string {
   if (!iso) {
     return '—';
   }
-  const date = new Date(iso);
+  const text = String(iso).trim();
+  const date = /T/.test(text) || /(?:Z|[+-]\d{2}:?\d{2})$/.test(text)
+    ? new Date(text)
+    : new Date(text.includes(' ') ? text.replace(' ', 'T') + '+08:00' : text);
   if (Number.isNaN(date.getTime())) {
     return '—';
   }
   return date.toLocaleString('en-HK', {
+    timeZone: 'Asia/Hong_Kong',
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 

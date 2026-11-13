@@ -23,8 +23,9 @@
  */
 
 import type { ReactNode } from 'react';
-import { Plane, Calendar, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Plane, Calendar, AlertTriangle, AlertCircle, Lock, Unlock } from 'lucide-react';
 import { Card } from '../../ui/card';
+import { Button } from '../../ui/button';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../../ui/select';
@@ -70,6 +71,7 @@ function Time5MinSelect({
   value,
   onChange,
   required,
+  disabled,
   wrapperClassName,
   wrapperStyle,
   testId,
@@ -77,6 +79,7 @@ function Time5MinSelect({
   value: string;
   onChange: (next: string) => void;
   required?: boolean;
+  disabled?: boolean;
   wrapperClassName?: string;
   wrapperStyle?: React.CSSProperties;
   testId?: string;
@@ -104,6 +107,7 @@ function Time5MinSelect({
         value={safeH}
         onChange={(e) => onChange(`${e.target.value}:${safeM || '00'}`)}
         required={required}
+        disabled={disabled}
         className={TIME5MIN_SELECT_CLS}
       >
         <option value="" disabled hidden>HH</option>
@@ -117,6 +121,7 @@ function Time5MinSelect({
         value={safeM}
         onChange={(e) => onChange(`${safeH || '00'}:${e.target.value}`)}
         required={required}
+        disabled={disabled}
         className={TIME5MIN_SELECT_CLS}
       >
         <option value="" disabled hidden>MM</option>
@@ -142,6 +147,17 @@ export interface EditSectionFlightProps {
   lastCheckedLabel?: ReactNode;
   /** Laravel 422 errors bag (snake_case keys) from Save All Changes. */
   fieldErrors?: Record<string, string[]>;
+  /**
+   * When true, Visit Date/Time are read-only so staff can save other
+   * fields without mutating a historical visit timestamp.
+   */
+  scheduleLocked?: boolean;
+  /** Unlock Visit Date/Time for an intentional reschedule. */
+  onUnlockSchedule?: () => void;
+  /** Original loaded visit date (Y-m-d) — used to suppress stale after:now errors. */
+  originalVisitDate?: string;
+  /** Original loaded visit time (HH:mm). */
+  originalVisitTime?: string;
 }
 
 // 2026-06-28 (round 6.2.76) — "Suite / Venue (legacy)" dropdown
@@ -151,6 +167,18 @@ export interface EditSectionFlightProps {
 // no assigned suite/lounge and was the source of Sky's 2026-06-28
 // directive "remove 'Suite / Venue (legacy)'".
 
+function visitStamp(date?: string, time?: string): string {
+  return `${(date ?? '').trim()} ${(time ?? '').trim()}`.trim();
+}
+
+function isVisitInPast(date?: string, time?: string): boolean {
+  const d = (date ?? '').trim();
+  const t = (time ?? '').trim() || '00:00';
+  if (!d) return false;
+  const ms = new Date(`${d}T${t.length === 5 ? `${t}:00` : t}`).getTime();
+  return Number.isFinite(ms) && ms < Date.now();
+}
+
 export function EditSectionFlight({
   formData,
   onFormChange,
@@ -158,6 +186,10 @@ export function EditSectionFlight({
   headerActions,
   lastCheckedLabel,
   fieldErrors,
+  scheduleLocked = false,
+  onUnlockSchedule,
+  originalVisitDate,
+  originalVisitTime,
 }: EditSectionFlightProps) {
   const flightType = formData.flightType;
   // Round 6.2.74 — Sky's 3h booking-time rule. The range is empty when
@@ -168,7 +200,23 @@ export function EditSectionFlight({
     ? `Must be between ${visitTimeRange.min} and ${visitTimeRange.max}`
     : null;
 
-  const dateTimeError = getLaravelFieldError(fieldErrors, 'date_time');
+  const originalStamp = visitStamp(originalVisitDate, originalVisitTime);
+  const currentStamp = visitStamp(formData.visitDate, formData.visitTime);
+  const visitUnchanged =
+    originalStamp !== '' && currentStamp !== '' && originalStamp === currentStamp;
+
+  // Never surface Laravel after:now on an unchanged historical timestamp.
+  const rawDateTimeError = getLaravelFieldError(fieldErrors, 'date_time');
+  const clientFutureError =
+    !scheduleLocked &&
+    !visitUnchanged &&
+    isVisitInPast(formData.visitDate, formData.visitTime)
+      ? 'The Visit date/time field must be a date after now.'
+      : undefined;
+  const dateTimeError =
+    visitUnchanged || scheduleLocked
+      ? undefined
+      : (rawDateTimeError || clientFutureError);
   const flightNoError = getLaravelFieldError(fieldErrors, 'flight_no');
   const flightTimeError = getLaravelFieldError(fieldErrors, 'flight_time');
   const flightOriginError = getLaravelFieldError(fieldErrors, 'flight_origin');
@@ -425,9 +473,38 @@ export function EditSectionFlight({
           (line 919-969 of the legacy BookingEditView.tsx); now
           merged into the Flight section for visual cohesion. */}
       <div className="mt-6 pt-4 border-t border-gray-200">
-        <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5" /> Visit & Payment
-        </h4>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" /> Visit & Payment
+            {scheduleLocked && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal"
+                data-testid="edit-visit-schedule-locked-badge"
+              >
+                <Lock className="w-3 h-3" />
+                Schedule locked
+              </span>
+            )}
+          </h4>
+          {scheduleLocked && onUnlockSchedule && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              data-testid="edit-visit-unlock-schedule"
+              onClick={onUnlockSchedule}
+            >
+              <Unlock className="w-3.5 h-3.5 mr-1.5" />
+              Unlock to Reschedule
+            </Button>
+          )}
+        </div>
+        {scheduleLocked && (
+          <p className="text-xs text-gray-500 mb-3" data-testid="edit-visit-schedule-lock-hint">
+            Visit Date/Time are locked so you can save other booking details without changing the visit timestamp.
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-6">
           <div>
             <label className="block text-sm text-gray-600 mb-[10px]">Visit Date</label>
@@ -435,7 +512,8 @@ export function EditSectionFlight({
               id="edit-visit-date"
               value={formData.visitDate}
               onChange={(next) => onFormChange({ visitDate: next })}
-              className={`w-full border rounded-md px-3 py-2 text-sm ${dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS}`}
+              disabled={scheduleLocked}
+              className={`w-full border rounded-md px-3 py-2 text-sm ${dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS}${scheduleLocked ? ' opacity-70 cursor-not-allowed' : ''}`}
             />
             <FieldErrorHint message={dateTimeError} testId="edit-visit-date-error" />
           </div>
@@ -459,9 +537,10 @@ export function EditSectionFlight({
             <Time5MinSelect
               value={formData.visitTime}
               onChange={(v) => onFormChange({ visitTime: v })}
+              disabled={scheduleLocked}
               wrapperClassName={`w-full border rounded-md px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-blue-300 ${
                 visitTimeRangeError || dateTimeError ? INPUT_ERROR_CLS : INPUT_OK_CLS
-              }`}
+              }${scheduleLocked ? ' opacity-70 cursor-not-allowed' : ''}`}
               testId="edit-visit-time"
             />
             {(visitTimeRangeError || dateTimeError) ? (

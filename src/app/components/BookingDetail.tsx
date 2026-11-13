@@ -586,11 +586,16 @@ export interface BookingDetailFullProps extends BookingDetailProps {
    * Forwarded to EditSectionFlight for Create-parity red field highlights.
    */
   fieldErrors?: Record<string, string[]>;
+  /** Lock Visit Date/Time until staff unlocks to reschedule. */
+  scheduleLocked?: boolean;
+  onUnlockSchedule?: () => void;
+  originalVisitDate?: string;
+  originalVisitTime?: string;
 }
 
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onProcessRefund, isProcessingRefund = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
- pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors }: BookingDetailFullProps) {
+ pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors, scheduleLocked = false, onUnlockSchedule, originalVisitDate, originalVisitTime }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
   const user = auth?.user ?? null;
   const canMergeProfiles = hasPermission(user, PERMISSIONS.MERGE_PROFILES);
@@ -2306,7 +2311,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <span>By <strong>{booking.supervisorRejectedByName}</strong></span>
             )}
             {booking.supervisorRejectedAt && (
-              <span>{new Date(booking.supervisorRejectedAt).toLocaleString()}</span>
+              <span>
+                {(() => {
+                  const raw = booking.supervisorRejectedAt;
+                  if (!raw) return '';
+                  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(raw) && !/(?:Z|[+-]\d{2}:?\d{2})$/.test(raw)) {
+                    return raw.replace('T', ' ');
+                  }
+                  const d = new Date(raw);
+                  if (Number.isNaN(d.getTime())) return raw;
+                  return d.toLocaleString('sv-SE', { timeZone: 'Asia/Hong_Kong' }).replace('T', ' ');
+                })()}
+              </span>
             )}
           </div>
         </Card>
@@ -2582,7 +2598,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       ))}
       {formData && onFormChange ? (
         <div data-testid="booking-detail-flight-editor">
-            <EditSectionFlight formData={formData} onFormChange={onFormChange} showTransit={showTransit} headerActions={refreshFlightButton} lastCheckedLabel={flightLastCheckedLabel} fieldErrors={fieldErrors} />
+            <EditSectionFlight
+              formData={formData}
+              onFormChange={onFormChange}
+              showTransit={showTransit}
+              headerActions={refreshFlightButton}
+              lastCheckedLabel={flightLastCheckedLabel}
+              fieldErrors={fieldErrors}
+              scheduleLocked={scheduleLocked}
+              onUnlockSchedule={onUnlockSchedule}
+              originalVisitDate={originalVisitDate}
+              originalVisitTime={originalVisitTime}
+            />
                 </div>
       ) : (
         <Card className="p-6" data-testid="booking-detail-flight-readonly">

@@ -148,6 +148,12 @@ export interface Member {
   internalGrouping: string;
   paymentMethod: 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase' | 'Bulk Purchase/Monthly Invoice';
   companyCode: string;
+  /** Linked Company (accounts.company_id) when accountType is Corporate. */
+  companyId?: number | null;
+  companyName?: string;
+  /** Linked Travel Agency (accounts.travel_agency_id) when accountType is Agency. */
+  agencyId?: number | null;
+  agencyName?: string;
   bulkPurchaseCode?: string;
   membershipNumber?: string;
   membershipType?: string;
@@ -266,6 +272,13 @@ export interface MemberDetailProps {
    * Individual-gates (Upfront pair vs all four).
    */
   paymentMethodOptions?: string[];
+
+  /** Debounced company search results for Corporate link autocomplete. */
+  companySearchResults?: Array<{ id: number; company_name: string; company_registration?: string | null }>;
+  onCompanySearchChange?: (value: string) => void;
+  /** Debounced agency search results for Agency link autocomplete. */
+  agencySearchResults?: Array<{ id: number; agency_name: string; agency_code?: string | null }>;
+  onAgencySearchChange?: (value: string) => void;
 
   /**
    * Staff book-on-behalf flag (Group Admin). Container owns the PUT;
@@ -497,6 +510,10 @@ export function MemberDetail({
   showMembershipBenefits: showMembershipBenefitsProp,
   showCreditExtras: showCreditExtrasProp,
   paymentMethodOptions: paymentMethodOptionsProp,
+  companySearchResults = [],
+  onCompanySearchChange,
+  agencySearchResults = [],
+  onAgencySearchChange,
   canBookOnBehalf: canBookOnBehalfProp,
   savingBookOnBehalf = false,
   onToggleBookOnBehalf,
@@ -623,7 +640,15 @@ export function MemberDetail({
     paymentMethod: memberData.paymentMethod,
     companyCode: memberData.companyCode,
     accountType: viewAccountType(memberData.accountType),
+    companyId: memberData.companyId ?? null as number | null,
+    companyName: memberData.companyName ?? '',
+    agencyId: memberData.agencyId ?? null as number | null,
+    agencyName: memberData.agencyName ?? '',
   });
+  const [companyLinkSearch, setCompanyLinkSearch] = useState(memberData.companyName ?? '');
+  const [agencyLinkSearch, setAgencyLinkSearch] = useState(memberData.agencyName ?? '');
+  const [showCompanyLinkDropdown, setShowCompanyLinkDropdown] = useState(false);
+  const [showAgencyLinkDropdown, setShowAgencyLinkDropdown] = useState(false);
   const [appearanceForm, setAppearanceForm] = useState({ ...memberData.appearance });
   const [workForm, setWorkForm] = useState({ ...memberData.workInfo });
   const [observationsForm, setObservationsForm] = useState({ ...memberData.observations });
@@ -650,7 +675,15 @@ export function MemberDetail({
       paymentMethod: memberData.paymentMethod,
       companyCode: memberData.companyCode,
       accountType: viewAccountType(memberData.accountType),
+      companyId: memberData.companyId ?? null,
+      companyName: memberData.companyName ?? '',
+      agencyId: memberData.agencyId ?? null,
+      agencyName: memberData.agencyName ?? '',
     });
+    setCompanyLinkSearch(memberData.companyName ?? '');
+    setAgencyLinkSearch(memberData.agencyName ?? '');
+    setShowCompanyLinkDropdown(false);
+    setShowAgencyLinkDropdown(false);
     setAppearanceForm({ ...memberData.appearance });
     setWorkForm({ ...memberData.workInfo });
     setObservationsForm({ ...memberData.observations });
@@ -670,6 +703,10 @@ export function MemberDetail({
     memberData.paymentMethod,
     memberData.companyCode,
     memberData.accountType,
+    memberData.companyId,
+    memberData.companyName,
+    memberData.agencyId,
+    memberData.agencyName,
     memberData.appearance,
     memberData.workInfo,
     memberData.observations,
@@ -832,6 +869,14 @@ export function MemberDetail({
   // and do not show a false-success toast. Demo mode (no onSave) still
   // toasts locally so standalone figma-ui preview stays usable.
   const handleSave = async () => {
+    if (accountForm.accountType === 'Corporate' && !accountForm.companyId) {
+      toast.error('Please link this customer to a Company');
+      return;
+    }
+    if (accountForm.accountType === 'Agency' && !accountForm.agencyId) {
+      toast.error('Please link this customer to a Travel Agency');
+      return;
+    }
     const updated: Member = {
       ...memberData,
       ...basicForm,
@@ -840,6 +885,10 @@ export function MemberDetail({
       internalGrouping: accountForm.internalGrouping,
       companyCode: accountForm.companyCode,
       accountType: accountForm.accountType,
+      companyId: accountForm.accountType === 'Corporate' ? accountForm.companyId : null,
+      companyName: accountForm.accountType === 'Corporate' ? accountForm.companyName : '',
+      agencyId: accountForm.accountType === 'Agency' ? accountForm.agencyId : null,
+      agencyName: accountForm.accountType === 'Agency' ? accountForm.agencyName : '',
       appearance: appearanceForm,
       workInfo: workForm,
       observations: observationsForm,
@@ -874,7 +923,15 @@ export function MemberDetail({
       paymentMethod: memberData.paymentMethod,
       companyCode: memberData.companyCode,
       accountType: viewAccountType(memberData.accountType),
+      companyId: memberData.companyId ?? null,
+      companyName: memberData.companyName ?? '',
+      agencyId: memberData.agencyId ?? null,
+      agencyName: memberData.agencyName ?? '',
     });
+    setCompanyLinkSearch(memberData.companyName ?? '');
+    setAgencyLinkSearch(memberData.agencyName ?? '');
+    setShowCompanyLinkDropdown(false);
+    setShowAgencyLinkDropdown(false);
     setAppearanceForm({ ...memberData.appearance });
     setWorkForm({ ...memberData.workInfo });
     setObservationsForm({ ...memberData.observations });
@@ -1327,10 +1384,29 @@ export function MemberDetail({
                 <label>Account Type</label>
                 <select
                   value={accountForm.accountType}
-                  onChange={e => setAccountForm(f => ({
-                    ...f,
-                    accountType: viewAccountType(e.target.value),
-                  }))}
+                  onChange={e => {
+                    const next = viewAccountType(e.target.value);
+                    setAccountForm(f => ({
+                      ...f,
+                      accountType: next,
+                      ...(next !== 'Corporate'
+                        ? { companyId: null, companyName: '' }
+                        : {}),
+                      ...(next !== 'Agency'
+                        ? { agencyId: null, agencyName: '' }
+                        : {}),
+                    }));
+                    if (next !== 'Corporate') {
+                      setCompanyLinkSearch('');
+                      setShowCompanyLinkDropdown(false);
+                      onCompanySearchChange?.('');
+                    }
+                    if (next !== 'Agency') {
+                      setAgencyLinkSearch('');
+                      setShowAgencyLinkDropdown(false);
+                      onAgencySearchChange?.('');
+                    }
+                  }}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                   data-testid="member-account-type"
@@ -1343,6 +1419,183 @@ export function MemberDetail({
                   Reporting label for lists and reports. Does not change contracts, login, or Group Admin.
                 </p>
               </div>
+              {accountForm.accountType === 'Corporate' && (
+                <div className="col-span-3" data-testid="member-link-company">
+                  <label>Link to Company *</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={companyLinkSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setCompanyLinkSearch(value);
+                        setAccountForm((f) => (
+                          f.companyName && f.companyName === value
+                            ? f
+                            : { ...f, companyId: null, companyName: '' }
+                        ));
+                        onCompanySearchChange?.(value);
+                        setShowCompanyLinkDropdown(value.trim().length > 0);
+                      }}
+                      onFocus={() => {
+                        if (companyLinkSearch.trim().length > 0) setShowCompanyLinkDropdown(true);
+                      }}
+                      disabled={!isEditing}
+                      placeholder="Search company by name..."
+                      className="w-full disabled:bg-gray-50"
+                      autoComplete="off"
+                      data-testid="member-company-search"
+                    />
+                    {isEditing && showCompanyLinkDropdown && (
+                      <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                        {companySearchResults.length === 0 ? (
+                          <div className="p-3 text-gray-500 text-sm">No matching companies found</div>
+                        ) : (
+                          companySearchResults.map((company) => (
+                            <div
+                              key={company.id}
+                              className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                                accountForm.companyId === company.id ? 'bg-blue-50' : ''
+                              }`}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setAccountForm((f) => ({
+                                  ...f,
+                                  companyId: company.id,
+                                  companyName: company.company_name,
+                                  internalGrouping: f.internalGrouping || company.company_name,
+                                }));
+                                setCompanyLinkSearch(company.company_name);
+                                setShowCompanyLinkDropdown(false);
+                                onCompanySearchChange?.('');
+                              }}
+                              data-testid={`member-company-option-${company.id}`}
+                            >
+                              <div className="font-medium">{company.company_name}</div>
+                              {company.company_registration ? (
+                                <div className="text-xs text-gray-500">{company.company_registration}</div>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {accountForm.companyId ? (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                      <span className="text-sm text-green-700">
+                        Selected: <span className="font-medium">{accountForm.companyName || companyLinkSearch}</span>
+                      </span>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAccountForm((f) => ({ ...f, companyId: null, companyName: '' }));
+                            setCompanyLinkSearch('');
+                            onCompanySearchChange?.('');
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                          aria-label="Clear company link"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Required — binds this customer via accounts.company_id.</p>
+                  )}
+                </div>
+              )}
+              {accountForm.accountType === 'Agency' && (
+                <div className="col-span-3" data-testid="member-link-agency">
+                  <label>Link to Travel Agency *</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={agencyLinkSearch}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setAgencyLinkSearch(value);
+                        setAccountForm((f) => (
+                          f.agencyName && f.agencyName === value
+                            ? f
+                            : { ...f, agencyId: null, agencyName: '' }
+                        ));
+                        onAgencySearchChange?.(value);
+                        setShowAgencyLinkDropdown(value.trim().length > 0);
+                      }}
+                      onFocus={() => {
+                        if (agencyLinkSearch.trim().length > 0) setShowAgencyLinkDropdown(true);
+                      }}
+                      disabled={!isEditing}
+                      placeholder="Search agency by name or code..."
+                      className="w-full disabled:bg-gray-50"
+                      autoComplete="off"
+                      data-testid="member-agency-search"
+                    />
+                    {isEditing && showAgencyLinkDropdown && (
+                      <div className="absolute z-50 mt-1 w-full border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto">
+                        {agencySearchResults.length === 0 ? (
+                          <div className="p-3 text-gray-500 text-sm">No matching agencies found</div>
+                        ) : (
+                          agencySearchResults.map((agency) => (
+                            <div
+                              key={agency.id}
+                              className={`p-3 cursor-pointer hover:bg-blue-50 border-b last:border-b-0 ${
+                                accountForm.agencyId === agency.id ? 'bg-blue-50' : ''
+                              }`}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                const label = agency.agency_code
+                                  ? `${agency.agency_name} (${agency.agency_code})`
+                                  : agency.agency_name;
+                                setAccountForm((f) => ({
+                                  ...f,
+                                  agencyId: agency.id,
+                                  agencyName: label,
+                                  internalGrouping: f.internalGrouping || agency.agency_name,
+                                }));
+                                setAgencyLinkSearch(label);
+                                setShowAgencyLinkDropdown(false);
+                                onAgencySearchChange?.('');
+                              }}
+                              data-testid={`member-agency-option-${agency.id}`}
+                            >
+                              <div className="font-medium">{agency.agency_name}</div>
+                              {agency.agency_code ? (
+                                <div className="text-xs text-gray-500">{agency.agency_code}</div>
+                              ) : null}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {accountForm.agencyId ? (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
+                      <span className="text-sm text-green-700">
+                        Selected: <span className="font-medium">{accountForm.agencyName || agencyLinkSearch}</span>
+                      </span>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAccountForm((f) => ({ ...f, agencyId: null, agencyName: '' }));
+                            setAgencyLinkSearch('');
+                            onAgencySearchChange?.('');
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                          aria-label="Clear agency link"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-500 mt-1">Required — binds this customer via accounts.travel_agency_id.</p>
+                  )}
+                </div>
+              )}
               <div>
                 <label>Internal Grouping</label>
                 {/* Free-text: Corporate / Agency / Individual groups are free-form
