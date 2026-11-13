@@ -322,13 +322,14 @@ export function PromoCodeGeneratedPage({ data: dataProp, onBack = () => {} }: Pr
         </div>
       </div>
 
-      {/* VIP notification banner */}
-      {purchaseCategory && mode === 'generate' && (
+      {mode === 'generate' && (
         <div className="bg-green-50 border-b border-green-200 px-6 py-3 flex items-center gap-3 shrink-0">
           <CheckCheck className="w-5 h-5 text-green-600 shrink-0" />
           <p className="text-sm text-green-800">
-            <span className="font-medium">VIP Account Creation Request Sent.</span>{' '}
-            VIP accounts creation request is sent to the VIP Lounge team.
+            <span className="font-medium">Promo Codes Generated.</span>{' '}
+            {codes.length} code{codes.length === 1 ? '' : 's'} created
+            {companyName ? ` for ${companyName}` : ''}
+            {purchaseCategory ? ` (${purchaseCategory})` : ''}.
           </p>
         </div>
       )}

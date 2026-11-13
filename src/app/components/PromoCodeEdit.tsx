@@ -317,10 +317,16 @@ export function PromoCodeEdit({
       return;
     }
 
+    // Shared autofill (unique prefix for blank "Custom Contract").
+    // Imported from production wrapper via dynamic path is awkward in figma;
+    // inline the same rules here so Make + SPA stay aligned.
     const rawName = (contract.promoCodeName ?? '').trim();
-    const cleanedPrefix = rawName
-      ? rawName.toUpperCase().replace(/[^A-Z0-9]/g, '')
-      : generateShortCode(contract.primaryName);
+    const fromName = rawName.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let cleanedPrefix = fromName || generateShortCode(contract.primaryName);
+    if (!fromName || fromName === 'CUSTOMCONTRACT' || fromName === 'CUSTOM') {
+      const ref = (contract.purchaseRef ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (ref) cleanedPrefix = (`CC${ref}`).slice(0, 20);
+    }
     setPrefix(cleanedPrefix || generateShortCode(contract.primaryName));
 
     const qty = contract.promoCodeQuantity ?? contract.sessionsAdded;
