@@ -54,7 +54,9 @@ import {
   discountAmountFromPercent,
   lineBaseTotal,
   lineDiscountsFromItemOverrides,
+  lineSurchargesFromItemOverrides,
   mergePriceOverridesFromItemOverrides,
+  resolveLimousineCatalogUnit,
   sanitizeItemOverrides,
   itemOverridesFromPersisted,
   type ItemOverride,
@@ -69,7 +71,7 @@ import {
   type InferLineProductContext,
 } from '../../../../../lib/pricing/lineItems';
 import {
-  CatalogPriceLabel,
+  UnitPriceInput,
   LineItemDiscountInput,
   LineItemSubtotalLabel,
   SharedLineItemsTable,
@@ -1020,9 +1022,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     const fromForm = sanitizeItemOverrides(formData?.itemOverrides);
     const hydrated = Object.keys(fromForm).length > 0
       ? fromForm
-      : itemOverridesFromPersisted(formData?.priceOverrides, formData?.lineDiscounts);
+      : itemOverridesFromPersisted(
+        formData?.priceOverrides,
+        formData?.lineDiscounts,
+        undefined,
+        formData?.lineSurcharges,
+      );
     setItemOverrides(hydrated);
-  }, [formData?.itemOverrides, formData?.priceOverrides, formData?.lineDiscounts]);
+  }, [formData?.itemOverrides, formData?.priceOverrides, formData?.lineDiscounts, formData?.lineSurcharges]);
 
   const writeItemOverride = (key: string, patch: ItemOverride) => {
     const rounded: ItemOverride = { ...patch };
@@ -1031,6 +1038,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     }
     if (typeof rounded.discountPercent === 'number' && Number.isFinite(rounded.discountPercent)) {
       rounded.discountPercent = Math.round(rounded.discountPercent * 100) / 100;
+    }
+    if (typeof rounded.surchargeAmount === 'number' && Number.isFinite(rounded.surchargeAmount)) {
+      rounded.surchargeAmount = Math.round(rounded.surchargeAmount * 100) / 100;
+    }
+    if (typeof rounded.unitPrice === 'number' && Number.isFinite(rounded.unitPrice)) {
+      rounded.unitPrice = Math.round(rounded.unitPrice * 100) / 100;
     }
     const next: Record<string, ItemOverride> = {
       ...itemOverrides,
@@ -1041,6 +1054,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       itemOverrides: next,
       priceOverrides: mergePriceOverridesFromItemOverrides(formData?.priceOverrides, next),
       lineDiscounts: lineDiscountsFromItemOverrides(next),
+      lineSurcharges: lineSurchargesFromItemOverrides(next),
     });
   };
 
@@ -1071,6 +1085,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       itemOverrides: next,
       priceOverrides: mergePriceOverridesFromItemOverrides(formData?.priceOverrides, next),
       lineDiscounts: lineDiscountsFromItemOverrides(next),
+      lineSurcharges: lineSurchargesFromItemOverrides(next),
     };
   };
 
@@ -1092,17 +1107,38 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       const staged = addonStagedOverridePatch(selectedAddon);
       if (staged.itemOverrides) setItemOverrides(staged.itemOverrides);
       if (selectedAddon === 'Limousine Transfer') {
+        const alreadyOn = Boolean(formData.hasLimousine);
+        const enteredStops = limoStops
+          .filter((s) => s.location.trim())
+          .map((s) => ({ id: s.id, type: s.type, location: s.location.trim() }));
+        const existingStops = (formData.limoStops ?? []).filter((s) => s.location.trim());
+        const prevQty = Math.max(
+          1,
+          Number(formData.limousineQuantity)
+            || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
+            || 1,
+        );
+        const addQty = Math.max(1, addonQty || 1);
+        const nextStops = alreadyOn
+          ? [
+              ...existingStops,
+              ...enteredStops.map((s, idx) => ({
+                ...s,
+                id: Date.now() + idx,
+                type: (existingStops.length === 0 && idx === 0 ? s.type : 'Destination') as 'Pick-up' | 'Destination',
+              })),
+            ]
+          : enteredStops;
         onFormChange({
           hasLimousine: true,
-          limoStops: limoStops.map((s) => ({
-            id: s.id,
-            type: s.type,
-            location: s.location,
-          })),
+          limoStops: nextStops.length > 0
+            ? nextStops
+            : [{ id: 1, type: 'Pick-up' as const, location: '' }],
+          limousineQuantity: alreadyOn ? prevQty + addQty : addQty,
           limousinePickupTime:
             (formData?.flightType ?? booking.flightType) === 'Arrival'
               ? ''
-              : limoPickupTimeDraft,
+              : (limoPickupTimeDraft || formData.limousinePickupTime || ''),
           ...staged,
         });
       } else if (selectedAddon === 'Wheelchair Assistance') {
@@ -1114,19 +1150,25 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       } else if (selectedAddon === 'Security Escort Service') {
         onFormChange({ hasSecurity: true, ...staged });
       } else if (selectedAddon === 'Lounge Extension') {
+        const prevHours = formData.hasLoungeExtension
+          ? Math.max(1, formData.loungeExtensionQty ?? 1)
+          : 0;
+        const addHours = Math.max(1, Math.min(6, addonQty || 1));
         onFormChange({
           hasLoungeExtension: true,
-          loungeExtensionQty: Math.max(1, Math.min(6, addonQty || 1)),
+          loungeExtensionQty: Math.max(1, Math.min(6, (prevHours || 0) + addHours)),
           ...staged,
         });
       } else {
-        // Lane B / unexpected catalog name — qty-only selection.
+        // Lane B catalog — increment qty when re-adding same name; keep price override.
         const prev = formData.catalogAddonSelections ?? [];
+        const existing = prev.find((s) => s.name === selectedAddon);
         const without = prev.filter((s) => s.name !== selectedAddon);
+        const nextQty = (existing?.quantity ?? 0) + Math.max(1, addonQty || 1);
         onFormChange({
           catalogAddonSelections: [
             ...without,
-            { name: selectedAddon, quantity: Math.max(1, addonQty || 1) },
+            { name: selectedAddon, quantity: nextQty },
           ],
           ...staged,
         });
@@ -1159,22 +1201,34 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     ...(invoiceShowLimo
       ? [{
           overrideKey: 'addon:Limousine Transfer',
-          catalogUnitPrice: Number(
-            booking.addons?.find((a) => a.name === 'Limousine Transfer')?.unitPrice ?? 800,
-          ),
-          quantity: Number(
-            booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity ?? 1,
+          catalogUnitPrice: resolveLimousineCatalogUnit(bookableItemPrices),
+          quantity: Math.max(
+            1,
+            Number(formData?.limousineQuantity)
+              || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
+              || 1,
           ),
         }]
       : []),
     ...(invoiceShowShopping
-      ? [{ overrideKey: 'addon:In-Lounge Shopping', catalogUnitPrice: 500, quantity: 1 }]
+      ? [{
+          overrideKey: 'addon:In-Lounge Shopping',
+          catalogUnitPrice: Number(
+            bookableItemPrices?.['In-Lounge Shopping']
+              ?? booking.addons?.find((a) => /shopping/i.test(a.name))?.unitPrice
+              ?? 0,
+          ),
+          quantity: 1,
+        }]
       : []),
     ...(invoiceShowSecurity
       ? [{
           overrideKey: 'addon:Security Escort Service',
           catalogUnitPrice: Number(
-            booking.addons?.find((a) => a.name === 'Security Escort Service')?.unitPrice ?? 1200,
+            bookableItemPrices?.['Security Escort Service']
+              ?? booking.addons?.find((a) => a.name === 'Security Escort Service')?.unitPrice
+              ?? CATALOG_ADDONS.find((a) => a.key === 'Security Escort Service')?.defaultPrice
+              ?? 1200,
           ),
           quantity: Number(
             booking.addons?.find((a) => a.name === 'Security Escort Service')?.quantity ?? 1,
@@ -1185,7 +1239,9 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
       ? [{
           overrideKey: 'addon:Wheelchair Assistance',
           catalogUnitPrice: Number(
-            booking.addons?.find((a) => a.name === 'Wheelchair Assistance')?.unitPrice ?? 0,
+            bookableItemPrices?.['Wheelchair Assistance']
+              ?? booking.addons?.find((a) => a.name === 'Wheelchair Assistance')?.unitPrice
+              ?? 0,
           ),
           quantity: Number(
             booking.addons?.find((a) => a.name === 'Wheelchair Assistance')?.quantity ?? 1,
@@ -3411,7 +3467,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
         <div className="flex items-center justify-between mb-4">
             <div>
           <h3 className="text-sm uppercase tracking-wide text-gray-500">Service Items</h3>
-            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Unit prices are catalog list prices. Staff may apply a per-line discount as a percent or HK$ amount. Contract, account, promo, and membership discounts apply after those prices and are listed below the lines.</p>
+            <p className="text-xs text-gray-500 mt-1">Line prices for this booking. Staff may edit unit price and apply a per-line discount (% / −HK$) or surcharge (+HK$ for extra stops / child seats). Contract, account, promo, and membership discounts apply after those prices and are listed below the lines.</p>
             </div>
           </div>
         {onFormChange && (
@@ -3444,7 +3500,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <textarea
                       className="w-full px-3 py-2 border rounded text-sm resize-none"
                       rows={2}
-                    defaultValue=""
+                      value={formData?.serviceItemRemarks?.suiteLounge ?? ''}
+                      readOnly={!onFormChange}
+                      onChange={onFormChange ? (e) => onFormChange({
+                        serviceItemRemarks: {
+                          ...(formData?.serviceItemRemarks ?? {}),
+                          suiteLounge: e.target.value,
+                        },
+                      }) : undefined}
                     />
                   </div>
                 </td>
@@ -3482,10 +3545,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <td colSpan={5} className="px-4 py-2 bg-gray-50">
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                        <textarea 
+                        <textarea
                           className="w-full px-3 py-2 border rounded text-sm resize-none"
                           rows={2}
-                          defaultValue="Food & beverage complimentary — dietary restrictions noted"
+                          value={formData?.serviceItemRemarks?.foodBeverage ?? ''}
+                          readOnly={!onFormChange}
+                          onChange={onFormChange ? (e) => onFormChange({
+                            serviceItemRemarks: {
+                              ...(formData?.serviceItemRemarks ?? {}),
+                              foodBeverage: e.target.value,
+                            },
+                          }) : undefined}
                         />
                       </div>
                     </td>
@@ -3503,20 +3573,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
               {/* Limousine Service */}
               {invoiceShowLimo && (() => {
-                // Round 6.1.2 (2026-06-07): render the structured limo
-                // addon (quantity / unit_price / subtotal / destinations)
-                // from `booking.addons` instead of the previous hard-coded
-                // `defaultValue={1}` / `defaultValue="800.00"` /
-                // `defaultValue="Pickup at Terminal 1"` which never
-                // reflected the staff's actual input. Fall back to the
-                // legacy single-line display only when `booking.addons`
-                // is missing or empty (legacy bookings created before
-                // the round 4.x AddonsSyncService shipped).
+                // Structured limo (qty / unit / destinations) — customer Step 3
+                // special add-on parity. Catalog unit is always the aligned
+                // HK$1,500 list (never legacy HK$800 stamps).
                 const limoAddon = booking.addons?.find(
                   (a) => a.name === 'Limousine Transfer',
                 );
-                const limoQty = limoAddon?.quantity ?? 1;
-                const limoCatalog = Number(limoAddon?.unitPrice ?? 800);
+                const limoQty = Math.max(
+                  1,
+                  Number(formData?.limousineQuantity)
+                    || Number(limoAddon?.quantity)
+                    || 1,
+                );
+                const limoCatalog = resolveLimousineCatalogUnit(bookableItemPrices);
                 const limoDestinations = limoAddon?.destinations ?? [];
                 const limoPickupTime = formData?.limousinePickupTime || limoAddon?.pickupTime || '';
                 const isArrival = (formData?.flightType ?? booking.flightType) === 'Arrival';
@@ -3537,6 +3606,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           {renderAddonRemove('Limousine Transfer', () => {
                             onFormChange?.({
                               hasLimousine: false,
+                              limousineQuantity: 1,
                               limoStops: [{ id: 1, type: 'Pick-up', location: '' }],
                               limousinePickupTime: '',
                             });
@@ -3544,17 +3614,60 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <input
-                          type="number"
-                          defaultValue={limoQty}
-                          className="w-20 px-2 py-1 border rounded text-center"
-                          min="1"
-                          readOnly
-                        />
+                        {onFormChange ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => onFormChange({
+                                hasLimousine: true,
+                                limousineQuantity: Math.max(1, limoQty - 1),
+                              })}
+                              disabled={limoQty <= 1}
+                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30"
+                              aria-label="Decrease limousine vehicles"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <input
+                              type="number"
+                              value={limoQty}
+                              onChange={(e) => {
+                                const next = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                onFormChange({ hasLimousine: true, limousineQuantity: next });
+                              }}
+                              className="w-14 px-2 py-1 border rounded text-center"
+                              min="1"
+                              data-testid="service-items-qty-addon:Limousine Transfer"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => onFormChange({
+                                hasLimousine: true,
+                                limousineQuantity: limoQty + 1,
+                              })}
+                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50"
+                              aria-label="Increase limousine vehicles"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            value={limoQty}
+                            className="w-20 px-2 py-1 border rounded text-center"
+                            min="1"
+                            readOnly
+                          />
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <CatalogPriceLabel
+                        <UnitPriceInput
+                          overrideKey="addon:Limousine Transfer"
                           catalogUnit={limoCatalog}
+                          itemOverrides={itemOverrides}
+                          onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                          readOnly={!onFormChange}
                           testId="service-items-unit-price-addon:Limousine Transfer"
                         />
                       </td>
@@ -3648,6 +3761,20 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                 </div>
                               </div>
                               )}
+                              <div className="flex flex-col gap-1 pt-1">
+                                <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                                <textarea
+                                  className="w-full px-3 py-2 border rounded text-sm resize-none bg-white"
+                                  rows={2}
+                                  value={formData?.serviceItemRemarks?.limousine ?? ''}
+                                  onChange={(e) => onFormChange({
+                                    serviceItemRemarks: {
+                                      ...(formData?.serviceItemRemarks ?? {}),
+                                      limousine: e.target.value,
+                                    },
+                                  })}
+                                />
+                              </div>
                             </div>
                           );
                         })() : (
@@ -3656,7 +3783,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <textarea
                             className="w-full px-3 py-2 border rounded text-sm resize-none"
                             rows={2}
-                            defaultValue={limoRemarks}
+                            value={formData?.serviceItemRemarks?.limousine || limoRemarks}
                             readOnly
                           />
                         </div>
@@ -3688,22 +3815,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         })}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <input 
-                        type="number" 
-                        defaultValue={1} 
-                        className="w-20 px-2 py-1 border rounded text-center"
-                        min="1"
-                        readOnly
-                      />
-                    </td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-700">1</td>
                     <td className="px-4 py-3 text-right">
-                      <CatalogPriceLabel catalogUnit={500} testId="service-items-unit-price-addon:In-Lounge Shopping" />
+                      <UnitPriceInput
+                        overrideKey="addon:In-Lounge Shopping"
+                        catalogUnit={Number(bookableItemPrices?.['In-Lounge Shopping'] ?? 0)}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        readOnly={!onFormChange}
+                        testId="service-items-unit-price-addon:In-Lounge Shopping"
+                      />
                     </td>
                     <td className="px-4 py-3 text-right">
                       <LineItemDiscountInput
                         overrideKey="addon:In-Lounge Shopping"
-                        catalogUnit={500}
+                        catalogUnit={Number(bookableItemPrices?.['In-Lounge Shopping'] ?? 0)}
                         qty={1}
                         itemOverrides={itemOverrides}
                         onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
@@ -3714,7 +3840,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <LineItemSubtotalLabel
                         itemOverrides={itemOverrides}
                         overrideKey="addon:In-Lounge Shopping"
-                        catalogUnit={500}
+                        catalogUnit={Number(bookableItemPrices?.['In-Lounge Shopping'] ?? 0)}
                         qty={1}
                       />
                     </td>
@@ -3847,7 +3973,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowSecurity && (() => {
                 const securityAddon = booking.addons?.find((a) => a.name === 'Security Escort Service');
                 const qty = Number(securityAddon?.quantity ?? 1);
-                const catalog = Number(securityAddon?.unitPrice ?? 1200);
+                const catalog = Number(
+                  bookableItemPrices?.['Security Escort Service']
+                    ?? securityAddon?.unitPrice
+                    ?? CATALOG_ADDONS.find((a) => a.key === 'Security Escort Service')?.defaultPrice
+                    ?? 1200,
+                );
                 return (
                   <tr data-testid="invoice-additional-security-row">
                     <td className="px-4 py-3">
@@ -3864,8 +3995,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      <CatalogPriceLabel
+                      <UnitPriceInput
+                        overrideKey="addon:Security Escort Service"
                         catalogUnit={catalog}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        readOnly={!onFormChange}
                         testId="service-items-unit-price-addon:Security Escort Service"
                       />
                     </td>
@@ -3894,7 +4029,11 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               {invoiceShowWheelchair && (() => {
                 const wcAddon = booking.addons?.find((a) => a.name === 'Wheelchair Assistance');
                 const qty = Number(wcAddon?.quantity ?? 1);
-                const catalog = Number(wcAddon?.unitPrice ?? 0);
+                const catalog = Number(
+                  bookableItemPrices?.['Wheelchair Assistance']
+                    ?? wcAddon?.unitPrice
+                    ?? 0,
+                );
                 return (
                   <>
                   <tr data-testid="invoice-additional-wheelchair-row">
@@ -3912,8 +4051,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-700">{qty}</td>
                     <td className="px-4 py-3 text-right">
-                      <CatalogPriceLabel
+                      <UnitPriceInput
+                        overrideKey="addon:Wheelchair Assistance"
                         catalogUnit={catalog}
+                        itemOverrides={itemOverrides}
+                        onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                        readOnly={!onFormChange}
                         testId="service-items-unit-price-addon:Wheelchair Assistance"
                       />
                     </td>
@@ -4006,15 +4149,19 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     />
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <CatalogPriceLabel
-                      catalogUnit={row.unitPrice}
+                    <UnitPriceInput
+                      overrideKey={`addon:${row.name}`}
+                      catalogUnit={Number(row.unitPrice ?? bookableItemPrices?.[row.name] ?? 0)}
+                      itemOverrides={itemOverrides}
+                      onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                      readOnly={!onFormChange}
                       testId={`service-items-unit-price-addon:${row.name}`}
                     />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <LineItemDiscountInput
                       overrideKey={`addon:${row.name}`}
-                      catalogUnit={row.unitPrice}
+                      catalogUnit={Number(row.unitPrice ?? bookableItemPrices?.[row.name] ?? 0)}
                       qty={Number(row.quantity ?? 1)}
                       itemOverrides={itemOverrides}
                       onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
@@ -4025,7 +4172,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                     <LineItemSubtotalLabel
                       itemOverrides={itemOverrides}
                       overrideKey={`addon:${row.name}`}
-                      catalogUnit={row.unitPrice}
+                      catalogUnit={Number(row.unitPrice ?? bookableItemPrices?.[row.name] ?? 0)}
                       qty={Number(row.quantity ?? 1)}
                     />
                   </td>

@@ -360,6 +360,10 @@ export interface BookingFormData {
   limoStops: EditLimoStop[];
   /** Kind W HH:mm limo pickup clock. */
   limousinePickupTime?: string;
+  /** Limousine vehicle / trip count (customer Step 3 parity). */
+  limousineQuantity?: number;
+  /** Extra charges (additional stops / child seats). Keys match priceOverrides. */
+  lineSurcharges?: Record<string, number>;
   wheelchairPassenger: string;
   selectedAddonKeys: string[];
   /** 2026-07-16 — Lane B catalog picks (qty-only). */
@@ -440,6 +444,15 @@ export interface BookingFormData {
   showBillingInfo?: boolean;
   /** Customer-facing invoice Service Remarks (`advanced_details.invoice_remarks`). */
   invoiceRemarks?: string;
+  /**
+   * Staff-only remarks under Service Items (Lounge / F&B / Limousine).
+   * Persisted as `advanced_details.service_item_remarks` (soft field).
+   */
+  serviceItemRemarks?: {
+    suiteLounge?: string;
+    foodBeverage?: string;
+    limousine?: string;
+  };
   // 2026-06-29 (round 6.2.78, Bug #4) — Status Management card
   // wires through the master Save. The 3 controls (Booking
   // Status dropdown / Payment Status dropdown / Status Update
