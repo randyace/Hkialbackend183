@@ -397,7 +397,7 @@ export function POSCheckout({
               <span className="font-semibold">{bookingData.guestName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">F&amp;B Total:</span>
+              <span className="text-gray-600">F&B Total:</span>
               <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
             </div>
           </div>
@@ -420,7 +420,7 @@ export function POSCheckout({
           </Button>
           <div>
             <h1>Checkout - {bookingNoProp}</h1>
-            <p className="text-gray-600">Collect F&amp;B payment before releasing the suite</p>
+            <p className="text-gray-600">Collect F&B payment before releasing the suite</p>
           </div>
         </div>
         <Badge className="bg-green-600 text-white text-lg px-4 py-2">
@@ -648,7 +648,7 @@ export function POSCheckout({
                 {hasPaymentLink && paymentLinkUrl ? (
                   <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                     <Label htmlFor="payment-link-url" className="text-sm">
-                      Payment URL &amp; QR Code
+                      Payment URL & QR Code
                     </Label>
                     <div className="flex flex-col gap-2 sm:flex-row">
                       <Input
@@ -787,7 +787,7 @@ export function POSCheckout({
               </div>
 
               <div className="border-t pt-3">
-                <p className="text-sm text-gray-600 mb-2">Food &amp; Beverage</p>
+                <p className="text-sm text-gray-600 mb-2">Food & Beverage</p>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span>HKD {fnbSubtotal.toFixed(2)}</span>
@@ -800,7 +800,7 @@ export function POSCheckout({
 
               <div className="border-t pt-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">F&amp;B Total</span>
+                  <span className="text-gray-600">F&B Total</span>
                   <span className="font-semibold">HKD {fnbSubtotal.toFixed(2)}</span>
                 </div>
                 {paidFnbAmount > 0 ? (

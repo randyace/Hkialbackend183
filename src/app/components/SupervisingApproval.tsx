@@ -441,7 +441,7 @@ export function SupervisingApproval({
       <div className="flex items-center justify-between">
         <div>
           <h1>Supervising Approval</h1>
-          <p className="text-gray-600">Supervisor &amp; manager review of booking prices and invoices before finalisation</p>
+          <p className="text-gray-600">Supervisor & manager review of booking prices and invoices before finalisation</p>
         </div>
         {totalPending > 0 && (
           <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-sm text-blue-700">
@@ -689,7 +689,7 @@ export function SupervisingApproval({
             <>
               <CheckCircle className="w-16 h-16 text-green-300 mb-4" />
               <p className="text-gray-700 mb-1">No invoices pending supervisor review</p>
-              <p className="text-sm text-gray-500">All submitted price &amp; invoice reviews have been processed.</p>
+              <p className="text-sm text-gray-500">All submitted price & invoice reviews have been processed.</p>
             </>
           ) : activeTab === 'revision' ? (
             <>
@@ -722,7 +722,7 @@ export function SupervisingApproval({
                 <tr>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Invoice / Booking</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Guest / Account</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Suite &amp; Visit</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Suite & Visit</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Flight</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Services</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Payment</th>

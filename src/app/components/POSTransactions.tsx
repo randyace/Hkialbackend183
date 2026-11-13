@@ -182,7 +182,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
     <div className="px-6 py-5 space-y-6">
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-          Guest Information &amp; Dietary
+          Guest Information & Dietary
         </h3>
 
         {booking.guests.length === 0 ? (
@@ -251,7 +251,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
 
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-          Suites &amp; Order Items
+          Suites & Order Items
         </h3>
 
         {booking.posOrders.length === 0 ? (
@@ -469,7 +469,7 @@ export function PosTransactions({
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Main Guest</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Suites</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Orders</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">F&amp;B Subtotal</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">F&B Subtotal</th>
                 <th className="px-4 py-3 w-12" />
               </tr>
             </thead>

@@ -329,8 +329,12 @@ export interface MemberDetailProps {
   onPreferenceFormChange?: (form: { category: string; preference: string; }) => void;
   allergyTarget?: 'customer' | 'spouse';
   dietaryTarget?: 'customer' | 'spouse';
-  allergyForm?: { allergen: string; severity: string; notes: string; };
-  dietaryForm?: { requirement: string; notes: string; };
+  allergyForm?: { allergen: string; severity: string; notes: string; code?: string | null };
+  dietaryForm?: { requirement: string; notes: string; code?: string | null };
+  /** Optional catalog-backed picker slot replacing free-text allergen name. */
+  allergyNamePicker?: React.ReactNode;
+  /** Optional catalog-backed picker slot replacing free-text dietary requirement. */
+  dietaryNamePicker?: React.ReactNode;
   onAllergyTargetChange?: (target: 'customer' | 'spouse') => void;
   onDietaryTargetChange?: (target: 'customer' | 'spouse') => void;
   onAllergyFormChange?: (form: { allergen: string; severity: string; notes: string; }) => void;
@@ -559,6 +563,8 @@ export function MemberDetail({
   dietaryTarget: dietaryTargetProp,
   allergyForm: allergyFormProp,
   dietaryForm: dietaryFormProp,
+  allergyNamePicker,
+  dietaryNamePicker,
   onAllergyTargetChange,
   onDietaryTargetChange,
   onAllergyFormChange,
@@ -1040,7 +1046,7 @@ export function MemberDetail({
               {/* Account Quotas & Credit — under status / account-type badges */}
               <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4 shadow-sm">
                 <h3 className="text-sm font-semibold text-[#0f2942] mb-2">
-                  Account Quotas &amp; Credit
+                  Account Quotas & Credit
                 </h3>
                 <div className="grid grid-cols-3 gap-4 text-sm" data-testid="member-quota-credit-card">
                   <div>
@@ -3089,13 +3095,15 @@ export function MemberDetail({
           <div className="space-y-4">
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Allergen</label>
-              <input
-                type="text"
-                value={activeAllergyForm.allergen}
-                onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
-                placeholder="e.g., Peanuts, Shellfish, Dairy"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              />
+              {allergyNamePicker ?? (
+                <input
+                  type="text"
+                  value={activeAllergyForm.allergen}
+                  onChange={e => { onAllergyFormChange?.({ ...activeAllergyForm, allergen: e.target.value }); setMockAllergyForm(f => ({ ...f, allergen: e.target.value })); }}
+                  placeholder="e.g., Peanuts, Shellfish, Dairy"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+              )}
             </div>
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Severity</label>
@@ -3165,13 +3173,15 @@ export function MemberDetail({
           <div className="space-y-4">
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Requirement</label>
-              <input
-                type="text"
-                value={activeDietaryForm.requirement}
-                onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, requirement: e.target.value }); setMockDietaryForm(f => ({ ...f, requirement: e.target.value })); }}
-                placeholder="e.g., Vegetarian, Low Sodium, Halal"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md"
-              />
+              {dietaryNamePicker ?? (
+                <input
+                  type="text"
+                  value={activeDietaryForm.requirement}
+                  onChange={e => { onDietaryFormChange?.({ ...activeDietaryForm, requirement: e.target.value }); setMockDietaryForm(f => ({ ...f, requirement: e.target.value })); }}
+                  placeholder="e.g., Vegetarian, Low Sodium, Halal"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md"
+                />
+              )}
             </div>
             <div>
               <label style={{ marginBottom: '10px', display: 'block' }}>Notes</label>
@@ -3380,7 +3390,7 @@ export function MemberDetail({
 
             {/* ── Section C: Lounge & Guest Details ──────────────────── */}
             <div>
-              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge &amp; Guest Details</h4>
+              <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b">Lounge & Guest Details</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Lobby / Suite</label>

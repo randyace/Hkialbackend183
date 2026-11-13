@@ -759,8 +759,8 @@ export function BookingInvoiceDialog({
                     <div className="flex items-center gap-2">
                       <Utensils className="w-4 h-4 text-green-600" />
                       <div>
-                        <p className="font-medium">Food &amp; Beverage (incl. Pre-order)</p>
-                        <p className="text-sm text-gray-500">Premium selection — all food &amp; drinks included</p>
+                        <p className="font-medium">Food & Beverage (incl. Pre-order)</p>
+                        <p className="text-sm text-gray-500">Premium selection — all food & drinks included</p>
                       </div>
                     </div>
                   </td>
@@ -788,7 +788,7 @@ export function BookingInvoiceDialog({
                   <td colSpan={3} className="px-6 py-2 text-right text-sm text-green-700">
                     <span className="inline-flex items-center gap-1.5">
                       <Utensils className="w-3.5 h-3.5" />
-                      Food &amp; Beverage (incl. pre-order):
+                      Food & Beverage (incl. pre-order):
                     </span>
                   </td>
                   <td className="px-6 py-2 text-right text-sm font-medium text-green-600 whitespace-nowrap">Complimentary</td>
@@ -827,7 +827,7 @@ export function BookingInvoiceDialog({
                       <div className="flex flex-col items-end gap-1">
                         <span className="text-sm font-medium text-amber-800 flex items-center gap-1.5">
                           <Ticket className="w-3.5 h-3.5" />
-                          Entry Vouchers Applied ({voucherCount} × HK${voucherUnitValue.toLocaleString()} — Account Owner &amp; Spouse):
+                          Entry Vouchers Applied ({voucherCount} × HK${voucherUnitValue.toLocaleString()} — Account Owner & Spouse):
                         </span>
                         <div className="flex gap-1.5 flex-wrap justify-end">
                           {Array.from({ length: voucherCount }, (_, i) => (

@@ -248,6 +248,8 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   onEdit?: () => void;
   onApprove?: (id: number) => void;
   isLoading?: boolean;
+  /** Master catalog labels for food-allergy autocomplete (EN + aliases). */
+  allergenCatalogSuggestions?: string[];
   /**
    * 2026-06-29 (round 6.2.80, Bug #6 / Pilot 2 Bug 3) — active
    * promo-code catalog forwarded to `EditSectionAccountInfo`
@@ -595,7 +597,7 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   originalVisitTime?: string;
 }
 
-export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onProcessRefund, isProcessingRefund = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
+export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, allergenCatalogSuggestions = [], onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onProcessRefund, isProcessingRefund = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors, scheduleLocked = false, onUnlockSchedule, originalVisitDate, originalVisitTime }: BookingDetailFullProps) {
   const auth = useAuthContextOptional();
@@ -3252,9 +3254,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </label>
                       <input
                         type="text"
+                        list="booking-detail-allergen-catalog"
                         value={p.foodAllergies}
                         onChange={e => updatePassenger(idx, 'foodAllergies', e.target.value)}
-                        placeholder="e.g. Shellfish, Peanuts, Dairy — leave blank if none"
+                        placeholder="Search catalog or type e.g. Peanuts, Dairy — leave blank if none"
                         className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 ${p.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                       />
                       {p.foodAllergies && (
@@ -3267,6 +3270,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </div>
               );
             })}
+
+            {allergenCatalogSuggestions.length > 0 ? (
+              <datalist id="booking-detail-allergen-catalog">
+                {allergenCatalogSuggestions.map((label) => (
+                  <option key={label} value={label} />
+                ))}
+              </datalist>
+            ) : null}
 
             {/* Passenger cards are controlled by the parent's formData and
                 persist through the single master Save below. The VIP/NFG
@@ -3438,6 +3449,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       </label>
                       <input
                         type="text"
+                        list="booking-detail-allergen-catalog"
                         value={g.foodAllergies}
                         onChange={e => updateNonFlyingGuest(idx, 'foodAllergies', e.target.value)}
                         placeholder="e.g. Peanuts, Shellfish — leave blank if none"

@@ -511,7 +511,7 @@ export function SystemUserEdit({
           className="space-y-4"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="profile">Profile &amp; Security</TabsTrigger>
+            <TabsTrigger value="profile">Profile & Security</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
           </TabsList>
 
@@ -604,7 +604,7 @@ export function SystemUserEdit({
                     <option value="Management">Management</option>
                     <option value="Security">Security</option>
                     <option value="Housekeeping">Housekeeping</option>
-                    <option value="F&B Services">F&amp;B Services</option>
+                    <option value="F&B Services">F&B Services</option>
                     <option value="Business Development">Business Development</option>
                   </select>
                 </div>

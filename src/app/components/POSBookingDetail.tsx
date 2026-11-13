@@ -1369,7 +1369,7 @@ export function POSBookingDetail({
               <div className="flex items-center gap-1.5 mb-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                 <h3 className="text-xs font-semibold text-red-800 uppercase tracking-wide">
-                  Food Allergies &amp; Dietary
+                  Food Allergies & Dietary
                 </h3>
               </div>
               <div className="space-y-2">
@@ -1460,7 +1460,7 @@ export function POSBookingDetail({
             aria-expanded={isContextDetailsOpen}
           >
             <span className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-              Member, Booking &amp; Payment Details
+              Member, Booking & Payment Details
             </span>
             <ChevronDown
               className={`h-4 w-4 shrink-0 text-gray-500 transition-transform ${isContextDetailsOpen ? 'rotate-180' : ''}`}

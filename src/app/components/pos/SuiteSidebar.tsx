@@ -402,7 +402,7 @@ export function SuiteSidebar({
   const renderGuestAllergiesSection = (sectionGuests: PosOccupiedGuest[]) => (
     <div className="space-y-3">
       <h3 className="text-sm uppercase tracking-wide text-gray-500">
-        Food Allergies &amp; Dietary
+        Food Allergies & Dietary
       </h3>
       {sectionGuests.length === 0 ? (
         <p className="text-sm text-gray-400">No guest information available.</p>

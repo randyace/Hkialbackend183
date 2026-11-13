@@ -1185,7 +1185,7 @@ export function BookingReviewPage({
                   </div>
                 ) : null}
               </Field>
-              <Field label="Visit Date &amp; Time"><span>{booking.dateTime}</span></Field>
+              <Field label="Visit Date & Time"><span>{booking.dateTime}</span></Field>
               <Field label="Payment Mode">
                 <Badge className={`text-xs ${paymentModeBadgeClass(booking.paymentMode)}`}>{formatPaymentLabel(booking)}</Badge>
               </Field>
