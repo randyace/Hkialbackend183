@@ -4,7 +4,7 @@ import {
   Car, ShoppingBag, Clock, Building2, CreditCard, BadgePercent,
   MailCheck, Info, FileEdit, User, ChevronRight, ShieldCheck,
   ClipboardCheck, Luggage, Tag, Phone, Mail, MessageSquare,
-  Accessibility, MapPin, Star, Undo2, FileText,
+  Accessibility, MapPin, Star, Undo2, FileText, Utensils,
 } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
@@ -18,6 +18,11 @@ import {
   type InvoiceBreakdownLine,
 } from './booking/invoiceDocumentModel';
 import { buildManageInvoicesList } from './booking/manageInvoicesList';
+import { SharedBillingSummary } from '../../../../../components/booking/billing';
+import {
+  buildReviewServiceItemsModel,
+  collectLimousineAddons,
+} from '../../../../../lib/pricing/reviewServiceItems';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -528,6 +533,38 @@ export function BookingReviewPage({
     [booking.passengers],
   );
 
+  // Itemized Service Items + pricing footer (parity with Booking Detail).
+  // Uses proposed/live price_breakdown + all limousine addon rows (not just first).
+  const reviewServiceItems = useMemo(() => {
+    if (isStandalonePreview) {
+      return buildReviewServiceItemsModel({
+        priceBreakdown: [],
+        addons: [],
+        totalAmount: 0,
+      });
+    }
+    const totalFromFields =
+      (typeof booking.finalAmountValue === 'number' && Number.isFinite(booking.finalAmountValue)
+        ? booking.finalAmountValue
+        : undefined)
+      ?? (typeof booking.totalPrice === 'number' && Number.isFinite(booking.totalPrice)
+        ? booking.totalPrice
+        : undefined);
+    return buildReviewServiceItemsModel({
+      priceBreakdown: booking.priceBreakdown,
+      addons: booking.addons,
+      totalAmount: totalFromFields,
+      amountLabel: booking.amount,
+    });
+  }, [
+    isStandalonePreview,
+    booking.addons,
+    booking.amount,
+    booking.finalAmountValue,
+    booking.priceBreakdown,
+    booking.totalPrice,
+  ]);
+
   // 2026-06-30 (round 6.2.81, Bug #6 follow-up — Sky: "booking
   // 1321 review page shows 'VIP20' even though no promo was
   // applied at create"). Pre-6.2.81 the mock-fallback check was
@@ -586,9 +623,16 @@ export function BookingReviewPage({
     || (booking.addons ?? []).find((a) => addonNameEq(a, 'Wheelchair Assistance'))?.passenger
     || ''
   ).trim();
-  const limoAddon = (booking.addons ?? []).find((a) => addonNameEq(a, 'Limousine Transfer'));
-  const limoDestinations = (limoAddon?.destinations ?? []).filter((d) => String(d).trim());
+  const limoAddons = collectLimousineAddons(booking.addons);
+  const limoAddon = limoAddons[0];
+  const limoDestinations = limoAddons.flatMap((a) =>
+    (a.destinations ?? []).map((d) => String(d).trim()).filter(Boolean),
+  );
   const limoPickupTime = (limoAddon?.pickupTime ?? '').trim();
+  const limoCarCount = limoAddons.reduce(
+    (sum, a) => sum + Math.max(1, Number(a.quantity) || 1),
+    0,
+  );
   const transitLegs = isStandalonePreview ? [] : (booking.legs ?? []).filter((leg) => leg.flightNo || leg.flightTime);
   const routeOrigin = (booking.flightOrigin ?? '').trim();
   const routeDestination = (booking.flightDestination ?? '').trim();
@@ -1371,8 +1415,21 @@ export function BookingReviewPage({
                 <Car className={`w-5 h-5 ${booking.hasLimousine ? 'text-purple-600' : 'text-gray-400'}`} />
                 <div>
                   <p className={`text-sm font-medium ${booking.hasLimousine ? 'text-purple-800' : 'text-gray-400'}`}>Limousine Transfer</p>
-                  <p className="text-xs text-gray-500">{booking.hasLimousine ? 'Included' : 'Not included'}</p>
-                  {booking.hasLimousine && limoDestinations.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    {booking.hasLimousine
+                      ? (limoCarCount > 1
+                        ? `Included (${limoCarCount} cars)`
+                        : 'Included')
+                      : 'Not included'}
+                  </p>
+                  {booking.hasLimousine && reviewServiceItems.limousineStopSummary.length > 0 && (
+                    <div className="mt-0.5 space-y-0.5" data-testid="review-limo-destinations">
+                      {reviewServiceItems.limousineStopSummary.map((line) => (
+                        <p key={line} className="text-xs text-purple-700">{line}</p>
+                      ))}
+                    </div>
+                  )}
+                  {booking.hasLimousine && limoDestinations.length > 0 && reviewServiceItems.limousineStopSummary.length === 0 && (
                     <p className="text-xs text-purple-700 mt-0.5" data-testid="review-limo-destinations">
                       {limoDestinations.join(' → ')}
                     </p>
@@ -1475,6 +1532,121 @@ export function BookingReviewPage({
                 );
               })}
             </div>
+
+            {/* Itemized Service Items & Pricing Breakdown — mirrors Booking Detail
+                so reviewers see every limousine row, ADJ, membership lines, totals. */}
+            {!isStandalonePreview && (
+              <div className="mt-6" data-testid="review-service-items-breakdown">
+                <h3 className="text-sm uppercase tracking-wide text-gray-500 mb-3">
+                  Service Items &amp; Pricing Breakdown
+                </h3>
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="w-full" data-testid="review-service-items-table">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs text-gray-500 uppercase tracking-wider">Item</th>
+                        <th className="px-4 py-3 text-center text-xs text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Price</th>
+                        <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Adj.</th>
+                        <th className="px-4 py-3 text-right text-xs text-gray-500 uppercase tracking-wider">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      <tr className="bg-blue-50">
+                        <td colSpan={5} className="px-4 py-2">
+                          <p className="text-xs font-semibold text-blue-900 uppercase tracking-wide">Suite &amp; Lounge</p>
+                        </td>
+                      </tr>
+                      {reviewServiceItems.productRows.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-2 text-sm text-gray-500">
+                            No suite or lounge line items on this booking.
+                          </td>
+                        </tr>
+                      ) : (
+                        reviewServiceItems.productRows.map((row) => (
+                          <tr key={row.id} data-testid={`review-service-item-${row.id}`}>
+                            <td className="px-4 py-3">
+                              <p className="font-medium">{row.label}</p>
+                              {row.subtitle && (
+                                <p className="text-xs text-gray-500">{row.subtitle}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm text-gray-700">{row.quantity}</td>
+                            <td className="px-4 py-3 text-right text-sm">
+                              HK${Math.round(row.unitPrice).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm text-gray-600">{row.adjLabel}</td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              HK${Math.round(row.lineSubtotal).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+
+                      <tr className="bg-purple-50">
+                        <td colSpan={5} className="px-4 py-2">
+                          <p className="text-xs font-semibold text-purple-900 uppercase tracking-wide">Additional Services</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-3">
+                          <div className="flex items-start gap-2">
+                            <Utensils className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
+                            <div>
+                              <p className="font-medium">Food &amp; Beverage Package</p>
+                              <p className="text-xs text-gray-500">Premium Selection — all food &amp; drinks complimentary</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-gray-700">1</td>
+                        <td className="px-4 py-3 text-right text-sm text-green-600 font-medium">HK$0</td>
+                        <td className="px-4 py-3 text-right text-sm text-gray-600">—</td>
+                        <td className="px-4 py-3 text-right font-medium text-green-600">Complimentary</td>
+                      </tr>
+                      {reviewServiceItems.addonRows.map((row) => (
+                        <tr key={row.id} data-testid={`review-service-item-${row.id}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-start gap-2">
+                              {/limousine/i.test(row.label) && (
+                                <Car className="w-4 h-4 text-purple-600 mt-0.5 shrink-0" />
+                              )}
+                              <div>
+                                <p className="font-medium">{row.label}</p>
+                                {row.subtitle && (
+                                  <p className="text-xs text-gray-500">{row.subtitle}</p>
+                                )}
+                                {(row.detailLines ?? []).map((detail) => (
+                                  <p key={detail} className="text-xs text-gray-600 mt-0.5">{detail}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center text-sm text-gray-700">{row.quantity}</td>
+                          <td className="px-4 py-3 text-right text-sm">
+                            {row.complimentary
+                              ? <span className="text-green-600 font-medium">HK$0</span>
+                              : `HK$${Math.round(row.unitPrice).toLocaleString()}`}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-600">{row.adjLabel}</td>
+                          <td className="px-4 py-3 text-right font-medium">
+                            {row.complimentary
+                              ? <span className="text-green-600">Complimentary</span>
+                              : `HK$${Math.round(row.lineSubtotal).toLocaleString()}`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <SharedBillingSummary
+                      orderItemsSubtotal={reviewServiceItems.orderItemsSubtotal}
+                      discountLines={reviewServiceItems.discountLines}
+                      totalAmount={reviewServiceItems.totalAmount}
+                      showComplimentaryFb={false}
+                    />
+                  </table>
+                </div>
+              </div>
+            )}
           </Card>
 
           {/* ── 7. Contact Person ── */}

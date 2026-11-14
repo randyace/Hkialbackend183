@@ -130,6 +130,15 @@ export interface EditLimoStop {
   location: string;
 }
 
+/** Independent Limousine Transfer billable row (POS multi-line). */
+export interface EditLimousineLine {
+  id: string;
+  quantity: number;
+  stops: EditLimoStop[];
+  pickupTime?: string;
+  unitPrice?: number;
+}
+
 export interface EditStaffOption {
   id: number;
   name: string;
@@ -362,6 +371,12 @@ export interface BookingFormData {
   limousinePickupTime?: string;
   /** Limousine vehicle / trip count (customer Step 3 parity). */
   limousineQuantity?: number;
+  /**
+   * Independent Limousine Transfer rows under ADDITIONAL SERVICES.
+   * ADD NEW ITEM appends a new line; row qty / "+ Add another stop" edits
+   * that line only. Line[0] mirrors limoStops / limousineQuantity.
+   */
+  limousineLines?: EditLimousineLine[];
   /** Extra charges (additional stops / child seats). Keys match priceOverrides. */
   lineSurcharges?: Record<string, number>;
   wheelchairPassenger: string;
@@ -452,6 +467,8 @@ export interface BookingFormData {
     suiteLounge?: string;
     foodBeverage?: string;
     limousine?: string;
+    /** Extra limousine line remarks: limousine_1, limousine_2, … */
+    [key: string]: string | undefined;
   };
   // 2026-06-29 (round 6.2.78, Bug #4) — Status Management card
   // wires through the master Save. The 3 controls (Booking

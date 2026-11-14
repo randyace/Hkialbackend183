@@ -883,10 +883,17 @@ export function MemberDetail({
       toast.error('Please link this customer to a Travel Agency');
       return;
     }
+    const composedPersonName = `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`.trim();
+    // Corporate / Agency accounts often have blank Title/First/Last — keep the
+    // existing org display name (e.g. "Cathay Pacific Airways") instead of "".
+    const resolvedName = composedPersonName
+      || (memberData.name || '').trim()
+      || (accountForm.accountType === 'Corporate' ? (accountForm.companyName || '').trim() : '')
+      || (accountForm.accountType === 'Agency' ? (accountForm.agencyName || '').trim() : '');
     const updated: Member = {
       ...memberData,
       ...basicForm,
-      name: `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`.trim(),
+      name: resolvedName,
       paymentMethod: accountForm.paymentMethod as Member['paymentMethod'],
       internalGrouping: accountForm.internalGrouping,
       companyCode: accountForm.companyCode,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, ReactNode } from 'react';
+import { useState, useEffect, useRef, useMemo, Fragment, type ReactNode } from 'react';
 import { ArrowLeft, AlertCircle, Car, ShoppingBag, CreditCard, Mail, FileText, Receipt, CheckCircle, XCircle, RotateCcw, Edit2, Trash2, Download, DollarSign, Plane, Clock, ShieldCheck, Accessibility, Plus, Minus, MapPin, User, Tag, Phone, MessageSquare, X, Search, History, Users, ExternalLink, Utensils, Eye, GitMerge, CheckCheck, AlertTriangle, UserCheck, Ticket, RefreshCw, Trophy, Star, Heart, Briefcase, Info, Edit, Save } from 'lucide-react';
 import { PERMISSIONS } from '../../../../../config/permissions';
 import { REGION_CODES } from '../../../../../utils/regionCodes';
@@ -61,6 +61,24 @@ import {
   itemOverridesFromPersisted,
   type ItemOverride,
 } from '../../../../../lib/pricing/priceOverrides';
+import {
+  destinationsToStops,
+  ensureLimousineLines,
+  limousineOverrideKey,
+  reindexLimousineOverrideMapAfterRemove,
+  stripLimousineOverrideKeys,
+  withLimoLineMirrors,
+  type LimousineLine,
+} from '../../../../../lib/addons/limousineLines';
+
+function destinationsToFallbackStops(
+  destinations: string[] | undefined,
+): LimousineLine['stops'] {
+  if (!destinations || destinations.length === 0) {
+    return [{ id: 1, type: 'Pick-up', location: '' }];
+  }
+  return destinationsToStops(destinations);
+}
 import {
   buildLineItemRowsFromPreview,
   buildSubtotalLinesFromProductPreview,
@@ -1060,8 +1078,18 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     });
   };
 
-  const addonStagedOverridePatch = (name: string): Partial<BookingFormData> => {
-    const overrideKey = addonOverrideKey(name);
+  /**
+   * Stage unit/discount overrides for ADD NEW ITEM.
+   * Limousine multi-line: write `limousineOverrideKey(lineIndex)` so a 2nd
+   * car at HK$2,000 does not overwrite Row (1)'s bare `addon:Limousine Transfer`.
+   */
+  const addonStagedOverridePatch = (
+    name: string,
+    limoLineIndex?: number,
+  ): Partial<BookingFormData> => {
+    const overrideKey = name === 'Limousine Transfer' && typeof limoLineIndex === 'number'
+      ? limousineOverrideKey(limoLineIndex)
+      : addonOverrideKey(name);
     const unitN = Number(addonUnitPrice);
     const unitPrice = Number.isFinite(unitN) && unitN >= 0
       ? Math.round(unitN * 100) / 100
@@ -1106,74 +1134,91 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     // stacked (pre-fix only toasted and reset — the 2nd pick
     // replaced the 1st and nothing reached Save All Changes).
     if (formData && onFormChange) {
-      const staged = addonStagedOverridePatch(selectedAddon);
-      if (staged.itemOverrides) setItemOverrides(staged.itemOverrides);
       if (selectedAddon === 'Limousine Transfer') {
-        const alreadyOn = Boolean(formData.hasLimousine);
+        // ADD NEW ITEM always appends an independent Limousine line.
+        // Row qty / "+ Add another stop" edit the existing line in-place.
         const enteredStops = limoStops
           .filter((s) => s.location.trim())
           .map((s) => ({ id: s.id, type: s.type, location: s.location.trim() }));
-        const existingStops = (formData.limoStops ?? []).filter((s) => s.location.trim());
-        const prevQty = Math.max(
-          1,
-          Number(formData.limousineQuantity)
-            || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
-            || 1,
-        );
         const addQty = Math.max(1, addonQty || 1);
-        const nextStops = alreadyOn
-          ? [
-              ...existingStops,
-              ...enteredStops.map((s, idx) => ({
-                ...s,
-                id: Date.now() + idx,
-                type: (existingStops.length === 0 && idx === 0 ? s.type : 'Destination') as 'Pick-up' | 'Destination',
-              })),
-            ]
-          : enteredStops;
+        const pickup =
+          (formData?.flightType ?? booking.flightType) === 'Arrival'
+            ? ''
+            : (limoPickupTimeDraft || '');
+        const existingLines = Array.isArray(formData.limousineLines) && formData.limousineLines.length > 0
+          ? formData.limousineLines
+          : (formData.hasLimousine
+            ? [{
+                id: 'legacy-1',
+                quantity: Math.max(1, Number(formData.limousineQuantity) || 1),
+                stops: (formData.limoStops ?? []).filter((s) => s.location.trim()).length > 0
+                  ? (formData.limoStops ?? []).filter((s) => s.location.trim())
+                  : [{ id: 1, type: 'Pick-up' as const, location: '' }],
+                pickupTime: formData.limousinePickupTime || undefined,
+              }]
+            : []);
+        const newLineIndex = existingLines.length;
+        const staged = addonStagedOverridePatch(selectedAddon, newLineIndex);
+        if (staged.itemOverrides) setItemOverrides(staged.itemOverrides);
+        const stagedUnit = staged.itemOverrides?.[limousineOverrideKey(newLineIndex)]?.unitPrice;
+        const limoCatalog = resolveLimousineCatalogUnit(bookableItemPrices);
+        const newLineUnit = typeof stagedUnit === 'number' && stagedUnit > 0
+          ? stagedUnit
+          : limoCatalog;
+        const newLine = {
+          id: `limo-${Date.now()}`,
+          quantity: addQty,
+          stops: enteredStops.length > 0
+            ? enteredStops
+            : [{ id: 1, type: 'Pick-up' as const, location: '' }],
+          pickupTime: pickup || undefined,
+          unitPrice: newLineUnit,
+        };
+        const nextLines = [...existingLines, newLine];
+        const first = nextLines[0];
         onFormChange({
           hasLimousine: true,
-          limoStops: nextStops.length > 0
-            ? nextStops
-            : [{ id: 1, type: 'Pick-up' as const, location: '' }],
-          limousineQuantity: alreadyOn ? prevQty + addQty : addQty,
-          limousinePickupTime:
-            (formData?.flightType ?? booking.flightType) === 'Arrival'
-              ? ''
-              : (limoPickupTimeDraft || formData.limousinePickupTime || ''),
-          ...staged,
-        });
-      } else if (selectedAddon === 'Wheelchair Assistance') {
-        onFormChange({
-          hasWheelchair: true,
-          wheelchairPassenger: wheelchairPassenger.trim(),
-          ...staged,
-        });
-      } else if (selectedAddon === 'Security Escort Service') {
-        onFormChange({ hasSecurity: true, ...staged });
-      } else if (selectedAddon === 'Lounge Extension') {
-        const prevHours = formData.hasLoungeExtension
-          ? Math.max(1, formData.loungeExtensionQty ?? 1)
-          : 0;
-        const addHours = Math.max(1, Math.min(6, addonQty || 1));
-        onFormChange({
-          hasLoungeExtension: true,
-          loungeExtensionQty: Math.max(1, Math.min(6, (prevHours || 0) + addHours)),
+          limousineLines: nextLines,
+          limoStops: first.stops,
+          limousineQuantity: first.quantity,
+          limousinePickupTime: first.pickupTime ?? '',
           ...staged,
         });
       } else {
-        // Lane B catalog — increment qty when re-adding same name; keep price override.
-        const prev = formData.catalogAddonSelections ?? [];
-        const existing = prev.find((s) => s.name === selectedAddon);
-        const without = prev.filter((s) => s.name !== selectedAddon);
-        const nextQty = (existing?.quantity ?? 0) + Math.max(1, addonQty || 1);
-        onFormChange({
-          catalogAddonSelections: [
-            ...without,
-            { name: selectedAddon, quantity: nextQty },
-          ],
-          ...staged,
-        });
+        const staged = addonStagedOverridePatch(selectedAddon);
+        if (staged.itemOverrides) setItemOverrides(staged.itemOverrides);
+        if (selectedAddon === 'Wheelchair Assistance') {
+          onFormChange({
+            hasWheelchair: true,
+            wheelchairPassenger: wheelchairPassenger.trim(),
+            ...staged,
+          });
+        } else if (selectedAddon === 'Security Escort Service') {
+          onFormChange({ hasSecurity: true, ...staged });
+        } else if (selectedAddon === 'Lounge Extension') {
+          const prevHours = formData.hasLoungeExtension
+            ? Math.max(1, formData.loungeExtensionQty ?? 1)
+            : 0;
+          const addHours = Math.max(1, Math.min(6, addonQty || 1));
+          onFormChange({
+            hasLoungeExtension: true,
+            loungeExtensionQty: Math.max(1, Math.min(6, (prevHours || 0) + addHours)),
+            ...staged,
+          });
+        } else {
+          // Lane B catalog — increment qty when re-adding same name; keep price override.
+          const prev = formData.catalogAddonSelections ?? [];
+          const existing = prev.find((s) => s.name === selectedAddon);
+          const without = prev.filter((s) => s.name !== selectedAddon);
+          const nextQty = (existing?.quantity ?? 0) + Math.max(1, addonQty || 1);
+          onFormChange({
+            catalogAddonSelections: [
+              ...without,
+              { name: selectedAddon, quantity: nextQty },
+            ],
+            ...staged,
+          });
+        }
       }
       toast.success(`"${selectedAddon}" added. Click Save All Changes below to persist.`);
     } else {
@@ -1198,20 +1243,45 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
 
   const productLineRows = buildLineItemRowsFromPreview(livePreviewBreakdown, lineProductContext);
 
+  // Multi-limo: one subtotal line per limousineLines row under indexed
+  // override keys — never collapse to a single bare `addon:Limousine Transfer`
+  // (that dropped Row 2 @ HK$2,000 → Subtotal HK$9,500 instead of HK$11,500).
+  const limoCatalogForSubtotal = resolveLimousineCatalogUnit(bookableItemPrices);
+  const limoSubtotalLines = invoiceShowLimo
+    ? (() => {
+        const lines = ensureLimousineLines({
+          limousineLines: formData?.limousineLines,
+          hasLimousine: formData?.hasLimousine ?? booking.hasLimousine,
+          limoStops: formData?.limoStops,
+          limousineQuantity: formData?.limousineQuantity,
+          limousinePickupTime: formData?.limousinePickupTime,
+        });
+        const rows = lines.length > 0
+          ? lines
+          : [{
+              id: 'fallback-1',
+              quantity: Math.max(
+                1,
+                Number(formData?.limousineQuantity)
+                  || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
+                  || 1,
+              ),
+              stops: [{ id: 1, type: 'Pick-up' as const, location: '' }],
+              unitPrice: undefined as number | undefined,
+            }];
+        return rows.map((line, idx) => ({
+          overrideKey: limousineOverrideKey(idx),
+          catalogUnitPrice: typeof line.unitPrice === 'number' && line.unitPrice > 0
+            ? line.unitPrice
+            : limoCatalogForSubtotal,
+          quantity: Math.max(1, Number(line.quantity) || 1),
+        }));
+      })()
+    : [];
+
   const orderItemsSubtotalLines = [
     ...buildSubtotalLinesFromProductPreview(livePreviewBreakdown, lineProductContext),
-    ...(invoiceShowLimo
-      ? [{
-          overrideKey: 'addon:Limousine Transfer',
-          catalogUnitPrice: resolveLimousineCatalogUnit(bookableItemPrices),
-          quantity: Math.max(
-            1,
-            Number(formData?.limousineQuantity)
-              || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
-              || 1,
-          ),
-        }]
-      : []),
+    ...limoSubtotalLines,
     ...(invoiceShowShopping
       ? [{
           overrideKey: 'addon:In-Lounge Shopping',
@@ -1250,11 +1320,22 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           ),
         }]
       : []),
-    ...invoiceCatalogRows.map((row) => ({
-      overrideKey: `addon:${row.name}`,
-      catalogUnitPrice: Number(row.unitPrice ?? 0),
-      quantity: Number(row.quantity ?? 1),
-    })),
+    // Occurrence-index duplicate catalog names (addon:Name / addon:Name#N)
+    // so multi-row catalog add-ons never collapse under one bare key the way
+    // limousine Row 2 used to drop out of the Service Items subtotal.
+    ...(() => {
+      const occurrence: Record<string, number> = {};
+      return invoiceCatalogRows.map((row) => {
+        const name = String(row.name ?? '').trim() || 'Addon';
+        const idx = occurrence[name] ?? 0;
+        occurrence[name] = idx + 1;
+        return {
+          overrideKey: idx === 0 ? `addon:${name}` : `addon:${name}#${idx}`,
+          catalogUnitPrice: Number(row.unitPrice ?? 0),
+          quantity: Number(row.quantity ?? 1),
+        };
+      });
+    })(),
   ];
   const orderItemsSubtotal = computeOrderItemsSubtotal(orderItemsSubtotalLines, itemOverrides);
 
@@ -3583,225 +3664,346 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                 </tr>
               )}
 
-              {/* Limousine Service */}
+              {/* Limousine Service — one billable row per limousineLines entry */}
               {invoiceShowLimo && (() => {
-                // Structured limo (qty / unit / destinations) — customer Step 3
-                // special add-on parity. Catalog unit is always the aligned
-                // HK$1,500 list (never legacy HK$800 stamps).
-                const limoAddon = booking.addons?.find(
-                  (a) => a.name === 'Limousine Transfer',
-                );
-                const limoQty = Math.max(
-                  1,
-                  Number(formData?.limousineQuantity)
-                    || Number(limoAddon?.quantity)
-                    || 1,
-                );
                 const limoCatalog = resolveLimousineCatalogUnit(bookableItemPrices);
-                const limoDestinations = limoAddon?.destinations ?? [];
-                const limoPickupTime = formData?.limousinePickupTime || limoAddon?.pickupTime || '';
                 const isArrival = (formData?.flightType ?? booking.flightType) === 'Arrival';
-                const limoRemarks = [
-                  limoDestinations.length > 0 ? limoDestinations.join(' → ') : 'Pickup at Terminal 1',
-                  !isArrival && limoPickupTime ? `Pick-up ${limoPickupTime}` : '',
-                ].filter(Boolean).join(' · ');
+                const lines: LimousineLine[] = ensureLimousineLines({
+                  limousineLines: formData?.limousineLines,
+                  hasLimousine: formData?.hasLimousine ?? booking.hasLimousine,
+                  limoStops: formData?.limoStops,
+                  limousineQuantity: formData?.limousineQuantity,
+                  limousinePickupTime: formData?.limousinePickupTime,
+                });
+                const displayLines = lines.length > 0
+                  ? lines
+                  : [{
+                      id: 'fallback-1',
+                      quantity: Math.max(
+                        1,
+                        Number(formData?.limousineQuantity)
+                          || Number(booking.addons?.find((a) => a.name === 'Limousine Transfer')?.quantity)
+                          || 1,
+                      ),
+                      stops: (formData?.limoStops && formData.limoStops.length > 0)
+                        ? formData.limoStops
+                        : destinationsToFallbackStops(
+                          booking.addons?.find((a) => a.name === 'Limousine Transfer')?.destinations,
+                        ),
+                      pickupTime: formData?.limousinePickupTime
+                        || booking.addons?.find((a) => a.name === 'Limousine Transfer')?.pickupTime
+                        || '',
+                    }];
+
+                const patchLines = (next: LimousineLine[]) => {
+                  onFormChange?.(withLimoLineMirrors(next));
+                };
+
                 return (
                   <>
-                    <tr>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <Car className="w-4 h-4 text-purple-600" />
-                          <div>
-                            <p className="font-medium">Limousine Transfer Service</p>
-                            <p className="text-xs text-gray-500">Airport Transfer</p>
-                          </div>
-                          {renderAddonRemove('Limousine Transfer', () => {
-                            onFormChange?.({
-                              hasLimousine: false,
-                              limousineQuantity: 1,
-                              limoStops: [{ id: 1, type: 'Pick-up', location: '' }],
-                              limousinePickupTime: '',
-                            });
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        {onFormChange ? (
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => onFormChange({
-                                hasLimousine: true,
-                                limousineQuantity: Math.max(1, limoQty - 1),
-                              })}
-                              disabled={limoQty <= 1}
-                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30"
-                              aria-label="Decrease limousine vehicles"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <input
-                              type="number"
-                              value={limoQty}
-                              onChange={(e) => {
-                                const next = Math.max(1, parseInt(e.target.value, 10) || 1);
-                                onFormChange({ hasLimousine: true, limousineQuantity: next });
-                              }}
-                              className="w-14 px-2 py-1 border rounded text-center"
-                              min="1"
-                              data-testid="service-items-qty-addon:Limousine Transfer"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => onFormChange({
-                                hasLimousine: true,
-                                limousineQuantity: limoQty + 1,
-                              })}
-                              className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50"
-                              aria-label="Increase limousine vehicles"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <input
-                            type="number"
-                            value={limoQty}
-                            className="w-20 px-2 py-1 border rounded text-center"
-                            min="1"
-                            readOnly
-                          />
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <UnitPriceInput
-                          overrideKey="addon:Limousine Transfer"
-                          catalogUnit={limoCatalog}
-                          itemOverrides={itemOverrides}
-                          onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
-                          readOnly={!onFormChange}
-                          testId="service-items-unit-price-addon:Limousine Transfer"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <LineItemDiscountInput
-                          overrideKey="addon:Limousine Transfer"
-                          catalogUnit={limoCatalog}
-                          qty={Number(limoQty ?? 1)}
-                          itemOverrides={itemOverrides}
-                          onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
-                          amountTestId="service-items-discount-amount-addon:Limousine Transfer"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium">
-                        <LineItemSubtotalLabel
-                          itemOverrides={itemOverrides}
-                          overrideKey="addon:Limousine Transfer"
-                          catalogUnit={limoCatalog}
-                          qty={Number(limoQty ?? 1)}
-                        />
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={5} className="px-4 py-2 bg-purple-50/50" data-testid="service-items-limo-stops">
-                        {onFormChange ? (() => {
-                          const stops = (formData?.limoStops && formData.limoStops.length > 0)
-                            ? formData.limoStops
-                            : (limoDestinations.length > 0
-                              ? limoDestinations.map((location, idx) => ({
-                                  id: idx + 1,
-                                  type: (idx === 0 ? 'Pick-up' : 'Destination') as const,
-                                  location,
-                                }))
-                              : [{ id: 1, type: 'Pick-up' as const, location: '' }]);
-                          const writeStops = (next: typeof stops) => onFormChange({ limoStops: next });
-                          return (
-                            <div className="space-y-2">
+                    {displayLines.map((line, lineIdx) => {
+                      const limoQty = Math.max(1, Number(line.quantity) || 1);
+                      const overrideKey = limousineOverrideKey(lineIdx);
+                      const limoPickupTime = line.pickupTime ?? '';
+                      const stops = line.stops.length > 0
+                        ? line.stops
+                        : [{ id: 1, type: 'Pick-up' as const, location: '' }];
+                      const limoRemarks = [
+                        stops.some((s) => s.location.trim())
+                          ? stops.map((s) => s.location.trim()).filter(Boolean).join(' → ')
+                          : 'Pickup at Terminal 1',
+                        !isArrival && limoPickupTime ? `Pick-up ${limoPickupTime}` : '',
+                      ].filter(Boolean).join(' · ');
+                      const remarksKey = lineIdx === 0 ? 'limousine' : `limousine_${lineIdx}`;
+
+                      return (
+                        <Fragment key={line.id}>
+                          <tr>
+                            <td className="px-4 py-3">
                               <div className="flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-purple-600" />
-                                <p className="text-xs text-purple-800">Pick-up / Destinations</p>
+                                <Car className="w-4 h-4 text-purple-600" />
+                                <div>
+                                  <p className="font-medium">
+                                    Limousine Transfer Service
+                                    {displayLines.length > 1 ? ` (${lineIdx + 1})` : ''}
+                                  </p>
+                                  <p className="text-xs text-gray-500">Airport Transfer</p>
+                                </div>
+                                {renderAddonRemove(
+                                  lineIdx === 0 ? 'Limousine Transfer' : `Limousine Transfer#${lineIdx}`,
+                                  () => {
+                                    const next = displayLines.filter((_, i) => i !== lineIdx);
+                                    if (next.length === 0) {
+                                      const clearedOverrides = stripLimousineOverrideKeys(itemOverrides);
+                                      setItemOverrides(clearedOverrides);
+                                      onFormChange?.({
+                                        ...withLimoLineMirrors([]),
+                                        itemOverrides: clearedOverrides,
+                                        priceOverrides: stripLimousineOverrideKeys(formData?.priceOverrides),
+                                        lineDiscounts: stripLimousineOverrideKeys(formData?.lineDiscounts),
+                                        lineSurcharges: stripLimousineOverrideKeys(formData?.lineSurcharges),
+                                      });
+                                      return;
+                                    }
+                                    const nextItemOverrides = reindexLimousineOverrideMapAfterRemove(
+                                      itemOverrides,
+                                      lineIdx,
+                                    );
+                                    setItemOverrides(nextItemOverrides);
+                                    onFormChange?.({
+                                      ...withLimoLineMirrors(next),
+                                      itemOverrides: nextItemOverrides,
+                                      priceOverrides: reindexLimousineOverrideMapAfterRemove(
+                                        formData?.priceOverrides,
+                                        lineIdx,
+                                      ),
+                                      lineDiscounts: reindexLimousineOverrideMapAfterRemove(
+                                        formData?.lineDiscounts,
+                                        lineIdx,
+                                      ),
+                                      lineSurcharges: reindexLimousineOverrideMapAfterRemove(
+                                        formData?.lineSurcharges,
+                                        lineIdx,
+                                      ),
+                                    });
+                                  },
+                                )}
                               </div>
-                              {stops.map((stop, idx) => (
-                                <div key={stop.id} className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">
-                                    {idx + 1}
-                                  </span>
-                                  <select
-                                    value={stop.type}
-                                    onChange={(e) => writeStops(stops.map((s) => s.id === stop.id ? { ...s, type: e.target.value as 'Pick-up' | 'Destination' } : s))}
-                                    className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0"
-                                  >
-                                    <option value="Pick-up">Pick-up</option>
-                                    <option value="Destination">Destination</option>
-                                  </select>
-                                  <input
-                                    type="text"
-                                    value={stop.location}
-                                    onChange={(e) => writeStops(stops.map((s) => s.id === stop.id ? { ...s, location: e.target.value } : s))}
-                                    placeholder="Location (e.g. HKG Terminal 1)"
-                                    className="flex-1 px-2 py-1.5 border rounded text-sm"
-                                  />
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {onFormChange ? (
+                                <div className="inline-flex items-center gap-1">
                                   <button
                                     type="button"
-                                    onClick={() => writeStops(stops.length > 1 ? stops.filter((s) => s.id !== stop.id) : stops)}
-                                    className="text-gray-400 hover:text-red-600 shrink-0"
-                                    aria-label={`Remove stop ${idx + 1}`}
+                                    onClick={() => {
+                                      const next = displayLines.map((l, i) => (
+                                        i === lineIdx
+                                          ? { ...l, quantity: Math.max(1, limoQty - 1) }
+                                          : l
+                                      ));
+                                      patchLines(next);
+                                    }}
+                                    disabled={limoQty <= 1}
+                                    className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-30"
+                                    aria-label="Decrease limousine vehicles"
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
-                                </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => writeStops([...stops, { id: Date.now(), type: 'Destination', location: '' }])}
-                                className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                Add another stop
-                              </button>
-                              {!isArrival && (
-                              <div>
-                                <label className="text-xs text-purple-800 block mb-1">Pick-up Time</label>
-                                <div className="relative w-full md:w-56">
-                                  <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
                                   <input
-                                    type="time"
-                                    value={limoPickupTime}
-                                    onChange={(e) => onFormChange({ limousinePickupTime: e.target.value })}
-                                    className="w-full pl-8 pr-3 py-1.5 border rounded text-sm"
+                                    type="number"
+                                    value={limoQty}
+                                    onChange={(e) => {
+                                      const nextQty = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                      patchLines(displayLines.map((l, i) => (
+                                        i === lineIdx ? { ...l, quantity: nextQty } : l
+                                      )));
+                                    }}
+                                    className="w-14 px-2 py-1 border rounded text-center"
+                                    min="1"
+                                    data-testid={`service-items-qty-${overrideKey}`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      patchLines(displayLines.map((l, i) => (
+                                        i === lineIdx ? { ...l, quantity: limoQty + 1 } : l
+                                      )));
+                                    }}
+                                    className="p-1 rounded border border-gray-300 bg-white hover:bg-gray-50"
+                                    aria-label="Increase limousine vehicles"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <input
+                                  type="number"
+                                  value={limoQty}
+                                  className="w-20 px-2 py-1 border rounded text-center"
+                                  min="1"
+                                  readOnly
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <UnitPriceInput
+                                overrideKey={overrideKey}
+                                catalogUnit={
+                                  typeof line.unitPrice === 'number' && line.unitPrice > 0
+                                    ? line.unitPrice
+                                    : limoCatalog
+                                }
+                                itemOverrides={itemOverrides}
+                                onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                                readOnly={!onFormChange}
+                                testId={`service-items-unit-price-${overrideKey}`}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <LineItemDiscountInput
+                                overrideKey={overrideKey}
+                                catalogUnit={
+                                  typeof line.unitPrice === 'number' && line.unitPrice > 0
+                                    ? line.unitPrice
+                                    : limoCatalog
+                                }
+                                qty={Number(limoQty ?? 1)}
+                                itemOverrides={itemOverrides}
+                                onItemOverrideChange={onFormChange ? writeItemOverride : undefined}
+                                amountTestId={`service-items-discount-amount-${overrideKey}`}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium">
+                              <LineItemSubtotalLabel
+                                itemOverrides={itemOverrides}
+                                overrideKey={overrideKey}
+                                catalogUnit={
+                                  typeof line.unitPrice === 'number' && line.unitPrice > 0
+                                    ? line.unitPrice
+                                    : limoCatalog
+                                }
+                                qty={Number(limoQty ?? 1)}
+                              />
+                            </td>
+                          </tr>
+                          <tr>
+                            <td
+                              colSpan={5}
+                              className="px-4 py-2 bg-purple-50/50"
+                              data-testid={lineIdx === 0 ? 'service-items-limo-stops' : `service-items-limo-stops-${lineIdx}`}
+                            >
+                              {onFormChange ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4 text-purple-600" />
+                                    <p className="text-xs text-purple-800">Pick-up / Destinations</p>
+                                  </div>
+                                  {stops.map((stop, idx) => (
+                                    <div key={stop.id} className="flex items-center gap-2">
+                                      <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-xs flex items-center justify-center shrink-0">
+                                        {idx + 1}
+                                      </span>
+                                      <select
+                                        value={stop.type}
+                                        onChange={(e) => {
+                                          const nextStops = stops.map((s) => (
+                                            s.id === stop.id
+                                              ? { ...s, type: e.target.value as 'Pick-up' | 'Destination' }
+                                              : s
+                                          ));
+                                          patchLines(displayLines.map((l, i) => (
+                                            i === lineIdx ? { ...l, stops: nextStops } : l
+                                          )));
+                                        }}
+                                        className="px-2 py-1.5 border rounded text-sm bg-white w-36 shrink-0"
+                                      >
+                                        <option value="Pick-up">Pick-up</option>
+                                        <option value="Destination">Destination</option>
+                                      </select>
+                                      <input
+                                        type="text"
+                                        value={stop.location}
+                                        onChange={(e) => {
+                                          const nextStops = stops.map((s) => (
+                                            s.id === stop.id ? { ...s, location: e.target.value } : s
+                                          ));
+                                          patchLines(displayLines.map((l, i) => (
+                                            i === lineIdx ? { ...l, stops: nextStops } : l
+                                          )));
+                                        }}
+                                        placeholder="Location (e.g. HKG Terminal 1)"
+                                        className="flex-1 px-2 py-1.5 border rounded text-sm"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const nextStops = stops.length > 1
+                                            ? stops.filter((s) => s.id !== stop.id)
+                                            : stops;
+                                          patchLines(displayLines.map((l, i) => (
+                                            i === lineIdx ? { ...l, stops: nextStops } : l
+                                          )));
+                                        }}
+                                        className="text-gray-400 hover:text-red-600 shrink-0"
+                                        aria-label={`Remove stop ${idx + 1}`}
+                                      >
+                                        <Minus className="w-3.5 h-3.5" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const nextStops = [
+                                        ...stops,
+                                        { id: Date.now(), type: 'Destination' as const, location: '' },
+                                      ];
+                                      patchLines(displayLines.map((l, i) => (
+                                        i === lineIdx ? { ...l, stops: nextStops } : l
+                                      )));
+                                    }}
+                                    className="inline-flex items-center gap-1 text-xs text-purple-700 hover:text-purple-900"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Add another stop
+                                  </button>
+                                  {!isArrival && (
+                                    <div>
+                                      <label className="text-xs text-purple-800 block mb-1">Pick-up Time</label>
+                                      <div className="relative w-full md:w-56">
+                                        <Clock className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                          type="time"
+                                          value={limoPickupTime}
+                                          onChange={(e) => {
+                                            patchLines(displayLines.map((l, i) => (
+                                              i === lineIdx
+                                                ? { ...l, pickupTime: e.target.value }
+                                                : l
+                                            )));
+                                          }}
+                                          className="w-full pl-8 pr-3 py-1.5 border rounded text-sm"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col gap-1 pt-1">
+                                    <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                                    <textarea
+                                      className="w-full px-3 py-2 border rounded text-sm resize-none bg-white"
+                                      rows={2}
+                                      value={
+                                        (formData?.serviceItemRemarks as Record<string, string> | undefined)?.[remarksKey]
+                                        ?? ''
+                                      }
+                                      onChange={(e) => onFormChange({
+                                        serviceItemRemarks: {
+                                          ...(formData?.serviceItemRemarks ?? {}),
+                                          [remarksKey]: e.target.value,
+                                        },
+                                      })}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  <label className="text-xs text-gray-600">Remarks by Staff:</label>
+                                  <textarea
+                                    className="w-full px-3 py-2 border rounded text-sm resize-none"
+                                    rows={2}
+                                    value={
+                                      (formData?.serviceItemRemarks as Record<string, string> | undefined)?.[remarksKey]
+                                      || limoRemarks
+                                    }
+                                    readOnly
                                   />
                                 </div>
-                              </div>
                               )}
-                              <div className="flex flex-col gap-1 pt-1">
-                                <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                                <textarea
-                                  className="w-full px-3 py-2 border rounded text-sm resize-none bg-white"
-                                  rows={2}
-                                  value={formData?.serviceItemRemarks?.limousine ?? ''}
-                                  onChange={(e) => onFormChange({
-                                    serviceItemRemarks: {
-                                      ...(formData?.serviceItemRemarks ?? {}),
-                                      limousine: e.target.value,
-                                    },
-                                  })}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })() : (
-                        <div className="flex flex-col gap-1">
-                          <label className="text-xs text-gray-600">Remarks by Staff:</label>
-                          <textarea
-                            className="w-full px-3 py-2 border rounded text-sm resize-none"
-                            rows={2}
-                            value={formData?.serviceItemRemarks?.limousine || limoRemarks}
-                            readOnly
-                          />
-                        </div>
-                        )}
-                      </td>
-                    </tr>
+                            </td>
+                          </tr>
+                        </Fragment>
+                      );
+                    })}
                   </>
                 );
               })()}
