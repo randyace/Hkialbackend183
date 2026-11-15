@@ -413,7 +413,7 @@ function NewClientReport({ data }: { data?: NewClientReportData } = {}) {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="p-5 lg:col-span-2">
-          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly New Client Count &amp; Income</h4>
+          <h4 className="text-sm font-semibold text-gray-700 mb-1">Monthly New Client Count & Income</h4>
           <p className="text-xs text-gray-500 mb-4">Bars = new client count (left axis) · Line = HK$ income from new clients (right axis)</p>
           <ResponsiveContainer width="100%" height={230}>
             <ComposedChart data={newClientMonthly}>
@@ -1295,7 +1295,7 @@ export function Reports({
     <div className="p-6 space-y-6">
       {/* ── Page Header ──────────────────────────────────────────────────── */}
       <div>
-        <h1>Reports &amp; Analytics</h1>
+        <h1>Reports & Analytics</h1>
         <p className="text-gray-600">Operational report generation and strategic management analytics</p>
       </div>
 

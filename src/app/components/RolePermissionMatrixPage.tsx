@@ -18,7 +18,7 @@ const DEMO_ROLES: RoleOption[] = [
 const DEMO_MODULES: RolePermissionModule[] = [
   {
     key: 'booking_management',
-    label: 'Booking Management',
+    label: 'Bookings Management',
     features: [
       {
         key: 'bookings',

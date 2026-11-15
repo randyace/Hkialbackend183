@@ -9,6 +9,10 @@ export type PosAllergenType = 'Allergy' | 'Dietary';
 export interface PosAllergenRow {
   id: number;
   name: string;
+  name_en?: string | null;
+  name_tc?: string | null;
+  name_sc?: string | null;
+  code?: string | null;
   type: PosAllergenType;
 }
 
@@ -48,7 +52,16 @@ export function PosAllergens({
   const filtered = allergens.filter((allergen) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
-    return allergen.name.toLowerCase().includes(q) || allergen.type.toLowerCase().includes(q);
+    return [
+      allergen.name,
+      allergen.name_en,
+      allergen.name_tc,
+      allergen.name_sc,
+      allergen.code,
+      allergen.type,
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(q));
   });
 
   return (
@@ -56,7 +69,7 @@ export function PosAllergens({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">POS Allergens & Dietary</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage allergen and dietary labels for menu items.</p>
+          <p className="text-sm text-gray-500 mt-1">Manage trilingual allergen and dietary labels for menu items.</p>
         </div>
         <Button onClick={onCreateAllergen} className="gap-2">
           <Plus className="w-4 h-4" />
@@ -71,7 +84,7 @@ export function PosAllergens({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name or type..."
+            placeholder="Search by EN / TC / SC / code / type..."
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -83,7 +96,9 @@ export function PosAllergens({
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">ID</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600">Name</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">Code</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">EN</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-600">TC / SC</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Type</th>
                 <th className="px-4 py-3 text-right font-medium text-gray-600">Actions</th>
               </tr>
@@ -91,13 +106,13 @@ export function PosAllergens({
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
                     Loading allergens...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
                     No allergens found.
                   </td>
                 </tr>
@@ -105,7 +120,12 @@ export function PosAllergens({
                 filtered.map((allergen) => (
                   <tr key={allergen.id} className="border-b border-gray-100 hover:bg-gray-50/60">
                     <td className="px-4 py-3 text-gray-700">{allergen.id}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{allergen.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-700">{allergen.code || '—'}</td>
+                    <td className="px-4 py-3 font-medium text-gray-900">{allergen.name_en || allergen.name}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      <div>{allergen.name_tc || '—'}</div>
+                      <div className="text-xs text-gray-400">{allergen.name_sc || ''}</div>
+                    </td>
                     <td className="px-4 py-3">
                       <TypeBadge type={allergen.type} />
                     </td>
@@ -124,7 +144,7 @@ export function PosAllergens({
                           variant="outline"
                           size="sm"
                           onClick={() => onDeleteAllergen?.(allergen.id)}
-                          className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="gap-1 text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Delete

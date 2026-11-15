@@ -206,10 +206,10 @@ export function mapReceiptDescription(line: InvoiceBreakdownLine): string {
   if (/child/i.test(key) || /child/i.test(label)) {
     return 'VIP Passenger ( Children )';
   }
-  // Only rename limousine rows — other add-ons keep their own label
-  // (Wheelchair, Champagne, etc. must not become "Airport Limousine Service").
+  // Align limousine display with Admin Service Items ("Limousine Transfer Service").
+  // Other add-ons keep their own label (Wheelchair, Champagne, etc.).
   if (key === 'add_on_limousine' || /limousine/i.test(key) || /limousine/i.test(label)) {
-    return 'Airport Limousine Service';
+    return 'Limousine Transfer Service';
   }
   return label || 'Item';
 }

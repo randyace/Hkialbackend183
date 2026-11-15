@@ -13,12 +13,18 @@ import {
 import React from 'react';
 
 type CodeType = 'Discount' | 'Free bookings';
+export type PromoAccountType = 'Corporate' | 'Agency' | 'Individual' | 'Independent';
 
 export interface PromoCode {
   id: number;
   companyId: number;
+  /** Stable owner accordion key (kind:entityId). */
+  ownerKey?: string;
   companyName: string;
   companyShortCode: string;
+  accountType?: PromoAccountType;
+  accountNumber?: string | null;
+  contractNumber?: string | null;
   prefix: string;
   titleEn: string;
   titleTradChi: string;
@@ -35,10 +41,20 @@ export interface PromoCode {
 }
 
 interface CompanyGroup {
+  ownerKey: string;
   companyId: number;
   companyName: string;
   companyShortCode: string;
+  accountType: PromoAccountType;
   batches: PromoCode[];
+}
+
+function batchOwnerKey(b: PromoCode): string {
+  return b.ownerKey || `${b.accountType ?? 'Independent'}:${b.companyId}`;
+}
+
+function batchAccountType(b: PromoCode): PromoAccountType {
+  return b.accountType ?? (b.companyId === 0 ? 'Independent' : 'Corporate');
 }
 
 export interface PromoCodeListProps {
@@ -275,20 +291,21 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
   const [filterType, setFilterType] = useState<'all' | CodeType>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterCompany, setFilterCompany] = useState<'all' | string>('all');
-  const [expandedCompanies, setExpandedCompanies] = useState<Set<number>>(() => {
-    const ids = Array.from(new Set(batches.map((b) => b.companyId)));
-    return new Set(ids);
+  const [filterAccountType, setFilterAccountType] = useState<'all' | PromoAccountType>('all');
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(() => {
+    return new Set(batches.map((b) => batchOwnerKey(b)));
   });
 
-  // Expand new company groups when real API data arrives (after loading).
+  // Expand new owner groups when real API data arrives (after loading).
   useEffect(() => {
     if (batches.length === 0) return;
     setExpandedCompanies((prev) => {
       const next = new Set(prev);
       let changed = false;
       for (const b of batches) {
-        if (!next.has(b.companyId)) {
-          next.add(b.companyId);
+        const key = batchOwnerKey(b);
+        if (!next.has(key)) {
+          next.add(key);
           changed = true;
         }
       }
@@ -296,39 +313,46 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
     });
   }, [batches]);
 
-  const toggleCompany = (companyId: number) => {
+  const toggleCompany = (ownerKey: string) => {
     const next = new Set(expandedCompanies);
-    if (next.has(companyId)) {
-      next.delete(companyId);
+    if (next.has(ownerKey)) {
+      next.delete(ownerKey);
     } else {
-      next.add(companyId);
+      next.add(ownerKey);
     }
     setExpandedCompanies(next);
   };
 
-  // Group batches by company
+  // Group batches by Account / Organization owner
   const companyGroups: CompanyGroup[] = Array.from(
-    new Map(batches.map((b) => [b.companyId, b])).values()
-  ).map((rep) => ({
-    companyId: rep.companyId,
-    companyName: rep.companyName,
-    companyShortCode: rep.companyShortCode,
-    batches: batches.filter((b) => b.companyId === rep.companyId),
-  }));
+    new Map(batches.map((b) => [batchOwnerKey(b), b])).values()
+  ).map((rep) => {
+    const key = batchOwnerKey(rep);
+    return {
+      ownerKey: key,
+      companyId: rep.companyId,
+      companyName: rep.companyName,
+      companyShortCode: rep.companyShortCode,
+      accountType: batchAccountType(rep),
+      batches: batches.filter((b) => batchOwnerKey(b) === key),
+    };
+  });
 
-  // Filter company groups
+  // Filter owner groups
   const filteredGroups = companyGroups
     .filter((group) => {
-      // Company filter
-      if (filterCompany !== 'all' && String(group.companyId) !== filterCompany) return false;
-      // Search
+      if (filterAccountType !== 'all' && group.accountType !== filterAccountType) return false;
+      if (filterCompany !== 'all' && group.ownerKey !== filterCompany) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
         const hit = group.batches.some(
           (b) =>
             b.prefix.toLowerCase().includes(q) ||
             b.titleEn.toLowerCase().includes(q) ||
-            b.companyName.toLowerCase().includes(q)
+            b.companyName.toLowerCase().includes(q) ||
+            (b.companyShortCode || '').toLowerCase().includes(q) ||
+            (b.accountNumber || '').toLowerCase().includes(q) ||
+            (b.contractNumber || '').toLowerCase().includes(q)
         );
         if (!hit) return false;
       }
@@ -336,7 +360,6 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
     })
     .map((group) => ({
       ...group,
-      // Apply type / status filters to child batches
       batches: group.batches.filter((b) => {
         const matchType = filterType === 'all' || b.codeType === filterType;
         const matchStatus =
@@ -348,7 +371,9 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           const matchSearch =
             b.prefix.toLowerCase().includes(q) ||
             b.titleEn.toLowerCase().includes(q) ||
-            b.companyName.toLowerCase().includes(q);
+            b.companyName.toLowerCase().includes(q) ||
+            (b.companyShortCode || '').toLowerCase().includes(q) ||
+            (b.accountNumber || '').toLowerCase().includes(q);
           return matchType && matchStatus && matchSearch;
         }
         return matchType && matchStatus;
@@ -363,7 +388,12 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
   const totalUsed = batches.reduce((s, b) => s + b.usedCount, 0);
 
   const batchCompanies = Array.from(
-    new Map(batches.map((b) => [b.companyId, { id: b.companyId, name: b.companyName }])).values()
+    new Map(
+      batches.map((b) => [
+        batchOwnerKey(b),
+        { id: batchOwnerKey(b), name: b.companyName, type: batchAccountType(b) },
+      ]),
+    ).values(),
   );
 
   return (
@@ -373,7 +403,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
         <div>
           <h1 className="text-gray-900 mb-1">Promo Code Batches</h1>
           <p className="text-sm text-gray-500">
-            Corporate promo codes are created in batches per company. Expand a company to view its batches.
+            Promo codes are created in batches per account / organization. Expand a group to view its batches.
           </p>
         </div>
         <Button className="bg-[#0f2942] hover:bg-[#1a3d5c] text-white shrink-0" onClick={onCreate}>
@@ -387,7 +417,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
         <Card className="p-4 bg-[#0f2942] text-white">
           <p className="text-xs text-blue-200 mb-1">Total Batches</p>
           <p className="text-2xl text-white">{totalBatches}</p>
-          <p className="text-xs text-blue-300 mt-1">{companyGroups.length} companies</p>
+          <p className="text-xs text-blue-300 mt-1">{companyGroups.length} accounts / orgs</p>
         </Card>
         <Card className="p-4 border-2 border-green-300 bg-green-50">
           <p className="text-xs text-green-700 mb-1">Active Batches</p>
@@ -416,18 +446,30 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Search by prefix, title, or company…"
+              placeholder="Search by prefix, title, account, agency, or company…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
             />
           </div>
+          <Select value={filterAccountType} onValueChange={(v: any) => setFilterAccountType(v)}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="All Account Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Account Types</SelectItem>
+              <SelectItem value="Corporate">Corporate</SelectItem>
+              <SelectItem value="Agency">Agency</SelectItem>
+              <SelectItem value="Individual">Individual</SelectItem>
+              <SelectItem value="Independent">Independent</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={filterCompany} onValueChange={(v: any) => setFilterCompany(v)}>
             <SelectTrigger className="w-full md:w-52">
-              <SelectValue placeholder="All Companies" />
+              <SelectValue placeholder="All Accounts / Orgs" />
             </SelectTrigger>
             <SelectContent className="max-h-60">
-              <SelectItem value="all">All Companies</SelectItem>
+              <SelectItem value="all">All Accounts / Orgs</SelectItem>
               {batchCompanies.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>
                   {c.name}
@@ -465,7 +507,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10"></TableHead>
-                <TableHead>Company</TableHead>
+                <TableHead>Account / Organization</TableHead>
                 <TableHead>Batches</TableHead>
                 <TableHead>
                   <span className="flex items-center gap-1">
@@ -486,7 +528,7 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                 </TableRow>
               ) : (
                 filteredGroups.flatMap((group) => {
-                  const isExpanded = expandedCompanies.has(group.companyId);
+                  const isExpanded = expandedCompanies.has(group.ownerKey);
                   const groupTotalCodes = group.batches.reduce((s, b) => s + b.totalCodes, 0);
                   const groupUsed = group.batches.reduce((s, b) => s + b.usedCount, 0);
                   const groupActive = group.batches.filter(isBatchActive).length;
@@ -495,9 +537,9 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
 
                   const companyRow = (
                     <TableRow
-                      key={`company-${group.companyId}`}
+                      key={`company-${group.ownerKey}`}
                       className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => toggleCompany(group.companyId)}
+                      onClick={() => toggleCompany(group.ownerKey)}
                     >
                       <TableCell className="text-gray-400">
                         {isExpanded ? (
@@ -512,7 +554,12 @@ export function PromoCodeList({ codes: codesProp, isLoading, onCreate, onEdit, o
                             <Building2 className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-sm text-gray-900 leading-tight">{group.companyName}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-gray-900 leading-tight">{group.companyName}</p>
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                {group.accountType}
+                              </Badge>
+                            </div>
                             <p className="text-xs text-gray-400 font-mono">{group.companyShortCode}</p>
                           </div>
                         </div>

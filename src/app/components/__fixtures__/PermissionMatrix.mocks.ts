@@ -7,7 +7,7 @@ import type {
 export const mockPermissionModules: PermissionModuleView[] = [
   {
     key: 'booking_management',
-    label: 'Booking Management',
+    label: 'Bookings Management',
     features: [
       {
         key: 'bookings',
@@ -33,7 +33,7 @@ export const mockPermissionModules: PermissionModuleView[] = [
   },
   {
     key: 'system_administration',
-    label: 'System Administration',
+    label: 'System Users Management',
     features: [
       {
         key: 'system_users',

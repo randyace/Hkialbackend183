@@ -7,7 +7,13 @@ export type PosAllergenType = 'Allergy' | 'Dietary';
 
 export interface PosAllergenFormData {
   name: string;
+  name_en: string;
+  name_tc: string;
+  name_sc: string;
+  code: string;
+  aliases: string;
   type: PosAllergenType | '';
+  sort_order?: number;
 }
 
 export interface PosAllergenEditProps {
@@ -26,8 +32,22 @@ const TYPE_OPTIONS: { value: PosAllergenType; label: string }[] = [
 
 const defaultFormData: PosAllergenFormData = {
   name: '',
+  name_en: '',
+  name_tc: '',
+  name_sc: '',
+  code: '',
+  aliases: '',
   type: '',
+  sort_order: 0,
 };
+
+function slugify(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
 
 export function PosAllergenEdit({
   allergenId,
@@ -44,7 +64,7 @@ export function PosAllergenEdit({
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      setFormData({ ...defaultFormData, ...initialData });
     }
   }, [initialData]);
 
@@ -52,9 +72,10 @@ export function PosAllergenEdit({
     e.preventDefault();
 
     let valid = true;
+    const nameEn = (formData.name_en || formData.name).trim();
 
-    if (!formData.name.trim()) {
-      setNameError('Name is required');
+    if (!nameEn) {
+      setNameError('English name is required');
       valid = false;
     } else {
       setNameError(null);
@@ -69,7 +90,12 @@ export function PosAllergenEdit({
 
     if (!valid) return;
 
-    onSave?.(formData);
+    onSave?.({
+      ...formData,
+      name: nameEn,
+      name_en: nameEn,
+      code: formData.code.trim() || slugify(nameEn),
+    });
   };
 
   if (isLoading) {
@@ -92,27 +118,77 @@ export function PosAllergenEdit({
           <h1 className="text-2xl font-semibold text-gray-900">
             {isEditMode ? 'Edit Allergen / Dietary Label' : 'Create Allergen / Dietary Label'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Configure allergen or dietary restriction labels for POS menu items.</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Configure trilingual allergen or dietary labels for POS menu items.
+          </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card className="p-6 space-y-5">
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium text-gray-700">Name</span>
+            <span className="text-sm font-medium text-gray-700">English Name (EN)</span>
             <input
               required
-              value={formData.name}
+              value={formData.name_en || formData.name}
               onChange={(e) => {
-                setFormData((prev) => ({ ...prev, name: e.target.value }));
+                const name_en = e.target.value;
+                setFormData((prev) => ({
+                  ...prev,
+                  name_en,
+                  name: name_en,
+                  code: prev.code.trim() ? prev.code : slugify(name_en),
+                }));
                 if (nameError) setNameError(null);
               }}
-              placeholder="e.g. Peanuts, Dairy, Vegetarian, Gluten-Free"
+              placeholder="e.g. Peanuts, Milk & Dairy (Lactose)"
               className={`w-full px-3 py-2 border rounded-lg text-sm ${
                 nameError ? 'border-red-400' : 'border-gray-200'
               }`}
             />
             {nameError ? <p className="text-xs text-red-600">{nameError}</p> : null}
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Traditional Chinese (TC)</span>
+              <input
+                value={formData.name_tc}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name_tc: e.target.value }))}
+                placeholder="繁體中文名稱"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-gray-700">Simplified Chinese (SC)</span>
+              <input
+                value={formData.name_sc}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name_sc: e.target.value }))}
+                placeholder="简体中文名称"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+              />
+            </label>
+          </div>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Code</span>
+            <input
+              value={formData.code}
+              onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
+              placeholder="Auto-generated from English name if blank"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono"
+            />
+            <p className="text-xs text-gray-500">Stable slug used for matching (e.g. peanuts, milk).</p>
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-gray-700">Search Aliases</span>
+            <input
+              value={formData.aliases}
+              onChange={(e) => setFormData((prev) => ({ ...prev, aliases: e.target.value }))}
+              placeholder="Comma-separated, e.g. dairy, lactose, 牛奶, 芝士"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+            />
           </label>
 
           <fieldset className="space-y-2">

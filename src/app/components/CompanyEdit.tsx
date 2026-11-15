@@ -675,7 +675,10 @@ export function CompanyEdit({
 
       {/* Edit Contract Dialog */}
       <Dialog open={!!editingContract} onOpenChange={() => setEditingContract(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent
+          className="w-[92vw] max-w-2xl sm:max-w-2xl p-6 sm:p-8 overflow-x-hidden"
+          data-testid="edit-contract-dialog"
+        >
           <DialogHeader>
             <DialogTitle>Edit Contract</DialogTitle>
             <DialogDescription>
@@ -683,34 +686,39 @@ export function CompanyEdit({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 mt-4">
-            <div>
+          <div className="mt-4 w-full min-w-0 space-y-4 box-border">
+            <div className="w-full min-w-0">
               <Label className="mb-[10px] block">Expiry Date *</Label>
               <StringDatePicker
                 value={editForm.expiryDate}
                 onChange={(value) => setEditForm({ ...editForm, expiryDate: value })}
+                className="w-full min-w-0 box-border"
               />
             </div>
 
-            <div>
-              <Label className="mb-[10px] block">Total Sessions *</Label>
-              <Input
-                type="number"
-                value={editForm.sessionsTotal}
-                onChange={(e) => setEditForm({ ...editForm, sessionsTotal: Number(e.target.value) })}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full min-w-0">
+              <div className="w-full min-w-0">
+                <Label className="mb-[10px] block">Total Sessions *</Label>
+                <Input
+                  type="number"
+                  value={editForm.sessionsTotal}
+                  onChange={(e) => setEditForm({ ...editForm, sessionsTotal: Number(e.target.value) })}
+                  className="w-full min-w-0 box-border"
+                />
+              </div>
+
+              <div className="w-full min-w-0">
+                <Label className="mb-[10px] block">Used Sessions *</Label>
+                <Input
+                  type="number"
+                  value={editForm.sessionsUsed}
+                  onChange={(e) => setEditForm({ ...editForm, sessionsUsed: Number(e.target.value) })}
+                  className="w-full min-w-0 box-border"
+                />
+              </div>
             </div>
 
-            <div>
-              <Label className="mb-[10px] block">Used Sessions *</Label>
-              <Input
-                type="number"
-                value={editForm.sessionsUsed}
-                onChange={(e) => setEditForm({ ...editForm, sessionsUsed: Number(e.target.value) })}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-wrap justify-end gap-3 mt-6">
               <Button variant="outline" onClick={() => setEditingContract(null)}>
                 Cancel
               </Button>

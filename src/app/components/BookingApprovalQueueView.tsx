@@ -258,7 +258,7 @@ export function BookingApprovalQueue({
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Booking No.</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Request</th>
                 <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Guest / Account</th>
-                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Suite &amp; Flight</th>
+                <th className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide">Suite & Flight</th>
                 <th
                   className="text-left px-4 py-3 text-xs text-gray-500 uppercase tracking-wide cursor-pointer select-none"
                   onClick={() => toggleSort('dateTime')}

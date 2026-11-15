@@ -46,6 +46,10 @@ export interface PosTransactionBookingRow {
   totalSuites: number;
   totalOrders: number;
   fnbSubtotal: number;
+  /** Walk-in guest POS session (no booking_id). */
+  isWalkIn?: boolean;
+  /** Suite/table label shown next to the Walk-in badge. */
+  suiteLabel?: string | null;
   guests: PosTransactionGuestRow[];
   posOrders: PosTransactionOrderRow[];
 }
@@ -182,11 +186,15 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
     <div className="px-6 py-5 space-y-6">
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
-          Guest Information &amp; Dietary
+          Guest Information & Dietary
         </h3>
 
         {booking.guests.length === 0 ? (
-          <p className="mt-3 text-sm text-gray-500">No guest information recorded for this booking.</p>
+          <p className="mt-3 text-sm text-gray-500">
+            {booking.isWalkIn
+              ? 'No guest profile recorded for this walk-in session.'
+              : 'No guest information recorded for this booking.'}
+          </p>
         ) : (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
             {booking.guests.map((guest, index) => {
@@ -251,7 +259,7 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
 
       <section>
         <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
-          Suites &amp; Order Items
+          Suites & Order Items
         </h3>
 
         {booking.posOrders.length === 0 ? (
@@ -443,7 +451,7 @@ export function PosTransactions({
                     onFilter?.();
                   }
                 }}
-                placeholder="Guest name or booking ref..."
+                placeholder="Guest name, booking ref, walk-in, suite..."
                 className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -469,7 +477,7 @@ export function PosTransactions({
                 <th className="px-4 py-3 text-left font-medium text-gray-600">Main Guest</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Suites</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-600">Total Orders</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600">F&amp;B Subtotal</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-600">F&B Subtotal</th>
                 <th className="px-4 py-3 w-12" />
               </tr>
             </thead>
@@ -494,7 +502,20 @@ export function PosTransactions({
                     <Fragment key={booking.id}>
                       <tr className="border-b border-gray-100 hover:bg-gray-50/60">
                         <td className="px-4 py-3 text-gray-700">{formatDateTime(booking.createdAt)}</td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{booking.bookingRef}</td>
+                        <td className="px-4 py-3 font-medium text-gray-900">
+                          {booking.isWalkIn ? (
+                            <span className="inline-flex items-center gap-2 flex-wrap">
+                              <Badge className="bg-slate-100 text-slate-800 border border-slate-200 hover:bg-slate-100">
+                                Walk-in
+                              </Badge>
+                              {booking.suiteLabel ? (
+                                <span className="text-sm font-normal text-gray-500">{booking.suiteLabel}</span>
+                              ) : null}
+                            </span>
+                          ) : (
+                            booking.bookingRef
+                          )}
+                        </td>
                         <td className="px-4 py-3 text-gray-700">{booking.mainGuest}</td>
                         <td className="px-4 py-3 text-center text-gray-700">{booking.totalSuites}</td>
                         <td className="px-4 py-3 text-center text-gray-700">{booking.totalOrders}</td>
@@ -506,7 +527,7 @@ export function PosTransactions({
                             type="button"
                             onClick={() => setExpandedRows((prev) => toggleExpandedRow(prev, booking.id))}
                             className="inline-flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                            aria-label={isExpanded ? 'Collapse booking details' : 'Expand booking details'}
+                            aria-label={isExpanded ? 'Collapse transaction details' : 'Expand transaction details'}
                             aria-expanded={isExpanded}
                           >
                             {isExpanded ? (

@@ -17,7 +17,12 @@
  * around line 687-749 (Card "Account Settings"). Now extracted.
  */
 
+import { useEffect } from 'react';
 import { Award, Minus, Plus } from 'lucide-react';
+import {
+  maxSelectableMembershipQuota,
+  promoCoveredGuestCount,
+} from '../../../../../../../lib/promoMembershipOverlap';
 import { Card } from '../../ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -25,6 +30,13 @@ import {
 import type {
   BookingFormData, EditMembershipTier, EditBookingChannel,
 } from '../BookingEditView';
+
+export function hasEditPromoCodeApplied(formData: Pick<BookingFormData, 'promoCodeId' | 'promoCode'>): boolean {
+  if (formData.promoCodeId != null && Number.isFinite(Number(formData.promoCodeId))) {
+    return true;
+  }
+  return Boolean(String(formData.promoCode ?? '').trim());
+}
 
 export interface EditSectionAccountInfoProps {
   formData: BookingFormData;
@@ -43,6 +55,7 @@ export interface EditSectionAccountInfoProps {
     code: string;
     discountType: 'percentage' | 'fixed';
     discountValue: number | string;
+    freeSessions?: number | null;
   }>;
   /**
    * Wrapper-owned membership eligibility. When omitted, standalone Figma
@@ -118,10 +131,61 @@ export function EditSectionAccountInfo({
   promoCodeOptions = [],
   membershipControls,
 }: EditSectionAccountInfoProps) {
+  const selectedPromo = formData.promoCodeId != null
+    ? promoCodeOptions.find((o) => o.id === formData.promoCodeId)
+    : undefined;
+  const totalLdGuests = Math.max(0, Math.trunc(formData.vipPassengersInLoungeDeluxe ?? 0));
+  const eligibleSlots = membershipControls !== undefined
+    ? (membershipControls.canUseLdFree ? (membershipControls.maxLdUnits ?? 1) : 0)
+    : 1;
+  const promoCovered = promoCoveredGuestCount({
+    totalGuests: totalLdGuests,
+    freeSessions: selectedPromo?.freeSessions,
+    discountType: selectedPromo?.discountType,
+    discountValue: selectedPromo?.discountValue,
+  });
+  // LD VIP seats drive free-lounge promo overlap. When there are no LD
+  // VIPs (e.g. PS-only + LD credit for 40%), promo coverage does not
+  // shrink membership slots.
+  const maxSelectableLd = totalLdGuests > 0
+    ? maxSelectableMembershipQuota({
+        availableQuota: formData.ldEntriesRemaining,
+        eligibleSlots,
+        totalGuests: totalLdGuests,
+        promoCoveredCount: promoCovered,
+      })
+    : (eligibleSlots > 0
+      ? maxSelectableMembershipQuota({
+          availableQuota: formData.ldEntriesRemaining,
+          eligibleSlots,
+          totalGuests: eligibleSlots,
+          promoCoveredCount: 0,
+        })
+      : 0);
   const membershipLdDisabled =
-    membershipControls !== undefined && !membershipControls.canUseLdFree;
+    membershipControls !== undefined
+      ? !membershipControls.canUseLdFree || maxSelectableLd < 1
+      : maxSelectableLd < 1;
   const membershipPsDisabled =
     membershipControls !== undefined && !membershipControls.canUsePsFree;
+
+  // Clamp selected units when promo coverage / eligibility shrinks the max.
+  useEffect(() => {
+    const current = formData.useMembershipLdUnits
+      ?? (formData.useMembershipLdFree === false ? 0 : null);
+    if (current == null) return;
+    if (current <= maxSelectableLd) return;
+    onFormChange({
+      useMembershipLdUnits: maxSelectableLd,
+      useMembershipLdFree: maxSelectableLd > 0,
+      ...(maxSelectableLd <= 0 ? { useMembershipPsFree: false } : {}),
+    });
+  }, [
+    maxSelectableLd,
+    formData.useMembershipLdUnits,
+    formData.useMembershipLdFree,
+    onFormChange,
+  ]);
 
   return (
     <Card className="p-5">
@@ -175,26 +239,29 @@ export function EditSectionAccountInfo({
             // null-clear pattern at handleMasterSave:1171-1173).
             <Select
               value={formData.promoCodeId == null ? 'none' : String(formData.promoCodeId)}
-              onValueChange={v => onFormChange({
-                promoCodeId: v === 'none' ? null : Number(v),
-                // Also seed the legacy `promoCode` STRING field
-                // (the wrapper still writes the legacy nested
-                // `advanced_details.account.promoApplied.code`
-                // block for back-compat with pre-6.2.80 admin-
-                // created bookings that used the text input).
-                promoCode: v === 'none'
-                  ? ''
-                  : (promoCodeOptions.find((o) => o.id === Number(v))?.code ?? ''),
-                promoDiscountPct: v === 'none'
-                  ? undefined
-                  : (() => {
-                      const opt = promoCodeOptions.find((o) => o.id === Number(v));
-                      if (!opt) return undefined;
-                      return opt.discountType === 'percentage'
-                        ? Number(opt.discountValue)
-                        : undefined;
-                    })(),
-              })}
+              onValueChange={v => {
+                const clearing = v === 'none';
+                onFormChange({
+                  promoCodeId: clearing ? null : Number(v),
+                  // Also seed the legacy `promoCode` STRING field
+                  // (the wrapper still writes the legacy nested
+                  // `advanced_details.account.promoApplied.code`
+                  // block for back-compat with pre-6.2.80 admin-
+                  // created bookings that used the text input).
+                  promoCode: clearing
+                    ? ''
+                    : (promoCodeOptions.find((o) => o.id === Number(v))?.code ?? ''),
+                  promoDiscountPct: clearing
+                    ? undefined
+                    : (() => {
+                        const opt = promoCodeOptions.find((o) => o.id === Number(v));
+                        if (!opt) return undefined;
+                        return opt.discountType === 'percentage'
+                          ? Number(opt.discountValue)
+                          : undefined;
+                      })(),
+                });
+              }}
             >
               <SelectTrigger><SelectValue placeholder="— Select —" /></SelectTrigger>
               <SelectContent>
@@ -269,18 +336,24 @@ export function EditSectionAccountInfo({
               </p>
             </div>
           </div>
+          {promoCovered > 0 && (
+            <p
+              className="text-xs text-amber-800 mb-3"
+              data-testid="edit-membership-promo-overlap-hint"
+            >
+              {maxSelectableLd < 1
+                ? 'Promo Code already covers all Lounge Deluxe VIP seats — membership free entry is unavailable for this booking.'
+                : `Promo Code covers ${promoCovered} Lounge Deluxe VIP seat(s). Membership free entry can still be applied to up to ${maxSelectableLd} remaining eligible seat(s).`}
+            </p>
+          )}
           <div className="space-y-4">
             {(() => {
-              const maxLdUnits = membershipLdDisabled
-                ? 0
-                : (membershipControls?.maxLdUnits ?? 1);
-              const ldValue = membershipLdDisabled
-                ? 0
-                : Math.min(
-                    formData.useMembershipLdUnits
-                      ?? (formData.useMembershipLdFree === false ? 0 : maxLdUnits),
-                    maxLdUnits,
-                  );
+              const maxLdUnits = maxSelectableLd;
+              const ldValue = Math.min(
+                formData.useMembershipLdUnits
+                  ?? (formData.useMembershipLdFree === false ? 0 : maxLdUnits),
+                maxLdUnits,
+              );
               const includesPs = (formData.numPremiereSuites ?? 0) > 0
                 || (formData.vipPassengersInPremiereSuite ?? 0) > 0
                 || (formData.nonFlyingGuestsInPremiereSuite ?? 0) > 0;

@@ -660,7 +660,7 @@ export function POSFloorPlan({
                         }}
                       >
                         <CheckCheck className="w-4 h-4" />
-                        Check In Guest &amp; Assign Suite
+                        Check In Guest & Assign Suite
                       </Button>
                     </div>
                   )}
@@ -715,7 +715,7 @@ export function POSFloorPlan({
                   return (
                     <div className="border-t pt-5 space-y-3">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm uppercase tracking-wide text-gray-500">Food Allergies &amp; Dietary</h3>
+                        <h3 className="text-sm uppercase tracking-wide text-gray-500">Food Allergies & Dietary</h3>
                         {withInfo.length > 0 && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs border border-red-200">
                             <AlertTriangle className="w-3 h-3" />
@@ -801,7 +801,7 @@ export function POSFloorPlan({
                   )}
 
                   <div className="mt-4" ref={searchRef}>
-                    <label className="text-xs text-gray-500 mb-[10px] block">Search &amp; Add Service / Item</label>
+                    <label className="text-xs text-gray-500 mb-[10px] block">Search & Add Service / Item</label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                       <input

@@ -25,6 +25,10 @@ import {
   lineBaseTotal,
   lineRowSubtotal,
 } from '../../../../../lib/pricing/priceOverrides';
+import {
+  maxSelectableMembershipQuota,
+  promoCoveredGuestCount,
+} from '../../../../../lib/promoMembershipOverlap';
 import { upsertCatalogSelection } from '../../../../../lib/addons/bookingAddonCatalog';
 import { hktTodayYmd } from '../../../../../lib/hktDate';
 import { Input } from './ui/input';
@@ -613,6 +617,8 @@ export interface CreateBookingProps {
    * Driven by booking_settings.show_dietary_fields.
    */
   showDietaryFields?: boolean;
+  /** Master catalog labels for food-allergy autocomplete (EN + aliases). */
+  allergenCatalogSuggestions?: string[];
   /**
    * Dev-only slot under Booking No. Provided by the admin wrapper when
    * the signed-in email is on the `__dev__` allowlist. Remove before pentest.
@@ -1128,6 +1134,7 @@ function RegionCodeCombobox({
 export function CreateBooking({
   showTransit = true,
   showDietaryFields = true,
+  allergenCatalogSuggestions = [],
   renderDevQuickFill,
   onSubmit,
   onCancel,
@@ -1418,14 +1425,31 @@ export function CreateBooking({
       && selectedAccount?.ps_free_upgrades_remaining !== undefined
       && Number.isFinite(selectedAccount.ps_free_upgrades_remaining)
       && selectedAccount.ps_free_upgrades_remaining > 0);
-  const canUseFreeLd = Boolean(showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit);
-  const maxLdUnits = canUseFreeLd
+  const canUseFreeLdBase = Boolean(
+    showMembershipBenefits && selectedAccount && hasLdQuota && namedVipForCredit,
+  );
+  const eligibleSlots = canUseFreeLdBase
     ? eligibleLdCreditSlots(
         membershipSitting,
         selectedAccount?.ld_entries_remaining,
         bookingIncludesPremiereSuite,
       )
     : 0;
+  const promoCovered = promoCoveredGuestCount({
+    totalGuests: vipLD,
+    freeSessions: promoApplied?.freeSessions,
+    discountType: promoApplied?.promoType === 'Free bookings' ? 'fixed' : 'percentage',
+    discountValue: promoApplied?.discountPct,
+  });
+  const maxLdUnits = vipLD > 0
+    ? maxSelectableMembershipQuota({
+        availableQuota: selectedAccount?.ld_entries_remaining,
+        eligibleSlots,
+        totalGuests: vipLD,
+        promoCoveredCount: promoCovered,
+      })
+    : eligibleSlots;
+  const canUseFreeLd = maxLdUnits > 0;
   const useMembershipLdUnits = Math.min(Math.max(0, ldUnitsRequested), maxLdUnits);
   const useMembershipLdFree = useMembershipLdUnits > 0;
   const canUseFreePs = canUseFreeLd
@@ -2616,7 +2640,7 @@ export function CreateBooking({
             1. ACCOUNT & GUEST INFORMATION
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Account &amp; Guest Information</h2>
+          <h2 className="mb-1">Account & Guest Information</h2>
           <p className="text-sm text-gray-500 mb-6">
             Select account type and enter guest details. Agency accounts auto-apply their default discount rate.
           </p>
@@ -2869,6 +2893,16 @@ export function CreateBooking({
                   </div>
                 </div>
                 <div className="mt-3 space-y-4">
+                  {promoCovered > 0 && (
+                    <p
+                      className="text-xs text-amber-800"
+                      data-testid="create-membership-promo-overlap-hint"
+                    >
+                      {maxLdUnits < 1
+                        ? 'Promo Code already covers all Lounge Deluxe VIP seats — membership free entry is unavailable for this booking.'
+                        : `Promo Code covers ${promoCovered} Lounge Deluxe VIP seat(s). Membership free entry can still be applied to up to ${maxLdUnits} remaining eligible seat(s).`}
+                    </p>
+                  )}
                   <div className={canUseFreeLd ? '' : 'opacity-60'}>
                     <p className="text-sm font-medium text-[#0f2942] mb-2">Use free LD entry credit</p>
                     <CreditQuantityBar
@@ -3208,7 +3242,7 @@ export function CreateBooking({
               </p>
               <div className="grid grid-cols-2 gap-6 mb-4">
                 <div>
-                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date &amp; Time <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Leg 2 Arrival Date & Time <span className="text-red-500">*</span></label>
                   <StringDateTimePicker
                     id="create-leg2-arrivalDate"
                     value={leg2ArrivalDate}
@@ -3794,14 +3828,15 @@ export function CreateBooking({
                         </label>
                         <input
                           type="text"
+                          list="allergen-catalog-suggestions"
                           value={p.foodAllergies}
                           onChange={e => updatePassenger(idx, 'foodAllergies', e.target.value)}
-                          placeholder="e.g. Shellfish, Peanuts, Dairy — leave blank if none"
+                          placeholder="Search catalog or type e.g. Peanuts, Dairy — leave blank if none"
                           className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${p.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                         />
                         {p.foodAllergies && (
                           <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen & F&B staff
                           </p>
                         )}
                       </div>
@@ -3951,14 +3986,15 @@ export function CreateBooking({
                         </label>
                         <input
                           type="text"
+                          list="allergen-catalog-suggestions"
                           value={g.foodAllergies}
                           onChange={e => updateNonFlying(idx, 'foodAllergies', e.target.value)}
-                          placeholder="e.g. Peanuts, Shellfish — leave blank if none"
+                          placeholder="Search catalog or type e.g. Peanuts — leave blank if none"
                           className={`w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-200 text-sm ${g.foodAllergies ? 'border-red-300 bg-red-50' : ''}`}
                         />
                         {g.foodAllergies && (
                           <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen &amp; F&amp;B staff
+                            <AlertCircle className="w-3 h-3" /> Allergy noted — please inform kitchen & F&B staff
                           </p>
                         )}
                       </div>
@@ -3967,6 +4003,13 @@ export function CreateBooking({
                   </div>
                 );
               })}
+              {allergenCatalogSuggestions.length > 0 ? (
+                <datalist id="allergen-catalog-suggestions">
+                  {allergenCatalogSuggestions.map((label) => (
+                    <option key={label} value={label} />
+                  ))}
+                </datalist>
+              ) : null}
             </div>
           </Card>
         )}
@@ -4500,7 +4543,7 @@ export function CreateBooking({
             9. SPECIAL REQUESTS & NOTES
             ════════════════════════════════════════ */}
         <Card className="p-6">
-          <h2 className="mb-1">Special Requests &amp; Notes</h2>
+          <h2 className="mb-1">Special Requests & Notes</h2>
           <p className="text-sm text-gray-500 mb-4">
             {showDietaryFields
               ? 'Any dietary requirements, accessibility needs, or special instructions for the lounge team.'

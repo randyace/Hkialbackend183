@@ -709,7 +709,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                     <input type="time" value={booking.legs[1].flightTime ?? ''} disabled className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Date &amp; Time</label>
+                    <label className="text-sm font-medium block" style={{ marginBottom: '10px' }}>Arrival Date & Time</label>
                     <input type="text" value={booking.legs[1].arrivalDate ?? ''} disabled placeholder="—" className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-gray-100 text-gray-500" />
                   </div>
                   <div>
@@ -1032,7 +1032,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
               <div className="mt-3 p-3 rounded-lg border border-purple-200 bg-purple-50/40">
                 <div className="flex items-center gap-2 mb-2">
                   <Car className="w-4 h-4 text-purple-600" />
-                  <p className="text-xs text-purple-800 font-medium">Limousine Service — Pick-up &amp; Drop-off Stops</p>
+                  <p className="text-xs text-purple-800 font-medium">Limousine Service — Pick-up & Drop-off Stops</p>
                 </div>
                 <div className="space-y-2">
                   {editLimoStops.map((stop, idx) => (
@@ -1080,7 +1080,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
           {/* Section 4: Special Requests */}
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3 pb-1 border-b flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5" /> Special Requests &amp; Notes
+              <MessageSquare className="w-3.5 h-3.5" /> Special Requests & Notes
             </h4>
             <textarea
               value={editSpecialReqs}
