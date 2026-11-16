@@ -29,6 +29,7 @@ import {
   parsePromoCodeImportSheet,
   type PromoCodeImportMetadata,
 } from '../../../../../lib/promoCodeImport';
+import { generateUniqueCodes } from '../../../../../lib/generatePromoCodes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 // 2026-07-02 — wrapper-supplied contract shape. Mirrors the PurchaseRecord
@@ -102,21 +103,6 @@ function generateShortCode(companyName: string): string {
     code = words[0].substring(0, 4).toUpperCase();
   }
   return code.replace(/[^A-Z0-9]/g, '') || 'PROMO';
-}
-
-// ─── Generate unique codes ────────────────────────────────────────────────────
-const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function randomSuffix(len = 6): string {
-  let result = '';
-  for (let i = 0; i < len; i++) result += CHARS[Math.floor(Math.random() * CHARS.length)];
-  return result;
-}
-
-function generateUniqueCodes(prefix: string, count: number): string[] {
-  const codes = new Set<string>();
-  const cleanPrefix = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  while (codes.size < count) codes.add(`${cleanPrefix}-${randomSuffix(6)}`);
-  return Array.from(codes);
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -924,7 +910,7 @@ export function PromoCodeEdit({
                 <p className="text-xs text-blue-700 mt-1">
                   {uploadedCodes.length > 0
                     ? 'Auto-filled from longest common prefix — you can still edit it.'
-                    : <>Format: <span className="font-mono font-medium">{prefix || 'PREFIX'}-XXXXXX</span></>}
+                    : <>Format: <span className="font-mono font-medium">{prefix || 'PREFIX'}-001-XXXXXX</span></>}
                 </p>
               </div>
               <div>
