@@ -51,7 +51,8 @@ export interface GradingPackage {
   tier: Tier;
   price: number;
   credits: number;
-  validityMonths: number;
+  /** Maps 1:1 to grading_packages.duration_days */
+  durationDays: number;
 }
 
 export interface SessionBundle {
@@ -134,10 +135,10 @@ export interface PurchaseRecord {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const GRADING_PACKAGES: GradingPackage[] = [
-  { kind: 'grading', tier: 'Gold',     price: 32000,  credits: 8,  validityMonths: 12 },
-  { kind: 'grading', tier: 'Platinum', price: 45000,  credits: 12, validityMonths: 12 },
-  { kind: 'grading', tier: 'Diamond',  price: 84000,  credits: 24, validityMonths: 12 },
-  { kind: 'grading', tier: 'Sapphire', price: 325000, credits: -1, validityMonths: 12 },
+  { kind: 'grading', tier: 'Gold',     price: 32000,  credits: 8,  durationDays: 365 },
+  { kind: 'grading', tier: 'Platinum', price: 45000,  credits: 12, durationDays: 365 },
+  { kind: 'grading', tier: 'Diamond',  price: 84000,  credits: 24, durationDays: 365 },
+  { kind: 'grading', tier: 'Sapphire', price: 325000, credits: -1, durationDays: 365 },
 ];
 
 export const SESSION_BUNDLES: SessionBundle[] = [
@@ -426,7 +427,11 @@ export function PurchaseCreate({
     let record: PurchaseRecord;
 
     if (selectedProduct === 'membership' && selectedPackage) {
-      expiry.setMonth(expiry.getMonth() + selectedPackage.validityMonths);
+      if (selectedPackage.kind === 'grading') {
+        expiry.setDate(expiry.getDate() + selectedPackage.durationDays);
+      } else {
+        expiry.setMonth(expiry.getMonth() + selectedPackage.validityMonths);
+      }
       const expiryDate = localDateStr(expiry);
       
       if (selectedPackage.kind === 'grading') {
@@ -741,7 +746,7 @@ export function PurchaseCreate({
                           <span className={meta.color}><TierIcon name={meta.iconName} className="w-4 h-4" /></span>
                         </div>
                         <p className="text-sm text-gray-900 mb-0.5">{pkg.tier}</p>
-                        <p className="text-xs text-gray-400 mb-2">{pkg.credits === -1 ? 'Unlimited' : `${pkg.credits} credits`} · {pkg.validityMonths}mo</p>
+                        <p className="text-xs text-gray-400 mb-2">{pkg.credits === -1 ? 'Unlimited' : `${pkg.credits} credits`} · {pkg.durationDays} Days</p>
                         <p className={`text-sm ${meta.color}`}>HKD {pkg.price.toLocaleString()}</p>
                       </div>
                     );
@@ -1195,7 +1200,7 @@ export function PurchaseCreate({
                             <TrendingUp className="w-3 h-3 text-gray-400" />
                             <TierBadge tier={selectedPackage.tier} />
                           </div>
-                          <p className="text-xs text-gray-500">{selectedPackage.credits === -1 ? 'Unlimited credits' : `+${selectedPackage.credits} credits`} · {selectedPackage.validityMonths} months</p>
+                          <p className="text-xs text-gray-500">{selectedPackage.credits === -1 ? 'Unlimited credits' : `+${selectedPackage.credits} credits`} · {selectedPackage.durationDays} Days</p>
                         </div>
                       ) : (
                         <div className="p-3 rounded-lg border-2 border-blue-200 bg-blue-50">

@@ -1,6 +1,6 @@
 import { ArrowLeft, User, CreditCard, Utensils, MapPin, AlertCircle, X, Loader2, ChevronDown, PanelLeftClose, PanelLeftOpen, Pencil, Flame, Zap, CheckSquare, Square, CheckCheck } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -22,6 +22,11 @@ import {
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { useTranslation } from '../lib/useTranslation';
+import {
+  buildTicketCartSignal,
+  shouldScrollTicketListOnCartChange,
+  type TicketCartSignal,
+} from '@/lib/pos/ticketListAutoScroll';
 
 interface OrderItem {
   id: string;
@@ -785,6 +790,48 @@ function TicketOrderItemRow({
   );
 }
 
+/**
+ * Owns the left-ticket scroll container so desktop + mobile panels each
+ * auto-scroll independently when cart items are added.
+ */
+function TicketItemsScrollArea({
+  orders,
+  children,
+}: {
+  orders: OrderItem[];
+  children: ReactNode;
+}) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const previousSignalRef = useRef<TicketCartSignal | null>(null);
+  const cartSignal = useMemo(() => buildTicketCartSignal(orders), [orders]);
+
+  useEffect(() => {
+    const previous = previousSignalRef.current;
+    previousSignalRef.current = cartSignal;
+    if (!shouldScrollTicketListOnCartChange(previous, cartSignal)) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      const el = listRef.current;
+      if (!el) {
+        return;
+      }
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [cartSignal]);
+
+  return (
+    <div
+      ref={listRef}
+      data-testid="pos-ticket-item-list"
+      className="flex-1 overflow-y-auto p-3 space-y-2"
+    >
+      {children}
+    </div>
+  );
+}
+
 export interface POSBookingDetailFullProps extends POSBookingDetailProps {
   /** Pass fully-loaded booking from CI4; when null falls back to MOCK_BOOKING_DETAIL */
   booking?: POSBooking | null;
@@ -944,11 +991,18 @@ export function POSBookingDetail({
   const guestsWithDietaryRecords = guests.filter(
     (guest) => guest.foodAllergies.length > 0 || guest.dietaryRequirements.length > 0,
   );
+  const [isAllergiesExpanded, setIsAllergiesExpanded] = useState(true);
   const [isContextDetailsOpen, setIsContextDetailsOpen] = useState(false);
   const [isTicketSidebarVisible, setIsTicketSidebarVisible] = useState(true);
   const [mobilePanel, setMobilePanel] = useState<'menu' | 'ticket'>('menu');
   const [batchMode, setBatchMode] = useState<BatchMode>('none');
   const [selectedBatchIds, setSelectedBatchIds] = useState<Set<string>>(new Set());
+
+  // Safety default: expand allergies whenever staff opens a different booking.
+  useEffect(() => {
+    setIsAllergiesExpanded(true);
+  }, [booking.bookingNo]);
+
   const activeOrderCount = booking.orders.filter((order) => !order.cancelledAt).length;
   const ticketItemCount = booking.orders.length;
   const showCancelWalkIn =
@@ -1141,7 +1195,7 @@ export function POSBookingDetail({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
+      <TicketItemsScrollArea orders={booking.orders}>
         {!isWalkIn && heldPreorderItems.length > 0 ? (
           <Card className="border border-yellow-200 bg-yellow-50 p-3">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-yellow-900">
@@ -1230,7 +1284,7 @@ export function POSBookingDetail({
             );
           })
         )}
-      </div>
+      </TicketItemsScrollArea>
 
       <div className="border-t border-gray-200 p-3 shrink-0 bg-white space-y-2">
         <div className="flex items-center justify-between">
@@ -1365,14 +1419,38 @@ export function POSBookingDetail({
           <div className="shrink-0 p-3 flex flex-col gap-3">
 
           {!isWalkIn && guestsWithDietaryRecords.length > 0 ? (
-            <div className="bg-red-50 border-l-4 border-red-500 px-3 py-2 shadow-sm rounded-r-lg shrink-0">
-              <div className="flex items-center gap-1.5 mb-2">
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                <h3 className="text-xs font-semibold text-red-800 uppercase tracking-wide">
-                  Food Allergies & Dietary
-                </h3>
-              </div>
-              <div className="space-y-2">
+            <div
+              data-testid="pos-allergies-banner"
+              className="bg-red-50 border-l-4 border-red-500 px-3 py-2 shadow-sm rounded-r-lg shrink-0"
+            >
+              <button
+                type="button"
+                data-testid="pos-allergies-toggle"
+                aria-expanded={isAllergiesExpanded}
+                onClick={() => setIsAllergiesExpanded((open) => !open)}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <h3 className="text-xs font-semibold text-red-800 uppercase tracking-wide">
+                    Food Allergies & Dietary
+                  </h3>
+                  {!isAllergiesExpanded ? (
+                    <span
+                      data-testid="pos-allergies-count-badge"
+                      className="ml-1 shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-800 border border-red-200"
+                    >
+                      {guestsWithDietaryRecords.length}{' '}
+                      {guestsWithDietaryRecords.length === 1 ? 'guest' : 'guests'} with allergies
+                    </span>
+                  ) : null}
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 text-red-600 transition-transform ${isAllergiesExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+              {isAllergiesExpanded ? (
+              <div data-testid="pos-allergies-body" className="mt-2 space-y-2">
                 {guestsWithDietaryRecords.map((guest) => (
                   <div
                     key={guest.guestId}
@@ -1450,6 +1528,7 @@ export function POSBookingDetail({
                   </div>
                 ))}
               </div>
+              ) : null}
             </div>
           ) : null}
 

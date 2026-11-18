@@ -24,7 +24,7 @@ export const mockPackages: GradingPackage[] = [
     price: 32000,
     currency: 'HKD',
     bookingCredits: 8,
-    validityMonths: 12,
+    durationDays: 365,
     description: 'Entry-level membership with 8 Lounge Deluxe entries and premium dining options.',
     psFreeUpgrades: 0,
     benefits: [
@@ -48,7 +48,7 @@ export const mockPackages: GradingPackage[] = [
     price: 45000,
     currency: 'HKD',
     bookingCredits: 12,
-    validityMonths: 12,
+    durationDays: 365,
     description: 'Enhanced membership with 12 Lounge Deluxe entries and exclusive Platinum member benefits.',
     psFreeUpgrades: 0,
     benefits: [
@@ -73,7 +73,7 @@ export const mockPackages: GradingPackage[] = [
     price: 84000,
     currency: 'HKD',
     bookingCredits: 24,
-    validityMonths: 12,
+    durationDays: 365,
     description: 'Premium membership with 24 Lounge Deluxe entries and 1 free Premiere Suite upgrade.',
     psFreeUpgrades: 1,
     benefits: [
@@ -99,7 +99,7 @@ export const mockPackages: GradingPackage[] = [
     price: 325000,
     currency: 'HKD',
     bookingCredits: -1,
-    validityMonths: 12,
+    durationDays: 365,
     description: 'Ultra-premium membership with unlimited Lounge Deluxe entries, 5 free Premiere Suite upgrades, and elite bespoke services.',
     psFreeUpgrades: 5,
     benefits: [

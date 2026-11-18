@@ -27,6 +27,19 @@ interface OrderItem {
   unitPrice: number;
   discount?: number;
   lineTotal: number;
+  /** Kitchen fulfillment for checkout badges. Cancelled items must not be passed in. */
+  fulfillmentStatus?: 'served' | 'unserved';
+}
+
+function checkoutFulfillmentBadgeClass(status: OrderItem['fulfillmentStatus']): string {
+  if (status === 'served') {
+    return 'bg-green-100 text-green-800 border border-green-200';
+  }
+  return 'bg-amber-100 text-amber-800 border border-amber-200';
+}
+
+function checkoutFulfillmentLabel(status: OrderItem['fulfillmentStatus']): string {
+  return status === 'served' ? 'Served' : 'Unserved';
 }
 
 interface BookingData {
@@ -477,9 +490,17 @@ export function POSCheckout({
                 <p className="py-4 text-center text-sm text-gray-500">No food and beverage orders for this suite.</p>
               ) : (
                 orderItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center py-2 border-b">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.name}</p>
+                  <div key={item.id} className="flex justify-between items-center py-2 border-b gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{item.name}</p>
+                        <Badge
+                          className={`shrink-0 text-xs ${checkoutFulfillmentBadgeClass(item.fulfillmentStatus)}`}
+                          data-testid={`checkout-item-status-${item.id}`}
+                        >
+                          {checkoutFulfillmentLabel(item.fulfillmentStatus)}
+                        </Badge>
+                      </div>
                       {item.unitPrice > 0 ? (
                         <p className="text-sm text-gray-500">
                           HK${item.unitPrice.toFixed(2)} x {item.quantity}
@@ -491,7 +512,7 @@ export function POSCheckout({
                         <p className="text-xs text-green-600">Discount: HK${item.discount.toFixed(2)}</p>
                       ) : null}
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       {item.lineTotal > 0 ? (
                         <p className="font-semibold">HK${item.lineTotal.toFixed(2)}</p>
                       ) : (

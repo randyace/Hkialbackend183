@@ -51,7 +51,8 @@ export interface GradingPackage {
   bookingCredits: number;
   /** Free Premiere Suite upgrades included with the package */
   psFreeUpgrades: number;
-  validityMonths: number;
+  /** Validity in calendar days — maps 1:1 to grading_packages.duration_days */
+  durationDays: number;
   description:    string;
   descriptionTrad?: string;
   descriptionSimp?: string;
@@ -192,7 +193,7 @@ export function GradingPackages({
                   <span className={pkg.color}>{TIER_META[pkg.tier].icon}</span>
                   <div>
                     <h3 className={`${pkg.color} text-lg`}>{pkg.tier} Package</h3>
-                    <p className="text-xs text-gray-500">{pkg.validityMonths}-month validity</p>
+                    <p className="text-xs text-gray-500">{pkg.durationDays} Days validity</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -230,7 +231,7 @@ export function GradingPackages({
                 </div>
                 <div className="bg-gray-50 rounded-lg p-3 text-center">
                   <Clock className="w-4 h-4 text-gray-500 mx-auto mb-1" />
-                  <p className="text-sm text-gray-900">{pkg.validityMonths}mo</p>
+                  <p className="text-sm text-gray-900">{pkg.durationDays} Days</p>
                   <p className="text-xs text-gray-500">Validity</p>
                 </div>
               </div>
@@ -335,15 +336,15 @@ export function GradingPackages({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Months)</Label>
+                  <Label htmlFor="edit-validity" className="mb-[10px] block">Validity (Days)</Label>
                   <Input
                     id="edit-validity"
                     type="number"
                     min={1}
-                    max={60}
-                    value={editingPackage.validityMonths}
+                    max={3650}
+                    value={editingPackage.durationDays}
                     onChange={(e) =>
-                      setEditingPackage({ ...editingPackage, validityMonths: Number(e.target.value) })
+                      setEditingPackage({ ...editingPackage, durationDays: Number(e.target.value) })
                     }
                   />
                 </div>
