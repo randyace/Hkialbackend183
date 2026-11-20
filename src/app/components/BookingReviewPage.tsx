@@ -329,6 +329,12 @@ export interface BookingReviewPageProps {
   // is always required. The wrapper calls
   // `updateBookingStatus(id, 'PendingForReview', reason)`.
   onPushBack?: (bookingId: number, reason: string) => void;
+  /**
+   * Open change-request status from the wrapper (e.g. awaiting_payment).
+   * When awaiting_payment, sidebar Final Approve / Push Back / Reject are
+   * hidden — supervisors act only via the top difference-payment banner.
+   */
+  changeRequestStatus?: string | null;
 }
 
 // ── Default mock booking for standalone preview ───────────────────────────────
@@ -368,11 +374,28 @@ export function BookingReviewPage({
   onPushBack,
   autoSendInvoice = false,
   onAutoSendInvoiceChange,
+  changeRequestStatus = null,
 }: BookingReviewPageProps = {}) {
   const booking: PendingBooking = bookingProp ?? MOCK_PENDING_BOOKING;
   // Wrapper always passes a booking prop. Mock `id % N` formulas
   // stay only for figma Make standalone preview (no prop).
   const isStandalonePreview = bookingProp === undefined;
+  const isEditOrCancelRequest =
+    booking.requestType === 'Edit Booking Request'
+    || booking.requestType === 'Cancel';
+  const isAwaitingPayment = changeRequestStatus === 'awaiting_payment';
+  const showSidebarDecisionActions = !isAwaitingPayment;
+  const showPushBackButton =
+    reviewStage === 'supervisor'
+    && !!onPushBack
+    && !isEditOrCancelRequest
+    && !isAwaitingPayment;
+  const rejectActionLabel =
+    booking.requestType === 'Cancel'
+      ? 'Reject Cancellation'
+      : booking.requestType === 'Edit Booking Request'
+        ? 'Reject Change'
+        : 'Reject Booking';
   const [reviewMode, setReviewMode] = useState<'view' | 'approve' | 'reject'>('view');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -1738,7 +1761,20 @@ export function BookingReviewPage({
 
             {reviewMode === 'view' && (
               <div className="space-y-3">
-                {reviewStage === 'staff' && booking.requestType === 'New Booking Request' && (
+                {isAwaitingPayment && (
+                  <div
+                    className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+                    data-testid="awaiting-payment-sidebar-note"
+                  >
+                    <p className="font-semibold">Difference payment required</p>
+                    <p className="mt-1 text-xs text-amber-900/90">
+                      Use <span className="font-medium">Send difference payment link</span> or{' '}
+                      <span className="font-medium">Reject change</span> in the banner above.
+                      Sidebar approve / push-back / reject are hidden while payment is pending.
+                    </p>
+                  </div>
+                )}
+                {showSidebarDecisionActions && reviewStage === 'staff' && booking.requestType === 'New Booking Request' && (
                   <div
                     className="rounded-md border border-gray-200 bg-gray-50 p-3"
                     data-testid="auto-send-invoice-radio"
@@ -1775,7 +1811,7 @@ export function BookingReviewPage({
                     </div>
                   </div>
                 )}
-                {reviewStage === 'supervisor' && booking.requestType === 'New Booking Request' && (
+                {showSidebarDecisionActions && reviewStage === 'supervisor' && booking.requestType === 'New Booking Request' && (
                   <div
                     className={`rounded-md border p-3 ${
                       autoSendInvoice
@@ -1802,36 +1838,42 @@ export function BookingReviewPage({
                     </p>
                   </div>
                 )}
-                <Button
-                  className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
-                  onClick={handleApprove}
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  {booking.requestType === 'Cancel'
-                    ? (reviewStage === 'staff' ? 'Approve Cancellation' : 'Confirm Cancellation (Final)')
-                    : (reviewStage === 'staff' ? 'Approve & Forward to Supervisor' : 'Approve Booking (Final)')}
-                </Button>
-                {/* 2026-06-24: supervisor-only push-back to Step 1
-                    (Staff Review). Yellow per Sky's spec, sits
-                    between the green Approve and red Reject
-                    buttons. Disabled if the wrapper didn't provide
-                    `onPushBack` (e.g. legacy callers). */}
-                {reviewStage === 'supervisor' && onPushBack && (
+                {showSidebarDecisionActions && (
+                  <Button
+                    className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12"
+                    onClick={handleApprove}
+                    data-testid="review-sidebar-approve"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    {booking.requestType === 'Cancel'
+                      ? (reviewStage === 'staff' ? 'Approve Cancellation' : 'Confirm Cancellation (Final)')
+                      : booking.requestType === 'Edit Booking Request'
+                        ? (reviewStage === 'staff' ? 'Approve & Forward to Supervisor' : 'Approve Change (Final)')
+                        : (reviewStage === 'staff' ? 'Approve & Forward to Supervisor' : 'Approve Booking (Final)')}
+                  </Button>
+                )}
+                {/* Push-back is new-booking ladder only — edit/cancel CRs
+                    have no send-back API (KD-13). Hidden while awaiting_payment. */}
+                {showPushBackButton && (
                   <Button
                     className="w-full bg-yellow-500 hover:bg-yellow-600 text-white gap-2 h-12"
                     onClick={() => setShowPushBackDialog(true)}
+                    data-testid="review-sidebar-push-back"
                   >
                     <Undo2 className="w-5 h-5" />
                     Push Back to Staff Review
                   </Button>
                 )}
-                <Button
-                  className="w-full bg-red-600 hover:bg-red-700 text-white gap-2 h-12"
-                  onClick={() => setShowRejectDialog(true)}
-                >
-                  <XCircle className="w-5 h-5" />
-                  {booking.requestType === 'Cancel' ? 'Reject Cancellation' : 'Reject Booking'}
-                </Button>
+                {showSidebarDecisionActions && (
+                  <Button
+                    className="w-full bg-red-600 hover:bg-red-700 text-white gap-2 h-12"
+                    onClick={() => setShowRejectDialog(true)}
+                    data-testid="review-sidebar-reject"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    {rejectActionLabel}
+                  </Button>
+                )}
               </div>
             )}
 
@@ -1893,9 +1935,17 @@ export function BookingReviewPage({
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Reject Booking Request</DialogTitle>
+            <DialogTitle>
+              {booking.requestType === 'Edit Booking Request'
+                ? 'Reject Change'
+                : booking.requestType === 'Cancel'
+                  ? 'Reject Cancellation'
+                  : 'Reject Booking Request'}
+            </DialogTitle>
             <DialogDescription>
-              Please select a rejection reason below.
+              {booking.requestType === 'Edit Booking Request' || booking.requestType === 'Cancel'
+                ? 'Rejecting leaves the live booking unchanged. Select a reason below.'
+                : 'Please select a rejection reason below.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

@@ -615,6 +615,23 @@ export interface BookingDetailFullProps extends BookingDetailProps {
   originalVisitTime?: string;
 }
 
+/**
+ * Cancel action gating for the Actions card.
+ * CheckedIn/Completed/Cancelled/Rejected hide the button; Approved/Confirmed
+ * stages a cancel CR so the label is "Request Cancellation".
+ */
+export function resolveCancelBookingAction(
+  status: string,
+): { label: 'Request Cancellation' | 'Cancel Booking' } | null {
+  if (['Cancelled', 'Rejected', 'Checked In', 'Completed'].includes(status)) {
+    return null;
+  }
+  if (status === 'Approved' || status === 'Confirmed') {
+    return { label: 'Request Cancellation' };
+  }
+  return { label: 'Cancel Booking' };
+}
+
 export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingProp, onBack, onApprove, isLoading = false, allergenCatalogSuggestions = [], onOpenFullEditor, livePreviewTotal = null, livePreviewBreakdown = [], regionCodes: regionCodesProp, customerProfile = null, membershipControls, onSaveGuestDetails, isSavingGuestDetails = false, onSaveAssignment, isSavingAssignment = false, onSaveStaffAssignment, isSavingStaffAssignment = false, onSavePassengerDetails, isSavingPassengerDetails = false, onSaveNonFlyingGuestDetails, isSavingNonFlyingGuestDetails = false, onUpdateStatus, isUpdatingStatus = false, onReactivateCancelled, isReactivatingCancelled = false, onProcessRefund, isProcessingRefund = false, onSendPaymentLink, onInvoiceSent, onSendInvoice, onSaveBillingDetails, apiBaseUrl, authToken, pendingSuggestions = [], onRunIdentityCheck, isRunningIdentityCheck = false, identityGuestId = null, onMergeComplete, movements = [], onOpenAddMovement, onEditMovement, onAddMovement, onDeleteMovement, isAddingMovement = false, isDeletingMovement = false, formData, priceOverrideReason: priceOverrideReasonProp, isEditDirty, onFormChange, onSaveAllChanges, isSavingAllChanges = false, staffOptions = [], suiteOptions = [], promoCodeOptions = [], numPremiereSuitesOverride, vipPassengersInPremiereSuiteOverride, nonFlyingGuestsInPremiereSuiteOverride, vipPassengersInLoungeDeluxeOverride, nonFlyingGuestsInLoungeDeluxeOverride, passengersOverride, nonFlyingGuestsOverride, onGuestCountChange, onPassengersChange, onNonFlyingGuestsChange, hasGuestErrors = false, incompleteVipInfoCount = 0,   bookableItemPrices, catalogAddonOptions, afterCardsSlot, // 2026-06-30 — forward `showTransit` to <EditSectionFlight>; default true (backward-compat)
  showTransit = true, // 2026-08-19 — round 6.2.169 task 8 (Cirium flight poll). figma-ui consumes the 4 flight-change props from the wrapper.
  pendingChanges = [], onRefreshFlight, onResolvePendingChange, refreshing = false, flightLastCheckedLabel = null, fieldErrors, scheduleLocked = false, onUnlockSchedule, originalVisitDate, originalVisitTime }: BookingDetailFullProps) {
@@ -1464,9 +1481,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
   const [refundReason,     setRefundReason]     = useState('');
   const [refundAmountTbd,  setRefundAmountTbd]  = useState(false);
 
-  // Actions card config array. Cancel Booking is a status change
-  // (→ Cancelled), not a delete — always available when the booking
-  // is not already Cancelled/Rejected.
+  // Actions card config array. Cancel is hidden for terminal /
+  // in-progress guest statuses; Approved/Confirmed stages a cancel CR.
   type BookingActionItem = {
     key: string;
     label: string;
@@ -1476,6 +1492,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     onClick?: () => void;
     testId?: string;
   };
+
+  const cancelAction = resolveCancelBookingAction(booking.status);
 
   const actionItems: BookingActionItem[] = [
     {
@@ -1494,41 +1512,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           testId: 'actions-manage-receipts',
         }]
       : []),
+    // Payment link: open Manage Invoices (InvoiceActionDialog) where staff
+    // can create/send the Adyen link — same live path as Manage Invoices.
     ...(booking.paymentStatus === 'Pending' && booking.paymentMode === 'Upfront'
       ? [{
           key: 'generate-payment-link',
           label: 'Generate Payment Link',
           icon: <CreditCard className="w-4 h-4 mr-2" />,
-          disabled: true,
+          onClick: () => setModalMode('invoice'),
+          testId: 'actions-generate-payment-link',
         }]
       : []),
-    ...(booking.paymentStatus === 'Payment Link Sent'
-      ? [{
-          key: 'send-payment-reminder',
-          label: 'Send Payment Reminder',
-          icon: <Mail className="w-4 h-4 mr-2" />,
-        }]
-      : []),
-    ...(booking.paymentStatus === 'Overdue' && booking.status !== 'Cancelled'
-      ? [{
-          key: 'reactivate',
-          label: 'Re-activate Booking',
-          icon: <RotateCcw className="w-4 h-4 mr-2" />,
-        }]
-      : []),
-    ...(booking.status === 'Confirmed'
-      ? [{
-          key: 'generate-qr',
-          label: 'Generate QR Code',
-          icon: <Download className="w-4 h-4 mr-2" />,
-        }]
-      : []),
-    {
-      key: 'share',
-      label: 'Share with Partners',
-      icon: <Mail className="w-4 h-4 mr-2" />,
-      disabled: true,
-    },
     {
       key: 'movement-log',
       label: 'Movement Log',
@@ -1566,12 +1560,13 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           },
         }]
       : []),
-    ...(booking.status !== 'Cancelled' && booking.status !== 'Rejected'
+    ...(cancelAction
       ? [{
           key: 'cancel',
-          label: 'Cancel Booking',
+          label: cancelAction.label,
           icon: <Trash2 className="w-4 h-4 mr-2" />,
           className: 'text-red-600 hover:text-red-700 hover:bg-red-50',
+          testId: 'actions-cancel-booking',
           onClick: () => {
             onUpdateStatus?.({
               status: 'Cancelled',
@@ -2567,33 +2562,26 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
             variant="outline"
             size="sm"
             onClick={() => {
-              // 2026-06-11 — round 6.2.34 UX. Use the wrapper's
-              // pre-fetched `customerProfile` (real Account
-              // data via `GET /api/accounts/{booking.accountId}`)
-              // when present. Fall back to a per-booking
-              // synthesised profile (12 base fields only) for
-              // legacy bookings with no accountId, or when the
-              // wrapper's fetch failed. INV-12 / INV-15: no
-              // hard-coded directory — the fallback uses the
-              // booking's own data, not a fixed mock list.
+              // Real Account profile from wrapper only — never invent
+              // Gold / expiry / contact mocks when customerProfile is absent.
               if (customerProfile) {
                 setSelectedCustomer(customerProfile);
-              } else {
-                setSelectedCustomer({
-                  id: 0,
-                  accountNo: booking.accountNo,
-                  name: booking.guestName,
-                  type: booking.accountType || 'Individual',
-                  email: `${booking.guestName.toLowerCase().replace(' ', '.')}@email.com`,
-                  phone: '+852 9000 0000',
-                  membershipType: booking.accountType === 'Individual' ? 'Gold' : undefined,
-                  membershipExpiry: booking.accountType === 'Individual' ? '2026-12-31' : undefined,
-                  status: 'Active',
-                  totalBookings: bookingId % 15 + 3,
-                  createdDate: '2024-01-01',
-                });
+                setIsCustomerProfileOpen(true);
+                return;
               }
+              setSelectedCustomer({
+                id: 0,
+                accountNo: booking.accountNo || '—',
+                name: booking.guestName || '—',
+                type: booking.accountType || 'Individual',
+                email: '',
+                phone: '',
+                status: 'Active',
+                totalBookings: 0,
+                createdDate: '',
+              });
               setIsCustomerProfileOpen(true);
+              toast.info('No linked customer profile — showing booking guest details only.');
             }}
             className="flex items-center gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
           >
@@ -4830,7 +4818,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               <option value="Approved">Approved</option>
               <option value="Confirmed">Confirmed</option>
               <option value="Rejected">Rejected</option>
-              <option value="Cancelled">Cancelled</option>
+              <option
+                value="Cancelled"
+                disabled={booking.status === 'Checked In'}
+              >
+                Cancelled
+              </option>
               <option value="Incomplete (No-show)">Incomplete (No-show)</option>
             </select>
           </div>
@@ -4860,17 +4853,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               onChange={e => setRejectionReasonText(e.target.value)}
             />
           </div>
-          {/* 2026-06-28 (round 6.2.71, Phase 4B) — "Update Status" button
-              REMOVED. Booking status transitions (Pending for
-              Review → Pending for Approval → Approved →
-              Confirmed, etc.) now happen via the supervisor
-              approval queue (`/bookings/supervising-approval`)
-              and the staff approval queue (`/bookings/approve`).
-              The status dropdown + reason textarea remain on
-              the detail page for VISIBILITY but are no longer
-              editable from here. The wrapper's `handleUpdateStatus`
-              + `onUpdateStatus` prop forwarding will be removed
-              in Phase 5. */}
+          {/* Status Management dropdowns + reason are editable and
+              persisted via Save All Changes (wrapper handleMasterSave →
+              PUT /api/bookings/{id}). Queue pages still drive many
+              ladder transitions; Cancel Booking uses onUpdateStatus. */}
         </div>
       </Card>
 

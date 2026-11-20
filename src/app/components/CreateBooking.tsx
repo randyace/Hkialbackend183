@@ -2510,12 +2510,10 @@ export function CreateBooking({
     onSubmit?.(formData);
   };
 
-  const mockPaymentModeOptions = (): PaymentMode[] => {
-    if (accountType === 'Individual')    return ['Upfront', 'Net Upfront'];
-    if (accountType === 'Corporate')     return ['Bulk Purchase/Monthly Invoice'];
-    if (accountType === 'Agency') return ['Upfront', 'Net Upfront', 'On-Credit'];
-    return ['Upfront', 'Net Upfront', 'On-Credit', 'Bulk Purchase/Monthly Invoice'];
-  };
+  // Standalone preview only — production wrapper always passes
+  // paymentModeOptions from createBookingPaymentModeOptions(selectedAccount).
+  // Pre-account / no prop: Upfront only (never mock On-Credit by accountType).
+  const mockPaymentModeOptions = (): PaymentMode[] => ['Upfront'];
   const resolvedPaymentModeOptions = (): PaymentMode[] => {
     if (paymentModeOptionsProp && paymentModeOptionsProp.length > 0) {
       return paymentModeOptionsProp;

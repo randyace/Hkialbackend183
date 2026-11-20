@@ -563,42 +563,45 @@ export function BookingManagement({
     return colors[type] || 'bg-gray-100 text-gray-700';
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    const matchesSearch = booking.bookingNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.accountNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         booking.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
-    const matchesPaymentStatus = paymentStatusFilter === 'all' || booking.paymentStatus === paymentStatusFilter;
-    const refundActionRequired =
-      booking.refundStatus === 'due'
-      || booking.refundStatus === 'pending_amount'
-      || booking.refundStatus === 'partial'
-      || (Number(booking.refundDue) || 0) > 0;
-    const matchesRefundStatus =
-      refundStatusFilter === 'all'
-      || (refundStatusFilter === 'action_required' && refundActionRequired)
-      || (refundStatusFilter === 'no_action_required' && !refundActionRequired);
-    
-    // Booking Category filter logic
-    let matchesBookingCategory = true;
-    if (bookingCategoryFilter !== 'all') {
-      if (bookingCategoryFilter === 'Agent Booking') {
-        matchesBookingCategory = booking.accountType === 'Agency';
-      } else if (bookingCategoryFilter === 'Corporate Booking') {
-        matchesBookingCategory = booking.accountType === 'Corporate';
-      } else if (bookingCategoryFilter === 'Individual Booking') {
-        matchesBookingCategory = booking.accountType === 'Individual';
+  // When the wrapper drives server pagination (`currentPage` prop set),
+  // trust API filters — do not re-hide rows via accountType/date/requestType.
+  // Standalone/mock mode still applies local filters for preview.
+  const filteredBookings = (isServerPaginated
+    ? bookings
+    : bookings.filter(booking => {
+      const matchesSearch = booking.bookingNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.guestName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.accountNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.flightNo.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
+      const matchesPaymentStatus = paymentStatusFilter === 'all' || booking.paymentStatus === paymentStatusFilter;
+      const refundActionRequired =
+        booking.refundStatus === 'due'
+        || booking.refundStatus === 'pending_amount'
+        || booking.refundStatus === 'partial'
+        || (Number(booking.refundDue) || 0) > 0;
+      const matchesRefundStatus =
+        refundStatusFilter === 'all'
+        || (refundStatusFilter === 'action_required' && refundActionRequired)
+        || (refundStatusFilter === 'no_action_required' && !refundActionRequired);
+
+      let matchesBookingCategory = true;
+      if (bookingCategoryFilter !== 'all') {
+        if (bookingCategoryFilter === 'Agent Booking') {
+          matchesBookingCategory = booking.accountType === 'Agency';
+        } else if (bookingCategoryFilter === 'Corporate Booking') {
+          matchesBookingCategory = booking.accountType === 'Corporate';
+        } else if (bookingCategoryFilter === 'Individual Booking') {
+          matchesBookingCategory = booking.accountType === 'Individual';
+        }
       }
-      // Membership Booking and AA Booking logic will be added when explained
-    }
-    
-    const matchesDateRange = !dateFrom || !dateTo || (new Date(booking.dateTime.split(' ')[0]) >= new Date(dateFrom) && new Date(booking.dateTime.split(' ')[0]) <= new Date(dateTo));
-    // PR7 — request type badge filter (New / Edit / Cancel open requests)
-    const matchesRequestType =
-      requestTypeFilter === 'all' || booking.requestType === requestTypeFilter;
-    return matchesSearch && matchesStatus && matchesPaymentStatus && matchesRefundStatus && matchesBookingCategory && matchesDateRange && matchesRequestType;
-  }).sort((a, b) => b.id - a.id);
+
+      const matchesDateRange = !dateFrom || !dateTo || (new Date(booking.dateTime.split(' ')[0]) >= new Date(dateFrom) && new Date(booking.dateTime.split(' ')[0]) <= new Date(dateTo));
+      const matchesRequestType =
+        requestTypeFilter === 'all' || booking.requestType === requestTypeFilter;
+      return matchesSearch && matchesStatus && matchesPaymentStatus && matchesRefundStatus && matchesBookingCategory && matchesDateRange && matchesRequestType;
+    })
+  ).slice().sort((a, b) => b.id - a.id);
 
   const localTotalPages = Math.ceil(filteredBookings.length / itemsPerPage);
   const localStartIndex = (currentPage - 1) * itemsPerPage;
