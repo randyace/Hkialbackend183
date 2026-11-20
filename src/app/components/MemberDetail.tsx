@@ -791,13 +791,6 @@ export function MemberDetail({
   // NOTE: All displayXxx = xxxProp || fallback chains removed.
   // UI should show empty state when container data is empty.
 
-  const [mockRemarks, setMockRemarks] = useState<Remark[]>([
-    { id: 1, remark: 'Customer is a high-value client. Provide exceptional service.', category: 'VIP Note', createdDate: '2024-01-15', createdBy: 'Manager' },
-    { id: 2, remark: 'Frequently travels with family. Inquire about family suite availability.', category: 'Service Note', createdDate: '2024-02-10', createdBy: 'Staff A' },
-    { id: 3, remark: 'Requested limousine service for all future bookings.', category: 'Special Request', createdDate: '2024-05-20', createdBy: 'Staff B' },
-    { id: 4, remark: 'Celebrates birthday in November. Consider special amenities.', category: 'General', createdDate: '2024-09-15', createdBy: 'Staff C' },
-  ]);
-
   // ── Prop-over-mock resolution — prop wins when provided ─────────────────
   // Data arrays: prefer prop when non-empty, else fall back to local mock
   // (Figma demo site has real data so this never triggers;
@@ -1417,7 +1410,11 @@ export function MemberDetail({
                 <input
                   type="text"
                   value={basicForm.passportNumber.slice(0, 4)}
-                  onChange={e => setBasicForm(f => ({ ...f, passportNumber: e.target.value }))}
+                  onChange={e => setBasicForm(f => ({
+                    ...f,
+                    passportNumber: e.target.value.replace(/\s/g, '').slice(0, 4),
+                  }))}
+                  maxLength={4}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md disabled:bg-gray-50"
                 />
