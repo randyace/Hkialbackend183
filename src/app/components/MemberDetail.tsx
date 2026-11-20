@@ -242,8 +242,17 @@ export interface MemberDetailProps {
   isAccountLocked?: boolean;
   lockReason?: string;
   lockedAt?: string;
-  twoFAEnabled?: boolean;
+  /** Live Sanctum PAT count from profile_security.active_sessions. */
   activeSessions?: number;
+  /**
+   * Live LAST LOGIN summary from profile_security.last_login.
+   * When null/absent, the card falls back to the first successful loginHistory row.
+   */
+  lastLogin?: {
+    at: string | null;
+    location: string | null;
+    ip_address: string | null;
+  } | null;
   loginHistory?: LoginAttempt[];
 
   /** Contracts tab body — supplied by parent container. */
@@ -368,19 +377,25 @@ export interface MemberDetailProps {
   showUnlockConfirm?: boolean;
   showResetPwConfirm?: boolean;
   showForceLogoutConfirm?: boolean;
-  showReset2FAConfirm?: boolean;
+  showResendOtpConfirm?: boolean;
   showDeactivateConfirm?: boolean;
   showActivateConfirm?: boolean;
   onShowUnlockConfirm?: () => void;
   onHideUnlockConfirm?: () => void;
+  /** Container-owned unlock persist (clears server lockout). */
+  onConfirmUnlock?: () => void | Promise<void>;
   onShowResetPwConfirm?: () => void;
   onHideResetPwConfirm?: () => void;
+  /** Container-owned password reset email (POST /auth/send-password-reset-link). */
+  onConfirmSendResetLink?: () => void | Promise<void>;
   onShowForceLogoutConfirm?: () => void;
   onHideForceLogoutConfirm?: () => void;
   /** Called when staff confirms "Sign Out All Sessions". Container owns the API call. */
   onForceLogout?: () => void | Promise<void>;
-  onShowReset2FAConfirm?: () => void;
-  onHideReset2FAConfirm?: () => void;
+  onShowResendOtpConfirm?: () => void;
+  onHideResendOtpConfirm?: () => void;
+  /** Container-owned staff OTP resend (POST /accounts/{id}/resend-otp). */
+  onConfirmResendOtp?: () => void | Promise<void>;
   onShowDeactivateConfirm?: () => void;
   onHideDeactivateConfirm?: () => void;
   /** Soft-deactivate: status → Inactive. Container owns the API call. */
@@ -505,8 +520,8 @@ export function MemberDetail({
   isAccountLocked: isAccountLockedProp,
   lockReason: lockReasonProp,
   lockedAt: lockedAtProp,
-  twoFAEnabled: twoFAEnabledProp,
   activeSessions: activeSessionsProp,
+  lastLogin: lastLoginProp,
   loginHistory: loginHistoryProp = [],
 
   contractsTabContent,
@@ -596,18 +611,21 @@ export function MemberDetail({
   showUnlockConfirm: showUnlockConfirmProp,
   showResetPwConfirm: showResetPwConfirmProp,
   showForceLogoutConfirm: showForceLogoutConfirmProp,
-  showReset2FAConfirm: showReset2FAConfirmProp,
+  showResendOtpConfirm: showResendOtpConfirmProp,
   showDeactivateConfirm: showDeactivateConfirmProp,
   showActivateConfirm: showActivateConfirmProp,
   onShowUnlockConfirm,
   onHideUnlockConfirm,
+  onConfirmUnlock,
   onShowResetPwConfirm,
   onHideResetPwConfirm,
+  onConfirmSendResetLink,
   onShowForceLogoutConfirm,
   onHideForceLogoutConfirm,
   onForceLogout,
-  onShowReset2FAConfirm,
-  onHideReset2FAConfirm,
+  onShowResendOtpConfirm,
+  onHideResendOtpConfirm,
+  onConfirmResendOtp,
   onShowDeactivateConfirm,
   onHideDeactivateConfirm,
   onDeactivateAccount,
@@ -724,34 +742,19 @@ export function MemberDetail({
   const [isAddMovementOpen, setIsAddMovementOpen] = useState(false);
   const [isAddRemarkOpen, setIsAddRemarkOpen] = useState(false);
 
-  // ── Security mock state (demo fallback — kept as per spec) ────────────────
+  // ── Security mock state (demo fallback for standalone Make preview) ─────
   const [mockIsAccountLocked, setMockIsAccountLocked] = useState(true);
   const [mockLockReason] = useState('5 consecutive failed login attempts');
   const [mockLockedAt] = useState('2026-03-05 14:23:11');
-  const [mockTwoFAEnabled, setMockTwoFAEnabled] = useState(true);
-  const [mockActiveSessions] = useState(2);
+  const [securityConfirmBusy, setSecurityConfirmBusy] = useState(false);
 
   // Security confirmation dialog mock state (demo fallback)
   const [mockShowUnlockConfirm, setMockShowUnlockConfirm]               = useState(false);
   const [mockShowResetPwConfirm, setMockShowResetPwConfirm]             = useState(false);
   const [mockShowForceLogoutConfirm, setMockShowForceLogoutConfirm]     = useState(false);
-  const [mockShowReset2FAConfirm, setMockShowReset2FAConfirm]           = useState(false);
+  const [mockShowResendOtpConfirm, setMockShowResendOtpConfirm]         = useState(false);
   const [mockShowDeactivateConfirm, setMockShowDeactivateConfirm]       = useState(false);
   const [mockShowActivateConfirm, setMockShowActivateConfirm]           = useState(false);
-
-  // Mock login history (demo fallback — LoginAttempt type is now top-level)
-  const [mockLoginHistory] = useState<LoginAttempt[]>([
-    { id: 1, datetime: '2026-03-07 09:15:44', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Success',    location: 'Hong Kong, HK' },
-    { id: 2, datetime: '2026-03-05 14:26:02', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Locked Out', location: 'Hong Kong, HK' },
-    { id: 3, datetime: '2026-03-05 14:24:58', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Failed',     location: 'Hong Kong, HK' },
-    { id: 4, datetime: '2026-03-05 14:24:11', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Failed',     location: 'Hong Kong, HK' },
-    { id: 5, datetime: '2026-03-05 14:23:30', ip: '203.98.12.45',  device: 'Chrome / Windows 11',    deviceType: 'desktop', status: 'Failed',     location: 'Hong Kong, HK' },
-    { id: 6, datetime: '2026-03-04 18:02:15', ip: '172.16.0.88',   device: 'Safari / iPhone 15 Pro', deviceType: 'mobile',  status: 'Success',    location: 'Hong Kong, HK' },
-    { id: 7, datetime: '2026-03-03 11:45:00', ip: '172.16.0.88',   device: 'Safari / iPhone 15 Pro', deviceType: 'mobile',  status: 'Success',    location: 'Hong Kong, HK' },
-    { id: 8, datetime: '2026-02-28 08:33:21', ip: '64.233.160.10', device: 'Chrome / macOS',         deviceType: 'desktop', status: 'Success',    location: 'London, UK' },
-    { id: 9, datetime: '2026-02-25 20:11:07', ip: '64.233.160.10', device: 'Chrome / macOS',         deviceType: 'desktop', status: 'Failed',     location: 'London, UK' },
-    { id: 10, datetime: '2026-02-20 14:55:39', ip: '172.16.0.88',  device: 'Safari / iPhone 15 Pro', deviceType: 'mobile',  status: 'Success',    location: 'Hong Kong, HK' },
-  ]);
 
   // ── Allergy / Dietary dialog mock state (demo fallback) ────────────────
   const [mockAllergyTarget, setMockAllergyTarget] = useState<'customer' | 'spouse'>('customer');
@@ -810,12 +813,11 @@ export function MemberDetail({
   // Spouse: undefined = not passed (use mock); null = explicitly no spouse
   const displaySpouse                 = spouseProp !== undefined               ? spouseProp                : mockSpouse;
 
-  // Security: undefined = not passed → use mock state
+  // Security: undefined = not passed → use mock state (lock only)
   const activeIsAccountLocked         = isAccountLockedProp       ?? mockIsAccountLocked;
   const activeLockReason              = lockReasonProp             ?? mockLockReason;
   const activeLockedAt                = lockedAtProp               ?? mockLockedAt;
-  const activeTwoFAEnabled            = twoFAEnabledProp           ?? mockTwoFAEnabled;
-  const activeActiveSessions          = activeSessionsProp         ?? mockActiveSessions;
+  const activeActiveSessions          = activeSessionsProp         ?? 0;
 
   // Dialog open state: prop wins when explicitly provided
   const activeIsAddPreferenceOpen     = isAddPreferenceOpenProp    ?? mockIsAddPreferenceOpen;
@@ -828,11 +830,56 @@ export function MemberDetail({
   const activeShowUnlockConfirm       = showUnlockConfirmProp      ?? mockShowUnlockConfirm;
   const activeShowResetPwConfirm      = showResetPwConfirmProp     ?? mockShowResetPwConfirm;
   const activeShowForceLogoutConfirm  = showForceLogoutConfirmProp ?? mockShowForceLogoutConfirm;
-  const activeShowReset2FAConfirm     = showReset2FAConfirmProp    ?? mockShowReset2FAConfirm;
+  const activeShowResendOtpConfirm    = showResendOtpConfirmProp   ?? mockShowResendOtpConfirm;
   const activeShowDeactivateConfirm   = showDeactivateConfirmProp  ?? mockShowDeactivateConfirm;
   const activeShowActivateConfirm     = showActivateConfirmProp    ?? mockShowActivateConfirm;
   const accountIsActive = memberData.status === 'Active';
   const accountIsInactive = memberData.status === 'Inactive';
+  const hasRegisteredEmail = Boolean(String(memberData.email ?? '').trim());
+  const canResendOtpEmail = accountIsActive && hasRegisteredEmail;
+
+  const resolvedLastLogin = (() => {
+    if (lastLoginProp && (lastLoginProp.at || lastLoginProp.location || lastLoginProp.ip_address)) {
+      return lastLoginProp;
+    }
+    const success = displayLoginHistory.find((row) => row.status === 'Success');
+    if (!success) return null;
+    return {
+      at: success.datetime || null,
+      location: success.location && success.location !== '—' ? success.location : null,
+      ip_address: success.ip && success.ip !== '—' ? success.ip : null,
+    };
+  })();
+
+  const lastLoginCard = (() => {
+    if (!resolvedLastLogin?.at) {
+      return { primary: 'No logins yet', secondary: '—' as string };
+    }
+    const raw = resolvedLastLogin.at.trim();
+    let datePart = raw;
+    let timePart = '';
+    const m = raw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?/);
+    if (m) {
+      datePart = m[1];
+      timePart = m[2];
+    } else if (/T/.test(raw) || /Z$/.test(raw)) {
+      const d = new Date(raw);
+      if (!Number.isNaN(d.getTime())) {
+        datePart = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Hong_Kong' });
+        timePart = d.toLocaleTimeString('en-GB', {
+          timeZone: 'Asia/Hong_Kong',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
+      }
+    }
+    const loc = resolvedLastLogin.location?.trim() || '';
+    return {
+      primary: datePart,
+      secondary: [timePart, loc].filter(Boolean).join(' · ') || '—',
+    };
+  })();
 
   // Form state
   const activeAllergyTarget           = allergyTargetProp          ?? mockAllergyTarget;
@@ -2545,16 +2592,18 @@ export function MemberDetail({
                 )}
               </div>
 
-              {/* 2FA */}
-              <div className={`rounded-lg p-4 border ${activeTwoFAEnabled ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
+              {/* 2FA — member auth uses Email OTP (not authenticator apps) */}
+              <div className={`rounded-lg p-4 border ${hasRegisteredEmail ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                  <Smartphone className={`w-4 h-4 ${activeTwoFAEnabled ? 'text-green-600' : 'text-yellow-600'}`} />
+                  <Smartphone className={`w-4 h-4 ${hasRegisteredEmail ? 'text-green-600' : 'text-yellow-600'}`} />
                   <span className="text-xs text-gray-500 uppercase tracking-wide">2FA</span>
                 </div>
-                <p className={`text-sm font-semibold ${activeTwoFAEnabled ? 'text-green-700' : 'text-yellow-700'}`}>
-                  {activeTwoFAEnabled ? 'Enabled' : 'Not Enabled'}
+                <p className={`text-sm font-semibold ${hasRegisteredEmail ? 'text-green-700' : 'text-yellow-700'}`}>
+                  Email OTP
                 </p>
-                <p className="text-xs text-gray-400 mt-0.5">Authenticator App</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {hasRegisteredEmail ? 'Verified via Email' : 'No email on file'}
+                </p>
               </div>
 
               {/* Active Sessions */}
@@ -2573,8 +2622,8 @@ export function MemberDetail({
                   <Clock className="w-4 h-4 text-gray-500" />
                   <span className="text-xs text-gray-500 uppercase tracking-wide">Last Login</span>
                 </div>
-                <p className="text-sm font-semibold text-gray-700">2026-03-07</p>
-                <p className="text-xs text-gray-400 mt-0.5">09:15 · Hong Kong, HK</p>
+                <p className="text-sm font-semibold text-gray-700">{lastLoginCard.primary}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{lastLoginCard.secondary}</p>
               </div>
             </div>
           </Card>
@@ -2717,25 +2766,25 @@ export function MemberDetail({
               </div>
               )}
 
-              {/* Reset 2FA */}
-              <div className="flex items-start gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+              {/* Resend OTP Email */}
+              <div className={`flex items-start gap-4 p-4 border rounded-lg ${canResendOtpEmail ? 'border-gray-200 bg-gray-50' : 'border-gray-200 bg-gray-50 opacity-90'}`}>
                 <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
                   <Smartphone className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Reset Two-Factor Authentication</p>
+                  <p className="text-sm font-semibold text-gray-900">Resend OTP Email</p>
                   <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                    Remove the current 2FA device binding. The customer will be prompted to set up 2FA again on next login.
+                    Send a fresh one-time verification code (OTP) to the customer's registered email address.
                   </p>
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!activeTwoFAEnabled}
-                    className={activeTwoFAEnabled ? 'border-purple-200 text-purple-700 hover:bg-purple-50' : ''}
-                    onClick={() => { onShowReset2FAConfirm?.(); setMockShowReset2FAConfirm(true); }}
+                    disabled={!canResendOtpEmail}
+                    className={canResendOtpEmail ? 'border-purple-200 text-purple-700 hover:bg-purple-50' : ''}
+                    onClick={() => { onShowResendOtpConfirm?.(); setMockShowResendOtpConfirm(true); }}
                   >
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    Reset 2FA
+                    Resend OTP
                   </Button>
                 </div>
               </div>
@@ -2831,10 +2880,21 @@ export function MemberDetail({
             <Button
               className="bg-green-600 hover:bg-green-700"
               onClick={() => {
-                setMockIsAccountLocked(false); // local demo fallback
-                onHideUnlockConfirm?.();
-                setMockShowUnlockConfirm(false);
-                toast.success('Account unlocked successfully. Customer can now sign in.');
+                void (async () => {
+                  try {
+                    if (onConfirmUnlock) {
+                      await onConfirmUnlock();
+                    } else {
+                      // Figma / standalone preview only.
+                      setMockIsAccountLocked(false);
+                      toast.success('Account unlocked successfully. Customer can now sign in.');
+                    }
+                    onHideUnlockConfirm?.();
+                    setMockShowUnlockConfirm(false);
+                  } catch {
+                    // Container owns error toasts when onConfirmUnlock is provided.
+                  }
+                })();
               }}
             >
               <LockOpen className="w-4 h-4 mr-2" />
@@ -2862,17 +2922,37 @@ export function MemberDetail({
             <p>This action will be recorded in the audit log.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); }}>Cancel</Button>
+            <Button
+              variant="outline"
+              disabled={securityConfirmBusy}
+              onClick={() => { onHideResetPwConfirm?.(); setMockShowResetPwConfirm(false); }}
+            >
+              Cancel
+            </Button>
             <Button
               className="bg-blue-600 hover:bg-blue-700"
+              disabled={securityConfirmBusy}
               onClick={() => {
-                onHideResetPwConfirm?.();
-                setMockShowResetPwConfirm(false);
-                toast.success(`Password reset link sent to ${memberData.email}`);
+                void (async () => {
+                  setSecurityConfirmBusy(true);
+                  try {
+                    if (onConfirmSendResetLink) {
+                      await onConfirmSendResetLink();
+                    } else {
+                      toast.success(`Password reset link sent to ${memberData.email}`);
+                    }
+                    onHideResetPwConfirm?.();
+                    setMockShowResetPwConfirm(false);
+                  } catch {
+                    // Container owns error toasts when onConfirmSendResetLink is provided.
+                  } finally {
+                    setSecurityConfirmBusy(false);
+                  }
+                })();
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Send Reset Link
+              {securityConfirmBusy ? 'Sending…' : 'Send Reset Link'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3001,36 +3081,55 @@ export function MemberDetail({
         </DialogContent>
       </Dialog>
 
-      {/* ── Reset 2FA Confirmation ─────────────────────────────────────────── */}
-      <Dialog open={activeShowReset2FAConfirm} onOpenChange={open => { if (!open) { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); } }}>
+      {/* ── Resend OTP Email Confirmation ──────────────────────────────────── */}
+      <Dialog open={activeShowResendOtpConfirm} onOpenChange={open => { if (!open) { onHideResendOtpConfirm?.(); setMockShowResendOtpConfirm(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Smartphone className="w-5 h-5 text-purple-600" />
-              Reset Two-Factor Authentication
+              Resend OTP Email
             </DialogTitle>
             <DialogDescription>
-              The 2FA device binding for <strong>{memberData.name}</strong> will be removed.
+              A fresh one-time verification code will be emailed to <strong>{memberData.email || 'the customer'}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-purple-800 space-y-1">
-            <p>The current authenticator app pairing will be <span className="font-medium">permanently unlinked</span>.</p>
-            <p>The customer will be prompted to set up 2FA again on their next login.</p>
-            <p>Use this if the customer has lost access to their authenticator app.</p>
+            <p>The previous OTP (if any) will be replaced by this new code.</p>
+            <p>The customer can enter the code on the login OTP screen immediately.</p>
+            <p>Any existing OTP lockout for this email will be cleared.</p>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { onHideReset2FAConfirm?.(); setMockShowReset2FAConfirm(false); }}>Cancel</Button>
+            <Button
+              variant="outline"
+              disabled={securityConfirmBusy}
+              onClick={() => { onHideResendOtpConfirm?.(); setMockShowResendOtpConfirm(false); }}
+            >
+              Cancel
+            </Button>
             <Button
               className="bg-purple-600 hover:bg-purple-700"
+              disabled={securityConfirmBusy}
               onClick={() => {
-                setMockTwoFAEnabled(false); // local demo fallback
-                onHideReset2FAConfirm?.();
-                setMockShowReset2FAConfirm(false);
-                toast.success('2FA has been reset. Customer will be prompted to set up 2FA on next login.');
+                void (async () => {
+                  setSecurityConfirmBusy(true);
+                  try {
+                    if (onConfirmResendOtp) {
+                      await onConfirmResendOtp();
+                    } else {
+                      toast.success(`OTP email sent to ${memberData.email}`);
+                    }
+                    onHideResendOtpConfirm?.();
+                    setMockShowResendOtpConfirm(false);
+                  } catch {
+                    // Container owns error toasts when onConfirmResendOtp is provided.
+                  } finally {
+                    setSecurityConfirmBusy(false);
+                  }
+                })();
               }}
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Confirm Reset 2FA
+              {securityConfirmBusy ? 'Sending…' : 'Confirm Resend OTP'}
             </Button>
           </DialogFooter>
         </DialogContent>
