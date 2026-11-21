@@ -117,7 +117,7 @@ interface EditBooking {
     flightNo: string;
     flightTime: string;
     arrivalDate: string;
-    flightClass?: 'Economy Class' | 'Business Class' | 'First Class';
+    flightClass?: 'Economy Class' | 'Premium Economy Class' | 'Business Class' | 'First Class';
     flightOrigin?: string;
     flightDestination?: string;
   }>;
@@ -644,6 +644,7 @@ export function BookingEditDialog({ open, onClose, booking, onSave, isSaving = f
                 <select value={editFlightClass} onChange={e => setEditFlightClass(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white">
                   <option value="">— Select —</option>
                   <option value="Economy Class">Economy Class</option>
+                  <option value="Premium Economy Class">Premium Economy Class</option>
                   <option value="Business Class">Business Class</option>
                   <option value="First Class">First Class</option>
                 </select>

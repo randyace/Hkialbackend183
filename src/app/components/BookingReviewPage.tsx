@@ -251,7 +251,7 @@ const CONTACT_SEEDS = [
 // passed, e.g. figma Make import) to keep the preview rendering
 // meaningful. Per INV-X1: don't break the figma Make import.
 const PROMO_CODES = ['SUMMER2024', 'VIP20', 'WELCOME', '', 'TRAVEL10', '', '', '', '', ''];
-const FLIGHT_CLASSES = ['Economy Class', 'Business Class', 'First Class'] as const;
+const FLIGHT_CLASSES = ['Economy Class', 'Premium Economy Class', 'Business Class', 'First Class'] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

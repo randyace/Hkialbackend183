@@ -72,7 +72,7 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type EditFlightType   = 'Arrival' | 'Departure' | 'Transit';
-export type EditFlightClass  = 'Economy Class' | 'Business Class' | 'First Class';
+export type EditFlightClass  = 'Economy Class' | 'Premium Economy Class' | 'Business Class' | 'First Class';
 export type EditPaymentMode  = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
 export type EditAccountType  = 'Individual' | 'Corporate' | 'Agency';
 export type EditMembershipTier = 'Diamond' | 'Platinum' | 'Gold' | 'Sapphire';

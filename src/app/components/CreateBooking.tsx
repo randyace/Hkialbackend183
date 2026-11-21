@@ -398,7 +398,7 @@ type PassengerTitle = 'Mr' | 'Mrs' | 'Ms' | 'Miss' | 'Dr' | 'Prof' | '';
 type AgeGroup = 'Adults (aged 12 and above)' | 'Children (aged 2-11)' | 'Infants (under 2 years old)' | '';
 type MembershipTier = 'Gold' | 'Platinum' | 'Diamond' | 'Sapphire';
 type PaymentMode = 'Upfront' | 'Net Upfront' | 'On-Credit' | 'Bulk Purchase/Monthly Invoice';
-type FlightClass = 'Economy Class' | 'Business Class' | 'First Class';
+type FlightClass = 'Economy Class' | 'Premium Economy Class' | 'Business Class' | 'First Class';
 type FlightType = 'Arrival' | 'Departure' | 'Transit';
 
 interface PassengerDetail {
@@ -494,7 +494,7 @@ export interface BookingFormData {
   leg2ArrivalDate?: string;
   leg2FlightNo?: string;
   leg2FlightTime?: string;
-  leg2FlightClass?: 'Economy Class' | 'Business Class' | 'First Class' | '';
+  leg2FlightClass?: 'Economy Class' | 'Premium Economy Class' | 'Business Class' | 'First Class' | '';
   /**
    * 2026-06-10 — explicit Premiere Suite / Lounge Deluxe quantities
    * + per-section VIP / Non-Flying Guest counts. The wrapper reads
@@ -3213,6 +3213,7 @@ export function CreateBooking({
                 <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Economy Class">Economy Class</SelectItem>
+                  <SelectItem value="Premium Economy Class">Premium Economy Class</SelectItem>
                   <SelectItem value="Business Class">Business Class</SelectItem>
                   <SelectItem value="First Class">
                     <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />First Class</span>
@@ -3304,6 +3305,7 @@ export function CreateBooking({
                     <SelectTrigger data-testid="leg2-flightClass" className={fieldErrors.leg2FlightClass ? 'border-red-400 bg-red-50' : undefined}><SelectValue placeholder="Select class" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Economy Class">Economy Class</SelectItem>
+                      <SelectItem value="Premium Economy Class">Premium Economy Class</SelectItem>
                       <SelectItem value="Business Class">Business Class</SelectItem>
                       <SelectItem value="First Class">
                         <span className="flex items-center gap-2"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />First Class</span>
