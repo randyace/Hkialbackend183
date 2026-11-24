@@ -66,7 +66,7 @@ export function EditSectionPassengers({
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-passenger fields. The 1st {vipPS} rows are Premiere Suite VIPs; the next {vipLD} are Lounge Deluxe VIPs.
-        Title, First Name, Last Name, Age Group, and Nationality are required. Travel Doc No. is optional.
+        Title, First Name, Last Name, and Age Group are required. Travel Doc No. and Nationality are optional.
       </p>
       <div className="space-y-4">
         {passengers.map((p, i) => {
@@ -170,11 +170,10 @@ export function EditSectionPassengers({
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs text-gray-600 mb-1">Nationality <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">Nationality</label>
                   <NationalityTypeahead
                     id={`edit-vip-nationality-${i}`}
                     value={p.nationality ?? ''}
-                    required
                     onChange={(code) => updatePassenger(i, { nationality: code })}
                     data-testid={`edit-vip-nationality-${i}`}
                   />

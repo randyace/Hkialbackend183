@@ -68,7 +68,7 @@ export function EditSectionNFGs({
       </h3>
       <p className="text-xs text-gray-500 mb-4">
         Per-NFG fields. The 1st {nonFlyingPS} rows are PS NFGs; the next {nonFlyingLD} are LD NFGs.
-        Title, First Name, Last Name, Age Group, and Nationality are required.
+        Title, First Name, Last Name, and Age Group are required. Nationality is optional.
       </p>
       <div className="space-y-3">
         {nfgs.map((g, i) => {
@@ -153,11 +153,10 @@ export function EditSectionNFGs({
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Nationality <span className="text-red-500">*</span></label>
+                  <label className="block text-xs text-gray-600 mb-1">Nationality</label>
                   <NationalityTypeahead
                     id={`edit-nfg-nationality-${i}`}
                     value={g.nationality ?? ''}
-                    required
                     onChange={(code) => updateNfg(i, { nationality: code })}
                     data-testid={`edit-nfg-nationality-${i}`}
                   />

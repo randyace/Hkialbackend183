@@ -53,10 +53,11 @@ import { toast } from 'sonner@2.0.3';
 // computes the valid visitTime range + an error message; reused by
 // EditSectionFlight in the admin edit page.
 import { computeVisitTimeRange } from './BookingEditView';
-import { NationalityTypeahead, isValidCountryCode } from '../../../../../components/NationalityTypeahead';
+import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { AirportTypeahead } from '../../../../../components/AirportTypeahead';
 import { REGION_CODES as FALLBACK_REGION_CODES } from '../../../../../utils/regionCodes';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
+import { lockedBirthdayYear } from '../../../../../utils/birthDate';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -2259,17 +2260,8 @@ export function CreateBooking({
   if (ldNoAdult)       ldErrors.push('At least 1 Adult passenger is required for a Lounge Deluxe booking.');
   if (ldNonFlyingOver) ldErrors.push(`Non-Flying Guests (${nonFlyingLD}) exceeds the maximum of 3 per Lounge Deluxe booking.`);
 
-  // 2026-07-17 — nationality (ISO alpha-2) required on every configured guest row.
-  const configuredVip = passengers.slice(0, vipPS + vipLD);
+  // Nationality is optional (birth-year lockdown Phase 3).
   const configuredNfg = nonFlyingGuests.slice(0, nonFlyingPS + nonFlyingLD);
-  const vipMissingNationality = configuredVip.some((p) => !isValidCountryCode(p.nationality));
-  const nfgMissingNationality = configuredNfg.some((g) => !isValidCountryCode(g.nationality));
-  if (vipMissingNationality) {
-    bookingGuestErrors.push('Nationality is required for each VIP Passenger (select from the country list).');
-  }
-  if (nfgMissingNationality) {
-    bookingGuestErrors.push('Nationality is required for each Non-Flying Guest (select from the country list).');
-  }
   const nfgMissingChildAge = configuredNfg.some(
     (g) => g.ageGroup === 'Children (aged 2-11)'
       && (typeof g.age !== 'number' || g.age < 2 || g.age > 11),
@@ -2557,7 +2549,10 @@ export function CreateBooking({
       ageGroup: payload.passengerAgeGroup,
       birthdayDay: payload.passengerBirthdayDay,
       birthdayMonth: payload.passengerBirthdayMonth,
-      birthdayYear: payload.passengerBirthdayYear,
+      birthdayYear: lockedBirthdayYear(
+        payload.passengerBirthdayDay,
+        payload.passengerBirthdayMonth,
+      ),
       nationality: payload.passengerNationality,
       foodAllergies: '',
     }));
@@ -3785,30 +3780,44 @@ export function CreateBooking({
                         </div>
                         <div className="col-span-3">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
-                          <div className="grid grid-cols-3 gap-2">
-                            <select value={p.birthdayDay} onChange={e => updatePassenger(idx, 'birthdayDay', e.target.value)}
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={p.birthdayDay}
+                              onChange={e => {
+                                const birthdayDay = e.target.value;
+                                setPassengers(prev => prev.map((row, i) => i === idx ? {
+                                  ...row,
+                                  birthdayDay,
+                                  birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
+                                } : row));
+                              }}
                               className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                               <option value="">Day</option>
                               {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => <option key={d}>{d}</option>)}
                             </select>
-                            <select value={p.birthdayMonth} onChange={e => updatePassenger(idx, 'birthdayMonth', e.target.value)}
+                            <select
+                              value={p.birthdayMonth}
+                              onChange={e => {
+                                const birthdayMonth = e.target.value;
+                                setPassengers(prev => prev.map((row, i) => i === idx ? {
+                                  ...row,
+                                  birthdayMonth,
+                                  birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
+                                } : row));
+                              }}
                               className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
                               <option value="">Month</option>
                               {MONTHS.map(m => <option key={m}>{m}</option>)}
                             </select>
-                            <input type="number" value={p.birthdayYear} onChange={e => updatePassenger(idx, 'birthdayYear', e.target.value)}
-                              placeholder="Year" min={1900} max={new Date().getFullYear()}
-                              className="w-full px-2 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
                           </div>
                         </div>
                       </div>
-                      {/* Row 3: Nationality (ISO alpha-2) */}
+                      {/* Row 3: Nationality (ISO alpha-2) — optional */}
                       <div>
-                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality</label>
                         <NationalityTypeahead
                           id={`create-vip-nationality-${idx}`}
                           value={p.nationality}
-                          required
                           onChange={(code) => updatePassenger(idx, 'nationality', code)}
                         />
                       </div>
@@ -3958,11 +3967,10 @@ export function CreateBooking({
                         </div>
                       )}
                       <div className="mt-4">
-                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality *</label>
+                        <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Nationality</label>
                         <NationalityTypeahead
                           id={`create-nfg-nationality-${idx}`}
                           value={g.nationality}
-                          required
                           onChange={(code) => updateNonFlying(idx, 'nationality', code)}
                         />
                       </div>

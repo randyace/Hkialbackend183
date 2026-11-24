@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Search, ChevronDown, ChevronRight, Clock, Pencil } from 'lucide-react';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
+import { formatBirthDayMonth } from '../../../../../utils/birthDate';
 
 export interface PosTransactionGuestRow {
   name: string;
@@ -81,30 +82,13 @@ function formatDateTime(value: string): string {
   });
 }
 
-function computeAgeFromDateOfBirth(dateOfBirth: string): number | null {
-  const dob = new Date(dateOfBirth);
-  if (Number.isNaN(dob.getTime())) {
-    return null;
-  }
-
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age -= 1;
-  }
-
-  return age >= 0 ? age : null;
+function formatGuestDob(dateOfBirth: string | null): string {
+  return formatBirthDayMonth(dateOfBirth) || '—';
 }
 
-function formatGuestAge(guest: PosTransactionGuestRow): string {
-  const numericAge = guest.dateOfBirth ? computeAgeFromDateOfBirth(guest.dateOfBirth) : null;
-
-  if (numericAge !== null) {
-    return String(numericAge);
-  }
-
-  return guest.age ?? '—';
+function formatGuestAgeGroup(guest: PosTransactionGuestRow): string {
+  // ageGroup / age label from API only — never compute numeric age from DOB.
+  return guest.age?.trim() || '—';
 }
 
 function resolveAllergyLabel(
@@ -210,7 +194,8 @@ function ExpandedBookingDetails({ booking }: { booking: PosTransactionBookingRow
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-medium text-gray-900">{guest.name}</p>
-                      <p className="text-sm text-gray-500 mt-0.5">Age: {formatGuestAge(guest)}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">Age group: {formatGuestAgeGroup(guest)}</p>
+                      <p className="text-sm text-gray-500 mt-0.5">DOB: {formatGuestDob(guest.dateOfBirth)}</p>
                     </div>
                     {guest.isMainMember ? (
                       <Badge variant="outline" className="text-xs shrink-0">Main Member</Badge>

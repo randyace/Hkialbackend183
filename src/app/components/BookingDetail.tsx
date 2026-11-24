@@ -124,6 +124,7 @@ import type {
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
+import { lockedBirthdayYear } from '../../../../../utils/birthDate';
 import {
   CHILD_AGE_SELECT_OPTIONS,
   guestChildAgeSelectValue,
@@ -190,6 +191,8 @@ import {
 // short-form on the way out (matches the existing master Save
 // wire format) and accept either on the way in.
 function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
+  const birthdayDay = p.birthdayDay ?? '';
+  const birthdayMonth = p.birthdayMonth ?? '';
   return {
     title: (p.title ?? '') as PassengerTitle,
     firstName: p.firstName ?? '',
@@ -197,9 +200,9 @@ function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
     travelDocNo: p.travelDocNo ?? '',
     membershipNo: p.membershipNo ?? '',
     ageGroup: (p.ageGroup ?? '') as AgeGroup,
-    birthdayDay: p.birthdayDay ?? '',
-    birthdayMonth: p.birthdayMonth ?? '',
-    birthdayYear: p.birthdayYear ?? '',
+    birthdayDay,
+    birthdayMonth,
+    birthdayYear: lockedBirthdayYear(birthdayDay, birthdayMonth),
     foodAllergies: p.foodAllergies ?? '',
     nationality: (p.nationality ?? '').trim().toUpperCase(),
     age: p.age,
@@ -216,7 +219,7 @@ function toEditPassenger(p: PassengerDetail): EditPassenger {
     ageGroup: (p.ageGroup || '') as EditPassenger['ageGroup'],
     birthdayDay: p.birthdayDay || undefined,
     birthdayMonth: p.birthdayMonth || undefined,
-    birthdayYear: p.birthdayYear || undefined,
+    birthdayYear: lockedBirthdayYear(p.birthdayDay, p.birthdayMonth) || undefined,
     foodAllergies: p.foodAllergies || undefined,
     nationality: (p.nationality || '').trim().toUpperCase() || undefined,
     age: p.age,
@@ -2109,10 +2112,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     if (!p.ageGroup) missing.push('Age Group');
     const childAgeMissing = missingChildAgeField(p.ageGroup, p.age);
     if (childAgeMissing) missing.push(childAgeMissing);
-    // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
-    if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
-      missing.push('Nationality');
-    }
+    // Travel Doc No., DOB, and Nationality stay optional.
     return missing;
   }
   function getMissingNfgFields(g: {
@@ -2130,9 +2130,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
     if (!g.ageGroup) missing.push('Age Group');
     const childAgeMissing = missingChildAgeField(g.ageGroup, g.age);
     if (childAgeMissing) missing.push(childAgeMissing);
-    if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
-      missing.push('Nationality');
-    }
+    // Nationality is optional.
     return missing;
   }
   // Compute the local completeness count when the wrapper
@@ -3103,8 +3101,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               </div>
             )}
             {/* VIP Passenger completeness inline warning.
-                Required: Title / First Name / Last Name / Age Group /
-                Nationality. Travel Doc No. and DOB are optional. */}
+                Required: Title / First Name / Last Name / Age Group.
+                Travel Doc No., DOB, and Nationality are optional. */}
             {totalVipIncomplete > 0 && (
               <div
                 className="mt-2 flex items-center gap-2 px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800"
@@ -3112,7 +3110,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Nationality.
+                  {totalVipIncomplete} VIP Passenger row{totalVipIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group.
                 </span>
               </div>
             )}
@@ -3269,10 +3267,17 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       )}
                       <div className={isChildrenAgeGroup(p.ageGroup) ? 'col-span-1' : 'col-span-3'}>
                         <label className="text-sm text-gray-600 block mb-[10px]">Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           <select
                             value={p.birthdayDay}
-                            onChange={e => updatePassenger(idx, 'birthdayDay', e.target.value)}
+                            onChange={e => {
+                              const birthdayDay = e.target.value;
+                              setPassengers(prev => prev.map((row, i) => i === idx ? {
+                                ...row,
+                                birthdayDay,
+                                birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
+                              } : row));
+                            }}
                             className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                           >
                             <option value="">Day</option>
@@ -3282,7 +3287,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           </select>
                           <select
                             value={p.birthdayMonth}
-                            onChange={e => updatePassenger(idx, 'birthdayMonth', e.target.value)}
+                            onChange={e => {
+                              const birthdayMonth = e.target.value;
+                              setPassengers(prev => prev.map((row, i) => i === idx ? {
+                                ...row,
+                                birthdayMonth,
+                                birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
+                              } : row));
+                            }}
                             className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                           >
                             <option value="">Month</option>
@@ -3290,26 +3302,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                               <option key={m} value={m}>{m}</option>
                             ))}
                           </select>
-                          <input
-                            type="number"
-                            value={p.birthdayYear}
-                            onChange={e => updatePassenger(idx, 'birthdayYear', e.target.value)}
-                            placeholder="Year"
-                            min={1900}
-                            max={new Date().getFullYear()}
-                            className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
-                          />
                         </div>
                       </div>
                     </div>
 
-                    {/* Row 3: Nationality (ISO alpha-2) */}
+                    {/* Row 3: Nationality (ISO alpha-2) — optional */}
                     <div>
-                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality *</label>
+                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality</label>
                       <NationalityTypeahead
                         id={`detail-vip-nationality-${idx}`}
                         value={p.nationality}
-                        required
                         onChange={(code) => updatePassenger(idx, 'nationality', code)}
                         data-testid={`detail-vip-nationality-${idx}`}
                       />
@@ -3378,7 +3380,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               >
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="text-xs">
-                  {totalNfgIncomplete} Non-Flying Guest row{totalNfgIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group / Nationality.
+                  {totalNfgIncomplete} Non-Flying Guest row{totalNfgIncomplete === 1 ? '' : 's'} incomplete — fill in Title / First Name / Last Name / Age Group.
                 </span>
               </div>
             )}
@@ -3499,13 +3501,12 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                         </select>
                       </div>
                     )}
-                    {/* Nationality */}
+                    {/* Nationality — optional */}
                     <div>
-                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality *</label>
+                      <label className="text-sm text-gray-600 block mb-[10px]">Nationality</label>
                       <NationalityTypeahead
                         id={`detail-nfg-nationality-${idx}`}
                         value={g.nationality}
-                        required
                         onChange={(code) => updateNonFlyingGuest(idx, 'nationality', code)}
                         data-testid={`detail-nfg-nationality-${idx}`}
                       />
@@ -5099,7 +5100,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                   <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
                     {effectiveIncompleteVipInfoCount > 0
-                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group / Nationality) before saving.`
+                      ? `Resolve the binding-rule errors above and complete all ${effectiveIncompleteVipInfoCount} VIP Passenger / NFG row${effectiveIncompleteVipInfoCount === 1 ? '' : 's'} (Title / First Name / Last Name / Age Group) before saving.`
                       : 'Resolve the binding-rule errors above (PS must have ≥1 VIP, max 6 per PS, max 3 NFG per LD, etc.) and the 3h visit-time rule before saving.'}
                   </p>
                 )}

@@ -612,11 +612,7 @@ function getMissingPassengerFields(p: EditPassenger): string[] {
   if (!p.ageGroup) missing.push('Age Group');
   const childAgeMissing = missingChildAgeField(p.ageGroup, p.age);
   if (childAgeMissing) missing.push(childAgeMissing);
-  // Travel Doc No. + DOB stay optional (parity with customer NewBooking).
-  // 2026-07-17+ — guest nationality mandatory on create; surface on edit too.
-  if (!p.nationality || !/^[A-Za-z]{2}$/.test(p.nationality.trim())) {
-    missing.push('Nationality');
-  }
+  // Travel Doc No., DOB, and Nationality stay optional.
   return missing;
 }
 function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
@@ -627,9 +623,7 @@ function getMissingNfgFields(g: EditNonFlyingGuest): string[] {
   if (!g.ageGroup) missing.push('Age Group');
   const childAgeMissing = missingChildAgeField(g.ageGroup, g.age);
   if (childAgeMissing) missing.push(childAgeMissing);
-  if (!g.nationality || !/^[A-Za-z]{2}$/.test(g.nationality.trim())) {
-    missing.push('Nationality');
-  }
+  // Nationality is optional.
   return missing;
 }
 

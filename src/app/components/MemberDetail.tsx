@@ -22,6 +22,8 @@ import {
 } from './ui/tabs';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
+import { DayMonthInput } from '../../../../ui/DayMonthInput';
+import { formatBirthDayMonth } from '../../../../../utils/birthDate';
 import { countryNameFor } from '../../../../../utils/countries';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
@@ -1421,14 +1423,17 @@ export function MemberDetail({
               </div>
               <div>
                 <label>Date of Birth</label>
-                <StringDatePicker
-                  value={basicForm.dateOfBirth}
-                  onChange={(next) => setBasicForm(f => ({ ...f, dateOfBirth: next }))}
-                  disabled={!isEditing}
-                  minDate="1900-01-01"
-                  maxDate={localDateStr()}
-                  className="disabled:bg-gray-50"
-                />
+                {isEditing ? (
+                  <DayMonthInput
+                    id="member-detail-dob"
+                    value={basicForm.dateOfBirth}
+                    onChange={(next) => setBasicForm(f => ({ ...f, dateOfBirth: next }))}
+                  />
+                ) : (
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                    {formatBirthDayMonth(basicForm.dateOfBirth) || '—'}
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -1832,11 +1837,9 @@ export function MemberDetail({
                 </div>
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Date of Birth</label>
-                  <StringDatePicker
-                    value={(displaySpouse.dateOfBirth || '').slice(0, 10)}
-                    disabled
-                    className="bg-gray-50"
-                  />
+                  <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                    {formatBirthDayMonth(displaySpouse.dateOfBirth) || '—'}
+                  </p>
                 </div>
               </div>
             ) : (
@@ -3824,15 +3827,14 @@ export function MemberDetail({
             </div>
 
             <div>
-              <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Date of Birth <span className="text-red-500">*</span></label>
-              <StringDatePicker
-                value={(activeSpouseForm.dateOfBirth || '').slice(0, 10)}
+              <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Date of Birth <span className="text-gray-400 font-normal">(optional)</span></label>
+              <DayMonthInput
+                id="member-detail-spouse-dob"
+                value={activeSpouseForm.dateOfBirth || ''}
                 onChange={(next) => {
                   onSpouseFormChange?.({ ...activeSpouseForm, dateOfBirth: next });
                   setMockSpouseForm(f => ({ ...f, dateOfBirth: next }));
                 }}
-                minDate="1900-01-01"
-                maxDate={localDateStr()}
               />
             </div>
 
@@ -3857,9 +3859,6 @@ export function MemberDetail({
               onClick={() => {
                 if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
                   toast.error('First Name and Last Name are required.'); return;
-                }
-                if (!(activeSpouseForm.dateOfBirth || '').trim()) {
-                  toast.error('Date of Birth is required.'); return;
                 }
                 setMockSpouse({ ...activeSpouseForm }); // demo fallback
                 toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
