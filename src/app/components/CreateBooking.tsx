@@ -57,7 +57,7 @@ import { NationalityTypeahead } from '../../../../../components/NationalityTypea
 import { AirportTypeahead } from '../../../../../components/AirportTypeahead';
 import { REGION_CODES as FALLBACK_REGION_CODES } from '../../../../../utils/regionCodes';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
-import { lockedBirthdayYear } from '../../../../../utils/birthDate';
+import { isSplitBirthdayIncomplete, lockedBirthdayYear } from '../../../../../utils/birthDate';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -2416,6 +2416,15 @@ export function CreateBooking({
       focusField(scrollId);
       return;
     }
+    // Half-filled passenger DOB (day XOR month) — never submit.
+    const halfFilledBirthday = passengers.some((p) =>
+      isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth),
+    );
+    if (halfFilledBirthday) {
+      toast.error('Please complete the date of birth (both day and month).');
+      focusField('create-lounge-deluxe-section');
+      return;
+    }
     // Premiere Suite: cap assigned suites to numPremiereSuites.
     if (numPremiereSuites > 0 && assignedSuiteIds.length > numPremiereSuites) {
       toast.error(`Premiere Suite assignments (${assignedSuiteIds.length}) cannot exceed Quantity of Premiere Suite (${numPremiereSuites}).`);
@@ -3780,6 +3789,14 @@ export function CreateBooking({
                         </div>
                         <div className="col-span-3">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
+                          {(() => {
+                            const halfFilled = isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth);
+                            const needDay = halfFilled && !String(p.birthdayDay ?? '').trim();
+                            const needMonth = halfFilled && !String(p.birthdayMonth ?? '').trim();
+                            const baseCls = 'w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm';
+                            const errCls = ' border-red-500 ring-1 ring-red-400/40';
+                            return (
+                              <>
                           <div className="grid grid-cols-2 gap-2">
                             <select
                               value={p.birthdayDay}
@@ -3791,7 +3808,8 @@ export function CreateBooking({
                                   birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
                                 } : row));
                               }}
-                              className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
+                              aria-invalid={needDay || undefined}
+                              className={`${baseCls}${needDay ? errCls : ''}`}>
                               <option value="">Day</option>
                               {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => <option key={d}>{d}</option>)}
                             </select>
@@ -3805,11 +3823,22 @@ export function CreateBooking({
                                   birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
                                 } : row));
                               }}
-                              className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm">
+                              aria-invalid={needMonth || undefined}
+                              className={`${baseCls}${needMonth ? errCls : ''}`}>
                               <option value="">Month</option>
                               {MONTHS.map(m => <option key={m}>{m}</option>)}
                             </select>
                           </div>
+                          {halfFilled ? (
+                            <p className="mt-1 text-xs text-red-500" role="alert">
+                              {needMonth
+                                ? 'Please also select the month.'
+                                : 'Please also select the day.'}
+                            </p>
+                          ) : null}
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
                       {/* Row 3: Nationality (ISO alpha-2) — optional */}

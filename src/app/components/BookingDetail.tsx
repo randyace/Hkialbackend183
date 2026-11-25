@@ -124,7 +124,7 @@ import type {
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
-import { lockedBirthdayYear } from '../../../../../utils/birthDate';
+import { isSplitBirthdayIncomplete, lockedBirthdayYear } from '../../../../../utils/birthDate';
 import {
   CHILD_AGE_SELECT_OPTIONS,
   guestChildAgeSelectValue,
@@ -2359,7 +2359,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
           {formData && onSaveAllChanges && (
             <Button
               type="button"
-              onClick={() => onSaveAllChanges(formData)}
+              onClick={() => {
+                const halfFilled = (formData.passengers ?? []).some((p) =>
+                  isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth),
+                );
+                if (halfFilled) {
+                  toast.error('Please complete the date of birth (both day and month).');
+                  return;
+                }
+                void onSaveAllChanges(formData);
+              }}
               disabled={isSavingAllChanges || hasGuestErrorsFinal || isEditDirty === false}
               data-testid="booking-detail-master-save"
               className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -3267,6 +3276,14 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       )}
                       <div className={isChildrenAgeGroup(p.ageGroup) ? 'col-span-1' : 'col-span-3'}>
                         <label className="text-sm text-gray-600 block mb-[10px]">Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
+                        {(() => {
+                          const halfFilled = isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth);
+                          const needDay = halfFilled && !String(p.birthdayDay ?? '').trim();
+                          const needMonth = halfFilled && !String(p.birthdayMonth ?? '').trim();
+                          const baseCls = 'w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white';
+                          const errCls = ' border-red-500 ring-1 ring-red-400/40';
+                          return (
+                            <>
                         <div className="grid grid-cols-2 gap-2">
                           <select
                             value={p.birthdayDay}
@@ -3278,7 +3295,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                 birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
                               } : row));
                             }}
-                            className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                            aria-invalid={needDay || undefined}
+                            className={`${baseCls}${needDay ? errCls : ''}`}
                           >
                             <option value="">Day</option>
                             {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => (
@@ -3295,7 +3313,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                                 birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
                               } : row));
                             }}
-                            className="w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                            aria-invalid={needMonth || undefined}
+                            className={`${baseCls}${needMonth ? errCls : ''}`}
                           >
                             <option value="">Month</option>
                             {MONTHS.map(m => (
@@ -3303,6 +3322,16 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             ))}
                           </select>
                         </div>
+                        {halfFilled ? (
+                          <p className="mt-1 text-xs text-red-500" role="alert">
+                            {needMonth
+                              ? 'Please also select the month.'
+                              : 'Please also select the day.'}
+                          </p>
+                        ) : null}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

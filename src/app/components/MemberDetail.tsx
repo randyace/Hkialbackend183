@@ -23,7 +23,7 @@ import {
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
 import { DayMonthInput } from '../../../../ui/DayMonthInput';
-import { formatBirthDayMonth } from '../../../../../utils/birthDate';
+import { formatBirthDayMonth, isIncompleteBirthDateValue } from '../../../../../utils/birthDate';
 import { countryNameFor } from '../../../../../utils/countries';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
@@ -923,6 +923,15 @@ export function MemberDetail({
     }
     if (accountForm.accountType === 'Agency' && !accountForm.agencyId) {
       toast.error('Please link this customer to a Travel Agency');
+      return;
+    }
+    if (isIncompleteBirthDateValue(basicForm.dateOfBirth)) {
+      toast.error('Please complete the date of birth (both day and month).');
+      return;
+    }
+    const spouseDob = activeSpouseForm?.dateOfBirth ?? mockSpouseForm.dateOfBirth ?? '';
+    if (isIncompleteBirthDateValue(spouseDob)) {
+      toast.error('Please complete the spouse date of birth (both day and month).');
       return;
     }
     const composedPersonName = `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`.trim();
@@ -3859,6 +3868,10 @@ export function MemberDetail({
               onClick={() => {
                 if (!activeSpouseForm.firstName.trim() || !activeSpouseForm.lastName.trim()) {
                   toast.error('First Name and Last Name are required.'); return;
+                }
+                if (isIncompleteBirthDateValue(activeSpouseForm.dateOfBirth || '')) {
+                  toast.error('Please complete the spouse date of birth (both day and month).');
+                  return;
                 }
                 setMockSpouse({ ...activeSpouseForm }); // demo fallback
                 toast.success(displaySpouse ? 'Spouse information updated.' : 'Spouse added successfully.');
