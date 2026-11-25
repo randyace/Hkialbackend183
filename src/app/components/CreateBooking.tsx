@@ -57,7 +57,11 @@ import { NationalityTypeahead } from '../../../../../components/NationalityTypea
 import { AirportTypeahead } from '../../../../../components/AirportTypeahead';
 import { REGION_CODES as FALLBACK_REGION_CODES } from '../../../../../utils/regionCodes';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
-import { isSplitBirthdayIncomplete, lockedBirthdayYear } from '../../../../../utils/birthDate';
+import {
+  isSplitBirthdayIncomplete,
+  lockedBirthdayDay,
+  maxBirthYear,
+} from '../../../../../utils/birthDate';
 // Round 6.2.30 (2026-06-10) — `Shuffle` icon import removed.
 // It was only used by the Quick Fill Demo button, which
 // was removed in the same commit (both here in the
@@ -86,6 +90,12 @@ const MONTHS = [
   'January','February','March','April','May','June',
   'July','August','September','October','November','December',
 ];
+
+const BIRTH_YEARS = (() => {
+  const years: number[] = [];
+  for (let y = maxBirthYear(); y >= 1900; y -= 1) years.push(y);
+  return years;
+})();
 
 // Round 6.2.136 — Individual membership has NO tier % discount.
 // Benefits are free LD entries + free PS upgrades (see accounts.ld_entries_remaining
@@ -2416,12 +2426,12 @@ export function CreateBooking({
       focusField(scrollId);
       return;
     }
-    // Half-filled passenger DOB (day XOR month) — never submit.
+    // Half-filled passenger DOB (year XOR month) — never submit.
     const halfFilledBirthday = passengers.some((p) =>
-      isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth),
+      isSplitBirthdayIncomplete(p.birthdayYear, p.birthdayMonth),
     );
     if (halfFilledBirthday) {
-      toast.error('Please complete the date of birth (both day and month).');
+      toast.error('Please complete the date of birth (both year and month).');
       focusField('create-lounge-deluxe-section');
       return;
     }
@@ -2556,10 +2566,10 @@ export function CreateBooking({
       lastName: `${lastNameBase} ${index + 1}`,
       travelDocNo: `${docNoBase}-${index + 1}`,
       ageGroup: payload.passengerAgeGroup,
-      birthdayDay: payload.passengerBirthdayDay,
+      birthdayYear: payload.passengerBirthdayYear,
       birthdayMonth: payload.passengerBirthdayMonth,
-      birthdayYear: lockedBirthdayYear(
-        payload.passengerBirthdayDay,
+      birthdayDay: lockedBirthdayDay(
+        payload.passengerBirthdayYear,
         payload.passengerBirthdayMonth,
       ),
       nationality: payload.passengerNationality,
@@ -3790,8 +3800,8 @@ export function CreateBooking({
                         <div className="col-span-3">
                           <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
                           {(() => {
-                            const halfFilled = isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth);
-                            const needDay = halfFilled && !String(p.birthdayDay ?? '').trim();
+                            const halfFilled = isSplitBirthdayIncomplete(p.birthdayYear, p.birthdayMonth);
+                            const needYear = halfFilled && !String(p.birthdayYear ?? '').trim();
                             const needMonth = halfFilled && !String(p.birthdayMonth ?? '').trim();
                             const baseCls = 'w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white text-sm';
                             const errCls = ' border-red-500 ring-1 ring-red-400/40';
@@ -3799,19 +3809,19 @@ export function CreateBooking({
                               <>
                           <div className="grid grid-cols-2 gap-2">
                             <select
-                              value={p.birthdayDay}
+                              value={p.birthdayYear}
                               onChange={e => {
-                                const birthdayDay = e.target.value;
+                                const birthdayYear = e.target.value;
                                 setPassengers(prev => prev.map((row, i) => i === idx ? {
                                   ...row,
-                                  birthdayDay,
-                                  birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
+                                  birthdayYear,
+                                  birthdayDay: lockedBirthdayDay(birthdayYear, row.birthdayMonth),
                                 } : row));
                               }}
-                              aria-invalid={needDay || undefined}
-                              className={`${baseCls}${needDay ? errCls : ''}`}>
-                              <option value="">Day</option>
-                              {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => <option key={d}>{d}</option>)}
+                              aria-invalid={needYear || undefined}
+                              className={`${baseCls}${needYear ? errCls : ''}`}>
+                              <option value="">Year</option>
+                              {BIRTH_YEARS.map(y => <option key={y} value={String(y)}>{y}</option>)}
                             </select>
                             <select
                               value={p.birthdayMonth}
@@ -3820,7 +3830,7 @@ export function CreateBooking({
                                 setPassengers(prev => prev.map((row, i) => i === idx ? {
                                   ...row,
                                   birthdayMonth,
-                                  birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
+                                  birthdayDay: lockedBirthdayDay(row.birthdayYear, birthdayMonth),
                                 } : row));
                               }}
                               aria-invalid={needMonth || undefined}
@@ -3833,7 +3843,7 @@ export function CreateBooking({
                             <p className="mt-1 text-xs text-red-500" role="alert">
                               {needMonth
                                 ? 'Please also select the month.'
-                                : 'Please also select the day.'}
+                                : 'Please also select the year.'}
                             </p>
                           ) : null}
                               </>

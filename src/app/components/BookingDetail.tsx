@@ -124,7 +124,11 @@ import type {
   PassengerDetail, NonFlyingGuest,
 } from './booking/BookingDetailMocks';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
-import { isSplitBirthdayIncomplete, lockedBirthdayYear } from '../../../../../utils/birthDate';
+import {
+  isSplitBirthdayIncomplete,
+  lockedBirthdayDay,
+  maxBirthYear,
+} from '../../../../../utils/birthDate';
 import {
   CHILD_AGE_SELECT_OPTIONS,
   guestChildAgeSelectValue,
@@ -180,6 +184,12 @@ import {
   generateMockBooking,
 } from './booking/BookingDetailMocks';
 
+const BIRTH_YEARS = (() => {
+  const years: number[] = [];
+  for (let y = maxBirthYear(); y >= 1900; y -= 1) years.push(y);
+  return years;
+})();
+
 // 2026-06-28 (round 6.2.73) — type-bridge helpers between the
 // upper-card's local `PassengerDetail[]` / `NonFlyingGuest[]`
 // state (short-form `ageGroup` strings like 'Adults (aged 12
@@ -191,7 +201,7 @@ import {
 // short-form on the way out (matches the existing master Save
 // wire format) and accept either on the way in.
 function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
-  const birthdayDay = p.birthdayDay ?? '';
+  const birthdayYear = p.birthdayYear ?? '';
   const birthdayMonth = p.birthdayMonth ?? '';
   return {
     title: (p.title ?? '') as PassengerTitle,
@@ -200,9 +210,9 @@ function toPassengerDetail(p: Partial<EditPassenger>): PassengerDetail {
     travelDocNo: p.travelDocNo ?? '',
     membershipNo: p.membershipNo ?? '',
     ageGroup: (p.ageGroup ?? '') as AgeGroup,
-    birthdayDay,
+    birthdayYear,
     birthdayMonth,
-    birthdayYear: lockedBirthdayYear(birthdayDay, birthdayMonth),
+    birthdayDay: lockedBirthdayDay(birthdayYear, birthdayMonth),
     foodAllergies: p.foodAllergies ?? '',
     nationality: (p.nationality ?? '').trim().toUpperCase(),
     age: p.age,
@@ -217,9 +227,9 @@ function toEditPassenger(p: PassengerDetail): EditPassenger {
     travelDocNo: p.travelDocNo,
     membershipNo: p.membershipNo || undefined,
     ageGroup: (p.ageGroup || '') as EditPassenger['ageGroup'],
-    birthdayDay: p.birthdayDay || undefined,
+    birthdayYear: p.birthdayYear || undefined,
     birthdayMonth: p.birthdayMonth || undefined,
-    birthdayYear: lockedBirthdayYear(p.birthdayDay, p.birthdayMonth) || undefined,
+    birthdayDay: lockedBirthdayDay(p.birthdayYear, p.birthdayMonth) || undefined,
     foodAllergies: p.foodAllergies || undefined,
     nationality: (p.nationality || '').trim().toUpperCase() || undefined,
     age: p.age,
@@ -2361,10 +2371,10 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
               type="button"
               onClick={() => {
                 const halfFilled = (formData.passengers ?? []).some((p) =>
-                  isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth),
+                  isSplitBirthdayIncomplete(p.birthdayYear, p.birthdayMonth),
                 );
                 if (halfFilled) {
-                  toast.error('Please complete the date of birth (both day and month).');
+                  toast.error('Please complete the date of birth (both year and month).');
                   return;
                 }
                 void onSaveAllChanges(formData);
@@ -3277,8 +3287,8 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                       <div className={isChildrenAgeGroup(p.ageGroup) ? 'col-span-1' : 'col-span-3'}>
                         <label className="text-sm text-gray-600 block mb-[10px]">Birthday <span className="text-gray-400 font-normal">(optional)</span></label>
                         {(() => {
-                          const halfFilled = isSplitBirthdayIncomplete(p.birthdayDay, p.birthdayMonth);
-                          const needDay = halfFilled && !String(p.birthdayDay ?? '').trim();
+                          const halfFilled = isSplitBirthdayIncomplete(p.birthdayYear, p.birthdayMonth);
+                          const needYear = halfFilled && !String(p.birthdayYear ?? '').trim();
                           const needMonth = halfFilled && !String(p.birthdayMonth ?? '').trim();
                           const baseCls = 'w-full px-2 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white';
                           const errCls = ' border-red-500 ring-1 ring-red-400/40';
@@ -3286,21 +3296,21 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                             <>
                         <div className="grid grid-cols-2 gap-2">
                           <select
-                            value={p.birthdayDay}
+                            value={p.birthdayYear}
                             onChange={e => {
-                              const birthdayDay = e.target.value;
+                              const birthdayYear = e.target.value;
                               setPassengers(prev => prev.map((row, i) => i === idx ? {
                                 ...row,
-                                birthdayDay,
-                                birthdayYear: lockedBirthdayYear(birthdayDay, row.birthdayMonth),
+                                birthdayYear,
+                                birthdayDay: lockedBirthdayDay(birthdayYear, row.birthdayMonth),
                               } : row));
                             }}
-                            aria-invalid={needDay || undefined}
-                            className={`${baseCls}${needDay ? errCls : ''}`}
+                            aria-invalid={needYear || undefined}
+                            className={`${baseCls}${needYear ? errCls : ''}`}
                           >
-                            <option value="">Day</option>
-                            {Array.from({ length: 31 }, (_, d) => String(d + 1).padStart(2, '0')).map(d => (
-                              <option key={d} value={d}>{d}</option>
+                            <option value="">Year</option>
+                            {BIRTH_YEARS.map(y => (
+                              <option key={y} value={String(y)}>{y}</option>
                             ))}
                           </select>
                           <select
@@ -3310,7 +3320,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                               setPassengers(prev => prev.map((row, i) => i === idx ? {
                                 ...row,
                                 birthdayMonth,
-                                birthdayYear: lockedBirthdayYear(row.birthdayDay, birthdayMonth),
+                                birthdayDay: lockedBirthdayDay(row.birthdayYear, birthdayMonth),
                               } : row));
                             }}
                             aria-invalid={needMonth || undefined}
@@ -3326,7 +3336,7 @@ export function BookingDetail({ bookingId = MOCK_BOOKING_ID, booking: bookingPro
                           <p className="mt-1 text-xs text-red-500" role="alert">
                             {needMonth
                               ? 'Please also select the month.'
-                              : 'Please also select the day.'}
+                              : 'Please also select the year.'}
                           </p>
                         ) : null}
                             </>

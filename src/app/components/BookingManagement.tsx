@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Filter, Download, Eye, Edit2, Trash2, X, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem, Cake } from 'lucide-react';
+import { Search, Filter, Download, Eye, Edit2, Trash2, X, Clock, User, AlertCircle, Plane, Car, ShoppingBag, CreditCard, Mail, FileText, CheckCircle, XCircle, RotateCcw, UserCheck, DollarSign, BadgePercent, Building2, Info, Loader2, Gem } from 'lucide-react';
+import { BirthdayCakeBadge } from '../../../../ui/BirthdayCakeBadge';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -137,6 +138,8 @@ interface Booking {
   pendingFlightChangesCount?: number;
   /** Birthday reminder — account or spouse birthday this month or within 3 days. */
   hasUpcomingBirthday?: boolean;
+  /** Two-tier cake badge from API (`current_month` | `next_month_soon`). */
+  birthdayBadgeStatus?: 'current_month' | 'next_month_soon' | null;
   /** Kind I last write — wrapper formats as `YYYY-MM-DD HH:MM` HKT. */
   updatedAt?: string;
   /** Booking refund workflow status (e.g. due, pending_amount, partial). */
@@ -954,16 +957,10 @@ export function BookingManagement({
                       >
                         {booking.guestName}
                       </Link>
-                      {booking.hasUpcomingBirthday && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex" title="Birthday this month or within 3 days">
-                              <Cake className="w-4 h-4 text-red-500" aria-label="Birthday this month or within 3 days" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>Birthday this month or within 3 days</TooltipContent>
-                        </Tooltip>
-                      )}
+                      <BirthdayCakeBadge
+                        status={booking.birthdayBadgeStatus}
+                        hasUpcomingBirthday={booking.hasUpcomingBirthday}
+                      />
                     </div>
                     <div className="text-xs text-gray-500">{booking.accountNo}</div>
                   </td>

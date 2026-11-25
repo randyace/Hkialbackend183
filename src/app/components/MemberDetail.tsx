@@ -22,8 +22,8 @@ import {
 } from './ui/tabs';
 import { NationalityTypeahead } from '../../../../../components/NationalityTypeahead';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
-import { DayMonthInput } from '../../../../ui/DayMonthInput';
-import { formatBirthDayMonth, isIncompleteBirthDateValue } from '../../../../../utils/birthDate';
+import { YearMonthInput } from '../../../../ui/YearMonthInput';
+import { formatBirthYearMonth, isIncompleteBirthDateValue } from '../../../../../utils/birthDate';
 import { countryNameFor } from '../../../../../utils/countries';
 import { sanitizeEnglishName } from '../../../../../utils/englishName';
 import { promptAutofillProcessingTime } from '@/lib/calculateTimeDifference';
@@ -926,12 +926,12 @@ export function MemberDetail({
       return;
     }
     if (isIncompleteBirthDateValue(basicForm.dateOfBirth)) {
-      toast.error('Please complete the date of birth (both day and month).');
+      toast.error('Please complete the date of birth (both year and month).');
       return;
     }
     const spouseDob = activeSpouseForm?.dateOfBirth ?? mockSpouseForm.dateOfBirth ?? '';
     if (isIncompleteBirthDateValue(spouseDob)) {
-      toast.error('Please complete the spouse date of birth (both day and month).');
+      toast.error('Please complete the spouse date of birth (both year and month).');
       return;
     }
     const composedPersonName = `${basicForm.title} ${basicForm.firstName} ${basicForm.lastName}`.trim();
@@ -1433,14 +1433,14 @@ export function MemberDetail({
               <div>
                 <label>Date of Birth</label>
                 {isEditing ? (
-                  <DayMonthInput
+                  <YearMonthInput
                     id="member-detail-dob"
                     value={basicForm.dateOfBirth}
                     onChange={(next) => setBasicForm(f => ({ ...f, dateOfBirth: next }))}
                   />
                 ) : (
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
-                    {formatBirthDayMonth(basicForm.dateOfBirth) || '—'}
+                    {formatBirthYearMonth(basicForm.dateOfBirth) || '—'}
                   </p>
                 )}
               </div>
@@ -1847,7 +1847,7 @@ export function MemberDetail({
                 <div>
                   <label className="text-sm text-gray-500 block" style={{ marginBottom: '10px' }}>Date of Birth</label>
                   <p className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
-                    {formatBirthDayMonth(displaySpouse.dateOfBirth) || '—'}
+                    {formatBirthYearMonth(displaySpouse.dateOfBirth) || '—'}
                   </p>
                 </div>
               </div>
@@ -3837,7 +3837,7 @@ export function MemberDetail({
 
             <div>
               <label className="text-sm text-gray-600 block" style={{ marginBottom: '10px' }}>Date of Birth <span className="text-gray-400 font-normal">(optional)</span></label>
-              <DayMonthInput
+              <YearMonthInput
                 id="member-detail-spouse-dob"
                 value={activeSpouseForm.dateOfBirth || ''}
                 onChange={(next) => {
@@ -3870,7 +3870,7 @@ export function MemberDetail({
                   toast.error('First Name and Last Name are required.'); return;
                 }
                 if (isIncompleteBirthDateValue(activeSpouseForm.dateOfBirth || '')) {
-                  toast.error('Please complete the spouse date of birth (both day and month).');
+                  toast.error('Please complete the spouse date of birth (both year and month).');
                   return;
                 }
                 setMockSpouse({ ...activeSpouseForm }); // demo fallback

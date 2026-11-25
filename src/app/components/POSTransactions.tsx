@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Search, ChevronDown, ChevronRight, Clock, Pencil } from 'lucide-react';
 import { StringDatePicker } from '../../../../ui/CustomDatePicker';
-import { formatBirthDayMonth } from '../../../../../utils/birthDate';
+import { formatBirthYearMonth } from '../../../../../utils/birthDate';
 
 export interface PosTransactionGuestRow {
   name: string;
@@ -83,7 +83,7 @@ function formatDateTime(value: string): string {
 }
 
 function formatGuestDob(dateOfBirth: string | null): string {
-  return formatBirthDayMonth(dateOfBirth) || '—';
+  return formatBirthYearMonth(dateOfBirth) || '—';
 }
 
 function formatGuestAgeGroup(guest: PosTransactionGuestRow): string {
